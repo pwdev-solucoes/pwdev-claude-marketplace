@@ -1,0 +1,13 @@
+{
+  "name": "pwdev-claude-marketplace",
+  "owner": {
+    "name": "Paulo Soares"
+  },
+  "plugins": [
+    {
+      "name": "gsd-pwdevia",
+      "source": "./plugins/gsd-pwdevia",
+      "description": "Add o plugin gsd-pwdevia"
+    }
+  ]
+}

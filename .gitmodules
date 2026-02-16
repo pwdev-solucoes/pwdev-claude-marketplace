@@ -1,0 +1,3 @@
+[submodule "plugins/gsd-pwdevia"]
+	path = plugins/gsd-pwdevia
+	url = https://github.com/pwdev-solucoes/gsd-pwdevia.git
