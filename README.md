@@ -6,7 +6,7 @@ Marketplace de plugins para [Claude Code](https://docs.anthropic.com/en/docs/cla
 
 | Plugin | Descrio | Verso |
 |--------|-----------|--------|
-| [gsd-pwdevia](./gsd-pwdevia/) | Framework spec-driven com 9 agentes, 5 fases e skills versionadas | 1.0.0 |
+| [gsd-pwdevia](https://github.com/pwdev-solucoes/gsd-pwdevia) | Framework spec-driven com 9 agentes, 5 fases e skills versionadas | 1.0.0 |
 
 ## Instalao
 
