@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment & local config
+.env
+.env.local
+.env.*.local
+*.local.json
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# pwdev-uiex state (option 1: do not version)
+# .planning/ui/
+
+# pwdev-uiex state (option 2: version as living documentation)
+# — already tracked, no ignore needed
+.aire.ai/
