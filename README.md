@@ -88,47 +88,29 @@ See the [full plugin documentation](./plugins/pwdev-prd/README.md).
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed
 - Node.js 18+ (for MCP servers via npx)
 
-### Global (recommended)
+### Add the marketplace
 
 ```bash
-git clone https://github.com/pwdev-solucoes/pwdev-claude-marketplace.git
-
-claude plugins add ./pwdev-claude-marketplace/plugins/pwdev-code
+claude plugin marketplace add https://github.com/pwdev-solucoes/pwdev-claude-marketplace.git
 ```
 
-### Per project
-
-Add to `.claude/settings.json` in your project:
-
-```json
-{
-  "plugins": [
-    { "path": "/path/to/pwdev-claude-marketplace/plugins/pwdev-code" }
-  ]
-}
-```
-
-Via Git:
-
-```json
-{
-  "plugins": [
-    {
-      "git": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace.git",
-      "subpath": "plugins/pwdev-code",
-      "branch": "main"
-    }
-  ]
-}
-```
-
-### First run
+### Install plugins
 
 ```bash
-/pwdev-code:init          # Creates .planning/ structure and CLAUDE.md
-/pwdev-code:setup-mcp     # (Optional) Configure MCP servers for your stack
-/pwdev-code:health        # Verify everything is working
+# Spec-driven development (11 agents, 6 phases)
+claude plugin install pwdev-code@pwdev-claude-marketplace
+
+# UI/UX engineering (8 agents, Figma, WCAG, theming)
+claude plugin install pwdev-uiux@pwdev-claude-marketplace
+
+# Simplified feature development (7-question plans)
+claude plugin install pwdev-feat@pwdev-claude-marketplace
+
+# Interview-driven PRD creation (12-step process)
+claude plugin install pwdev-prd@pwdev-claude-marketplace
 ```
+
+Install only the plugins you need. Each one works independently.
 
 ---
 
