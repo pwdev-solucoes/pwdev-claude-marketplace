@@ -6,9 +6,9 @@ Official plugin marketplace for [Claude Code](https://docs.anthropic.com/en/docs
 
 ## What is PWDEV
 
-**Pwdev** builds developer tooling that brings structure, quality, and predictability to AI-assisted software development.
+[Paulo Soares](https://github.com/soarescbm), CTO of PWDEV, a company focused on developing GovTech solutions, believes that artificial intelligence is fundamentally reshaping software development. More than a passing trend, this shift represents a new way to support professionals, extend capabilities, and bring greater consistency across the entire development lifecycle. Guided by this vision, PWDEV is making these solutions available to help teams work with more structure, quality, and predictability.
 
-Our plugins transform Claude Code from a generic coding assistant into a disciplined engineering partner — with specialized agents, structured workflows, and domain knowledge packs.
+Our plugins turn Claude Code from a general-purpose coding assistant into a disciplined engineering partner through specialized agents, structured workflows, and domain-specific knowledge packs.
 
 Core philosophy across all plugins:
 
