@@ -1,0 +1,22 @@
+{
+  "name": "pwdev-prd",
+  "version": "1.0.0",
+  "description": "PRD creation framework for Claude Code — structured interview-driven Product Requirements Documents for features and systems, technology-agnostic, with Markdown + JSON export.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/pwdev-solucoes"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "claude-code",
+    "claude-plugin",
+    "prd",
+    "product-requirements",
+    "requirements-engineering",
+    "interview",
+    "documentation",
+    "agnostic"
+  ]
+}

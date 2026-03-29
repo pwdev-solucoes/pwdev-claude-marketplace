@@ -1,121 +1,139 @@
-# PWDEV Claude Marketplace
+# PWDEV Marketplace
 
-Marketplace de plugins para [Claude Code](https://docs.anthropic.com/en/docs/claude-code) com agentes especializados, workflows estruturados e skills de desenvolvimento.
+Official plugin marketplace for [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
-## Plugins Disponveis
+---
 
-| Plugin | Descrio | Verso |
-|--------|-----------|--------|
-| [gsd-pwdevia](./plugins/gsd-pwdevia/) | Framework spec-driven com 9 agentes, 5 fases e skills versionadas | 1.0.0 |
+## What is PWDEV
 
-## Instalao
+**Pwdev Solucoes** builds developer tooling that brings structure, quality, and predictability to AI-assisted software development.
 
-### Pr-requisitos
+Our plugins transform Claude Code from a generic coding assistant into a disciplined engineering partner — with specialized agents, structured workflows, and domain knowledge packs.
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) instalado
-- Node.js 18+ (para MCP servers via npx)
+Core philosophy across all plugins:
 
-### Instalar um plugin do marketplace
+> **Never execute without a plan. Never ship without verification.**
 
-```bash
-# Clone o marketplace
-git clone https://github.com/pwdev/pwdev-claude-marketplace.git
+---
 
-# Instale o plugin desejado globalmente
-claude plugins add ./pwdev-claude-marketplace/plugins/gsd-pwdevia
+## Plugins
+
+| Plugin | Description | Version | License |
+|--------|-------------|:-------:|:-------:|
+| [**pwdev-code**](./plugins/pwdev-code/) | Spec-driven development framework — 11 agents, 6 phases, 21 commands | 1.0.0 | Apache-2.0 |
+| [**pwdev-uiex**](./plugins/pwdev-uiex/) | UI/UX engineering framework — 7 agents, 5-phase workflow, Figma integration, WCAG 2.1 AA | 1.0.0 | Apache-2.0 |
+| [**pwdev-feat**](./plugins/pwdev-feat/) | Simplified feature development — PWDEVIA 7-question plans + executor, fast and practical | 1.0.0 | Apache-2.0 |
+| [**pwdev-prd**](./plugins/pwdev-prd/) | Interview-driven PRD creation — 12-step structured interview, Markdown + JSON, technology-agnostic | 1.0.0 | Apache-2.0 |
+
+### pwdev-code
+
+Framework that orchestrates **11 specialized agents** across **6 phases** to ensure every line of code is planned, traceable, and verified.
+
+```
+PRD ─▶ ROADMAP ─▶ DISCOVER ─▶ DESIGN ─▶ PLAN ─▶ EXECUTE ─▶ REVIEW ─▶ VERIFY
 ```
 
-### Instalar por projeto
+**Agents:** Product Manager, Delivery Lead, Requirements Engineer, Technical Analyst, Software Architect, Planning Engineer, Implementation Engineer, Code Reviewer, QA Engineer, Spec Verifier, Generalist Engineer
 
-Crie `.claude/settings.json` na raiz do seu projeto:
+See the [full plugin documentation](./plugins/pwdev-code/README.md).
+
+### pwdev-uiex
+
+UI/UX engineering framework for **Vue 3 + shadcn-vue (Reka UI v2)** that orchestrates **7 specialized agents** across a 5-phase workflow.
+
+```
+UNDERSTAND ─▶ STRUCTURE ─▶ IMPLEMENT ─▶ REVIEW ─▶ HANDOFF
+```
+
+**Agents:** Orchestrator, UX Analyst, Design Bridge, UI Scanner, UI Builder, A11y Reviewer, UX Critic
+
+**Key features:** Figma MCP integration, WCAG 2.1 AA auditing, 7-axis UX review, project-specific contextual skills
+
+See the [full plugin documentation](./plugins/pwdev-uiex/README.md).
+
+### pwdev-feat
+
+Simplified AI-assisted feature development using the **PWDEVIA 7-question methodology**. Describe what you want, get a structured plan, execute it.
+
+```
+Describe ─▶ Plan ─▶ Execute
+```
+
+**Agents:** PWDEVIA (Prompt Engineer) + Executor
+
+**Plan types:** Feature, Backend, Frontend, Test, Review, Quick
+
+See the [full plugin documentation](./plugins/pwdev-feat/README.md).
+
+### pwdev-prd
+
+Interview-driven **PRD creation** with a 12-step structured process. Technology-agnostic, outputs Markdown + optional JSON.
+
+```
+Interview (12 steps) ─▶ PRD.md ─▶ Export (JSON / GitHub Issue)
+```
+
+**Agent:** PRD Interview Specialist
+
+**Outputs:** Structured PRD with objectives, metrics, functional/non-functional requirements, architecture, risks, acceptance criteria
+
+See the [full plugin documentation](./plugins/pwdev-prd/README.md).
+
+---
+
+## Installation
+
+### Prerequisites
+
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed
+- Node.js 18+ (for MCP servers via npx)
+
+### Global (recommended)
+
+```bash
+git clone https://github.com/pwdev-solucoes/pwdev-claude-marketplace.git
+
+claude plugins add ./pwdev-claude-marketplace/plugins/pwdev-code
+```
+
+### Per project
+
+Add to `.claude/settings.json` in your project:
 
 ```json
 {
   "plugins": [
-    { "path": "/caminho/para/pwdev-claude-marketplace/plugins/gsd-pwdevia" }
+    { "path": "/path/to/pwdev-claude-marketplace/plugins/pwdev-code" }
   ]
 }
 ```
 
-## Uso Rpido
+Via Git:
 
-Aps instalar o plugin GSD-PWDEVIA:
+```json
+{
+  "plugins": [
+    {
+      "git": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace.git",
+      "subpath": "plugins/pwdev-code",
+      "branch": "main"
+    }
+  ]
+}
+```
+
+### First run
 
 ```bash
-# Inicializar o framework no seu projeto
-/gsd-pwdevia:gsd-init
-
-# Task rpida (bugfix, config)
-/gsd-pwdevia:gsd-quick "Fix validao de email"
-
-# Feature completa (5 fases)
-/gsd-pwdevia:gsd-discover "CRUD de usurios"
-/gsd-pwdevia:gsd-design
-/gsd-pwdevia:gsd-plan
-/gsd-pwdevia:gsd-execute
-/gsd-pwdevia:gsd-verify
+/pwdev-code:init          # Creates .planning/ structure and CLAUDE.md
+/pwdev-code:setup-mcp     # (Optional) Configure MCP servers for your stack
+/pwdev-code:health        # Verify everything is working
 ```
-
-## Estrutura do Repositrio
-
-```
-pwdev-claude-marketplace/
- .claude-plugin/
-    marketplace.json       # Manifesto do marketplace
- plugins/
-    gsd-pwdevia/           # Plugin GSD-PWDEVIA
-        commands/          # 19 slash commands
-        agents/            # 9 agentes especializados
-        skills/            # Skills de conhecimento
-        templates/         # Templates para projetos
-        mcp.json           # MCP servers sugeridos
-        INSTALL.md         # Guia de instalao
-        README.md          # Documentao do plugin
-        CLAUDE.md          # Referncia tcnica
- README.md                # Este arquivo
-```
-
-## Plugins em Detalhe
-
-### GSD-PWDEVIA
-
-> Get Stuff Done + Prompt Writer for Development with Iterative Agents
-
-Framework que orquestra **9 agentes especializados** em **5 fases** para garantir que cada linha de cdigo seja planejada, rastrevel e verificada.
-
-**Workflow:**
-
-```
-DISCOVER  DESIGN  PLAN  EXECUTE  VERIFY
-```
-
-**Skills includas:** Laravel 12+, Vue 3 + PrimeVue, React + Chakra UI v3, Frontend Design
-
-Consulte o [README do plugin](./plugins/gsd-pwdevia/README.md) para documentao completa.
-
-## Contribuio
-
-1. Fork o repositrio
-2. Crie sua branch (`git checkout -b meu-plugin`)
-3. Adicione seu plugin em `plugins/seu-plugin/`
-4. Atualize o `marketplace.json` com a referncia
-5. Abra um Pull Request
-
-### Estrutura mnima de um plugin
-
-```
-seu-plugin/
- .claude-plugin/
-    plugin.json            # Manifesto (obrigatrio)
- commands/                # Pelo menos 1 command
-    meu-command.md
- README.md
-```
-
-## Licena
-
-MIT
 
 ---
 
-*Mantido por [Paulo Soares](https://github.com/pwdev)*
+## License
+
+Apache-2.0
+
+*Maintained by [Paulo Soares](https://github.com/pwdev-solucoes)*

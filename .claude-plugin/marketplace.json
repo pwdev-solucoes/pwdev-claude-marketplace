@@ -5,9 +5,24 @@
   },
   "plugins": [
     {
-      "name": "gsd-pwdevia",
-      "source": "./plugins/gsd-pwdevia",
-      "description": "Add o plugin gsd-pwdevia"
+      "name": "pwdev-code",
+      "source": "./plugins/pwdev-code",
+      "description": "Spec-driven development framework — 11 agents, 6 phases, 21 commands"
+    },
+    {
+      "name": "pwdev-uiex",
+      "source": "./plugins/pwdev-uiex",
+      "description": "UI/UX engineering framework — 7 agents, Figma integration, WCAG 2.1 AA"
+    },
+    {
+      "name": "pwdev-feat",
+      "source": "./plugins/pwdev-feat",
+      "description": "Simplified feature development — PWDEVIA 7-question plans + executor, fast and practical"
+    },
+    {
+      "name": "pwdev-prd",
+      "source": "./plugins/pwdev-prd",
+      "description": "Interview-driven PRD creation — 12-step structured interview, Markdown + JSON export, technology-agnostic"
     }
   ]
 }

@@ -1,0 +1,22 @@
+{
+  "name": "pwdev-code",
+  "version": "1.0.0",
+  "description": "Spec-driven development framework for Claude Code — 11 specialized agents, 6 phases (including code review + QA), and extensible skills that turn requirements into verified, traceable code.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/pwdev-solucoes"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-code",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-code",
+  "license": "Apache-2.0",
+  "keywords": [
+    "claude-code",
+    "claude-plugin",
+    "workflow",
+    "agents",
+    "prompt-engineering",
+    "software-development",
+    "spec-driven",
+    "quality-assurance"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "pwdev-feat",
+  "version": "1.0.0",
+  "description": "Simplified AI-assisted feature development — generates structured action plans using the PWDEVIA 7-question methodology and executes them. Fast, practical, no ceremony.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/pwdev-solucoes"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "claude-code",
+    "claude-plugin",
+    "feature-development",
+    "prompt-engineering",
+    "action-plans",
+    "code-generation",
+    "testing",
+    "code-review"
+  ]
+}

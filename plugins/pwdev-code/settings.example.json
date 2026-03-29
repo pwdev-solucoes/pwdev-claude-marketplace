@@ -1,0 +1,71 @@
+{
+  "$schema": "https://claude.ai/schemas/settings.json",
+  "_comment": "Copy this file to .claude/settings.json in your project and adjust the paths",
+
+  "plugins": [
+    {
+      "_comment": "Option 1: Absolute path (local development)",
+      "path": "/absolute/path/to/pwdev-code"
+    },
+    {
+      "_comment": "Option 2: Relative path (if plugin is near the project)",
+      "path": "../pwdev-code"
+    },
+    {
+      "_comment": "Option 3: Via Git (production)",
+      "git": "https://github.com/pwdev-solucoes/pwdev-code.git",
+      "branch": "main"
+    }
+  ],
+
+  "_instructions": {
+    "installation": [
+      "1. Copy this file to your project: cp settings.example.json /your-project/.claude/settings.json",
+      "2. Choose ONE plugin option above and remove the others",
+      "3. Remove the _comment and _instructions fields",
+      "4. Copy the template: cp templates/CLAUDE.template.md /your-project/CLAUDE.md",
+      "5. Run /pwdev-code:init in Claude Code"
+    ]
+  },
+
+  "permissions": {
+    "allow": [
+      "git add",
+      "git commit",
+      "git status",
+      "git log",
+      "git diff",
+      "git tag",
+      "git branch",
+      "git checkout",
+      "git stash",
+      "mkdir -p",
+      "cat",
+      "ls",
+      "find",
+      "grep",
+      "wc",
+      "npm run",
+      "npm test",
+      "npm audit",
+      "composer run",
+      "composer test",
+      "composer audit",
+      "npx vitest",
+      "npx playwright",
+      "npx eslint",
+      "npx tsc"
+    ],
+    "deny": [
+      "rm -rf /",
+      "git push --force",
+      "git reset --hard",
+      "cat .env",
+      "cat .env.local",
+      "cat .env.production",
+      "cat *.pem",
+      "cat *.key",
+      "cat id_rsa*"
+    ]
+  }
+}

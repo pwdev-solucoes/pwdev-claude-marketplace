@@ -1,0 +1,27 @@
+{
+  "name": "pwdev-uiex",
+  "version": "1.0.0",
+  "description": "Stack-agnostic UI/UX engineering framework for Claude Code — 7 agents, 5-phase workflow, Figma integration, WCAG 2.1 AA. Supports shadcn-vue, shadcn/ui, PrimeVue, Untitled UI, Tailwind Plus, and custom stacks.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/pwdev-solucoes"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "claude-code",
+    "claude-plugin",
+    "ui-ux",
+    "stack-agnostic",
+    "vue3",
+    "react",
+    "shadcn",
+    "primevue",
+    "tailwind",
+    "accessibility",
+    "wcag",
+    "figma",
+    "design-system"
+  ]
+}
