@@ -21,7 +21,7 @@ PWDEV-UIEX orchestrates **7 specialized agents** across a **5-phase workflow** t
 | `tailwind-plus` | Vue / React | Tailwind Plus (Headless UI) | |
 | `custom` | Any | Any / None | |
 
-Stacks are configured via `/pwdev-uiex:stack` and stored in `.planning/ui/stack.json`. The `ui-builder` agent reads this config before implementing any component.
+Stacks are configured via `/pwdev-uiux:stack` and stored in `.planning/ui/stack.json`. The `ui-builder` agent reads this config before implementing any component.
 
 ---
 
@@ -30,11 +30,11 @@ Stacks are configured via `/pwdev-uiex:stack` and stored in `.planning/ui/stack.
 ### 5-Phase Workflow
 
 ```
-/pwdev-uiex:scan (existing project)
+/pwdev-uiux:scan (existing project)
      |
      v generates project-ui-skill.md
      |
-/pwdev-uiex:start "description"
+/pwdev-uiux:start "description"
      |
      v
 [PHASE 1] UNDERSTAND     -> ux-spec.md
@@ -91,44 +91,44 @@ The UX critic reviews every component against: **Experience**, **Gestalt**, **Tr
 
 | Command | What it does |
 |---------|-------------|
-| `/pwdev-uiex:init` | Initialize framework, detect stack, create `.planning/ui/` |
-| `/pwdev-uiex:stack` | Configure UI stack (shadcn-vue, shadcn-react, primevue, untitled-ui, custom) |
-| `/pwdev-uiex:setup-figma` | Connect Figma MCP |
-| `/pwdev-uiex:scan` | Scan existing project UI |
+| `/pwdev-uiux:init` | Initialize framework, detect stack, create `.planning/ui/` |
+| `/pwdev-uiux:stack` | Configure UI stack (shadcn-vue, shadcn-react, primevue, untitled-ui, custom) |
+| `/pwdev-uiux:setup-figma` | Connect Figma MCP |
+| `/pwdev-uiux:scan` | Scan existing project UI |
 
 ### Theming
 
 | Command | What it does |
 |---------|-------------|
-| `/pwdev-uiex:theme` | Create semantic theme (CSS vars + Tailwind, light/dark, contrast validated) |
-| `/pwdev-uiex:theme update` | Modify existing theme tokens |
-| `/pwdev-uiex:theme from-figma` | Extract theme from Figma variables |
-| `/pwdev-uiex:theme validate` | Run WCAG AA contrast validation on current theme |
+| `/pwdev-uiux:theme` | Create semantic theme (CSS vars + Tailwind, light/dark, contrast validated) |
+| `/pwdev-uiux:theme update` | Modify existing theme tokens |
+| `/pwdev-uiux:theme from-figma` | Extract theme from Figma variables |
+| `/pwdev-uiux:theme validate` | Run WCAG AA contrast validation on current theme |
 
 ### Development
 
 | Command | What it does |
 |---------|-------------|
-| `/pwdev-uiex:start "task"` | Start new UI flow from Phase 1 |
-| `/pwdev-uiex:analyze "desc"` | Quick UX exploration |
-| `/pwdev-uiex:build [component]` | Implement component from spec |
+| `/pwdev-uiux:start "task"` | Start new UI flow from Phase 1 |
+| `/pwdev-uiux:analyze "desc"` | Quick UX exploration |
+| `/pwdev-uiux:build [component]` | Implement component from spec |
 
 ### Review & Delivery
 
 | Command | What it does |
 |---------|-------------|
-| `/pwdev-uiex:review` | A11y + UX review in parallel |
-| `/pwdev-uiex:handoff` | Generate delivery docs |
-| `/pwdev-uiex:status` | View current flow state |
+| `/pwdev-uiux:review` | A11y + UX review in parallel |
+| `/pwdev-uiux:handoff` | Generate delivery docs |
+| `/pwdev-uiux:status` | View current flow state |
 
 ### Figma Push
 
 | Command | What it does |
 |---------|-------------|
-| `/pwdev-uiex:push-to-figma [path]` | Push component to Figma |
-| `/pwdev-uiex:push-to-figma screen` | Push screen layout |
-| `/pwdev-uiex:push-to-figma library` | Build component library |
-| `/pwdev-uiex:push-to-figma tokens` | Sync design tokens |
+| `/pwdev-uiux:push-to-figma [path]` | Push component to Figma |
+| `/pwdev-uiux:push-to-figma screen` | Push screen layout |
+| `/pwdev-uiux:push-to-figma library` | Build component library |
+| `/pwdev-uiux:push-to-figma tokens` | Sync design tokens |
 
 ---
 

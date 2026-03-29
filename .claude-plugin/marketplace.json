@@ -10,8 +10,8 @@
       "description": "Spec-driven development framework — 11 agents, 6 phases, 21 commands"
     },
     {
-      "name": "pwdev-uiex",
-      "source": "./plugins/pwdev-uiex",
+      "name": "pwdev-uiux",
+      "source": "./plugins/pwdev-uiux",
       "description": "UI/UX engineering framework — 7 agents, Figma integration, WCAG 2.1 AA"
     },
     {

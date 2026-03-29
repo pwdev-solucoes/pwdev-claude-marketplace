@@ -4,7 +4,7 @@ description: Quick UX + Figma analysis without starting a full flow. Activates u
 argument-hint: "[task description | Figma URL | both separated by space]"
 ---
 
-# /pwdev-uiex:analyze
+# /pwdev-uiux:analyze
 
 **Argument**: $ARGUMENTS
 

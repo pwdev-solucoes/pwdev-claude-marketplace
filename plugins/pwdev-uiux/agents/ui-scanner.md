@@ -3,7 +3,7 @@ name: ui-scanner
 description: >
   Analyzes the project's existing UI — by code and visually via browser —
   and generates a contextual skill (.planning/ui/project-ui-skill.md) with the
-  project's patterns, tokens, and conventions. Invoked by /pwdev-uiex:scan.
+  project's patterns, tokens, and conventions. Invoked by /pwdev-uiux:scan.
   Enables the ui-builder to build new components consistent with the existing project.
 model: sonnet
 permissionMode: acceptEdits

@@ -4,7 +4,7 @@ description: Create or update a semantic color theme with CSS custom properties 
 argument-hint: "[create | update | from-figma | validate]"
 ---
 
-# /pwdev-uiex:theme — Semantic Theme Builder
+# /pwdev-uiux:theme — Semantic Theme Builder
 
 ## Agent
 Assume the persona of `agents/theme-builder.md`.
@@ -30,7 +30,7 @@ $ARGUMENTS: mode of operation.
 cat .planning/ui/stack.json 2>/dev/null || echo "NO_STACK"
 ```
 
-If no stack → suggest `/pwdev-uiex:stack` first.
+If no stack → suggest `/pwdev-uiux:stack` first.
 
 ### STEP 2 — Brand interview (max 2 rounds)
 
@@ -95,9 +95,9 @@ Files:
   .planning/ui/theme-spec.md   ← Documentation
 
 Next:
-  /pwdev-uiex:theme validate      → Re-check contrast
-  /pwdev-uiex:push-to-figma tokens → Sync tokens to Figma
-  /pwdev-uiex:start "task"         → Build with this theme
+  /pwdev-uiux:theme validate      → Re-check contrast
+  /pwdev-uiux:push-to-figma tokens → Sync tokens to Figma
+  /pwdev-uiux:start "task"         → Build with this theme
 ```
 
 ---

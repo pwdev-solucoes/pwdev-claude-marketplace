@@ -1,7 +1,7 @@
 ---
 name: orchestrator
 description: >
-  Coordinator of the pwdev-uiex framework. Active when the user uses /pwdev-uiex:start
+  Coordinator of the pwdev-uiux framework. Active when the user uses /pwdev-uiux:start
   or when a UI/UX task requires coordination between multiple agents.
   Stack-agnostic — reads .planning/ui/stack.json for framework/library config.
   Never writes component code directly — delegates to specialized agents.
@@ -16,9 +16,9 @@ mcpServers:
   - notion
 ---
 
-# Orchestrator — pwdev-uiex Coordinator
+# Orchestrator — pwdev-uiux Coordinator
 
-You coordinate the pwdev-uiex framework flow. Your job is to:
+You coordinate the pwdev-uiux framework flow. Your job is to:
 - Read the context in `.planning/ui/current-flow.md`
 - Decide which phase to activate and which agents to spawn
 - Verify gates before advancing phases
@@ -56,7 +56,7 @@ Before spawning `ui-builder`, read the stack configuration:
 cat .planning/ui/stack.json 2>/dev/null || echo "NO_STACK"
 cat .planning/ui/project-ui-skill.md 2>/dev/null
 ```
-If stack.json is missing → ask to run `/pwdev-uiex:stack` first.
+If stack.json is missing → ask to run `/pwdev-uiux:stack` first.
 
 Spawn protocol for `ui-builder`:
 ```
@@ -79,7 +79,7 @@ If critical failures: return to PHASE 3 with list of fixes.
 
 ### PHASE 5 — Handoff
 **Entry gate**: PHASE 4 gate approved
-**Delegation**: `/pwdev-uiex:handoff` command
+**Delegation**: `/pwdev-uiux:handoff` command
 **Exit gate**: doc in `docs/handoff/`
 
 ---
@@ -98,7 +98,7 @@ Every agent spawn must include:
 
 At each phase transition, inform:
 ```
-[pwdev-uiex] Phase X → Phase Y
+[pwdev-uiux] Phase X → Phase Y
 Previous gate: APPROVED
 Active agent(s): [names]
 Waiting for: [next gate criteria]

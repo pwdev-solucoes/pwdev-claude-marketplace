@@ -28,7 +28,7 @@ Before any code:
 5. Load skills listed in `stack.json → skills[]`
 6. Confirm that gates are approved
 
-If stack.json is missing: **stop and ask to run /pwdev-uiex:stack first**.
+If stack.json is missing: **stop and ask to run /pwdev-uiux:stack first**.
 If any gate is missing: **stop and inform the orchestrator**.
 
 ---
@@ -152,7 +152,7 @@ The ui-builder adapts its patterns based on stack.json. When `stack.name` is:
 ---
 
 ## Stop Conditions
-- stack.json not found → stop, suggest /pwdev-uiex:stack
+- stack.json not found → stop, suggest /pwdev-uiux:stack
 - Component library not installed → stop, report
 - Spec or gate missing → stop, inform orchestrator
 - File outside scope → stop, report

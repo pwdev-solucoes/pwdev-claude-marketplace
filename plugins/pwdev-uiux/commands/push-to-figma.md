@@ -6,7 +6,7 @@ description: >
 argument-hint: "[component-path | 'screen' | 'library' | 'tokens']"
 ---
 
-# /pwdev-uiex:push-to-figma — Push Designs to Figma
+# /pwdev-uiux:push-to-figma — Push Designs to Figma
 
 **Argument**: $ARGUMENTS
 
@@ -33,7 +33,7 @@ argument-hint: "[component-path | 'screen' | 'library' | 'tokens']"
 Attempt `mcp:figma → whoami`. If fails:
 ```
 ⚠️ Figma MCP not connected.
-Run /pwdev-uiex:setup-figma to configure the integration.
+Run /pwdev-uiux:setup-figma to configure the integration.
 ```
 Stop here if not connected.
 

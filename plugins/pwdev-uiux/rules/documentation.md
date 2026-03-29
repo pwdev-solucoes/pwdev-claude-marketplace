@@ -1,4 +1,4 @@
-# Documentation rules — pwdev-uiex
+# Documentation rules — pwdev-uiux
 
 ## Vue 3 Conventions
 
@@ -23,7 +23,7 @@
 - Never delete — only overwrite or append
 - Always include approval gate with checkboxes
 - Include last update timestamp
-- `project-ui-skill.md`: update with `/pwdev-uiex:scan` after structural changes
+- `project-ui-skill.md`: update with `/pwdev-uiux:scan` after structural changes
 
 ## Recommended commits per gate
 
@@ -37,9 +37,9 @@ Gate 5 completed: docs: add handoff for [feature]
 ## Suggested .gitignore
 
 ```gitignore
-# pwdev-uiex state (option 1: do not version)
+# pwdev-uiux state (option 1: do not version)
 .planning/ui/
 
-# pwdev-uiex state (option 2: version as living documentation)
+# pwdev-uiux state (option 2: version as living documentation)
 # — do not add to .gitignore
 ```

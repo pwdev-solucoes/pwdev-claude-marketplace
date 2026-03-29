@@ -6,7 +6,7 @@ description: >
 argument-hint: "[check | install | connect]"
 ---
 
-# /pwdev-uiex:setup-figma — Figma Integration Setup
+# /pwdev-uiux:setup-figma — Figma Integration Setup
 
 **Argument**: $ARGUMENTS (optional — `check`, `install`, or `connect`)
 
@@ -42,7 +42,7 @@ Available capabilities:
   WRITE: use_figma (create/edit nodes), create_new_file, generate_diagram
   SYNC:  search_design_system, code_connect mappings
 
-→ You're all set! Use /pwdev-uiex:start to begin developing.
+→ You're all set! Use /pwdev-uiux:start to begin developing.
 ```
 
 **If $ARGUMENTS is `check`: stop here.**
@@ -159,7 +159,7 @@ grep -q ".mcp.json" .gitignore 2>/dev/null || echo ".mcp.json" >> .gitignore
 
 ### 4. Verify the connection
 
-   Run: /pwdev-uiex:setup-figma check
+   Run: /pwdev-uiux:setup-figma check
 
    Expected output:
    ✅ Figma MCP: Connected
@@ -193,10 +193,10 @@ After successful connection, verify write access:
   /figma:figma-generate-library — Build design systems in Figma
   /figma:figma-implement-design — Translate Figma → production code
 
-### pwdev-uiex Commands Using Figma
-  /pwdev-uiex:push-to-figma     — Push implemented components to Figma
-  /pwdev-uiex:analyze [url]     — Read and analyze Figma designs
-  /pwdev-uiex:start             — Full workflow with Figma integration
+### pwdev-uiux Commands Using Figma
+  /pwdev-uiux:push-to-figma     — Push implemented components to Figma
+  /pwdev-uiux:analyze [url]     — Read and analyze Figma designs
+  /pwdev-uiux:start             — Full workflow with Figma integration
 ```
 
 ---
@@ -214,9 +214,9 @@ Read capabilities: [available / not available]
 Write capabilities: [available / not available]
 
 Next steps:
-  /pwdev-uiex:start "task"          — Start UI development with Figma
-  /pwdev-uiex:push-to-figma         — Push existing components to Figma
-  /pwdev-uiex:analyze [figma-url]   — Analyze a Figma design
+  /pwdev-uiux:start "task"          — Start UI development with Figma
+  /pwdev-uiux:push-to-figma         — Push existing components to Figma
+  /pwdev-uiux:analyze [figma-url]   — Analyze a Figma design
 ```
 
 ## Prohibitions

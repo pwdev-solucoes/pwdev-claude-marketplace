@@ -4,7 +4,7 @@ description: Configure the UI stack for the project. Sets which component librar
 argument-hint: "[stack-name] — shadcn-vue | shadcn-react | primevue | untitled-ui | custom"
 ---
 
-# /pwdev-uiex:stack — Configure UI Stack
+# /pwdev-uiux:stack — Configure UI Stack
 
 ## Input
 $ARGUMENTS: stack preset name (optional — interactive if empty).
@@ -189,8 +189,8 @@ Skills loaded: {list}
 📄 Config: .planning/ui/stack.json
 
 👉 Next:
-  /pwdev-uiex:scan    → Analyze existing UI
-  /pwdev-uiex:start   → Start developing
+  /pwdev-uiux:scan    → Analyze existing UI
+  /pwdev-uiux:start   → Start developing
 ```
 
 ## Prohibitions

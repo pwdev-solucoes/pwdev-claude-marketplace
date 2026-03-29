@@ -3,7 +3,7 @@ name: pwdev-handoff
 description: Generates complete handoff documentation for the implemented and approved Vue components. Consolidates specs, findings and acceptance criteria.
 ---
 
-# /pwdev-uiex:handoff
+# /pwdev-uiux:handoff
 
 ## Check review gate
 
@@ -11,7 +11,7 @@ description: Generates complete handoff documentation for the implemented and ap
 grep "FAILED" .planning/ui/review-findings.md 2>/dev/null && echo "BLOCKED" || echo "OK"
 ```
 
-If FAILED: `Fix the critical issues and run /pwdev-uiex:review again.`
+If FAILED: `Fix the critical issues and run /pwdev-uiux:review again.`
 
 ## Generate document
 
@@ -19,7 +19,7 @@ Create `docs/handoff/[task-kebab]-[YYYY-MM-DD].md`:
 
 ```markdown
 # Handoff — [Task]
-**Date**: [date] | **Framework**: pwdev-uiex v1.0.0 | **Status**: APPROVED
+**Date**: [date] | **Framework**: pwdev-uiux v1.0.0 | **Status**: APPROVED
 
 ## Stack used
 Vue 3 + shadcn-vue (Reka UI v2) + Tailwind + vee-validate + Zod
@@ -60,7 +60,7 @@ Vue 3 + shadcn-vue (Reka UI v2) + Tailwind + vee-validate + Zod
 ```bash
 # Update state
 cat > .planning/ui/current-flow.md << 'EOF'
-# pwdev-uiex State
+# pwdev-uiux State
 ## Active flow
 - Status: COMPLETED
 - Handoff: docs/handoff/[file].md
@@ -71,8 +71,8 @@ EOF
 ✅ Handoff generated
 
 File: docs/handoff/[file].md
-pwdev-uiex flow completed.
+pwdev-uiux flow completed.
 
-→ /pwdev-uiex:start for next feature
-→ /pwdev-uiex:scan to update the project skill
+→ /pwdev-uiux:start for next feature
+→ /pwdev-uiux:scan to update the project skill
 ```

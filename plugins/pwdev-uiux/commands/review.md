@@ -3,7 +3,7 @@ name: pwdev-review
 description: Runs a full UX + accessibility Vue review in parallel. Activates a11y-reviewer (WCAG 2.1 AA + Reka UI) and ux-critic (7 Playbook axes) simultaneously.
 ---
 
-# /pwdev-uiex:review
+# /pwdev-uiux:review
 
 ## Check components
 
@@ -11,7 +11,7 @@ description: Runs a full UX + accessibility Vue review in parallel. Activates a1
 grep -c "##" .planning/ui/component-log.md 2>/dev/null || echo "0 components"
 ```
 
-If no components: `Run /pwdev-uiex:build first.`
+If no components: `Run /pwdev-uiux:build first.`
 
 ## Parallel dispatch
 
@@ -33,7 +33,7 @@ Append to .planning/ui/review-findings.md (do not overwrite).
 ## Consolidate result
 
 ```
-## /pwdev-uiex:review Result
+## /pwdev-uiux:review Result
 
 ### Accessibility WCAG 2.1 AA
 - Status: PASSED / FAILED
@@ -44,6 +44,6 @@ Append to .planning/ui/review-findings.md (do not overwrite).
 - Critical: N | High: N
 
 ### Next step
-[PASSED] → /pwdev-uiex:handoff to generate documentation
-[FAILED] → Fix critical issues → /pwdev-uiex:review again
+[PASSED] → /pwdev-uiux:handoff to generate documentation
+[FAILED] → Fix critical issues → /pwdev-uiux:review again
 ```

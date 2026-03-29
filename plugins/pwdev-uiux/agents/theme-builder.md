@@ -401,8 +401,8 @@ Files:
   .planning/ui/theme-spec.md ← Documentation
 
 Next:
-  /pwdev-uiex:start    → Build components with this theme
-  /pwdev-uiex:push-to-figma tokens → Sync to Figma
+  /pwdev-uiux:start    → Build components with this theme
+  /pwdev-uiux:push-to-figma tokens → Sync to Figma
 ```
 
 ---
@@ -428,4 +428,4 @@ Next:
 ## Stop Conditions
 - Brand color fails contrast in all foreground combinations → stop, suggest alternatives
 - Existing theme detected → stop, ask: extend or replace?
-- stack.json missing → stop, suggest /pwdev-uiex:stack
+- stack.json missing → stop, suggest /pwdev-uiux:stack

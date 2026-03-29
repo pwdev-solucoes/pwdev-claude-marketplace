@@ -1,5 +1,5 @@
 {
-  "name": "pwdev-uiex",
+  "name": "pwdev-uiux",
   "version": "1.0.0",
   "description": "Stack-agnostic UI/UX engineering framework for Claude Code — 7 agents, 5-phase workflow, Figma integration, WCAG 2.1 AA. Supports shadcn-vue, shadcn/ui, PrimeVue, Untitled UI, Tailwind Plus, and custom stacks.",
   "author": {

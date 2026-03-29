@@ -4,7 +4,7 @@ description: Implements Vue 3 components with shadcn-vue + Reka UI based on the 
 argument-hint: "[Vue component name or 'all']"
 ---
 
-# /pwdev-uiex:build — Implement Vue Component
+# /pwdev-uiux:build — Implement Vue Component
 
 **Argument**: $ARGUMENTS
 
@@ -19,7 +19,7 @@ ls .planning/ui/project-ui-skill.md 2>/dev/null && echo "Skill OK" || echo "No s
 ```
 
 If ux-spec gate not approved:
-> Run `/pwdev-uiex:analyze` first to create and approve the UX spec.
+> Run `/pwdev-uiux:analyze` first to create and approve the UX spec.
 
 ## Context for ui-builder
 

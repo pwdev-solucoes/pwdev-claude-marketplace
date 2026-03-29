@@ -1,9 +1,9 @@
 ---
 name: pwdev-status
-description: Displays the current state of the pwdev-uiex flow — gates, agents, pending items and recommended next action.
+description: Displays the current state of the pwdev-uiux flow — gates, agents, pending items and recommended next action.
 ---
 
-# /pwdev-uiex:status
+# /pwdev-uiux:status
 
 ## Read all state files
 
@@ -19,7 +19,7 @@ echo "=== PROJECT SKILL ===" && head -5 .planning/ui/project-ui-skill.md 2>/dev/
 ## Calculate and display status
 
 ```
-## pwdev-uiex Status
+## pwdev-uiux Status
 
 **Task**: [from current-flow]
 **Current phase**: [phase]
@@ -34,14 +34,14 @@ echo "=== PROJECT SKILL ===" && head -5 .planning/ui/project-ui-skill.md 2>/dev/
 | 5 — Handoff | Doc in docs/handoff/ | ✅/⏳/❌ |
 
 ### Project UI Skill
-[available / not available — suggest /pwdev-uiex:scan if missing]
+[available / not available — suggest /pwdev-uiux:scan if missing]
 
 ### Next action
 [based on the first pending gate]
-  ⏳ Gate 1 → /pwdev-uiex:analyze "description"
-  ⏳ Gate 2 → /pwdev-uiex:analyze [figma-url]
-  ⏳ Gate 3 → /pwdev-uiex:build [component]
-  ⏳ Gate 4 → /pwdev-uiex:review
-  ⏳ Gate 5 → /pwdev-uiex:handoff
-  ✅ All → /pwdev-uiex:start for new feature
+  ⏳ Gate 1 → /pwdev-uiux:analyze "description"
+  ⏳ Gate 2 → /pwdev-uiux:analyze [figma-url]
+  ⏳ Gate 3 → /pwdev-uiux:build [component]
+  ⏳ Gate 4 → /pwdev-uiux:review
+  ⏳ Gate 5 → /pwdev-uiux:handoff
+  ✅ All → /pwdev-uiux:start for new feature
 ```

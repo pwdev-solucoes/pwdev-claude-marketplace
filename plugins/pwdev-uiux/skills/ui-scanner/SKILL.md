@@ -2,7 +2,7 @@
 name: ui-scanner
 description: >
   Skill for analyzing a project's existing UI in Vue. Activates when the user
-  uses /pwdev-uiex:scan or asks to "analyze the project UI", "map existing
+  uses /pwdev-uiux:scan or asks to "analyze the project UI", "map existing
   components", "understand project patterns", or "create project skill".
   Generates .planning/ui/project-ui-skill.md with project-specific patterns and tokens.
 context: fork
@@ -16,7 +16,7 @@ contextual skill to guide new development.
 
 ## When to use
 
-- Before starting development on an existing project (`/pwdev-uiex:scan`)
+- Before starting development on an existing project (`/pwdev-uiux:scan`)
 - When the ui-builder needs real project context
 - For consistency auditing of the existing design system
 - To map what exists before deciding what to build
@@ -90,10 +90,10 @@ documented in the `ui-scanner` agent.
 ## Usage example
 
 ```
-/pwdev-uiex:scan                    # Scan current project
-/pwdev-uiex:scan http://localhost:3000/dashboard  # Focus on a specific route
-/pwdev-uiex:scan --visual-only      # Visual analysis only (no code)
-/pwdev-uiex:scan --code-only        # Code analysis only (no browser)
+/pwdev-uiux:scan                    # Scan current project
+/pwdev-uiux:scan http://localhost:3000/dashboard  # Focus on a specific route
+/pwdev-uiux:scan --visual-only      # Visual analysis only (no code)
+/pwdev-uiux:scan --code-only        # Code analysis only (no browser)
 ```
 
 ## Expected output
@@ -110,5 +110,5 @@ Patterns identified: script setup TS, vee-validate, composables per feature
 Skill generated at: .planning/ui/project-ui-skill.md
 The ui-builder will use this skill as a reference for new components.
 
-Next step: /pwdev-uiex:start "description of the new feature"
+Next step: /pwdev-uiux:start "description of the new feature"
 ```

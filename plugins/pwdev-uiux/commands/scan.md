@@ -7,7 +7,7 @@ description: >
 argument-hint: "[optional URL or route, e.g.: http://localhost:3000/dashboard]"
 ---
 
-# /pwdev-uiex:scan — Scan Project UI
+# /pwdev-uiux:scan — Scan Project UI
 
 **Optional argument**: $ARGUMENTS
 
@@ -71,7 +71,7 @@ Document inconsistencies as observations — not judgments.
 After `ui-scanner` completion, present summary:
 
 ```
-✅ /pwdev-uiex:scan completed
+✅ /pwdev-uiux:scan completed
 
 📦 Stack
   Vue 3.x | shadcn-vue (Reka UI) | Tailwind x.x
@@ -95,14 +95,14 @@ After `ui-scanner` completion, present summary:
   [list of divergences found]
 
 📄 Skill saved at: .planning/ui/project-ui-skill.md
-   Valid for this project. Update with /pwdev-uiex:scan after significant changes.
+   Valid for this project. Update with /pwdev-uiux:scan after significant changes.
 
-→ Next step: /pwdev-uiex:start "task description"
+→ Next step: /pwdev-uiux:start "task description"
 ```
 
 ## Notes
 
-- Run `/pwdev-uiex:scan` whenever the project has significant structural changes
+- Run `/pwdev-uiux:scan` whenever the project has significant structural changes
 - The generated skill is stored in `.planning/ui/` and is automatically read by the `ui-builder`
 - For new projects (without components), the skill will be a minimal template
 - Add `.planning/ui/project-ui-skill.md` to `.gitignore` or commit as living documentation

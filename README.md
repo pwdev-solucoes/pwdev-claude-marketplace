@@ -21,7 +21,7 @@ Core philosophy across all plugins:
 | Plugin | Description | Version | License |
 |--------|-------------|:-------:|:-------:|
 | [**pwdev-code**](./plugins/pwdev-code/) | Spec-driven development framework — 11 agents, 6 phases, 21 commands | 1.0.0 | Apache-2.0 |
-| [**pwdev-uiex**](./plugins/pwdev-uiex/) | UI/UX engineering framework — 7 agents, 5-phase workflow, Figma integration, WCAG 2.1 AA | 1.0.0 | Apache-2.0 |
+| [**pwdev-uiux**](./plugins/pwdev-uiux/) | UI/UX engineering framework — 7 agents, 5-phase workflow, Figma integration, WCAG 2.1 AA | 1.0.0 | Apache-2.0 |
 | [**pwdev-feat**](./plugins/pwdev-feat/) | Simplified feature development — PWDEVIA 7-question plans + executor, fast and practical | 1.0.0 | Apache-2.0 |
 | [**pwdev-prd**](./plugins/pwdev-prd/) | Interview-driven PRD creation — 12-step structured interview, Markdown + JSON, technology-agnostic | 1.0.0 | Apache-2.0 |
 
@@ -37,7 +37,7 @@ PRD ─▶ ROADMAP ─▶ DISCOVER ─▶ DESIGN ─▶ PLAN ─▶ EXECUTE ─�
 
 See the [full plugin documentation](./plugins/pwdev-code/README.md).
 
-### pwdev-uiex
+### pwdev-uiux
 
 UI/UX engineering framework for **Vue 3 + shadcn-vue (Reka UI v2)** that orchestrates **7 specialized agents** across a 5-phase workflow.
 
@@ -49,7 +49,7 @@ UNDERSTAND ─▶ STRUCTURE ─▶ IMPLEMENT ─▶ REVIEW ─▶ HANDOFF
 
 **Key features:** Figma MCP integration, WCAG 2.1 AA auditing, 7-axis UX review, project-specific contextual skills
 
-See the [full plugin documentation](./plugins/pwdev-uiex/README.md).
+See the [full plugin documentation](./plugins/pwdev-uiux/README.md).
 
 ### pwdev-feat
 

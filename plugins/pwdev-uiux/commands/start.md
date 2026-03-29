@@ -4,7 +4,7 @@ description: Starts a new Vue UI/UX development flow. Activates the orchestrator
 argument-hint: "[UI task description, e.g.: 'create 3-step onboarding form']"
 ---
 
-# /pwdev-uiex:start — Start New Flow
+# /pwdev-uiux:start — Start New Flow
 
 **Argument**: $ARGUMENTS
 
@@ -25,7 +25,7 @@ wc -l .planning/ui/project-ui-skill.md 2>/dev/null || echo "Skill not found"
 ```
 
 If skill missing and project has components:
-> Tip: run `/pwdev-uiex:scan` first so the ui-builder builds consistently with the existing project.
+> Tip: run `/pwdev-uiux:scan` first so the ui-builder builds consistently with the existing project.
 
 ## Clear previous state
 
@@ -39,7 +39,7 @@ printf "# Review Findings\n*Pending*\n" > .planning/ui/review-findings.md
 
 Update `.planning/ui/current-flow.md`:
 ```markdown
-# pwdev-uiex State
+# pwdev-uiux State
 
 ## Active flow
 - **Task**: $ARGUMENTS
@@ -53,7 +53,7 @@ Update `.planning/ui/current-flow.md`:
 
 Invoke `orchestrator` with:
 ```
-New task started via /pwdev-uiex:start:
+New task started via /pwdev-uiux:start:
 
 Task: $ARGUMENTS
 Stack: [read from .planning/ui/stack.json — framework, library, forms]
@@ -67,12 +67,12 @@ Wait for approval gate before advancing to PHASE 2.
 ## Inform user
 
 ```
-🚀 pwdev-uiex v1.0.0 — Flow started
+🚀 pwdev-uiux v1.0.0 — Flow started
 
 Task: $ARGUMENTS
 Phase: PHASE 1 — Understand
 Agent: ux-analyst
 
 The ux-analyst is analyzing the context and creating the UX spec.
-Use /pwdev-uiex:status to track progress.
+Use /pwdev-uiux:status to track progress.
 ```

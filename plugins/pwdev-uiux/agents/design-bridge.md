@@ -80,7 +80,7 @@ Used in PHASE 2 when a Figma URL is available.
 
 ## MODE: WRITE (Code → Figma)
 
-Used by `/pwdev-uiex:push-to-figma` to create designs in Figma from implemented code.
+Used by `/pwdev-uiux:push-to-figma` to create designs in Figma from implemented code.
 
 ### Prerequisites
 

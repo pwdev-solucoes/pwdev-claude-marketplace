@@ -1,9 +1,9 @@
 ---
 name: init
-description: Initialize the pwdev-uiex framework — detects project stack, creates .planning/ui/ workspace, checks Figma MCP.
+description: Initialize the pwdev-uiux framework — detects project stack, creates .planning/ui/ workspace, checks Figma MCP.
 ---
 
-# /pwdev-uiex:init — Framework Initialization
+# /pwdev-uiux:init — Framework Initialization
 
 ## STEP 1 — Check if already initialized
 
@@ -17,9 +17,9 @@ fi
 
 If already initialized:
 ```
-pwdev-uiex already initialized.
+pwdev-uiux already initialized.
    Workspace: .planning/ui/
-   Use /pwdev-uiex:status to see current state.
+   Use /pwdev-uiux:status to see current state.
 ```
 Stop unless user asks to reinitialize.
 
@@ -50,7 +50,7 @@ console.log('headlessui:', d['@headlessui/react']||d['@headlessui/vue']||'N/A');
 If no frontend framework detected:
 ```
 No frontend framework detected in package.json.
-pwdev-uiex works with Vue 3, React, Svelte, or any frontend framework.
+pwdev-uiux works with Vue 3, React, Svelte, or any frontend framework.
 Make sure you're in the right project directory.
 ```
 
@@ -69,14 +69,14 @@ touch .planning/ui/review-findings.md
 
 Write initial state to `.planning/ui/current-flow.md`:
 ```markdown
-# pwdev-uiex — State
+# pwdev-uiux — State
 
 ## Active flow
 - Status: no active flow
 - Phase: —
 - Pending gate: —
 - Initialized: [timestamp]
-- Stack: not configured (run /pwdev-uiex:stack)
+- Stack: not configured (run /pwdev-uiux:stack)
 
 ## History
 - [timestamp]: Framework initialized
@@ -101,7 +101,7 @@ Which UI stack does this project use?
 Pick a number or name (default: auto-detect):
 ```
 
-If user picks or auto-detect succeeds → run `/pwdev-uiex:stack` logic to create `.planning/ui/stack.json`.
+If user picks or auto-detect succeeds → run `/pwdev-uiux:stack` logic to create `.planning/ui/stack.json`.
 
 ---
 
@@ -112,7 +112,7 @@ Try `mcp:figma → whoami` to confirm connection.
 If not configured:
 ```
 Figma MCP: Not configured (optional)
-To set up: /pwdev-uiex:setup-figma
+To set up: /pwdev-uiux:setup-figma
 ```
 
 ---
@@ -120,7 +120,7 @@ To set up: /pwdev-uiex:setup-figma
 ## STEP 6 — Initialization report
 
 ```
-pwdev-uiex initialized
+pwdev-uiux initialized
 
 Detected stack:
   Framework:    [Vue 3 / React / Svelte / ...]
@@ -141,10 +141,10 @@ Integrations:
   Figma MCP:  [connected / not configured]
 
 Next steps:
-  /pwdev-uiex:stack          → Change UI stack configuration
-  /pwdev-uiex:setup-figma    → Connect Figma
-  /pwdev-uiex:scan           → Analyze existing UI
-  /pwdev-uiex:start "task"   → Start new UI development
+  /pwdev-uiux:stack          → Change UI stack configuration
+  /pwdev-uiux:setup-figma    → Connect Figma
+  /pwdev-uiux:scan           → Analyze existing UI
+  /pwdev-uiux:start "task"   → Start new UI development
 ```
 
 ## Prohibitions
