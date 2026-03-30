@@ -59,10 +59,15 @@ Execute all protocol analysis steps:
 2. Component analysis (shadcn-vue + product)
 3. CSS token and tailwind.config extraction
 4. Visual analysis (if URL available)
-5. Generate project-ui-skill.md
+5. Best practices compliance check (using ui-best-practices skill)
+6. Generate project-ui-skill.md (including compliance report section)
+
+The ui-scanner agent has ui-best-practices and ui-theme-reference declared as skills
+in its frontmatter — they are loaded automatically.
 
 Prioritize: most recurring patterns, most used tokens, most complex components.
 Document inconsistencies as observations — not judgments.
+The compliance report should flag P0 violations as issues and P1 as recommendations.
 ```
 
 ## Final report
@@ -90,6 +95,11 @@ After `ui-scanner` completion, present summary:
   Forms: [vee-validate / Field / manual]
   Organization: [by feature / by type]
 
+📋 Best Practices Compliance
+  P0 rules: N/N passed [✅ / ⚠️ N violations]
+  P1 rules: N/N passed
+  Top issues: [brief list of most impactful violations]
+
 ⚠️ Inconsistencies
   [list of divergences found]
 
@@ -97,6 +107,7 @@ After `ui-scanner` completion, present summary:
    Valid for this project. Update with /pwdev-uiux:scan after significant changes.
 
 → Next step: /pwdev-uiux:start "task description"
+  [If P0 violations found] → Fix P0 issues first, then /pwdev-uiux:scan again
 ```
 
 ## Notes
