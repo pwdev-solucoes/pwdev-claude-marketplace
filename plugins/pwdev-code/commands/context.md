@@ -1,5 +1,4 @@
 ---
-name: context
 description: Generate minimal context files for executor subagents to combat context rot
 ---
 

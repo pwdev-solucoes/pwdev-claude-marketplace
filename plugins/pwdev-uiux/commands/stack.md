@@ -1,5 +1,4 @@
 ---
-name: stack
 description: Configure the UI stack for the project. Sets which component library, framework, and patterns the agents will follow.
 argument-hint: "[stack-name] — shadcn-vue | shadcn-react | primevue | untitled-ui | custom"
 ---

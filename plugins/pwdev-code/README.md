@@ -155,8 +155,6 @@ Sources of truth: SPEC.md objective + quality + DoD, task ACs, skill checklists,
 |---------|-------------|
 | `/pwdev-code:init` | Initialize framework in repo — creates `.planning/`, CLAUDE.md, settings |
 | `/pwdev-code:setup-mcp` | Interactively configure MCP servers — detects stack, suggests relevant servers, generates `.mcp.json` |
-| `/pwdev-code:skill` | Manage skills — `list`, `install <name>`, `create <name>`, `audit <name>`, `link <name>` |
-
 ### Product Planning
 
 | Command | What it does | Output |
@@ -228,7 +226,7 @@ skills/skill-name/
 └── references/           # On-demand lookup (unlimited size)
 ```
 
-### Installable Catalog (via `/pwdev-code:skill install`)
+### Installable Catalog
 
 skill-laravel, skill-vue3-primevue, skill-react-chakra, skill-api-design, skill-security,
 skill-testing, skill-performance, skill-devops, skill-data-modeling, skill-docs

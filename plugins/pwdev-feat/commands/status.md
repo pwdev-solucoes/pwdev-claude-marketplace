@@ -1,5 +1,4 @@
 ---
-name: status
 description: Show current plans — pending, executed, and failed.
 ---
 

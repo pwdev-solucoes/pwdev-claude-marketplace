@@ -1,5 +1,4 @@
 ---
-name: pwdev-status
 description: Displays the current state of the pwdev-uiux flow — gates, agents, pending items and recommended next action.
 ---
 

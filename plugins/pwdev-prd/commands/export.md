@@ -1,5 +1,4 @@
 ---
-name: export
 description: Export a PRD as a GitHub issue or regenerate the JSON export.
 argument-hint: "[prd-slug] [--json | --github]"
 ---

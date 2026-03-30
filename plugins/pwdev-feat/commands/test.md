@@ -1,5 +1,4 @@
 ---
-name: test
 description: Create a test plan for existing code — unit, integration, E2E with Playwright.
 argument-hint: "[what to test, e.g. 'UserService' or 'authentication flow']"
 ---

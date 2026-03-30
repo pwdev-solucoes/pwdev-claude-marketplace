@@ -1,5 +1,4 @@
 ---
-name: backend
 description: Create a backend-focused action plan — API endpoints, services, models, migrations, tests.
 argument-hint: "[backend task description]"
 ---

@@ -1,5 +1,4 @@
 ---
-name: feat
 description: Create a full feature action plan using the PWDEVIA 7-question methodology. Covers backend + frontend + tests.
 argument-hint: "[feature description]"
 ---

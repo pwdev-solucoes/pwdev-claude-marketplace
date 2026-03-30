@@ -1,5 +1,4 @@
 ---
-name: map-codebase
 description: Analyze an existing repository and generate documentation for brownfield projects
 ---
 

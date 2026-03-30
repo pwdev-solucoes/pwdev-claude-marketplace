@@ -1,5 +1,4 @@
 ---
-name: list
 description: List all PRDs in the workspace with status summary.
 ---
 

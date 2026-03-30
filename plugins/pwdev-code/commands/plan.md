@@ -1,5 +1,4 @@
 ---
-name: plan
 description: Run the planning phase to break the spec into waves and executable tasks
 ---
 

@@ -1,5 +1,4 @@
 ---
-name: create
 description: Start a structured interview to create a new PRD. Produces Markdown + optional JSON.
 argument-hint: "[feature or system description]"
 ---

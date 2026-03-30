@@ -1,5 +1,4 @@
 ---
-name: quick
 description: All-in-one quick mode for small tasks (up to 5 files)
 ---
 

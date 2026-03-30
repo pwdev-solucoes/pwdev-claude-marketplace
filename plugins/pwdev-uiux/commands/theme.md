@@ -1,5 +1,4 @@
 ---
-name: theme
 description: Create or update a semantic color theme with CSS custom properties + Tailwind config. Supports light/dark modes with WCAG AA contrast validation.
 argument-hint: "[create | update | from-figma | validate]"
 ---

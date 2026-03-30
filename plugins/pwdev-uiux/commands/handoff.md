@@ -1,5 +1,4 @@
 ---
-name: pwdev-handoff
 description: Generates complete handoff documentation for the implemented and approved Vue components. Consolidates specs, findings and acceptance criteria.
 ---
 

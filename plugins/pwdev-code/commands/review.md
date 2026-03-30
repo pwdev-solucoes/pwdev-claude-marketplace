@@ -1,5 +1,4 @@
 ---
-name: review
 description: Run code review + QA test audit on implemented code. Spawns agent-code-reviewer and agent-qa in parallel.
 argument-hint: "[files | --code-only | --tests-only | --diff HEAD~N]"
 ---

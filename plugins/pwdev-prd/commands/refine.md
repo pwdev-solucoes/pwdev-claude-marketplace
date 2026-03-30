@@ -1,5 +1,4 @@
 ---
-name: refine
 description: Update an existing PRD through targeted questions about specific sections.
 argument-hint: "[prd-slug]"
 ---

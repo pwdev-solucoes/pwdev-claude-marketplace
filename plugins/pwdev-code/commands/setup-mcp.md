@@ -1,3 +1,7 @@
+---
+description: Configure MCP servers in .mcp.json for the detected stack
+---
+
 # /setup-mcp — Configure MCP Servers
 
 ## Role

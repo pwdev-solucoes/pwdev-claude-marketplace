@@ -1,5 +1,4 @@
 ---
-name: discover
 description: Run the discovery phase to gather requirements through interviews and research
 ---
 

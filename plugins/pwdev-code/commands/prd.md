@@ -1,5 +1,4 @@
 ---
-name: prd
 description: Create or refine a Product Requirements Document (PRD)
 ---
 

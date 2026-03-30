@@ -1,5 +1,4 @@
 ---
-name: checklist
 description: Generate specialized checklists for different stages of the development cycle
 ---
 

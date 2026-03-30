@@ -1,5 +1,4 @@
 ---
-name: status
 description: Display the current project status and progress report
 ---
 
