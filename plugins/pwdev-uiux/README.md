@@ -1,12 +1,118 @@
-# PWDEV-UIEX v1.0.0
+# PWDEV-UIUX v1.0.0
 
 > **Stack-Agnostic UI/UX Engineering Framework for Claude Code**
+
+*Read this in [Português Brasileiro](./README.pt-BR.md)*
 
 ```
 Configure your stack → Analyze → Implement → Review → Ship
 ```
 
-PWDEV-UIEX orchestrates **7 specialized agents** across a **5-phase workflow** to produce UI components that are spec-driven, accessible (WCAG 2.1 AA), and consistent with your project. Works with any modern frontend stack.
+PWDEV-UIUX orchestrates **8 specialized agents** across a **5-phase workflow** to produce UI components that are spec-driven, accessible (WCAG 2.1 AA), and consistent with your project. Works with any modern frontend stack.
+
+---
+
+## Getting Started
+
+### Step 1 — Install the plugin
+
+```bash
+claude plugin install pwdev-uiux@pwdev-claude-marketplace
+```
+
+### Step 2 — Initialize the framework
+
+```
+/pwdev-uiux:init
+```
+
+This creates the `.planning/ui/` workspace and detects your project's framework.
+
+### Step 3 — Configure your stack
+
+```
+/pwdev-uiux:stack
+```
+
+Choose your stack (shadcn-vue, shadcn-react, primevue, untitled-ui, tailwind-plus, or custom). The configuration is saved to `.planning/ui/stack.json` and used by all agents.
+
+### Step 4 — (Optional) Connect Figma
+
+```
+/pwdev-uiux:setup-figma
+```
+
+Enables bidirectional Figma integration: extract designs into code specs, push implemented components back to Figma.
+
+### Step 5 — Scan your existing project
+
+```
+/pwdev-uiux:scan
+```
+
+Analyzes your codebase and generates `.planning/ui/project-ui-skill.md` — a contextual skill with your project's patterns, tokens, and conventions. Also runs a **best practices compliance check** against 60+ rules.
+
+### Step 6 — Create your theme
+
+```
+/pwdev-uiux:theme create
+```
+
+Generates a semantic color theme with CSS custom properties + Tailwind config. Supports light/dark modes with WCAG AA contrast validation.
+
+### Step 7 — Start building
+
+```
+/pwdev-uiux:start "description of your UI task"
+```
+
+This launches the 5-phase workflow: Understand → Structure → Implement → Review → Handoff.
+
+---
+
+## Usage Examples
+
+### Build a new feature end-to-end
+
+```
+/pwdev-uiux:start "User profile page with avatar, settings form, and activity feed"
+```
+
+The orchestrator guides you through all 5 phases automatically.
+
+### Quick component build (skip spec phases)
+
+```
+/pwdev-uiux:build UserCard
+```
+
+Implements a component directly from an existing spec.
+
+### Review existing components
+
+```
+/pwdev-uiux:review
+```
+
+Runs accessibility (WCAG 2.1 AA) + UX (7-axis + best practices) review in parallel. Generates a compliance report with pass/fail counts by priority (P0/P1/P2).
+
+### Extract theme from Figma
+
+```
+/pwdev-uiux:theme from-figma
+```
+
+Reads Figma variables and generates CSS + Tailwind config automatically.
+
+### Push components to Figma
+
+```
+/pwdev-uiux:push-to-figma UserCard
+/pwdev-uiux:push-to-figma screen
+/pwdev-uiux:push-to-figma tokens
+```
+
+Creates Figma representations from your implemented code.
 
 ---
 
@@ -32,7 +138,7 @@ Stacks are configured via `/pwdev-uiux:stack` and stored in `.planning/ui/stack.
 ```
 /pwdev-uiux:scan (existing project)
      |
-     v generates project-ui-skill.md
+     v generates project-ui-skill.md + compliance report
      |
 /pwdev-uiux:start "description"
      |
@@ -46,8 +152,8 @@ Stacks are configured via `/pwdev-uiux:stack` and stored in `.planning/ui/stack.
 [PHASE 3] IMPLEMENT       -> Components + component-log.md
      | gate: components implemented
      v
-[PHASE 4] REVIEW          -> review-findings.md
-     | gate: zero critical failures
+[PHASE 4] REVIEW          -> review-findings.md + compliance report
+     | gate: zero critical failures + all P0 rules passed
      v
 [PHASE 5] HANDOFF         -> docs/handoff/[feature].md
 ```
@@ -56,17 +162,33 @@ Stacks are configured via `/pwdev-uiux:stack` and stored in `.planning/ui/stack.
 |-------|-------------|------|
 | **UNDERSTAND** | UX analyst creates structured spec | Spec approved by human |
 | **STRUCTURE** | Design bridge translates Figma into implementation spec | Figma spec filled |
-| **IMPLEMENT** | UI builder creates components following stack config + spec | All components logged |
-| **REVIEW** | A11y reviewer + UX critic run in parallel | Zero critical failures |
+| **IMPLEMENT** | UI builder creates components following stack config + spec + best practices | All components logged |
+| **REVIEW** | A11y reviewer + UX critic run in parallel with compliance report | Zero critical failures + all P0 passed |
 | **HANDOFF** | Generate delivery documentation | Doc in `docs/handoff/` |
+
+### Best Practices Compliance
+
+The framework enforces **60+ UI/UX rules** organized by priority:
+
+| Priority | Meaning | Enforcement |
+|----------|---------|-------------|
+| **P0 — Mandatory** | Violations are bugs | Always enforced. Blocks review gate. |
+| **P1 — Strong default** | Apply unless justified | Enforced by default. Skip requires documentation. |
+| **P2 — Recommended** | Apply when context allows | Tracked in compliance report. |
+| **P3 — Contextual** | Case by case | Not enforced, informational. |
+
+Rules cover: visual foundation, typography, layout & spacing, button hierarchy, navigation, tabs, data interactions, destructive actions, access & onboarding, forms, reports, errors & validation, performance, and motion & focus.
+
+### 7-Axis UX Review + Rule Compliance
+
+The UX critic reviews every component against two complementary lenses:
+
+1. **7 Qualitative Axes**: Experience, Gestalt, Trust, Decision, Cognition, Attention, Accessibility
+2. **Rule-Based Compliance**: 60+ concrete rules with P0–P3 priority from the best practices ruleset
 
 ### Project Context
 
-The **ui-scanner** analyzes your existing project before development and generates a project-specific contextual skill that the `ui-builder` uses for consistency.
-
-### 7-Axis UX Review
-
-The UX critic reviews every component against: **Experience**, **Gestalt**, **Trust**, **Decision**, **Cognition**, **Attention**, **Accessibility**.
+The **ui-scanner** analyzes your existing project before development and generates a project-specific contextual skill that the `ui-builder` uses for consistency. It also runs a compliance check to identify existing violations.
 
 ---
 
@@ -77,11 +199,11 @@ The UX critic reviews every component against: **Experience**, **Gestalt**, **Tr
 | **orchestrator** | Opus | Coordinates phases, reads stack.json. Never writes code. |
 | **ux-analyst** | Sonnet | Requirements into structured UX specs |
 | **design-bridge** | Sonnet | Bidirectional Figma bridge (read + write) |
-| **ui-scanner** | Sonnet | Analyzes existing UI, generates contextual skill |
-| **ui-builder** | Sonnet | Reads stack.json, loads skills, implements components |
+| **ui-scanner** | Sonnet | Analyzes existing UI, generates contextual skill + compliance report |
+| **ui-builder** | Sonnet | Reads stack.json, loads skills, implements components following best practices |
 | **theme-builder** | Sonnet | Creates semantic color themes (CSS vars + Tailwind), light/dark, WCAG AA contrast |
-| **a11y-reviewer** | Haiku | WCAG 2.1 AA compliance audit |
-| **ux-critic** | Sonnet | 7-axis UX review with principle-based findings |
+| **a11y-reviewer** | Haiku | WCAG 2.1 AA + best practices P0 accessibility rules audit |
+| **ux-critic** | Sonnet | 7-axis UX review + best practices rule compliance with P0–P3 findings |
 
 ---
 
@@ -94,7 +216,7 @@ The UX critic reviews every component against: **Experience**, **Gestalt**, **Tr
 | `/pwdev-uiux:init` | Initialize framework, detect stack, create `.planning/ui/` |
 | `/pwdev-uiux:stack` | Configure UI stack (shadcn-vue, shadcn-react, primevue, untitled-ui, custom) |
 | `/pwdev-uiux:setup-figma` | Connect Figma MCP |
-| `/pwdev-uiux:scan` | Scan existing project UI |
+| `/pwdev-uiux:scan` | Scan existing project UI + best practices compliance check |
 
 ### Theming
 
@@ -117,7 +239,7 @@ The UX critic reviews every component against: **Experience**, **Gestalt**, **Tr
 
 | Command | What it does |
 |---------|-------------|
-| `/pwdev-uiux:review` | A11y + UX review in parallel |
+| `/pwdev-uiux:review` | A11y + UX + best practices compliance review in parallel |
 | `/pwdev-uiux:handoff` | Generate delivery docs |
 | `/pwdev-uiux:status` | View current flow state |
 
@@ -154,6 +276,8 @@ Stored in `.planning/ui/stack.json`:
 
 | Skill | Domain |
 |-------|--------|
+| **ui-best-practices** | Canonical UI/UX ruleset (14 sections, 60+ rules, P0–P3 priority) |
+| **ui-theme-reference** | Canonical design token registry (colors, typography, spacing, shadows, z-index, motion) |
 | shadcn-vue | shadcn-vue CLI, components, vee-validate |
 | reka-ui | Headless primitives, asChild, controlled state |
 | figma | Bidirectional Figma integration |
@@ -169,5 +293,5 @@ Stored in `.planning/ui/stack.json`:
 
 Apache-2.0 — See [LICENSE](./LICENSE)
 
-*PWDEV-UIEX v1.0.0 — Quality as a gate, not an aspiration.*
+*PWDEV-UIUX v1.0.0 — Quality as a gate, not an aspiration.*
 *Maintained by [Paulo Soares](https://github.com/pwdev-solucoes)*

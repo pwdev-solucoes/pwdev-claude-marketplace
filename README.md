@@ -1,6 +1,8 @@
 # PWDEV Marketplace
 
-Plugin marketplace  for [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
+*Read this in [Português Brasileiro](./README.pt-BR.md)*
+
+Plugin marketplace for [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
 ---
 

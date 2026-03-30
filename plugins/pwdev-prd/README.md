@@ -1,5 +1,7 @@
 # PWDEV-PRD v1.0.0
 
+*Read this in [Português Brasileiro](./README.pt-BR.md)*
+
 > **Interview-Driven PRD Creation for Claude Code**
 
 ```

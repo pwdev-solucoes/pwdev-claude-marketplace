@@ -1,5 +1,7 @@
 # PWDEV-FEAT v1.0.0
 
+*Read this in [Português Brasileiro](./README.pt-BR.md)*
+
 > **Simplified AI-Assisted Feature Development for Claude Code**
 
 ```

@@ -11,6 +11,8 @@ consumes:
 produces:
   - Semantic theme files (CSS variables + Tailwind config)
   - .planning/ui/theme-spec.md (theme documentation)
+skills:
+  - ui-theme-reference
 never:
   - Use hardcoded hex values in components (only semantic tokens)
   - Create tokens without light AND dark mode

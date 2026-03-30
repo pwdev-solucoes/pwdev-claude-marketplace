@@ -1,5 +1,7 @@
 # PWDEV-CODE v1.0.0
 
+*Read this in [Português Brasileiro](./README.pt-BR.md)*
+
 > **Spec-Driven Development Framework for Claude Code**
 
 ```
