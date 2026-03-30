@@ -1,5 +1,4 @@
 ---
-name: init
 description: Initialize the pwdev-prd framework — creates .planning/prds/ workspace.
 ---
 

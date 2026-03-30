@@ -1,5 +1,4 @@
 ---
-name: setup
 description: Generate a CLAUDE.md governance file for the project based on detected stack and conventions.
 ---
 

@@ -1,5 +1,4 @@
 ---
-name: setup-figma
 description: >
   Verify, install, and configure the Figma MCP server for Claude Code.
   Guides the user through connecting their Figma account step-by-step.

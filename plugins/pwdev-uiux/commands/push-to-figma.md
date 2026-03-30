@@ -1,5 +1,4 @@
 ---
-name: push-to-figma
 description: >
   Push implemented Vue components to Figma — creates screens, component library,
   or design system from code. Uses the design-bridge agent in reverse mode (Code → Figma).

@@ -1,5 +1,4 @@
 ---
-name: init
 description: Initialize the pwdev-feat framework — creates .planning/feat/ workspace structure.
 ---
 

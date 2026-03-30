@@ -1,5 +1,4 @@
 ---
-name: init
 description: Initialize the PWDEV-CODE v3 framework in a repository
 ---
 
@@ -118,7 +117,6 @@ Suggest: "/pwdev-code:map-codebase to analyze existing repo."
 2. /pwdev-code:prd — create product PRD
 3. /pwdev-code:roadmap — generate executable roadmap
 4. /pwdev-code:discover — start first feature
-5. /pwdev-code:skill install skill-uiux — install UI/UX skill
 ```
 
 ## Prohibitions

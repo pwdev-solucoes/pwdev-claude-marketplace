@@ -1,5 +1,4 @@
 ---
-name: cleanup
 description: Archive artifacts from completed phases and keep .planning/ organized
 ---
 

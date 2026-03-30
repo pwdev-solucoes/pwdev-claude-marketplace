@@ -1,5 +1,4 @@
 ---
-name: quick
 description: Quick task — no plan file, direct execution for simple tasks (bugfix, config, rename, 1-3 files).
 argument-hint: "[task description]"
 ---

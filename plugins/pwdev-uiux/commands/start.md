@@ -1,5 +1,4 @@
 ---
-name: pwdev-start
 description: Starts a new Vue UI/UX development flow. Activates the orchestrator and begins with UX analysis. Use with task description as argument.
 argument-hint: "[UI task description, e.g.: 'create 3-step onboarding form']"
 ---

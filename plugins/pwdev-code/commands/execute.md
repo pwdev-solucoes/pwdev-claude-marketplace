@@ -1,5 +1,4 @@
 ---
-name: execute
 description: Execute planned tasks by delegating to the executor agent
 ---
 

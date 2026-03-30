@@ -1,5 +1,4 @@
 ---
-name: design
 description: Run the design phase to produce SPEC.md with architecture decisions
 ---
 

@@ -1,5 +1,4 @@
 ---
-name: deps
 description: Audit project dependencies for vulnerabilities, deprecations, and unused packages
 ---
 

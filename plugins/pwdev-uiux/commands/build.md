@@ -1,5 +1,4 @@
 ---
-name: pwdev-build
 description: Implements Vue 3 components with shadcn-vue + Reka UI based on the validated spec. Checks gates before starting. Uses project-ui-skill when available.
 argument-hint: "[Vue component name or 'all']"
 ---

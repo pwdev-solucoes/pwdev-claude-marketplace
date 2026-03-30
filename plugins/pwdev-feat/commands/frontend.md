@@ -1,5 +1,4 @@
 ---
-name: frontend
 description: Create a frontend-focused action plan — components, pages, composables, E2E tests with Playwright.
 argument-hint: "[frontend task description]"
 ---

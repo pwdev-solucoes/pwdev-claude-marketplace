@@ -1,5 +1,4 @@
 ---
-name: pwdev-review
 description: Runs a full UX + accessibility Vue review in parallel. Activates a11y-reviewer (WCAG 2.1 AA + Reka UI) and ux-critic (7 Playbook axes) simultaneously.
 ---
 

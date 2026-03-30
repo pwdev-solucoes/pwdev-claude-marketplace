@@ -1,5 +1,4 @@
 ---
-name: review
 description: Create a code review plan — security, performance, conventions, test coverage.
 argument-hint: "[files or scope to review, e.g. 'src/services/' or 'last 3 commits']"
 ---

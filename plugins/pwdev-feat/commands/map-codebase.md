@@ -1,5 +1,4 @@
 ---
-name: map-codebase
 description: Analyze the existing codebase and generate a context document for the planner agent.
 ---
 

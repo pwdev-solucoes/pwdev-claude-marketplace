@@ -1,5 +1,4 @@
 ---
-name: resume
 description: Resume a previous session by reading persisted state and recommending next action
 ---
 

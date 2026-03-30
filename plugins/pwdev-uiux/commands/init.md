@@ -1,5 +1,4 @@
 ---
-name: init
 description: Initialize the pwdev-uiux framework — detects project stack, creates .planning/ui/ workspace, checks Figma MCP.
 ---
 

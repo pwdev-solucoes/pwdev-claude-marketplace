@@ -1,5 +1,4 @@
 ---
-name: health
 description: Run a comprehensive project health diagnostic across code, tests, dependencies, security, and process
 ---
 

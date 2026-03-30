@@ -1,5 +1,4 @@
 ---
-name: roadmap
 description: Decomposes PRD into an executable multi-file roadmap with traceability. Generates .planning/roadmap/ structure.
 ---
 

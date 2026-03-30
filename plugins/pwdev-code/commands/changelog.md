@@ -1,5 +1,4 @@
 ---
-name: changelog
 description: Generate CHANGELOG.md from commits, summaries, and verifications
 ---
 

@@ -1,5 +1,4 @@
 ---
-name: pwdev-scan
 description: >
   Scans the existing UI of the Vue project and generates a contextual skill in
   .planning/ui/project-ui-skill.md. Use before starting development

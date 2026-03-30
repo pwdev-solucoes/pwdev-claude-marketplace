@@ -1,5 +1,4 @@
 ---
-name: verify
 description: Run the verification phase to validate implementation against the spec
 ---
 
