@@ -18,14 +18,23 @@ Filosofia central em todos os plugins:
 
 ---
 
+## Novidades da v1.1.0
+
+- **Seleção de Idioma** — Todos os comandos agora suportam Português (PT-BR) e Inglês (EN). Configurado uma vez durante o `/init`, usado silenciosamente em todos os comandos.
+- **Perfis de Modelo** — Escolha entre os perfis `performance`, `balanced` ou `economy` para controlar qual modelo Claude (Opus/Sonnet/Haiku) cada agente utiliza.
+- **Trilha de Auditoria (opt-in)** — Banco de dados SQLite opcional em `.planning/pwdev-audit.db` registra todos os comandos, decisões e artefatos. Desativado por padrão, nunca versionado.
+- **Configuração Unificada** — Idioma, perfil de modelo e configuração de auditoria armazenados em `.planning/config.json`, compartilhados entre todos os plugins.
+
+---
+
 ## Plugins
 
 | Plugin | Descrição | Versão | Licença |
 |--------|-----------|:------:|:------:|
-| [**pwdev-code**](./plugins/pwdev-code/) | Framework de desenvolvimento orientado a especificação — 11 agentes, 6 fases, 21 comandos | 1.0.0 | Apache-2.0 |
-| [**pwdev-uiux**](./plugins/pwdev-uiux/) | Framework de engenharia UI/UX — 7 agentes, fluxo de 5 fases, integração com Figma, WCAG 2.1 AA | 1.0.0 | Apache-2.0 |
-| [**pwdev-feat**](./plugins/pwdev-feat/) | Desenvolvimento simplificado de features — planos PWDEVIA com 7 perguntas + executor, rápido e prático | 1.0.0 | Apache-2.0 |
-| [**pwdev-prd**](./plugins/pwdev-prd/) | Criação de PRD guiada por entrevista — entrevista estruturada em 12 etapas, Markdown + JSON, agnóstico de tecnologia | 1.0.0 | Apache-2.0 |
+| [**pwdev-code**](./plugins/pwdev-code/) | Framework de desenvolvimento orientado a especificação — 11 agentes, 6 fases, 21 comandos | 1.1.0 | Apache-2.0 |
+| [**pwdev-uiux**](./plugins/pwdev-uiux/) | Framework de engenharia UI/UX — 7 agentes, fluxo de 5 fases, integração com Figma, WCAG 2.1 AA | 1.1.0 | Apache-2.0 |
+| [**pwdev-feat**](./plugins/pwdev-feat/) | Desenvolvimento simplificado de features — planos PWDEVIA com 7 perguntas + executor, rápido e prático | 1.1.0 | Apache-2.0 |
+| [**pwdev-prd**](./plugins/pwdev-prd/) | Criação de PRD guiada por entrevista — entrevista estruturada em 12 etapas, Markdown + JSON, agnóstico de tecnologia | 1.1.0 | Apache-2.0 |
 
 ### pwdev-code
 
@@ -116,8 +125,147 @@ Instale apenas os plugins de que você precisa. Cada um funciona de forma indepe
 
 ---
 
+## Configuração
+
+Todos os plugins compartilham uma configuração unificada armazenada em `.planning/config.json`. Ela é definida durante o `/init` de qualquer plugin.
+
+### Seleção de Idioma
+
+Todos os comandos suportam **Português (PT-BR)** e **Inglês (EN)**. O idioma é configurado uma vez e aplicado em todos os plugins.
+
+- Durante o `/init`: você escolhe o idioma
+- Durante outros comandos: a preferência salva é usada silenciosamente
+- Troca durante a conversa: se você mudar de idioma, o agente detecta e oferece atualizar sua preferência
+
+```json
+{
+  "lang": "pt-BR"
+}
+```
+
+Termos tecnicos (API, CRUD, REST, endpoint) permanecem sempre em inglês, independentemente do idioma escolhido. Nomes de arquivos e chaves de dados estruturados também permanecem em inglês.
+
+### Perfis de Modelo
+
+Cada plugin usa agentes especializados que podem rodar em diferentes modelos Claude. Os perfis de modelo permitem equilibrar qualidade vs. custo:
+
+| Perfil | Orquestrador | Planner / Executor | Reviewer | Scanner |
+|--------|:----------:|:-----------------:|:--------:|:-------:|
+| **performance** | Opus | Opus | Sonnet | Sonnet |
+| **balanced** | Opus | Sonnet | Sonnet | Haiku |
+| **economy** | Sonnet | Sonnet | Haiku | Haiku |
+
+- Durante o `/init`: você escolhe um perfil (padrão: balanced)
+- Override de agentes específicos: `model_overrides` no config.json
+
+```json
+{
+  "lang": "pt-BR",
+  "model_profile": "balanced",
+  "model_overrides": {
+    "agent-architect": "opus"
+  }
+}
+```
+
+---
+
+## Trilha de Auditoria
+
+Todos os plugins compartilham um banco de dados SQLite opcional em `.planning/pwdev-audit.db`. Ele é **desativado por padrão** e configurado durante o `/init`. O arquivo do banco nunca é versionado (adicionado automaticamente ao `.gitignore`).
+
+A trilha de auditoria registra:
+- **Eventos** — cada execução de comando (início, conclusão, falha) com timestamp, agente, modelo e fase
+- **Decisões** — decisões arquiteturais e de produto com justificativa e alternativas consideradas
+- **Artefatos** — arquivos criados ou modificados pelo framework, com rastreamento de status
+- **Alterações de config** — histórico de alterações de idioma, perfil de modelo e outras configurações
+
+O banco de auditoria funciona **em paralelo** com os arquivos Markdown — os agentes continuam lendo e escrevendo Markdown como antes. O SQLite é uma camada adicional para histórico e análise.
+
+### Consultando a Trilha de Auditoria
+
+```bash
+# Últimos 20 eventos
+sqlite3 .planning/pwdev-audit.db "SELECT timestamp, plugin, command, action, target FROM events ORDER BY timestamp DESC LIMIT 20;"
+
+# Todas as decisões com justificativa
+sqlite3 .planning/pwdev-audit.db "SELECT timestamp, phase, decision, rationale FROM decisions ORDER BY timestamp;"
+
+# Frequência de comandos
+sqlite3 .planning/pwdev-audit.db "SELECT command, COUNT(*) as runs FROM events WHERE action='completed' GROUP BY command ORDER BY runs DESC;"
+```
+
+Adicione `.planning/pwdev-audit.db` ao `.gitignore` (recomendado).
+
+---
+
+## Atualização
+
+### Atualizar o marketplace
+
+Baixe as últimas alterações do repositório do marketplace:
+
+```bash
+claude plugin marketplace update
+```
+
+Isso executa `git pull` na cópia local em `~/.claude/plugins/marketplaces/pwdev-claude-marketplace/`.
+
+### Atualizar plugins instalados
+
+Reinstale cada plugin que você usa para obter a versão mais recente:
+
+```bash
+claude plugin install pwdev-code@pwdev-claude-marketplace
+claude plugin install pwdev-uiux@pwdev-claude-marketplace
+claude plugin install pwdev-feat@pwdev-claude-marketplace
+claude plugin install pwdev-prd@pwdev-claude-marketplace
+```
+
+Isso copia os arquivos atualizados do plugin para o cache local. **Os dados do seu projeto (`.planning/`) nunca são tocados** — apenas os comandos e agentes do plugin são atualizados.
+
+### Migrar seu workspace (se necessário)
+
+Após atualizar, execute `/init` no seu projeto para verificar se há etapas de migração:
+
+```
+/pwdev-feat:init
+/pwdev-code:init
+/pwdev-uiux:init
+/pwdev-prd:init
+```
+
+O comando `init` detecta workspaces existentes e:
+- Preserva todos os seus dados (planos, PRDs, specs, relatórios)
+- Oferece migração guiada se a estrutura de pastas mudou
+- Pede para confirmar ou atualizar idioma, perfil de modelo e configurações de auditoria
+- Nunca sobrescreve sem sua confirmação
+
+### O que é atualizado vs. o que permanece
+
+| Componente | Localização | Na atualização |
+|------------|-------------|---------------|
+| Comandos e agentes | `~/.claude/plugins/cache/` | **Substituídos** pela nova versão |
+| Config do plugin | `~/.claude/plugins/installed_plugins.json` | **Atualizado** (versão, commit SHA) |
+| Dados do projeto | `.planning/` (seu projeto) | **Intocados** — nunca modificados por atualizações |
+| config.json | `.planning/config.json` | **Preservado** — init usa merge, não sobrescreve |
+| Banco de auditoria | `.planning/pwdev-audit.db` | **Preservado** — append-only, nunca resetado |
+
+### Compatibilidade de versão
+
+Cada plugin armazena sua versão em `.claude-plugin/plugin.json`. Após atualizar, você pode verificar:
+
+```bash
+# Verificar versão instalada
+cat ~/.claude/plugins/cache/pwdev-claude-marketplace/pwdev-feat/*/plugin.json | grep version
+```
+
+Mudanças incompatíveis (bumps de versão major) são documentadas no README de cada plugin em "Novidades".
+
+---
+
 ## Licença
 
 Apache-2.0
 
-*Mantido por [Paulo Soares](https://github.com/pwdev-solucoes)*
+*Mantido por [Paulo Soares](https://github.com/soarescbm)*
