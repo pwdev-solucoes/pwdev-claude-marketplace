@@ -1,6 +1,6 @@
 ---
-description: Query the audit trail database for events, decisions, artifacts, and statistics
-argument-hint: "[summary | events | decisions | artifacts | stats | query <SQL>]"
+description: Query the audit trail database for events, decisions, artifacts, and statistics. Export full PDF report.
+argument-hint: "[summary | events | decisions | artifacts | stats | export | query <SQL>]"
 ---
 
 # /pwdev-code:audit — Audit Trail Query
@@ -48,7 +48,8 @@ Parse `$ARGUMENTS` to determine the sub-command:
 | `decisions` | Go to STEP 4 — Decision Log |
 | `artifacts` | Go to STEP 5 — Artifact Tracker |
 | `stats` | Go to STEP 6 — Statistics |
-| `query <SQL>` | Go to STEP 7 — Custom Query |
+| `export` | Go to STEP 7 — Export PDF Report |
+| `query <SQL>` | Go to STEP 8 — Custom Query |
 
 If unrecognized, show help:
 ```markdown
@@ -61,6 +62,7 @@ Available sub-commands:
   decisions  — All architectural/product decisions with rationale
   artifacts  — Files tracked by the framework
   stats      — Command frequency, durations, phase distribution
+  export     — Generate a full PDF audit report
   query <SQL> — Run a custom SQL query against the audit database
 
 Examples:
@@ -68,6 +70,7 @@ Examples:
   /pwdev-code:audit events
   /pwdev-code:audit decisions
   /pwdev-code:audit stats
+  /pwdev-code:audit export
   /pwdev-code:audit query "SELECT * FROM events WHERE action='failed'"
 ```
 
@@ -301,7 +304,281 @@ Present as:
 
 ---
 
-## STEP 7 — Custom Query
+## STEP 7 — Export PDF Report
+
+Generate a comprehensive audit report as PDF.
+
+### STEP 7.1 — Check Dependencies
+
+```bash
+command -v python3 >/dev/null 2>&1 && python3 -c "import weasyprint" 2>/dev/null && echo "WEASYPRINT_OK"
+command -v python3 >/dev/null 2>&1 && python3 -c "import markdown" 2>/dev/null && echo "MARKDOWN_OK"
+command -v pandoc >/dev/null 2>&1 && echo "PANDOC_OK"
+command -v wkhtmltopdf >/dev/null 2>&1 && echo "WKHTMLTOPDF_OK"
+```
+
+Determine the PDF generation strategy based on available tools (in priority order):
+
+1. **pandoc** (preferred) — `pandoc` available
+2. **weasyprint** — `python3` + `weasyprint` + `markdown` available
+3. **wkhtmltopdf** — `wkhtmltopdf` available
+4. **None** — fallback to Markdown export only
+
+If no PDF tool is available, inform:
+- PT-BR: `Nenhuma ferramenta de PDF encontrada. Gerando relatorio em Markdown. Para PDF, instale: pandoc (recomendado), weasyprint, ou wkhtmltopdf.`
+- EN: `No PDF tool found. Generating Markdown report. For PDF, install: pandoc (recommended), weasyprint, or wkhtmltopdf.`
+
+### STEP 7.2 — Collect All Data
+
+Run all queries from STEP 2 (Summary), STEP 3 (Events), STEP 4 (Decisions), STEP 5 (Artifacts), and STEP 6 (Statistics) and store results.
+
+Additionally, collect project metadata:
+```bash
+# Project name (from git or directory)
+basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+
+# Current date
+date +"%Y-%m-%d %H:%M"
+
+# Total time span of audit data
+sqlite3 .planning/pwdev-audit.db "SELECT MIN(timestamp) || ' to ' || MAX(timestamp) FROM events;"
+
+# Git branch
+git branch --show-current 2>/dev/null
+```
+
+### STEP 7.3 — Generate Markdown Report
+
+Write the full report to `.planning/audit-report.md`:
+
+```markdown
+# Audit Trail Report
+
+**Project:** {project_name}
+**Branch:** {branch}
+**Generated:** {current_date}
+**Period:** {first_event_date} to {last_event_date}
+**Language:** {lang}
+
+---
+
+## 1. Executive Summary
+
+- **Total events:** {count}
+- **Total decisions:** {count}
+- **Active artifacts:** {count}
+- **Configuration changes:** {count}
+- **Success rate:** {pct}% ({completed} completed / {failed} failed)
+
+### Events by Action
+| Action | Count |
+|--------|-------|
+{rows}
+
+---
+
+## 2. Activity Timeline (last 14 days)
+
+| Day | Events |
+|-----|--------|
+{rows}
+
+---
+
+## 3. Event Log (last 50)
+
+| # | Timestamp | Plugin | Command | Agent | Phase | Action | Target |
+|---|-----------|--------|---------|-------|-------|--------|--------|
+{rows}
+
+---
+
+## 4. Decisions
+
+| # | Timestamp | Phase | Decision | Rationale | Alternatives | Reversible |
+|---|-----------|-------|----------|-----------|--------------|------------|
+{rows}
+
+---
+
+## 5. Artifacts
+
+### By Type
+| Type | Count |
+|------|-------|
+{rows}
+
+### All Artifacts
+| Path | Type | Phase | Status | Created |
+|------|------|-------|--------|---------|
+{rows}
+
+---
+
+## 6. Statistics
+
+### Command Frequency
+| Command | Runs |
+|---------|------|
+{rows}
+
+### Performance
+| Command | Runs | Avg (s) | Min (s) | Max (s) |
+|---------|------|---------|---------|---------|
+{rows}
+
+### Events by Phase
+| Phase | Count |
+|-------|-------|
+{rows}
+
+### Events by Plugin
+| Plugin | Count |
+|--------|-------|
+{rows}
+
+---
+
+## 7. Failed Commands
+
+| Timestamp | Plugin | Command | Agent | Detail |
+|-----------|--------|---------|-------|--------|
+{rows}
+
+---
+
+## 8. Configuration Change History
+
+| Timestamp | Field | Old Value | New Value | Changed By |
+|-----------|-------|-----------|-----------|------------|
+{rows}
+
+---
+
+*Report generated by /pwdev-code:audit export*
+```
+
+### STEP 7.4 — Convert to PDF
+
+Based on the available tool detected in STEP 7.1:
+
+**Option 1 — pandoc:**
+```bash
+pandoc .planning/audit-report.md \
+  -o .planning/audit-report.pdf \
+  --pdf-engine=pdflatex \
+  -V geometry:margin=2cm \
+  -V fontsize=10pt \
+  -V mainfont="Inter" \
+  --highlight-style=tango \
+  2>/dev/null || \
+pandoc .planning/audit-report.md \
+  -o .planning/audit-report.pdf \
+  -V geometry:margin=2cm \
+  -V fontsize=10pt \
+  2>/dev/null
+```
+
+If `pdflatex` is not available, try with `wkhtmltopdf` engine:
+```bash
+pandoc .planning/audit-report.md \
+  -o .planning/audit-report.pdf \
+  --pdf-engine=wkhtmltopdf \
+  2>/dev/null
+```
+
+**Option 2 — weasyprint:**
+```bash
+python3 -c "
+import markdown, weasyprint
+
+with open('.planning/audit-report.md', 'r') as f:
+    md_content = f.read()
+
+html = markdown.markdown(md_content, extensions=['tables', 'fenced_code'])
+
+styled_html = '''<!DOCTYPE html>
+<html><head><meta charset=\"utf-8\">
+<style>
+  body { font-family: Inter, system-ui, sans-serif; font-size: 10pt; margin: 2cm; color: #1a1a1a; line-height: 1.5; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #333; padding-bottom: 8px; }
+  h2 { font-size: 14pt; color: #333; margin-top: 24px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+  h3 { font-size: 11pt; color: #555; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 9pt; }
+  th { background: #f4f4f5; font-weight: 600; text-align: left; padding: 6px 10px; border: 1px solid #ddd; }
+  td { padding: 5px 10px; border: 1px solid #eee; }
+  tr:nth-child(even) { background: #fafafa; }
+  code { background: #f4f4f5; padding: 1px 4px; border-radius: 3px; font-size: 9pt; }
+  hr { border: none; border-top: 1px solid #eee; margin: 20px 0; }
+  strong { color: #111; }
+</style>
+</head><body>''' + html + '</body></html>'
+
+weasyprint.HTML(string=styled_html).write_pdf('.planning/audit-report.pdf')
+"
+```
+
+**Option 3 — wkhtmltopdf:**
+```bash
+python3 -c "
+import markdown
+
+with open('.planning/audit-report.md', 'r') as f:
+    md_content = f.read()
+
+html = markdown.markdown(md_content, extensions=['tables', 'fenced_code'])
+
+styled_html = '''<!DOCTYPE html>
+<html><head><meta charset=\"utf-8\">
+<style>
+  body { font-family: Inter, system-ui, sans-serif; font-size: 10pt; margin: 0; color: #1a1a1a; line-height: 1.5; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #333; padding-bottom: 8px; }
+  h2 { font-size: 14pt; color: #333; margin-top: 24px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 9pt; }
+  th { background: #f4f4f5; font-weight: 600; text-align: left; padding: 6px 10px; border: 1px solid #ddd; }
+  td { padding: 5px 10px; border: 1px solid #eee; }
+  tr:nth-child(even) { background: #fafafa; }
+</style>
+</head><body>''' + html + '</body></html>'
+
+with open('.planning/audit-report.html', 'w') as f:
+    f.write(styled_html)
+" && wkhtmltopdf --quiet --margin-top 20mm --margin-bottom 20mm --margin-left 20mm --margin-right 20mm .planning/audit-report.html .planning/audit-report.pdf && rm -f .planning/audit-report.html
+```
+
+**Fallback — Markdown only:**
+Skip PDF generation. The `.planning/audit-report.md` file is still available.
+
+### STEP 7.5 — Confirm Output
+
+Check if PDF was generated:
+```bash
+[ -f ".planning/audit-report.pdf" ] && echo "PDF_OK" || echo "PDF_FAIL"
+```
+
+If PDF_OK:
+- PT-BR: `Relatorio de auditoria gerado com sucesso:`
+- EN: `Audit report generated successfully:`
+
+```markdown
+  - PDF: .planning/audit-report.pdf
+  - Markdown: .planning/audit-report.md
+```
+
+If PDF_FAIL (but Markdown exists):
+- PT-BR: `Falha ao gerar PDF. Relatorio disponivel em Markdown: .planning/audit-report.md`
+- EN: `PDF generation failed. Report available as Markdown: .planning/audit-report.md`
+
+Ensure both files are in `.gitignore`:
+```bash
+if ! grep -q "audit-report" .gitignore 2>/dev/null; then
+  echo -e "\n# Audit reports (not versioned)\n.planning/audit-report.md\n.planning/audit-report.pdf" >> .gitignore
+fi
+```
+
+---
+
+## STEP 8 — Custom Query
 
 Extract the SQL from `$ARGUMENTS` after `query `.
 
@@ -330,7 +607,7 @@ Present the raw result in a formatted table. If the query fails, show the SQLite
 
 ---
 
-## STEP 8 — Audit Log (self-referential)
+## STEP 9 — Audit Log (self-referential)
 
 After presenting results, log this query:
 ```bash
