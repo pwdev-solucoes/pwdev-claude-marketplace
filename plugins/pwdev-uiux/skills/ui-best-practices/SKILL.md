@@ -1,7 +1,7 @@
 ---
 name: ui-best-practices
 description: >
-  Canonical UI/UX best practices ruleset with 14 sections and 60+ rules prioritized
+  Canonical UI/UX best practices ruleset with 14 sections and 70+ rules prioritized
   P0–P3. Use when implementing, reviewing, or auditing UI components. P0 rules are
   mandatory — violations are bugs. All rules reference tokens from ui-theme-reference.
 ---
@@ -177,19 +177,22 @@ Implement a universal search (actions, pages, data) accessible via `Cmd+K` / `Ct
 ### 5.5 Separate Routine vs. Occasional `P1`
 If the menu has many items, split by frequency: daily-use items at the top, always visible. Occasional items (settings, integrations) grouped at the bottom or in a submenu.
 
-### 5.6 Active Item Indicator `P0`
+### 5.6 Group Items into Sections and Submenus `P1`
+When the menu has many items, divide them into logical sections with clear titles or collapsible submenus. Instead of processing 12 loose items, the user sees 3 organized groups. Use visual separators or section labels to reduce cognitive load.
+
+### 5.7 Active Item Indicator `P0`
 The currently active menu item must be visually distinct: highlight color, differentiated background, colored sidebar accent, or a combination. The user must always know where they are.
 
-### 5.7 Position Communicates Hierarchy `P2`
+### 5.8 Position Communicates Hierarchy `P2`
 In top menus: primary items left, secondary items right. In sidebars: primary items top, secondary items bottom. Spatial position is an implicit priority signal.
 
-### 5.8 Main CTA in the Menu `P2`
+### 5.9 Main CTA in the Menu `P2`
 If there is a high-frequency action (e.g., "New project", "Create task"), add a CTA button directly in the navigation. Eliminates extra clicks to reach the most important action.
 
-### 5.9 Menu Order: Process or Frequency `P2`
+### 5.10 Menu Order: Process or Frequency `P2`
 Items follow either process order (Register → Configure → Execute → Analyze) or frequency order (most used first). Pick one logic and apply consistently.
 
-### 5.10 Mobile Navigation `P1`
+### 5.11 Mobile Navigation `P1`
 - **Up to 4–5 functions**: bottom bar (thumb-reachable)
 - **Complex menus**: hamburger in top bar, aligned right
 - Maximum 4 visible items on mobile — group the rest under "More"
@@ -231,7 +234,16 @@ Tables are denser, more scannable, and more efficient — use as default. Use ca
 ### 7.3 Quick Actions in Listings `P1`
 Include 2–3 frequent actions directly in the listing (duplicate, delete, publish). Prevents opening each item just to perform a simple action. For more actions, use a kebab menu (three dots).
 
-### 7.4 Click Behavior Proportional to Data `P1`
+### 7.4 Many Actions = Overflow Menu `P1`
+When an object has many available actions, showing all of them clutters the interface. Surface the 2–3 most frequent actions inline and group the rest in a kebab menu (three dots). The interface stays clean without losing functionality.
+
+### 7.5 Complex Objects Need Tabs or Sections `P1`
+When an object has many data fields and relationships, do not dump everything on a single scrollable page. Use tabs or well-defined sections to organize information by context — e.g., "General", "History", "Settings". This reduces cognitive load and improves navigation.
+
+### 7.6 Place the Create Button Where Most Visible `P1`
+The "create new" button can live in the page header, sidebar, or between cards. What matters most is that it is visible and accessible in the context where the user needs it. Never bury the primary creation action.
+
+### 7.7 Click Behavior Proportional to Data `P1`
 | Data volume | Open with |
 |-------------|-----------|
 | 3–5 fields | Modal / popup |
@@ -240,13 +252,13 @@ Include 2–3 frequent actions directly in the listing (duplicate, delete, publi
 
 A full page for 3 fields is wasteful; a popup for 20 fields is suffocating.
 
-### 7.5 Creation: Popup First, Page Later `P2`
+### 7.8 Creation: Popup First, Page Later `P2`
 If an object has many fields but few are required, start with a popup asking only the essentials (name, type). After creation, redirect to the full detail page. Reduces initial friction.
 
-### 7.6 Auto-Save When Safe `P2`
+### 7.9 Auto-Save When Safe `P2`
 Save automatically when edits are local and have no side effects. Show subtle feedback: "Saved" / "Saving...". When edits trigger emails, affect integrations, or impact other users, require an explicit "Save changes" button.
 
-### 7.7 Empty State = Guidance `P0`
+### 7.10 Empty State = Guidance `P0`
 Never show a blank table. Empty states must include: an illustration or visual, a clear explanation of what belongs here, and a prominent CTA ("Create your first project"). Optionally: a short video or link to docs.
 
 ---
@@ -313,6 +325,9 @@ Record brief, focused videos showing exactly how each key feature works. Place t
 ### 9.14 Educational Message Sequences `P3`
 Automate onboarding messages (email or in-app): Day 1 welcome, Day 3 first integration, Day 7 advanced tip, Day 14 hidden features. Education reduces churn.
 
+### 9.15 Human Face in Demo Videos `P3`
+Videos featuring a real person create a human connection with the user. Beyond improving content retention, they convey the feeling of personalized support behind the tool. Include a visible webcam overlay in screencasts when possible.
+
 ---
 
 ## 10. Forms & Long Flows
@@ -323,20 +338,23 @@ Long forms scare users. Break into focused steps with clear objectives. Progress
 ### 10.2 Name Steps by Objective `P1`
 Label each step with its purpose: "Personal Data", "Address", "Payment". Avoid generic labels like "Step 2" or "50% complete".
 
-### 10.3 Tooltips on Complex Fields `P1`
+### 10.3 Field Height Sets Expectation `P2`
+Match input field height to the expected content length. A name field should be slim; a feedback or description field should be taller to encourage longer responses. Tall fields signal "write more here", short fields signal "keep it brief". Always enable auto-resize for textareas.
+
+### 10.4 Tooltips on Complex Fields `P1`
 When a field requires reasoning or is easily misunderstood, add a `?` tooltip next to the label. Prevents abandonment without cluttering the UI with visible help text.
 
-### 10.4 Show or Hide Progress Strategically `P2`
+### 10.5 Show or Hide Progress Strategically `P2`
 - **Transparency priority**: show progress (Step X of Y) with labeled stages
 - **Conversion priority**: consider hiding progress to prevent "there's still a lot left" abandonment
 
-### 10.5 Real-Time Preview `P2`
+### 10.6 Real-Time Preview `P2`
 When the flow builds something visual (a site, a card, a document), show a live preview as the user progresses. Concrete progress motivates completion.
 
-### 10.6 Review Step in Critical Flows `P0`
+### 10.7 Review Step in Critical Flows `P0`
 In irreversible flows (payment, contract, permanent registration), add a final review step. Show all data in summary format with "Edit" links next to each section.
 
-### 10.7 Confirmation via External Channel `P2`
+### 10.8 Confirmation via External Channel `P2`
 After critical actions (payment, contract, booking), send a summary via email, WhatsApp, or SMS. Reinforces trust and serves as a receipt.
 
 ---
