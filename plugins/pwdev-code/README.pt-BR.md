@@ -204,6 +204,7 @@ Fontes de verdade: objetivo + qualidade + DoD do spec.md, ACs das tarefas, check
 | `/pwdev-code:map-codebase` | Primeiro contato com repositório existente — analisa stack, padrões, convenções, riscos |
 | `/pwdev-code:health` | Scorecard de saúde do projeto — testes, lint, dependências, segurança |
 | `/pwdev-code:health --deps` | Auditoria focada de dependências — versões, vulnerabilidades, pacotes depreciados |
+| `/pwdev-code:audit` | Consultar a trilha de auditoria — resumo, eventos, decisões, artefatos, estatísticas, exportar PDF |
 | `/pwdev-code:skill` | Criar, listar ou auditar skills (`skill create backend`, `skill create frontend`, `skill list`, `skill audit`) |
 
 ### Release & Manutenção
@@ -264,15 +265,23 @@ O banco de auditoria funciona **em paralelo** com os arquivos Markdown — os ag
 
 ### Consultando a Trilha de Auditoria
 
+Use `/pwdev-code:audit` para consultar o banco interativamente:
+
+| Sub-comando | O que faz |
+|-------------|----------|
+| `summary` (padrão) | Dashboard com métricas-chave e atividade recente |
+| `events` | Log completo de eventos (últimos 50) |
+| `decisions` | Todas as decisões arquiteturais/produto com justificativa |
+| `artifacts` | Arquivos rastreados pelo framework |
+| `stats` | Frequência de comandos, durações, distribuição por fase, taxa de sucesso |
+| `export` | Gerar relatório completo de auditoria em PDF + Markdown |
+| `query <SQL>` | Executar uma consulta SQL customizada (somente leitura) |
+
 ```bash
-# Últimos 20 eventos
-sqlite3 .planning/pwdev-audit.db "SELECT timestamp, plugin, command, action, target FROM events ORDER BY timestamp DESC LIMIT 20;"
-
-# Todas as decisões com justificativa
-sqlite3 .planning/pwdev-audit.db "SELECT timestamp, phase, decision, rationale FROM decisions ORDER BY timestamp;"
-
-# Frequência de comandos
-sqlite3 .planning/pwdev-audit.db "SELECT command, COUNT(*) as runs FROM events WHERE action='completed' GROUP BY command ORDER BY runs DESC;"
+/pwdev-code:audit              # dashboard resumido
+/pwdev-code:audit stats        # estatísticas detalhadas
+/pwdev-code:audit export       # gerar relatório PDF em .planning/audit-report.pdf
+/pwdev-code:audit query "SELECT * FROM events WHERE action='failed'"
 ```
 
 Adicione `.planning/pwdev-audit.db` ao `.gitignore` (recomendado).
