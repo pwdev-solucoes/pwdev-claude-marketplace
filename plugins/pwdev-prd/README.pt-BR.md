@@ -1,4 +1,4 @@
-# PWDEV-PRD v1.0.0
+# PWDEV-PRD v1.1.0
 
 *Leia em [English](./README.md)*
 
@@ -36,6 +36,14 @@ Isso torna os PRDs compatíveis com qualquer fluxo de trabalho posterior:
 - `/pwdev-feat:feat` para desenvolvimento simplificado de funcionalidades
 - `/pwdev-code:discover` para desenvolvimento rigoroso orientado a especificações
 - Handoff manual para equipes de engenharia
+
+---
+
+## Novidades da v1.1.0
+
+- **Seleção de Idioma** — Todos os comandos suportam PT-BR e EN. Configurado durante o `/pwdev-prd:init`.
+- **Perfis de Modelo** — Modelo do agente configurável via perfis `performance`, `balanced` ou `economy`.
+- **Trilha de Auditoria (opt-in)** — Registro SQLite opcional de comandos e decisões. Desativado por padrão.
 
 ---
 
@@ -90,7 +98,7 @@ Antes de gerar o PRD final, o agente valida:
 
 | Comando | O que faz |
 |---------|-----------|
-| `/pwdev-prd:init` | Cria o workspace `.planning/prds/` |
+| `/pwdev-prd:init` | Cria o workspace `.planning/prds/`, configura idioma e perfil de modelo |
 
 ### Criação de PRD
 
@@ -107,6 +115,67 @@ Antes de gerar o PRD final, o agente valida:
 | `/pwdev-prd:export {slug}` | Exporta como JSON ou issue do GitHub |
 | `/pwdev-prd:export {slug} --json` | Regenera o prd.json |
 | `/pwdev-prd:export {slug} --github` | Cria uma issue no GitHub a partir do PRD |
+
+---
+
+## Configuração de Idioma e Modelo
+
+### Idioma
+
+Todos os comandos suportam **Português (PT-BR)** e **Inglês (EN)**. Configurado durante o `/pwdev-prd:init` e armazenado em `.planning/config.json`.
+
+- `/pwdev-prd:init` — sempre pergunta a preferência de idioma
+- Outros comandos — usam a preferência salva silenciosamente
+- Override — mude de idioma durante a conversa e confirme quando solicitado
+
+### Perfil de Modelo
+
+O modelo do agente é configurável via perfis definidos durante o `/pwdev-prd:init`:
+
+| Perfil | agent-interviewer |
+|--------|:-----------------:|
+| **performance** | Opus |
+| **balanced** | Sonnet |
+| **economy** | Sonnet |
+
+Override com `model_overrides` em `.planning/config.json`:
+
+```json
+{
+  "lang": "pt-BR",
+  "model_profile": "balanced",
+  "model_overrides": {}
+}
+```
+
+---
+
+## Trilha de Auditoria
+
+Todos os plugins compartilham um banco de dados SQLite opcional em `.planning/pwdev-audit.db`. Ele é **desativado por padrão** e configurado durante o `/init`. O arquivo do banco nunca é versionado (adicionado automaticamente ao `.gitignore`).
+
+A trilha de auditoria registra:
+- **Eventos** — cada execução de comando (início, conclusão, falha) com timestamp, agente, modelo e fase
+- **Decisões** — decisões arquiteturais e de produto com justificativa e alternativas consideradas
+- **Artefatos** — arquivos criados ou modificados pelo framework, com rastreamento de status
+- **Alterações de config** — histórico de alterações de idioma, perfil de modelo e outras configurações
+
+O banco de auditoria funciona **em paralelo** com os arquivos Markdown — os agentes continuam lendo e escrevendo Markdown como antes. O SQLite é uma camada adicional para histórico e análise.
+
+### Consultando a Trilha de Auditoria
+
+```bash
+# Últimos 20 eventos
+sqlite3 .planning/pwdev-audit.db "SELECT timestamp, plugin, command, action, target FROM events ORDER BY timestamp DESC LIMIT 20;"
+
+# Todas as decisões com justificativa
+sqlite3 .planning/pwdev-audit.db "SELECT timestamp, phase, decision, rationale FROM decisions ORDER BY timestamp;"
+
+# Frequência de comandos
+sqlite3 .planning/pwdev-audit.db "SELECT command, COUNT(*) as runs FROM events WHERE action='completed' GROUP BY command ORDER BY runs DESC;"
+```
+
+Adicione `.planning/pwdev-audit.db` ao `.gitignore` (recomendado).
 
 ---
 
@@ -189,5 +258,5 @@ Quando o usuário não sabe a resposta, o agente oferece os seguintes valores co
 
 Apache-2.0 — Consulte [LICENSE](./LICENSE)
 
-*PWDEV-PRD v1.0.0 — Requisitos claros, documentos consistentes, melhores funcionalidades.*
-*Mantido por [Paulo Soares](https://github.com/pwdev-solucoes)*
+*PWDEV-PRD v1.1.0 — Requisitos claros, documentos consistentes, melhores funcionalidades.*
+*Mantido por [Paulo Soares](https://github.com/soarescbm)*

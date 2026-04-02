@@ -1,4 +1,4 @@
-# PWDEV-PRD v1.0.0
+# PWDEV-PRD v1.1.0
 
 *Read this in [Português Brasileiro](./README.pt-BR.md)*
 
@@ -36,6 +36,14 @@ This makes PRDs compatible with any downstream workflow:
 - `/pwdev-feat:feat` for simplified feature development
 - `/pwdev-code:discover` for rigorous spec-driven development
 - Manual handoff to engineering teams
+
+---
+
+## What's New in v1.1.0
+
+- **Language Selection** — All commands support PT-BR and EN. Configured during `/pwdev-prd:init`.
+- **Model Profiles** — Agent model configurable via `performance`, `balanced`, or `economy` profiles.
+- **Audit Trail (opt-in)** — Optional SQLite logging of commands and decisions. Disabled by default.
 
 ---
 
@@ -90,7 +98,7 @@ Before generating the final PRD, the agent validates:
 
 | Command | What it does |
 |---------|-------------|
-| `/pwdev-prd:init` | Create `.planning/prds/` workspace |
+| `/pwdev-prd:init` | Create `.planning/prds/` workspace, configure language and model profile |
 
 ### PRD Creation
 
@@ -107,6 +115,67 @@ Before generating the final PRD, the agent validates:
 | `/pwdev-prd:export {slug}` | Export as JSON or GitHub issue |
 | `/pwdev-prd:export {slug} --json` | Regenerate prd.json |
 | `/pwdev-prd:export {slug} --github` | Create GitHub issue from PRD |
+
+---
+
+## Language & Model Configuration
+
+### Language
+
+All commands support **Portuguese (PT-BR)** and **English (EN)**. Configured during `/pwdev-prd:init` and stored in `.planning/config.json`.
+
+- `/pwdev-prd:init` — always asks for language preference
+- Other commands — use saved preference silently
+- Override — switch language mid-conversation and confirm when prompted
+
+### Model Profile
+
+Agent model is configurable via profiles set during `/pwdev-prd:init`:
+
+| Profile | agent-interviewer |
+|---------|:-----------------:|
+| **performance** | Opus |
+| **balanced** | Sonnet |
+| **economy** | Sonnet |
+
+Override with `model_overrides` in `.planning/config.json`:
+
+```json
+{
+  "lang": "pt-BR",
+  "model_profile": "balanced",
+  "model_overrides": {}
+}
+```
+
+---
+
+## Audit Trail
+
+All plugins share an optional SQLite audit database at `.planning/pwdev-audit.db`. It is **disabled by default** and configured during `/init`. The database file is never versioned (automatically added to `.gitignore`).
+
+The audit trail records:
+- **Events** — every command execution (start, complete, fail) with timestamp, agent, model, and phase
+- **Decisions** — architectural and product decisions with rationale and alternatives considered
+- **Artifacts** — files created or modified by the framework, with status tracking
+- **Config changes** — history of language, model profile, and other configuration changes
+
+The audit database runs **in parallel** with Markdown files — agents continue to read and write Markdown as before. SQLite is a bonus layer for history and analysis.
+
+### Querying the Audit Trail
+
+```bash
+# Last 20 events
+sqlite3 .planning/pwdev-audit.db "SELECT timestamp, plugin, command, action, target FROM events ORDER BY timestamp DESC LIMIT 20;"
+
+# All decisions with rationale
+sqlite3 .planning/pwdev-audit.db "SELECT timestamp, phase, decision, rationale FROM decisions ORDER BY timestamp;"
+
+# Command frequency
+sqlite3 .planning/pwdev-audit.db "SELECT command, COUNT(*) as runs FROM events WHERE action='completed' GROUP BY command ORDER BY runs DESC;"
+```
+
+Add `.planning/pwdev-audit.db` to `.gitignore` (recommended).
 
 ---
 
@@ -189,5 +258,5 @@ When the user doesn't know, the agent offers these as **hypotheses** (explicitly
 
 Apache-2.0 — See [LICENSE](./LICENSE)
 
-*PWDEV-PRD v1.0.0 — Clear requirements, consistent documents, better features.*
-*Maintained by [Paulo Soares](https://github.com/pwdev-solucoes)*
+*PWDEV-PRD v1.1.0 — Clear requirements, consistent documents, better features.*
+*Maintained by [Paulo Soares](https://github.com/soarescbm)*
