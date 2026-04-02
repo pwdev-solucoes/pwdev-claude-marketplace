@@ -125,6 +125,7 @@ You describe                    PWDEVIA creates                Executor implemen
 | `/pwdev-feat:exec {slug}` | Execute a specific feature plan (or `latest`) |
 | `/pwdev-feat:quick "desc"` | Direct execution — no plan file, for simple tasks |
 | `/pwdev-feat:status` | Show pending, executed, and failed plans |
+| `/pwdev-feat:audit` | Query the audit trail — summary, events, decisions, artifacts, stats, export PDF |
 
 ---
 
@@ -174,15 +175,23 @@ The audit database runs **in parallel** with Markdown files — agents continue 
 
 ### Querying the Audit Trail
 
+Use `/pwdev-feat:audit` to query the database interactively:
+
+| Sub-command | What it does |
+|-------------|-------------|
+| `summary` (default) | Dashboard with key metrics and recent activity |
+| `events` | Full event log (last 50 entries) |
+| `decisions` | All architectural/product decisions with rationale |
+| `artifacts` | Files tracked by the framework |
+| `stats` | Command frequency, durations, phase distribution, success rate |
+| `export` | Generate a full audit report as PDF + Markdown |
+| `query <SQL>` | Run a custom read-only SQL query |
+
 ```bash
-# Last 20 events
-sqlite3 .planning/pwdev-audit.db "SELECT timestamp, plugin, command, action, target FROM events ORDER BY timestamp DESC LIMIT 20;"
-
-# All decisions with rationale
-sqlite3 .planning/pwdev-audit.db "SELECT timestamp, phase, decision, rationale FROM decisions ORDER BY timestamp;"
-
-# Command frequency
-sqlite3 .planning/pwdev-audit.db "SELECT command, COUNT(*) as runs FROM events WHERE action='completed' GROUP BY command ORDER BY runs DESC;"
+/pwdev-feat:audit              # summary dashboard
+/pwdev-feat:audit stats        # detailed statistics
+/pwdev-feat:audit export       # generate PDF report at .planning/audit-report.pdf
+/pwdev-feat:audit query "SELECT * FROM events WHERE action='failed'"
 ```
 
 Add `.planning/pwdev-audit.db` to `.gitignore` (recommended).
