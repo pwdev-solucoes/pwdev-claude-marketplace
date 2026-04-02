@@ -1,4 +1,4 @@
-# PWDEV-UIUX v1.0.0
+# PWDEV-UIUX v1.1.0
 
 > **Stack-Agnostic UI/UX Engineering Framework for Claude Code**
 
@@ -67,6 +67,14 @@ Generates a semantic color theme with CSS custom properties + Tailwind config. S
 ```
 
 This launches the 5-phase workflow: Understand → Structure → Implement → Review → Handoff.
+
+---
+
+## What's New in v1.1.0
+
+- **Language Selection** — All commands support PT-BR and EN. Configured during `/pwdev-uiux:init`.
+- **Model Profiles** — Agent models configurable via `performance`, `balanced`, or `economy` profiles. Orchestrator defaults to Opus in balanced mode.
+- **Audit Trail (opt-in)** — Optional SQLite logging of commands, decisions, and artifacts. Disabled by default.
 
 ---
 
@@ -205,6 +213,8 @@ The **ui-scanner** analyzes your existing project before development and generat
 | **a11y-reviewer** | Haiku | WCAG 2.1 AA + best practices P0 accessibility rules audit |
 | **ux-critic** | Sonnet | 7-axis UX review + best practices rule compliance with P0–P3 findings |
 
+*Agent models shown are defaults for the "balanced" profile. Configure with /pwdev-uiux:init or model_overrides in config.json.*
+
 ---
 
 ## Commands
@@ -213,7 +223,7 @@ The **ui-scanner** analyzes your existing project before development and generat
 
 | Command | What it does |
 |---------|-------------|
-| `/pwdev-uiux:init` | Initialize framework, detect stack, create `.planning/ui/` |
+| `/pwdev-uiux:init` | Initialize framework, detect stack, create `.planning/ui/`, configure language and model profile |
 | `/pwdev-uiux:stack` | Configure UI stack (shadcn-vue, shadcn-react, primevue, untitled-ui, custom) |
 | `/pwdev-uiux:setup-figma` | Connect Figma MCP |
 | `/pwdev-uiux:scan` | Scan existing project UI + best practices compliance check |
@@ -251,6 +261,69 @@ The **ui-scanner** analyzes your existing project before development and generat
 | `/pwdev-uiux:push-to-figma screen` | Push screen layout |
 | `/pwdev-uiux:push-to-figma library` | Build component library |
 | `/pwdev-uiux:push-to-figma tokens` | Sync design tokens |
+
+---
+
+## Language & Model Configuration
+
+### Language
+
+All commands support **Portuguese (PT-BR)** and **English (EN)**. Configured during `/pwdev-uiux:init` and stored in `.planning/config.json`.
+
+- `/pwdev-uiux:init` — always asks for language preference
+- Other commands — use saved preference silently
+- Override — switch language mid-conversation and confirm when prompted
+
+### Model Profile
+
+Agent models are configurable via profiles set during `/pwdev-uiux:init`:
+
+| Profile | orchestrator | ux-analyst / ui-builder / design-bridge / theme-builder | a11y-reviewer / ux-critic | ui-scanner |
+|---------|:----------:|:------------------------------------------------------:|:------------------------:|:----------:|
+| **performance** | Opus | Opus | Sonnet | Sonnet |
+| **balanced** | Opus | Sonnet | Sonnet | Haiku |
+| **economy** | Sonnet | Sonnet | Haiku | Haiku |
+
+Override specific agents with `model_overrides` in `.planning/config.json`:
+
+```json
+{
+  "lang": "pt-BR",
+  "model_profile": "balanced",
+  "model_overrides": {
+    "orchestrator": "opus"
+  }
+}
+```
+
+---
+
+## Audit Trail
+
+All plugins share an optional SQLite audit database at `.planning/pwdev-audit.db`. It is **disabled by default** and configured during `/init`. The database file is never versioned (automatically added to `.gitignore`).
+
+The audit trail records:
+- **Events** — every command execution (start, complete, fail) with timestamp, agent, model, and phase
+- **Decisions** — architectural and product decisions with rationale and alternatives considered
+- **Artifacts** — files created or modified by the framework, with status tracking
+- **Config changes** — history of language, model profile, and other configuration changes
+
+The audit database runs **in parallel** with Markdown files — agents continue to read and write Markdown as before. SQLite is a bonus layer for history and analysis.
+
+### Querying the Audit Trail
+
+```bash
+# Last 20 events
+sqlite3 .planning/pwdev-audit.db "SELECT timestamp, plugin, command, action, target FROM events ORDER BY timestamp DESC LIMIT 20;"
+
+# All decisions with rationale
+sqlite3 .planning/pwdev-audit.db "SELECT timestamp, phase, decision, rationale FROM decisions ORDER BY timestamp;"
+
+# Command frequency
+sqlite3 .planning/pwdev-audit.db "SELECT command, COUNT(*) as runs FROM events WHERE action='completed' GROUP BY command ORDER BY runs DESC;"
+```
+
+Add `.planning/pwdev-audit.db` to `.gitignore` (recommended).
 
 ---
 
@@ -293,5 +366,5 @@ Stored in `.planning/ui/stack.json`:
 
 Apache-2.0 — See [LICENSE](./LICENSE)
 
-*PWDEV-UIUX v1.0.0 — Quality as a gate, not an aspiration.*
-*Maintained by [Paulo Soares](https://github.com/pwdev-solucoes)*
+*PWDEV-UIUX v1.1.0 — Quality as a gate, not an aspiration.*
+*Maintained by [Paulo Soares](https://github.com/soarescbm)*
