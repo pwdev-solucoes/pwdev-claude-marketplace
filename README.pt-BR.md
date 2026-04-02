@@ -184,16 +184,26 @@ O banco de auditoria funciona **em paralelo** com os arquivos Markdown — os ag
 
 ### Consultando a Trilha de Auditoria
 
+Todos os plugins incluem um comando `/audit` para consultar o banco interativamente:
+
+| Sub-comando | O que faz |
+|-------------|----------|
+| `summary` (padrão) | Dashboard com métricas-chave e atividade recente |
+| `events` | Log completo de eventos (últimos 50) |
+| `decisions` | Todas as decisões arquiteturais/produto com justificativa |
+| `artifacts` | Arquivos rastreados pelo framework |
+| `stats` | Frequência de comandos, durações, distribuição por fase, taxa de sucesso |
+| `export` | Gerar relatório completo de auditoria em PDF + Markdown |
+| `query <SQL>` | Executar uma consulta SQL customizada (somente leitura) |
+
 ```bash
-# Últimos 20 eventos
-sqlite3 .planning/pwdev-audit.db "SELECT timestamp, plugin, command, action, target FROM events ORDER BY timestamp DESC LIMIT 20;"
-
-# Todas as decisões com justificativa
-sqlite3 .planning/pwdev-audit.db "SELECT timestamp, phase, decision, rationale FROM decisions ORDER BY timestamp;"
-
-# Frequência de comandos
-sqlite3 .planning/pwdev-audit.db "SELECT command, COUNT(*) as runs FROM events WHERE action='completed' GROUP BY command ORDER BY runs DESC;"
+/pwdev-code:audit              # dashboard resumido
+/pwdev-code:audit stats        # estatísticas detalhadas
+/pwdev-code:audit export       # gerar relatório PDF em .planning/audit-report.pdf
+/pwdev-code:audit query "SELECT * FROM events WHERE action='failed'"
 ```
+
+O sub-comando `export` gera um relatório PDF completo com sumário executivo, log de eventos, decisões, artefatos, estatísticas e histórico de configuração. Suporta pandoc, weasyprint e wkhtmltopdf com detecção automática e fallback para Markdown.
 
 Adicione `.planning/pwdev-audit.db` ao `.gitignore` (recomendado).
 
