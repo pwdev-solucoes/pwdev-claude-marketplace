@@ -1,17 +1,30 @@
 ---
-description: Show current plans — pending, executed, and failed.
+description: Show current features — pending, executed, and failed.
 ---
 
-# /pwdev-feat:status — Plan Status
+# /pwdev-feat:status — Feature Status
+
+## STEP 0 — Language Selection
+Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
+If set → use it silently. If not set → detect from $ARGUMENTS or ask:
+"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
+Save choice to `.planning/config.json` (merge, do not overwrite other fields).
+All subsequent output follows the resolved language. Technical terms stay in English.
 
 ## Procedure
 
 ```bash
-echo "=== PENDING PLANS ==="
-ls .planning/feat/plans/*.md 2>/dev/null | grep -v ".done.md" | sort
+echo "=== PENDING FEATURES ==="
+for dir in .planning/feat/features/*/; do
+  slug=$(basename "$dir")
+  [ -f "$dir/plan.md" ] && [ ! -f "$dir/plan.done.md" ] && echo "$slug"
+done 2>/dev/null
 
-echo "=== EXECUTED PLANS ==="
-ls .planning/feat/plans/*.done.md 2>/dev/null | sort
+echo "=== EXECUTED FEATURES ==="
+for dir in .planning/feat/features/*/; do
+  slug=$(basename "$dir")
+  [ -f "$dir/plan.done.md" ] && echo "$slug"
+done 2>/dev/null
 
 echo "=== CODEBASE CONTEXT ==="
 [ -f ".planning/feat/codebase.md" ] && echo "✅ codebase.md present" || echo "⚠️ No codebase.md — run /pwdev-feat:map-codebase"
@@ -24,17 +37,17 @@ Present:
 ```
 📊 pwdev-feat Status
 
-Pending plans: {N}
-Executed plans: {N}
+Pending features: {N}
+Executed features: {N}
 Codebase context: {present / missing}
 CLAUDE.md: {present / missing}
 
 Pending:
-  001-user-crud.md         → /pwdev-feat:exec 001
-  002-auth-tests.md        → /pwdev-feat:exec 002
+  user-crud       → /pwdev-feat:exec user-crud
+  auth-tests      → /pwdev-feat:exec auth-tests
 
 Executed:
-  003-login-page.done.md   → ✅ COMPLETE
+  login-page      → ✅ COMPLETE
 
-👉 Next: /pwdev-feat:exec {next pending number}
+👉 Next: /pwdev-feat:exec {next pending slug}
 ```

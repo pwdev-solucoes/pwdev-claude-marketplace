@@ -1,4 +1,4 @@
-# PWDEV-FEAT v1.0.0
+# PWDEV-FEAT v1.1.0
 
 *Leia em [English](./README.md)*
 
@@ -33,8 +33,8 @@ Cada plano é construído respondendo a 7 perguntas fundamentais:
 ```
 Você descreve               PWDEVIA cria                   Executor implementa
 ─────────────               ────────────                   ────────────────────
-"CRUD de usuário    →       001-user-crud.md         →     Código + Testes + Commit
- com listagem               (7 seções + passos)            001-user-crud.done.md
+"CRUD de usuário    →       user-crud/plan.md        →     Código + Testes + Commit
+ com listagem               (7 seções + passos)            user-crud/plan.done.md
  paginada"
 ```
 
@@ -48,6 +48,15 @@ Você descreve               PWDEVIA cria                   Executor implementa
 | **Test** | `/pwdev-feat:test` | Testes unitários, integração e E2E para código existente |
 | **Review** | `/pwdev-feat:review` | Revisão de código — segurança, performance, convenções |
 | **Quick** | `/pwdev-feat:quick` | Execução direta, sem arquivo de plano (máx. 1-3 arquivos) |
+
+---
+
+## Novidades da v1.1.0
+
+- **Pastas por feature** — Planos agora ficam em `.planning/feat/features/{slug}/plan.md` em vez do diretório flat `plans/`. Cada feature tem sua própria pasta isolada.
+- **Seleção de Idioma** — Todos os comandos suportam PT-BR e EN. Configurado durante o `/pwdev-feat:init`.
+- **Perfis de Modelo** — Modelos dos agentes configuráveis via perfis `performance`, `balanced` ou `economy`.
+- **Trilha de Auditoria (opt-in)** — Registro SQLite opcional de comandos, decisões e artefatos. Desativado por padrão.
 
 ---
 
@@ -67,7 +76,7 @@ Você descreve               PWDEVIA cria                   Executor implementa
 /pwdev-feat:feat "CRUD de usuário com listagem paginada e busca"
 
 # 5. Executar o plano
-/pwdev-feat:exec 001
+/pwdev-feat:exec user-crud
 
 # Ou pular o planejamento para tarefas simples
 /pwdev-feat:quick "Corrigir validação de e-mail no UserController"
@@ -96,7 +105,7 @@ Você descreve               PWDEVIA cria                   Executor implementa
 
 | Comando | O que faz |
 |---------|-----------|
-| `/pwdev-feat:init` | Cria o workspace `.planning/feat/` |
+| `/pwdev-feat:init` | Cria o workspace `.planning/feat/`, configura idioma e perfil de modelo |
 | `/pwdev-feat:map-codebase` | Analisa a base de código → gera o contexto `codebase.md` |
 | `/pwdev-feat:setup` | Gera `CLAUDE.md` com as convenções do projeto |
 
@@ -114,9 +123,70 @@ Você descreve               PWDEVIA cria                   Executor implementa
 
 | Comando | O que faz |
 |---------|-----------|
-| `/pwdev-feat:exec {NNN}` | Executa um plano específico (ou `latest`) |
+| `/pwdev-feat:exec {slug}` | Executa o plano de uma feature específica (ou `latest`) |
 | `/pwdev-feat:quick "desc"` | Execução direta — sem arquivo de plano, para tarefas simples |
 | `/pwdev-feat:status` | Exibe planos pendentes, executados e com falha |
+
+---
+
+## Configuração de Idioma e Modelo
+
+### Idioma
+
+Todos os comandos suportam **Português (PT-BR)** e **Inglês (EN)**. Configurado durante o `/pwdev-feat:init` e armazenado em `.planning/config.json`.
+
+- `/pwdev-feat:init` — sempre pergunta a preferência de idioma
+- Outros comandos — usam a preferência salva silenciosamente
+- Override — mude de idioma durante a conversa e confirme quando solicitado
+
+### Perfil de Modelo
+
+Os modelos dos agentes são configuráveis via perfis definidos durante o `/pwdev-feat:init`:
+
+| Perfil | agent-planner | agent-executor |
+|--------|:------------:|:--------------:|
+| **performance** | Opus | Opus |
+| **balanced** | Sonnet | Sonnet |
+| **economy** | Sonnet | Sonnet |
+
+Override de agentes específicos com `model_overrides` em `.planning/config.json`:
+
+```json
+{
+  "lang": "pt-BR",
+  "model_profile": "balanced",
+  "model_overrides": {}
+}
+```
+
+---
+
+## Trilha de Auditoria
+
+Todos os plugins compartilham um banco de dados SQLite opcional em `.planning/pwdev-audit.db`. Ele é **desativado por padrão** e configurado durante o `/init`. O arquivo do banco nunca é versionado (adicionado automaticamente ao `.gitignore`).
+
+A trilha de auditoria registra:
+- **Eventos** — cada execução de comando (início, conclusão, falha) com timestamp, agente, modelo e fase
+- **Decisões** — decisões arquiteturais e de produto com justificativa e alternativas consideradas
+- **Artefatos** — arquivos criados ou modificados pelo framework, com rastreamento de status
+- **Alterações de config** — histórico de alterações de idioma, perfil de modelo e outras configurações
+
+O banco de auditoria funciona **em paralelo** com os arquivos Markdown — os agentes continuam lendo e escrevendo Markdown como antes. O SQLite é uma camada adicional para histórico e análise.
+
+### Consultando a Trilha de Auditoria
+
+```bash
+# Últimos 20 eventos
+sqlite3 .planning/pwdev-audit.db "SELECT timestamp, plugin, command, action, target FROM events ORDER BY timestamp DESC LIMIT 20;"
+
+# Todas as decisões com justificativa
+sqlite3 .planning/pwdev-audit.db "SELECT timestamp, phase, decision, rationale FROM decisions ORDER BY timestamp;"
+
+# Frequência de comandos
+sqlite3 .planning/pwdev-audit.db "SELECT command, COUNT(*) as runs FROM events WHERE action='completed' GROUP BY command ORDER BY runs DESC;"
+```
+
+Adicione `.planning/pwdev-audit.db` ao `.gitignore` (recomendado).
 
 ---
 
@@ -140,7 +210,7 @@ Todo plano gerado pelo PWDEVIA segue esta estrutura:
 ## Commit                     ← mensagem de commit convencional
 ```
 
-Os planos são armazenados em `.planning/feat/plans/` e executados com `/pwdev-feat:exec`.
+Os planos são armazenados em `.planning/feat/features/{slug}/plan.md` e executados com `/pwdev-feat:exec {slug}`.
 
 ---
 
@@ -148,12 +218,18 @@ Os planos são armazenados em `.planning/feat/plans/` e executados com `/pwdev-f
 
 ```
 .planning/feat/
-└── plans/
-    ├── 001-user-crud.md           # Plano pendente
-    ├── 001-user-crud.done.md      # Relatório de execução
-    ├── 002-auth-tests.md          # Plano pendente
-    └── ...
+├── features/
+│   ├── user-crud/
+│   │   ├── plan.md                # Plano de ação
+│   │   └── plan.done.md           # Relatório de execução
+│   ├── auth-tests/
+│   │   ├── plan.md
+│   │   └── plan.done.md
+│   └── ...
+└── codebase.md                    # Gerado por /pwdev-feat:map-codebase
 ```
+
+Cada feature tem sua própria pasta em `features/`. Todos os artefatos da feature (plano, relatório de execução, review) ficam dentro dessa pasta.
 
 Arquivos de contexto opcionais:
 - `.planning/feat/codebase.md` — gerado por `/pwdev-feat:map-codebase`
@@ -182,5 +258,5 @@ Arquivos de contexto opcionais:
 
 Apache-2.0 — Veja [LICENSE](./LICENSE)
 
-*PWDEV-FEAT v1.0.0 — Descreva, planeje, execute. Entregue.*
-*Mantido por [Paulo Soares](https://github.com/pwdev-solucoes)*
+*PWDEV-FEAT v1.1.0 — Descreva, planeje, execute. Entregue.*
+*Mantido por [Paulo Soares](https://github.com/soarescbm)*
