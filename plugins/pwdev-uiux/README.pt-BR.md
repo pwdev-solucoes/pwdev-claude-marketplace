@@ -261,6 +261,7 @@ O **ui-scanner** analisa seu projeto existente antes do desenvolvimento e gera u
 | `/pwdev-uiux:push-to-figma screen` | Envia layout de tela |
 | `/pwdev-uiux:push-to-figma library` | Constrói biblioteca de componentes |
 | `/pwdev-uiux:push-to-figma tokens` | Sincroniza design tokens |
+| `/pwdev-uiux:audit` | Consultar a trilha de auditoria — resumo, eventos, decisões, artefatos, estatísticas, exportar PDF |
 
 ---
 
@@ -312,15 +313,23 @@ O banco de auditoria funciona **em paralelo** com os arquivos Markdown — os ag
 
 ### Consultando a Trilha de Auditoria
 
+Use `/pwdev-uiux:audit` para consultar o banco interativamente:
+
+| Sub-comando | O que faz |
+|-------------|----------|
+| `summary` (padrão) | Dashboard com métricas-chave e atividade recente |
+| `events` | Log completo de eventos (últimos 50) |
+| `decisions` | Todas as decisões arquiteturais/produto com justificativa |
+| `artifacts` | Arquivos rastreados pelo framework |
+| `stats` | Frequência de comandos, durações, distribuição por fase, taxa de sucesso |
+| `export` | Gerar relatório completo de auditoria em PDF + Markdown |
+| `query <SQL>` | Executar uma consulta SQL customizada (somente leitura) |
+
 ```bash
-# Últimos 20 eventos
-sqlite3 .planning/pwdev-audit.db "SELECT timestamp, plugin, command, action, target FROM events ORDER BY timestamp DESC LIMIT 20;"
-
-# Todas as decisões com justificativa
-sqlite3 .planning/pwdev-audit.db "SELECT timestamp, phase, decision, rationale FROM decisions ORDER BY timestamp;"
-
-# Frequência de comandos
-sqlite3 .planning/pwdev-audit.db "SELECT command, COUNT(*) as runs FROM events WHERE action='completed' GROUP BY command ORDER BY runs DESC;"
+/pwdev-uiux:audit              # dashboard resumido
+/pwdev-uiux:audit stats        # estatísticas detalhadas
+/pwdev-uiux:audit export       # gerar relatório PDF em .planning/audit-report.pdf
+/pwdev-uiux:audit query "SELECT * FROM events WHERE action='failed'"
 ```
 
 Adicione `.planning/pwdev-audit.db` ao `.gitignore` (recomendado).
