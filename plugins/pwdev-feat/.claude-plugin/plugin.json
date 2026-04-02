@@ -1,6 +1,6 @@
 {
   "name": "pwdev-feat",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Simplified AI-assisted feature development — generates structured action plans using the PWDEVIA 7-question methodology and executes them. Fast, practical, no ceremony.",
   "author": {
     "name": "Paulo Soares",

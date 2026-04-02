@@ -1,4 +1,4 @@
-# PWDEV-PRD v1.1.0
+# PWDEV-PRD v1.1.1
 
 *Read this in [Português Brasileiro](./README.pt-BR.md)*
 
@@ -39,7 +39,7 @@ This makes PRDs compatible with any downstream workflow:
 
 ---
 
-## What's New in v1.1.0
+## What's New in v1.1.1
 
 - **Language Selection** — All commands support PT-BR and EN. Configured during `/pwdev-prd:init`.
 - **Model Profiles** — Agent model configurable via `performance`, `balanced`, or `economy` profiles.
@@ -267,5 +267,5 @@ When the user doesn't know, the agent offers these as **hypotheses** (explicitly
 
 Apache-2.0 — See [LICENSE](./LICENSE)
 
-*PWDEV-PRD v1.1.0 — Clear requirements, consistent documents, better features.*
+*PWDEV-PRD v1.1.1 — Clear requirements, consistent documents, better features.*
 *Maintained by [Paulo Soares](https://github.com/soarescbm)*

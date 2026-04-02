@@ -1,4 +1,4 @@
-# PWDEV-UIUX v1.1.0
+# PWDEV-UIUX v1.1.1
 
 > **Stack-Agnostic UI/UX Engineering Framework for Claude Code**
 
@@ -70,7 +70,7 @@ This launches the 5-phase workflow: Understand → Structure → Implement → R
 
 ---
 
-## What's New in v1.1.0
+## What's New in v1.1.1
 
 - **Language Selection** — All commands support PT-BR and EN. Configured during `/pwdev-uiux:init`.
 - **Model Profiles** — Agent models configurable via `performance`, `balanced`, or `economy` profiles. Orchestrator defaults to Opus in balanced mode.
@@ -375,5 +375,5 @@ Stored in `.planning/ui/stack.json`:
 
 Apache-2.0 — See [LICENSE](./LICENSE)
 
-*PWDEV-UIUX v1.1.0 — Quality as a gate, not an aspiration.*
+*PWDEV-UIUX v1.1.1 — Quality as a gate, not an aspiration.*
 *Maintained by [Paulo Soares](https://github.com/soarescbm)*

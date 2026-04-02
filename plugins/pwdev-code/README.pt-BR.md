@@ -1,4 +1,4 @@
-# PWDEV-CODE v1.1.0
+# PWDEV-CODE v1.1.1
 
 *Leia em [English](./README.md)*
 
@@ -102,7 +102,7 @@ Salvaguardas adicionais: máximo de 3 tarefas por plano, state.md para persistê
 
 ---
 
-### Novidades da v1.1.0
+### Novidades da v1.1.1
 
 - **Seleção de Idioma** — Todos os comandos suportam PT-BR e EN. Configurado durante o `/pwdev-code:init`.
 - **Perfis de Modelo** — Modelos dos agentes configuráveis via perfis `performance`, `balanced` ou `economy`.
@@ -416,5 +416,5 @@ skill-testing, skill-performance, skill-devops, skill-data-modeling, skill-docs
 
 Apache-2.0 — Veja [LICENSE](./LICENSE)
 
-*PWDEV-CODE v1.1.0 — A complexidade vive no sistema, não no seu fluxo de trabalho.*
+*PWDEV-CODE v1.1.1 — A complexidade vive no sistema, não no seu fluxo de trabalho.*
 *Mantido por [Paulo Soares](https://github.com/soarescbm)*

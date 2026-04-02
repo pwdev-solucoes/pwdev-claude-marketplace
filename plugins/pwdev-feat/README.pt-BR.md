@@ -1,4 +1,4 @@
-# PWDEV-FEAT v1.1.0
+# PWDEV-FEAT v1.1.1
 
 *Leia em [English](./README.md)*
 
@@ -51,7 +51,7 @@ Você descreve               PWDEVIA cria                   Executor implementa
 
 ---
 
-## Novidades da v1.1.0
+## Novidades da v1.1.1
 
 - **Pastas por feature** — Planos agora ficam em `.planning/feat/features/{slug}/plan.md` em vez do diretório flat `plans/`. Cada feature tem sua própria pasta isolada.
 - **Seleção de Idioma** — Todos os comandos suportam PT-BR e EN. Configurado durante o `/pwdev-feat:init`.
@@ -267,5 +267,5 @@ Arquivos de contexto opcionais:
 
 Apache-2.0 — Veja [LICENSE](./LICENSE)
 
-*PWDEV-FEAT v1.1.0 — Descreva, planeje, execute. Entregue.*
+*PWDEV-FEAT v1.1.1 — Descreva, planeje, execute. Entregue.*
 *Mantido por [Paulo Soares](https://github.com/soarescbm)*
