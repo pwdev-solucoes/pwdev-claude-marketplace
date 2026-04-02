@@ -1,4 +1,4 @@
-# PWDEV-FEAT v1.0.0
+# PWDEV-FEAT v1.1.0
 
 *Read this in [Português Brasileiro](./README.pt-BR.md)*
 
@@ -33,8 +33,8 @@ Every plan is built by answering 7 fundamental questions:
 ```
 You describe                    PWDEVIA creates                Executor implements
 ─────────────                   ───────────────                ────────────────────
-"User CRUD with          →      001-user-crud.md         →     Code + Tests + Commit
- paginated listing"             (7 sections + steps)           001-user-crud.done.md
+"User CRUD with          →      user-crud/plan.md        →     Code + Tests + Commit
+ paginated listing"             (7 sections + steps)           user-crud/plan.done.md
 ```
 
 ### Plan Types
@@ -47,6 +47,15 @@ You describe                    PWDEVIA creates                Executor implemen
 | **Test** | `/pwdev-feat:test` | Unit, integration, E2E tests for existing code |
 | **Review** | `/pwdev-feat:review` | Code review — security, performance, conventions |
 | **Quick** | `/pwdev-feat:quick` | Direct execution, no plan file (1-3 files max) |
+
+---
+
+## What's New in v1.1.0
+
+- **Per-feature folders** — Plans now live in `.planning/feat/features/{slug}/plan.md` instead of flat `plans/` directory. Each feature gets its own isolated folder.
+- **Language Selection** — All commands support PT-BR and EN. Configured during `/pwdev-feat:init`.
+- **Model Profiles** — Agent models configurable via `performance`, `balanced`, or `economy` profiles.
+- **Audit Trail (opt-in)** — Optional SQLite logging of commands, decisions, and artifacts. Disabled by default.
 
 ---
 
@@ -66,7 +75,7 @@ You describe                    PWDEVIA creates                Executor implemen
 /pwdev-feat:feat "User CRUD with paginated listing and search"
 
 # 5. Execute the plan
-/pwdev-feat:exec 001
+/pwdev-feat:exec user-crud
 
 # Or skip planning for simple tasks
 /pwdev-feat:quick "Fix email validation in UserController"
@@ -95,7 +104,7 @@ You describe                    PWDEVIA creates                Executor implemen
 
 | Command | What it does |
 |---------|-------------|
-| `/pwdev-feat:init` | Create `.planning/feat/` workspace |
+| `/pwdev-feat:init` | Create `.planning/feat/` workspace, configure language and model profile |
 | `/pwdev-feat:map-codebase` | Analyze codebase → generate `codebase.md` context |
 | `/pwdev-feat:setup` | Generate `CLAUDE.md` with project conventions |
 
@@ -113,9 +122,70 @@ You describe                    PWDEVIA creates                Executor implemen
 
 | Command | What it does |
 |---------|-------------|
-| `/pwdev-feat:exec {NNN}` | Execute a specific plan (or `latest`) |
+| `/pwdev-feat:exec {slug}` | Execute a specific feature plan (or `latest`) |
 | `/pwdev-feat:quick "desc"` | Direct execution — no plan file, for simple tasks |
 | `/pwdev-feat:status` | Show pending, executed, and failed plans |
+
+---
+
+## Language & Model Configuration
+
+### Language
+
+All commands support **Portuguese (PT-BR)** and **English (EN)**. Configured during `/pwdev-feat:init` and stored in `.planning/config.json`.
+
+- `/pwdev-feat:init` — always asks for language preference
+- Other commands — use saved preference silently
+- Override — switch language mid-conversation and confirm when prompted
+
+### Model Profile
+
+Agent models are configurable via profiles set during `/pwdev-feat:init`:
+
+| Profile | agent-planner | agent-executor |
+|---------|:------------:|:--------------:|
+| **performance** | Opus | Opus |
+| **balanced** | Sonnet | Sonnet |
+| **economy** | Sonnet | Sonnet |
+
+Override specific agents with `model_overrides` in `.planning/config.json`:
+
+```json
+{
+  "lang": "pt-BR",
+  "model_profile": "balanced",
+  "model_overrides": {}
+}
+```
+
+---
+
+## Audit Trail
+
+All plugins share an optional SQLite audit database at `.planning/pwdev-audit.db`. It is **disabled by default** and configured during `/init`. The database file is never versioned (automatically added to `.gitignore`).
+
+The audit trail records:
+- **Events** — every command execution (start, complete, fail) with timestamp, agent, model, and phase
+- **Decisions** — architectural and product decisions with rationale and alternatives considered
+- **Artifacts** — files created or modified by the framework, with status tracking
+- **Config changes** — history of language, model profile, and other configuration changes
+
+The audit database runs **in parallel** with Markdown files — agents continue to read and write Markdown as before. SQLite is a bonus layer for history and analysis.
+
+### Querying the Audit Trail
+
+```bash
+# Last 20 events
+sqlite3 .planning/pwdev-audit.db "SELECT timestamp, plugin, command, action, target FROM events ORDER BY timestamp DESC LIMIT 20;"
+
+# All decisions with rationale
+sqlite3 .planning/pwdev-audit.db "SELECT timestamp, phase, decision, rationale FROM decisions ORDER BY timestamp;"
+
+# Command frequency
+sqlite3 .planning/pwdev-audit.db "SELECT command, COUNT(*) as runs FROM events WHERE action='completed' GROUP BY command ORDER BY runs DESC;"
+```
+
+Add `.planning/pwdev-audit.db` to `.gitignore` (recommended).
 
 ---
 
@@ -139,7 +209,7 @@ Every plan generated by PWDEVIA follows this structure:
 ## Commit                     ← conventional commit message
 ```
 
-Plans are stored in `.planning/feat/plans/` and executed with `/pwdev-feat:exec`.
+Plans are stored in `.planning/feat/features/{slug}/plan.md` and executed with `/pwdev-feat:exec {slug}`.
 
 ---
 
@@ -147,12 +217,18 @@ Plans are stored in `.planning/feat/plans/` and executed with `/pwdev-feat:exec`
 
 ```
 .planning/feat/
-└── plans/
-    ├── 001-user-crud.md           # Pending plan
-    ├── 001-user-crud.done.md      # Execution report
-    ├── 002-auth-tests.md          # Pending plan
-    └── ...
+├── features/
+│   ├── user-crud/
+│   │   ├── plan.md                # Action plan
+│   │   └── plan.done.md           # Execution report
+│   ├── auth-tests/
+│   │   ├── plan.md
+│   │   └── plan.done.md
+│   └── ...
+└── codebase.md                    # Generated by /pwdev-feat:map-codebase
 ```
+
+Each feature gets its own folder under `features/`. All artifacts related to a feature (plan, execution report, review findings) live inside that folder.
 
 Optional context files:
 - `.planning/feat/codebase.md` — generated by `/pwdev-feat:map-codebase`
@@ -181,5 +257,5 @@ Optional context files:
 
 Apache-2.0 — See [LICENSE](./LICENSE)
 
-*PWDEV-FEAT v1.0.0 — Describe, plan, execute. Ship.*
-*Maintained by [Paulo Soares](https://github.com/pwdev-solucoes)*
+*PWDEV-FEAT v1.1.0 — Describe, plan, execute. Ship.*
+*Maintained by [Paulo Soares](https://github.com/soarescbm)*

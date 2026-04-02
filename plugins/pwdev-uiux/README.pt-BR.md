@@ -1,4 +1,4 @@
-# PWDEV-UIUX v1.0.0
+# PWDEV-UIUX v1.1.0
 
 > **Framework de Engenharia UI/UX Agnóstico de Stack para Claude Code**
 
@@ -67,6 +67,14 @@ Gera um tema de cores semântico com CSS custom properties + configuração do T
 ```
 
 Inicia o fluxo de 5 fases: Entender → Estruturar → Implementar → Revisar → Entregar.
+
+---
+
+## Novidades da v1.1.0
+
+- **Seleção de Idioma** — Todos os comandos suportam PT-BR e EN. Configurado durante o `/pwdev-uiux:init`.
+- **Perfis de Modelo** — Modelos dos agentes configuráveis via perfis `performance`, `balanced` ou `economy`. Orchestrator usa Opus por padrão no modo balanced.
+- **Trilha de Auditoria (opt-in)** — Registro SQLite opcional de comandos, decisões e artefatos. Desativado por padrão.
 
 ---
 
@@ -205,6 +213,8 @@ O **ui-scanner** analisa seu projeto existente antes do desenvolvimento e gera u
 | **a11y-reviewer** | Haiku | Auditoria de WCAG 2.1 AA + regras de acessibilidade P0 de boas práticas |
 | **ux-critic** | Sonnet | Revisão UX de 7 eixos + conformidade com regras de boas práticas com findings P0–P3 |
 
+*Os modelos dos agentes mostrados são os padrões do perfil "balanced". Configure com /pwdev-uiux:init ou model_overrides no config.json.*
+
 ---
 
 ## Comandos
@@ -213,7 +223,7 @@ O **ui-scanner** analisa seu projeto existente antes do desenvolvimento e gera u
 
 | Comando | O que faz |
 |---------|-----------|
-| `/pwdev-uiux:init` | Inicializa o framework, detecta a stack, cria `.planning/ui/` |
+| `/pwdev-uiux:init` | Inicializa o framework, detecta a stack, cria `.planning/ui/`, configura idioma e perfil de modelo |
 | `/pwdev-uiux:stack` | Configura a stack de UI (shadcn-vue, shadcn-react, primevue, untitled-ui, custom) |
 | `/pwdev-uiux:setup-figma` | Conecta o Figma MCP |
 | `/pwdev-uiux:scan` | Analisa a UI do projeto existente + verificação de conformidade com boas práticas |
@@ -251,6 +261,69 @@ O **ui-scanner** analisa seu projeto existente antes do desenvolvimento e gera u
 | `/pwdev-uiux:push-to-figma screen` | Envia layout de tela |
 | `/pwdev-uiux:push-to-figma library` | Constrói biblioteca de componentes |
 | `/pwdev-uiux:push-to-figma tokens` | Sincroniza design tokens |
+
+---
+
+## Configuração de Idioma e Modelo
+
+### Idioma
+
+Todos os comandos suportam **Português (PT-BR)** e **Inglês (EN)**. Configurado durante o `/pwdev-uiux:init` e armazenado em `.planning/config.json`.
+
+- `/pwdev-uiux:init` — sempre pergunta a preferência de idioma
+- Outros comandos — usam a preferência salva silenciosamente
+- Override — mude de idioma durante a conversa e confirme quando solicitado
+
+### Perfil de Modelo
+
+Os modelos dos agentes são configuráveis via perfis definidos durante o `/pwdev-uiux:init`:
+
+| Perfil | orchestrator | ux-analyst / ui-builder / design-bridge / theme-builder | a11y-reviewer / ux-critic | ui-scanner |
+|--------|:----------:|:------------------------------------------------------:|:------------------------:|:----------:|
+| **performance** | Opus | Opus | Sonnet | Sonnet |
+| **balanced** | Opus | Sonnet | Sonnet | Haiku |
+| **economy** | Sonnet | Sonnet | Haiku | Haiku |
+
+Override de agentes específicos com `model_overrides` em `.planning/config.json`:
+
+```json
+{
+  "lang": "pt-BR",
+  "model_profile": "balanced",
+  "model_overrides": {
+    "orchestrator": "opus"
+  }
+}
+```
+
+---
+
+## Trilha de Auditoria
+
+Todos os plugins compartilham um banco de dados SQLite opcional em `.planning/pwdev-audit.db`. Ele é **desativado por padrão** e configurado durante o `/init`. O arquivo do banco nunca é versionado (adicionado automaticamente ao `.gitignore`).
+
+A trilha de auditoria registra:
+- **Eventos** — cada execução de comando (início, conclusão, falha) com timestamp, agente, modelo e fase
+- **Decisões** — decisões arquiteturais e de produto com justificativa e alternativas consideradas
+- **Artefatos** — arquivos criados ou modificados pelo framework, com rastreamento de status
+- **Alterações de config** — histórico de alterações de idioma, perfil de modelo e outras configurações
+
+O banco de auditoria funciona **em paralelo** com os arquivos Markdown — os agentes continuam lendo e escrevendo Markdown como antes. O SQLite é uma camada adicional para histórico e análise.
+
+### Consultando a Trilha de Auditoria
+
+```bash
+# Últimos 20 eventos
+sqlite3 .planning/pwdev-audit.db "SELECT timestamp, plugin, command, action, target FROM events ORDER BY timestamp DESC LIMIT 20;"
+
+# Todas as decisões com justificativa
+sqlite3 .planning/pwdev-audit.db "SELECT timestamp, phase, decision, rationale FROM decisions ORDER BY timestamp;"
+
+# Frequência de comandos
+sqlite3 .planning/pwdev-audit.db "SELECT command, COUNT(*) as runs FROM events WHERE action='completed' GROUP BY command ORDER BY runs DESC;"
+```
+
+Adicione `.planning/pwdev-audit.db` ao `.gitignore` (recomendado).
 
 ---
 
@@ -293,5 +366,5 @@ Armazenada em `.planning/ui/stack.json`:
 
 Apache-2.0 — Veja [LICENSE](./LICENSE)
 
-*PWDEV-UIUX v1.0.0 — Qualidade como critério de entrega, não como aspiração.*
-*Mantido por [Paulo Soares](https://github.com/pwdev-solucoes)*
+*PWDEV-UIUX v1.1.0 — Qualidade como critério de entrega, não como aspiração.*
+*Mantido por [Paulo Soares](https://github.com/soarescbm)*

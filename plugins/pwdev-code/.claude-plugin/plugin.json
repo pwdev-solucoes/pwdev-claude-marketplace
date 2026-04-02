@@ -1,10 +1,10 @@
 {
   "name": "pwdev-code",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Spec-driven development framework for Claude Code — 11 specialized agents, 6 phases (including code review + QA), and extensible skills that turn requirements into verified, traceable code.",
   "author": {
     "name": "Paulo Soares",
-    "url": "https://github.com/pwdev-solucoes"
+    "url": "https://github.com/soarescbm"
   },
   "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
   "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",

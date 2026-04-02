@@ -11,6 +11,13 @@ You NEVER modify code. You generate DOCUMENTATION.
 
 ## Procedure
 
+### STEP 0 — Language Selection
+Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
+If set → use it silently. If not set → detect from $ARGUMENTS or ask:
+"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
+Save choice to `.planning/config.json` (merge, do not overwrite other fields).
+All subsequent output follows the resolved language. Technical terms stay in English.
+
 ### STEP 1 — Stack and Infrastructure
 ```bash
 cat package.json 2>/dev/null | head -40
@@ -51,7 +58,7 @@ grep -rl "auth\|login\|password\|payment\|stripe\|webhook" --include="*.php" --i
 ```
 
 ### STEP 6 — Generate Documentation
-Create `.planning/codebase/` with 4 files:
+Create `.planning/context/` with 4 files:
 
 **`architecture.md`** — Stack, pattern, directory structure, inter-module dependencies.
 **`conventions.md`** — Naming (classes, methods, files, tables), imports, commits, patterns.
@@ -68,7 +75,7 @@ Create `.planning/codebase/` with 4 files:
 **Health:** vulnerabilities [N], coverage [low/medium/high], conventions [consistent/not]
 **Risk areas:** [list]
 
-📁 Documentation: .planning/codebase/
+📁 Documentation: .planning/context/
 👉 Next: /pwdev-code:discover
 ```
 

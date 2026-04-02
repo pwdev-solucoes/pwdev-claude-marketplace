@@ -7,21 +7,34 @@ description: Create or refine a Product Requirements Document (PRD)
 ## Agent
 Assume the persona of `.claude/agents/agent-prd.md`.
 
+### Model Resolution
+Read `.planning/config.json` for `model_profile` and `model_overrides`.
+Resolution order: (1) `model_overrides[agent-name]` → (2) profile lookup → (3) agent frontmatter `model:` default.
+Profiles — **performance**: opus for all except reviewer/scanner (sonnet). **balanced**: opus for orchestrator, sonnet for planner/executor/builder/interviewer/reviewer/researcher, haiku for scanner. **economy**: sonnet for most, haiku for reviewer/scanner.
+When spawning the agent, pass the resolved model via the `model` parameter.
+
 ## References
 If they exist, read before starting:
 - `CLAUDE.md` — framework and conventions
-- `.planning/PROJECT.md` — existing vision
-- `.planning/roadmap/ROADMAP.md` — existing roadmap (if this is an update)
+- `.planning/context/project.md` — existing vision
+- `.planning/product/roadmap/roadmap.md` — existing roadmap (if this is an update)
 
 ## Input
 $ARGUMENTS: product/feature description (optional).
 
 ## Flow
 
+### STEP 0 — Language Selection
+Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
+If set → use it silently. If not set → detect from $ARGUMENTS or ask:
+"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
+Save choice to `.planning/config.json` (merge, do not overwrite other fields).
+All subsequent output follows the resolved language. Technical terms stay in English.
+
 ### STEP 1 — Context Detection
 ```bash
-cat .planning/PROJECT.md 2>/dev/null && echo "---PROJECT EXISTS---"
-cat .planning/roadmap/ROADMAP.md 2>/dev/null && echo "---ROADMAP EXISTS---"
+cat .planning/context/project.md 2>/dev/null && echo "---PROJECT EXISTS---"
+cat .planning/product/roadmap/roadmap.md 2>/dev/null && echo "---ROADMAP EXISTS---"
 ls *.prd.md PRD.md prd.md 2>/dev/null && echo "---PRD EXISTS---"
 ```
 If PRD exists → "Refine or create new?"
@@ -46,7 +59,7 @@ PRD quality checklist (10 items).
 cat > PRD.md << 'EOF'
 [content]
 EOF
-cp PRD.md .planning/PRD.md 2>/dev/null
+cp PRD.md .planning/product/prd.md 2>/dev/null
 ```
 
 ### Transition

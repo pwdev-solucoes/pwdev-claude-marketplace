@@ -1,5 +1,6 @@
 ---
-description: Run a comprehensive project health diagnostic across code, tests, dependencies, security, and process
+description: Run a comprehensive project health diagnostic across code, tests, dependencies, security, and process. Use --deps for a focused dependency audit.
+argument-hint: "[--deps]"
 ---
 
 # /pwdev-code:health — Project Health Diagnostics
@@ -8,9 +9,23 @@ description: Run a comprehensive project health diagnostic across code, tests, d
 Utility agent that runs a comprehensive assessment of project health:
 code, tests, dependencies, security, documentation, framework process, and **plugin structure**.
 
+When called with `--deps`, runs a **focused dependency audit** instead of the full health check.
+
+## Input
+$ARGUMENTS: Optional flags.
+- `--deps` → run only the dependency audit (STEP 2.5 + STEP 2.6)
+- empty → run full health check
+
 ## Procedure
 
-### STEP 0 — Plugin Structure Validation
+### STEP 0 — Language Selection
+Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
+If set → use it silently. If not set → detect from $ARGUMENTS or ask:
+"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
+Save choice to `.planning/config.json` (merge, do not overwrite other fields).
+All subsequent output follows the resolved language. Technical terms stay in English.
+
+### STEP 0.1 — Plugin Structure Validation
 
 ```bash
 echo "=== PLUGIN STRUCTURE VALIDATION ==="
@@ -111,8 +126,74 @@ git diff --stat 2>/dev/null
 git stash list 2>/dev/null
 
 echo "=== FRAMEWORK ==="
-ls .planning/STATE.md .planning/SPEC.md .planning/ROADMAP.md .planning/roadmap/ROADMAP.md 2>/dev/null
+ls .planning/state.md .planning/phases/*/spec.md .planning/product/roadmap/roadmap.md 2>/dev/null
 ```
+
+### STEP 1.5 — Dependency Audit
+
+> This step runs as part of the full health check, or standalone with `--deps`.
+> If `$ARGUMENTS` contains `--deps`, skip STEP 0.1, STEP 1, STEP 2 and run only this step + STEP 1.6.
+
+```bash
+# Detect ecosystem
+[ -f "package.json" ] && echo "NODE" && cat package.json | head -50
+[ -f "composer.json" ] && echo "PHP" && cat composer.json | head -50
+[ -f "requirements.txt" ] && echo "PYTHON" && cat requirements.txt
+[ -f "Cargo.toml" ] && echo "RUST" && cat Cargo.toml | head -30
+[ -f "go.mod" ] && echo "GO" && cat go.mod | head -20
+
+# Node
+npm audit 2>/dev/null
+npm outdated 2>/dev/null
+npx depcheck 2>/dev/null
+
+# PHP
+composer audit 2>/dev/null
+composer outdated 2>/dev/null
+
+# Python
+pip audit 2>/dev/null
+pip list --outdated 2>/dev/null
+```
+
+### STEP 1.6 — Dependency Report
+
+```markdown
+## Dependency Report
+
+### Summary
+| Category | Count | Action |
+|----------|:-----:|--------|
+| Vulnerable | [N] | Update URGENTLY |
+| Deprecated | [N] | Plan migration |
+| Outdated (major) | [N] | Evaluate update |
+| Outdated (minor/patch) | [N] | Update when possible |
+| Unused | [N] | Remove |
+| OK | [N] | No action |
+
+### Vulnerabilities (URGENT)
+| Package | Version | Severity | Fix available? | CVE |
+|---------|---------|:--------:|:--------------:|-----|
+| [name] | [ver]  | Critical/High | Yes → [ver] | [id] |
+
+### Deprecated
+| Package | Version | Recommended replacement |
+|---------|---------|------------------------|
+| [name] | [ver]  | [alternative]          |
+
+### Unused
+| Package | Detection confidence |
+|---------|:-------------------:|
+| [name] | High/Medium         |
+
+### Recommendations
+1. [priority action 1]
+2. [priority action 2]
+```
+
+Save to `.planning/reports/deps/{date}.md` (if .planning/ exists).
+
+If `--deps` was used, stop here. Do not continue to STEP 2.
 
 ### STEP 2 — Scorecard
 
@@ -133,7 +214,7 @@ ls .planning/STATE.md .planning/SPEC.md .planning/ROADMAP.md .planning/roadmap/R
 | 📦 Dependencies | [A-F] | [X] outdated, [X] deprecated |
 | 📝 Documentation | [A-F] | README [✅/❌], CLAUDE.md [✅/❌], API docs [✅/❌] |
 | 🔄 Git | [A-F] | Conventional commits [✅/❌], branch strategy [✅/❌] |
-| 📋 Process | [A-F] | .planning/ [✅/❌], SPEC.md [✅/❌], roadmap [✅/❌] |
+| 📋 Process | [A-F] | .planning/ [✅/❌], spec.md [✅/❌], roadmap [✅/❌] |
 
 ### Score Criteria
 - **A:** Excellent, no action needed
@@ -153,7 +234,7 @@ ls .planning/STATE.md .planning/SPEC.md .planning/ROADMAP.md .planning/roadmap/R
 1. [what is going well]
 ```
 
-Save to `.planning/HEALTH.md` (if .planning/ exists).
+Save to `.planning/reports/health/{date}.md` (if .planning/ exists).
 
 ## Prohibitions
 - ❌ NEVER fix problems automatically (only diagnose)

@@ -7,6 +7,13 @@ argument-hint: "[UI task description, e.g.: 'create 3-step onboarding form']"
 
 **Argument**: $ARGUMENTS
 
+## STEP 0 — Language Selection
+Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
+If set → use it silently. If not set → detect from $ARGUMENTS or ask:
+"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
+Save choice to `.planning/config.json` (merge, do not overwrite other fields).
+All subsequent output follows the resolved language. Technical terms stay in English.
+
 ## Pre-check
 
 ```bash
@@ -47,6 +54,12 @@ Update `.planning/ui/current-flow.md`:
 - **Pending gate**: ux-spec approved
 - **Started**: [timestamp]
 ```
+
+## Model Resolution
+Read `.planning/config.json` for `model_profile` and `model_overrides`.
+Resolution order: (1) `model_overrides[agent-name]` → (2) profile lookup → (3) agent frontmatter `model:` default.
+Profiles — **performance**: opus for all except reviewer/scanner (sonnet). **balanced**: opus for orchestrator, sonnet for planner/executor/builder/interviewer/reviewer/researcher, haiku for scanner. **economy**: sonnet for most, haiku for reviewer/scanner.
+When spawning the agent, pass the resolved model via the `model` parameter.
 
 ## Activate orchestrator
 

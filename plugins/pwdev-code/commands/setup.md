@@ -1,20 +1,61 @@
 ---
-description: Configure MCP servers in .mcp.json for the detected stack
+description: Configure project infrastructure — MCP servers, stack detection, and general setup tasks
+argument-hint: "[mcp | stack] (default: interactive)"
 ---
 
-# /setup-mcp — Configure MCP Servers
+# /pwdev-code:setup — Project Setup
 
 ## Role
-Utility agent that configures the `.mcp.json` file in the project root with recommended MCP servers for the detected stack.
+Multi-purpose setup utility. Routes to the appropriate setup flow based on $ARGUMENTS.
 
 ## Input
-$ARGUMENTS: Optional — comma-separated list of servers to install (e.g., "primevue,context7,github"). If empty, runs interactive mode.
+$ARGUMENTS: subcommand — `mcp`, `stack`, or empty (interactive menu).
 
 ## Procedure
 
-### STEP 1 — Detect Current State
+### STEP 0 — Language Selection
+Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
+If set → use it silently. If not set → detect from $ARGUMENTS or ask:
+"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
+Save choice to `.planning/config.json` (merge, do not overwrite other fields).
+All subsequent output follows the resolved language. Technical terms stay in English.
+
+### STEP 1 — Route Subcommand
+
+Parse the first word of $ARGUMENTS:
+
+- **`mcp`** → go to STEP 2 (MCP Server Configuration)
+- **`stack`** → go to STEP 3 (Stack Detection & Config)
+- **empty or other** → present interactive menu:
+
+  **PT-BR:**
+  ```
+  O que deseja configurar?
+
+  1. mcp    — Configurar servidores MCP (.mcp.json)
+  2. stack  — Detectar e configurar a stack do projeto
+
+  Escolha (1-2):
+  ```
+
+  **EN:**
+  ```
+  What would you like to set up?
+
+  1. mcp    — Configure MCP servers (.mcp.json)
+  2. stack  — Detect and configure project stack
+
+  Choose (1-2):
+  ```
+
+---
+
+## STEP 2 — MCP Server Configuration
+
+> Previously `/pwdev-code:setup-mcp`. Full MCP setup flow.
+
+### STEP 2.1 — Detect Current State
 ```bash
-# Check if .mcp.json already exists
 if [ -f ".mcp.json" ]; then
   echo "EXISTING"
 else
@@ -24,17 +65,15 @@ fi
 
 If `.mcp.json` exists → show current servers, ask: "Add servers to existing config or replace?"
 
-### STEP 2 — Detect Stack (silent, ~10s)
+### STEP 2.2 — Detect Stack (silent, ~10s)
 ```bash
 cat package.json 2>/dev/null | head -30
 cat composer.json 2>/dev/null | head -30
 ls src/ app/ resources/ 2>/dev/null
-cat CLAUDE.md .planning/SPEC.md 2>/dev/null | head -50
+cat CLAUDE.md .planning/phases/{active-phase-slug}/spec.md 2>/dev/null | head -50
 ```
 
-Identify: Vue/React/Angular, Laravel/Express/Django, DB type, etc.
-
-### STEP 3 — Present Server Catalog
+### STEP 2.3 — Present Server Catalog
 
 Show available servers organized by category. Mark recommended ones based on detected stack.
 
@@ -88,9 +127,9 @@ Show available servers organized by category. Mark recommended ones based on det
 | brave-search | @modelcontextprotocol/server-brave-search | Yes | Optional |
 ```
 
-### STEP 4 — Selection
+### STEP 2.4 — Selection
 
-**If $ARGUMENTS provided:** use the listed servers directly.
+**If $ARGUMENTS has server names (e.g., `mcp primevue,context7`):** use them directly.
 **If interactive:** ask the human to select which servers to configure.
 
 Suggest a sensible default based on detected stack:
@@ -102,7 +141,7 @@ Suggest a sensible default based on detected stack:
 
 Present selection and await approval.
 
-### STEP 5 — Collect API Keys
+### STEP 2.5 — Collect API Keys
 
 For each selected server that requires an API key:
 1. Ask the human for the key
@@ -112,7 +151,7 @@ For each selected server that requires an API key:
 **Important:** Inform the human:
 > "API keys will be written to `.mcp.json`. Make sure `.mcp.json` is in your `.gitignore` to avoid committing secrets."
 
-### STEP 6 — Generate .mcp.json
+### STEP 2.6 — Generate .mcp.json
 
 Write `.mcp.json` to the **project root** (not the plugin directory).
 
@@ -131,53 +170,26 @@ Format:
 }
 ```
 
-**Server configurations:**
-
-| Server | Command | Args | Env |
-|--------|---------|------|-----|
-| primevue | npx | ["-y", "@primevue/mcp"] | — |
-| context7 | npx | ["-y", "@upstash/context7-mcp"] | CONTEXT7_API_KEY |
-| github | npx | ["-y", "@modelcontextprotocol/server-github"] | GITHUB_PERSONAL_ACCESS_TOKEN |
-| sequential-thinking | npx | ["-y", "@modelcontextprotocol/server-sequential-thinking"] | — |
-| filesystem | npx | ["-y", "@modelcontextprotocol/server-filesystem", "[project-path]"] | — |
-| memory | npx | ["-y", "@modelcontextprotocol/server-memory"] | — |
-| fetch | npx | ["-y", "@modelcontextprotocol/server-fetch"] | — |
-| brave-search | npx | ["-y", "@modelcontextprotocol/server-brave-search"] | BRAVE_API_KEY |
-| postgres | npx | ["-y", "@modelcontextprotocol/server-postgres"] | POSTGRES_CONNECTION_STRING |
-| redis | npx | ["-y", "@modelcontextprotocol/server-redis", "redis://localhost:6379"] | — |
-| supabase | npx | ["-y", "@supabase/mcp-server-supabase@latest", "--access-token", "[token]"] | — |
-| shadcn | npx | ["-y", "@anthropic/mcp-server-shadcn-ui"] | — |
-| chakra-ui | npx | ["-y", "@anthropic/mcp-server-chakra-ui"] | — |
-| figma | npx | ["-y", "@anthropic/mcp-server-figma"] | FIGMA_ACCESS_TOKEN |
-| openrouter | npx | ["-y", "@openrouter/mcp-server"] | OPENROUTER_API_KEY |
-| openai | npx | ["-y", "@modelcontextprotocol/server-openai"] | OPENAI_API_KEY |
-| google-ai | npx | ["-y", "@anthropic/mcp-server-google-ai"] | GOOGLE_AI_API_KEY |
-| ollama | npx | ["-y", "@modelcontextprotocol/server-ollama"] | OLLAMA_HOST (default: http://localhost:11434) |
-
-### STEP 7 — Ensure .gitignore
+### STEP 2.7 — Ensure .gitignore
 
 Check if `.mcp.json` is in `.gitignore`. If not, ask the human:
 > ".mcp.json contains API keys. Add it to .gitignore? (recommended)"
 
 If approved, append `.mcp.json` to `.gitignore`.
 
-### STEP 8 — Summary
+### STEP 2.8 — Summary
 
 ```markdown
-## ✅ MCP Servers Configured
+## MCP Servers Configured
 
 **File:** .mcp.json
 **Servers:** [N] configured
 
 | Server | Status |
 |--------|--------|
-| context7 | ✅ Configured |
-| github | ⚠️ Placeholder key (update later) |
-| primevue | ✅ Ready (no key needed) |
-
-### Servers with placeholder keys:
-- `github` → set GITHUB_PERSONAL_ACCESS_TOKEN
-- Run `/pwdev-code:setup-mcp` again to update keys
+| context7 | Configured |
+| github | Placeholder key (update later) |
+| primevue | Ready (no key needed) |
 
 ### Next steps:
 1. Update placeholder API keys in `.mcp.json`
@@ -185,9 +197,32 @@ If approved, append `.mcp.json` to `.gitignore`.
 3. Verify with `/pwdev-code:health`
 ```
 
+---
+
+## STEP 3 — Stack Detection & Config
+
+### STEP 3.1 — Detect Stack
+```bash
+cat package.json 2>/dev/null | head -40
+cat composer.json 2>/dev/null | head -40
+cat requirements.txt 2>/dev/null | head -20
+cat go.mod 2>/dev/null | head -10
+ls artisan nuxt.config.* next.config.* vite.config.* 2>/dev/null
+```
+
+### STEP 3.2 — Present Findings
+
+Show detected stack and ask the human to confirm or adjust.
+
+### STEP 3.3 — Save to config
+
+Update `.planning/config.json` with detected stack info (merge, do not overwrite).
+
+---
+
 ## Prohibitions
-- ❌ NEVER commit `.mcp.json` with real API keys
-- ❌ NEVER overwrite existing `.mcp.json` without confirmation
-- ❌ NEVER log or display API key values after writing
-- ❌ NEVER read `.env` files
-- ❌ NEVER write to the plugin directory — only to the project root
+- NEVER commit `.mcp.json` with real API keys
+- NEVER overwrite existing `.mcp.json` without confirmation
+- NEVER log or display API key values after writing
+- NEVER read `.env` files
+- NEVER write to the plugin directory — only to the project root
