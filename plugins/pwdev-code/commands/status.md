@@ -5,16 +5,24 @@ description: Display the current project status and progress report
 # /pwdev-code:status — Status Report
 
 ## Procedure
+
+### STEP 0 — Language Selection
+Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
+If set → use it silently. If not set → detect from $ARGUMENTS or ask:
+"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
+Save choice to `.planning/config.json` (merge, do not overwrite other fields).
+All subsequent output follows the resolved language. Technical terms stay in English.
+
 Read and present the current state:
 
 ```bash
-cat .planning/STATE.md 2>/dev/null || echo "❌ STATE.md not found. No active project."
-cat .planning/ROADMAP.md 2>/dev/null
-ls .planning/phases/*-PLAN.md 2>/dev/null
-ls .planning/phases/*-SUMMARY.md 2>/dev/null
-ls .planning/phases/*-CODE-REVIEW.md 2>/dev/null
-ls .planning/phases/*-QA-REPORT.md 2>/dev/null
-ls .planning/phases/*-VERIFY.md 2>/dev/null
+cat .planning/state.md 2>/dev/null || echo "❌ state.md not found. No active project."
+cat .planning/product/roadmap/roadmap.md 2>/dev/null
+ls .planning/phases/*/plans/*.md 2>/dev/null
+ls .planning/phases/*/execution/*-summary.md 2>/dev/null
+ls .planning/phases/*/review/code-review.md 2>/dev/null
+ls .planning/phases/*/review/qa-report.md 2>/dev/null
+ls .planning/phases/*/verify/verify.md 2>/dev/null
 ls .planning/quick/ 2>/dev/null
 ```
 
@@ -23,7 +31,7 @@ Present:
 ## 📊 Project Status
 
 **Current phase:** [DISCOVER | DESIGN | PLAN | EXECUTE | REVIEW | VERIFY]
-**Current plan:** [NN-PP] | **Current task:** [NN-PP-TT]
+**Current plan:** [phase-slug/PP] | **Current task:** [phase-slug/PP-TT]
 **Status:** [in progress | awaiting approval | verifying | blocked]
 
 ### Progress

@@ -36,6 +36,13 @@ Or a range:    /pwdev-code:review --diff HEAD~3
 
 ## Flow
 
+### STEP 0 — Language Selection
+Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
+If set → use it silently. If not set → detect from $ARGUMENTS or ask:
+"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
+Save choice to `.planning/config.json` (merge, do not overwrite other fields).
+All subsequent output follows the resolved language. Technical terms stay in English.
+
 ### STEP 1 — Determine Scope
 
 ```bash
@@ -59,8 +66,8 @@ echo "Total: $(echo "$FILES" | wc -l) files"
 ```bash
 # Read project conventions
 cat CLAUDE.md 2>/dev/null | head -50
-cat .planning/codebase/conventions.md 2>/dev/null | head -30
-cat .planning/SPEC.md 2>/dev/null | head -80
+cat .planning/context/conventions.md 2>/dev/null | head -30
+cat .planning/phases/{active-phase-slug}/spec.md 2>/dev/null | head -80
 ```
 
 ### STEP 3 — Spawn Agents
@@ -74,10 +81,10 @@ cat .planning/SPEC.md 2>/dev/null | head -80
 Spawn: agent-code-reviewer
 Scope: [file list]
 Context:
-  - SPEC.md sections 1, 5, 7 (persona, quality, prohibitions)
+  - spec.md sections 1, 5, 7 (persona, quality, prohibitions)
   - CLAUDE.md conventions
   - Active skills
-Output: .planning/phases/{NN}-CODE-REVIEW.md
+Output: .planning/phases/{active-phase-slug}/review/code-review.md
 ```
 
 #### QA Agent
@@ -85,10 +92,10 @@ Output: .planning/phases/{NN}-CODE-REVIEW.md
 Spawn: agent-qa
 Scope: [file list]
 Context:
-  - SPEC.md sections 2, 5, 8 (objective, quality, DoD)
-  - SUMMARY.md files (what was implemented)
+  - spec.md sections 2, 5, 8 (objective, quality, DoD)
+  - execution/*-summary.md files (what was implemented)
   - Active skills
-Output: .planning/phases/{NN}-QA-REPORT.md
+Output: .planning/phases/{active-phase-slug}/review/qa-report.md
 ```
 
 ### STEP 4 — Consolidate Results
@@ -103,13 +110,13 @@ Wait for both agents to complete. Merge findings into a single summary.
 ## Code Review
   Verdict: [APPROVED | CHANGES REQUESTED | BLOCKED]
   Findings: [N] critical, [N] high, [N] medium, [N] low
-  Report: .planning/phases/{NN}-CODE-REVIEW.md
+  Report: .planning/phases/{active-phase-slug}/review/code-review.md
 
 ## QA Test Audit
   Verdict: [ADEQUATE | GAPS FOUND | INSUFFICIENT]
   Tests: [N] passed, [N] failed, [N] skipped
   Coverage gaps: [N] critical, [N] important
-  Report: .planning/phases/{NN}-QA-REPORT.md
+  Report: .planning/phases/{active-phase-slug}/review/qa-report.md
 
 ## Combined Verdict
   [PASS | FIX REQUIRED | BLOCKED]
@@ -125,9 +132,9 @@ Wait for both agents to complete. Merge findings into a single summary.
   /pwdev-code:review     → Re-review after fixes
 ```
 
-### STEP 6 — Update STATE.md
+### STEP 6 — Update state.md
 
-Record review results in `.planning/STATE.md`:
+Record review results in `.planning/state.md`:
 ```markdown
 ## Last Review
 - Date: [timestamp]

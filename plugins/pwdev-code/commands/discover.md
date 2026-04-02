@@ -8,8 +8,14 @@ description: Run the discovery phase to gather requirements through interviews a
 Assume the persona of `.claude/agents/agent-interviewer.md`.
 Spawn `.claude/agents/agent-researcher.md` in parallel (silent).
 
+### Model Resolution
+Read `.planning/config.json` for `model_profile` and `model_overrides`.
+Resolution order: (1) `model_overrides[agent-name]` → (2) profile lookup → (3) agent frontmatter `model:` default.
+Profiles — **performance**: opus for all except reviewer/scanner (sonnet). **balanced**: opus for orchestrator, sonnet for planner/executor/builder/interviewer/reviewer/researcher, haiku for scanner. **economy**: sonnet for most, haiku for reviewer/scanner.
+When spawning the agent, pass the resolved model via the `model` parameter.
+
 ## References
-Read: `CLAUDE.md` (sections 1-4), `.planning/STATE.md` (if it exists).
+Read: `CLAUDE.md` (sections 1-4), `.planning/state.md` (if it exists).
 
 ## Skills
 If `.claude/skills/` has domain skills → load them for better questions.
@@ -18,6 +24,13 @@ If `.claude/skills/` has domain skills → load them for better questions.
 Check if `.planning/` exists. If not → suggest `/pwdev-code:init` first.
 
 ## Flow
+
+### STEP 0 — Language Selection
+Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
+If set → use it silently. If not set → detect from $ARGUMENTS or ask:
+"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
+Save choice to `.planning/config.json` (merge, do not overwrite other fields).
+All subsequent output follows the resolved language. Technical terms stay in English.
 
 ### STEP 1 — Codebase Mapping (silent, ~15s)
 ```bash
@@ -40,22 +53,22 @@ Round 3: Quality and Constraints
 Wait for explicit confirmation between rounds if needed.
 
 ### STEP 4 — Parallel Research (agent-researcher)
-Generate `.planning/research/` (domain.md, stack.md, pitfalls.md).
+Generate `.planning/context/` research files (domain.md, stack.md, pitfalls.md).
 
 ### STEP 5 — Synthesis and Confirmation
 Present summary: scope, v1/v2 requirements, assumptions, risks, recommended level.
 **Wait for explicit approval.**
 
 ### STEP 6 — Generate Artifacts
-- `.planning/PROJECT.md`
-- `.planning/REQUIREMENTS.md`
-- `.planning/research/` (3 files)
-- Update `.planning/STATE.md`: Phase DISCOVER ✅
+- `.planning/context/project.md`
+- `.planning/context/requirements.md`
+- `.planning/context/` (domain.md, stack.md, pitfalls.md)
+- Update `.planning/state.md`: Phase DISCOVER ✅
 
 ### Transition
 ```
 ✅ Discovery complete.
-📁 Artifacts in .planning/
+📁 Artifacts in .planning/context/
 👉 Next: /pwdev-code:design
 ```
 

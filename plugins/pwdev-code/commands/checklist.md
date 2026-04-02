@@ -20,11 +20,18 @@ If empty, ask which type.
 
 ## Procedure
 
+### STEP 0 — Language Selection
+Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
+If set → use it silently. If not set → detect from $ARGUMENTS or ask:
+"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
+Save choice to `.planning/config.json` (merge, do not overwrite other fields).
+All subsequent output follows the resolved language. Technical terms stay in English.
+
 Read the project context:
 ```bash
 cat CLAUDE.md 2>/dev/null | head -100
-cat .planning/SPEC.md 2>/dev/null | head -50
-cat .planning/PROJECT.md 2>/dev/null | head -30
+cat .planning/phases/{active-phase-slug}/spec.md 2>/dev/null | head -50
+cat .planning/context/project.md 2>/dev/null | head -30
 cat package.json 2>/dev/null | head -20
 cat composer.json 2>/dev/null | head -20
 ```
@@ -44,13 +51,13 @@ Generate the checklist adapted to the stack and project context.
 - [ ] Existing tests pass before starting
 
 ## PWDEV-CODE
-- [ ] /pwdev-code:discover complete → PROJECT.md + REQUIREMENTS.md
-- [ ] /pwdev-code:design complete → SPEC.md approved
-- [ ] /pwdev-code:plan complete → PLANs approved
-- [ ] STATE.md updated
+- [ ] /pwdev-code:discover complete → project.md + requirements.md
+- [ ] /pwdev-code:design complete → spec.md approved
+- [ ] /pwdev-code:plan complete → plans approved
+- [ ] state.md updated
 
 ## Scope
-- [ ] Scope defined and documented in SPEC.md
+- [ ] Scope defined and documented in spec.md
 - [ ] "Out of scope" explicit
 - [ ] Acceptance criteria verifiable
 - [ ] Stop conditions defined
@@ -87,7 +94,7 @@ Generate the checklist adapted to the stack and project context.
 - [ ] Documentation updated
 - [ ] Reversible migrations (if applicable)
 - [ ] Version tag created
-- [ ] VERIFY.md with ✅ verdict
+- [ ] verify.md with ✅ verdict
 
 ## Deploy
 - [ ] Environment variables configured in production
@@ -141,7 +148,7 @@ Generate the checklist adapted to the stack and project context.
 - [ ] Code does what the task asks (no more, no less)
 - [ ] Edge cases handled
 - [ ] Adequate error handling
-- [ ] Follows SPEC.md acceptance criteria
+- [ ] Follows spec.md acceptance criteria
 
 ## Quality
 - [ ] Readable code (clear names, small functions)
@@ -181,9 +188,9 @@ Generate the checklist adapted to the stack and project context.
 
 ## Understand the Project
 - [ ] Read CLAUDE.md (PWDEV-CODE framework)
-- [ ] Read .planning/PROJECT.md (vision and stack)
-- [ ] Read .planning/SPEC.md (current contract)
-- [ ] Read .planning/roadmap/ROADMAP.md (what is planned)
+- [ ] Read .planning/context/project.md (vision and stack)
+- [ ] Read .planning/phases/{active-phase-slug}/spec.md (current contract)
+- [ ] Read .planning/product/roadmap/roadmap.md (what is planned)
 - [ ] Browse folder structure (~15min)
 
 ## Tools
@@ -199,7 +206,7 @@ Generate the checklist adapted to the stack and project context.
 - [ ] Open PR and request review
 ```
 
-Save the generated checklist to `.planning/checklists/[type]-[date].md`.
+Save the generated checklist to `.planning/reports/checklists/[type]-[date].md`.
 
 ## Prohibitions
 - ❌ NEVER generate a generic checklist without reading the project context

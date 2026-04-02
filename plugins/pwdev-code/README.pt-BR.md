@@ -1,4 +1,4 @@
-# PWDEV-CODE v1.0.0
+# PWDEV-CODE v1.1.0
 
 *Leia em [English](./README.md)*
 
@@ -44,18 +44,18 @@ Cada funcionalidade passa por um pipeline estruturado com portões de aprovaçã
 ```
 DISCOVER  ─▶  DESIGN  ─▶  PLAN  ─▶  EXECUTE  ─▶  REVIEW  ─▶  VERIFY
    │            │           │          │           │           │
-Interview    SPEC.md     Atomic     Code        Code review  Goal-backward
+Interview    spec.md     Atomic     Code        Code review  Goal-backward
 + Research   + Decisions tasks      + Commits   + QA audit   + AC/DoD
 ```
 
 | Fase | O que acontece | Saída |
 |------|---------------|-------|
-| **DISCOVER** | Entrevista o usuário (máx. 3 rodadas), mapeia o código-base silenciosamente, sintetiza os requisitos | PROJECT.md, REQUIREMENTS.md |
-| **DESIGN** | Toma e documenta decisões arquiteturais, gera o contrato de execução | SPEC.md (8 seções), CONTEXT.md |
-| **PLAN** | Decompõe o SPEC.md em tarefas atômicas organizadas em ondas (paralelas/sequenciais) | PLAN.md com tarefas (máx. 3 por plano, máx. 5 arquivos cada) |
-| **EXECUTE** | Implementa cada tarefa em contexto limpo, executa lint, testes e commit atômico | Código + commits + SUMMARY.md por tarefa |
-| **REVIEW** | Revisão de código (bugs, segurança, performance) + auditoria de testes QA (cobertura, lacunas) em paralelo | CODE-REVIEW.md + QA-REPORT.md |
-| **VERIFY** | Validação retroativa a partir do objetivo: "o que precisa ser VERDADEIRO?" em vez de "o que fizemos?" | VERIFY.md com veredicto, FIX-PLAN.md se rejeitado |
+| **DISCOVER** | Entrevista o usuário (máx. 3 rodadas), mapeia o código-base silenciosamente, sintetiza os requisitos | project.md, requirements.md |
+| **DESIGN** | Toma e documenta decisões arquiteturais, gera o contrato de execução | spec.md (8 seções), decisions.md |
+| **PLAN** | Decompõe o spec.md em tarefas atômicas organizadas em ondas (paralelas/sequenciais) | plan.md com tarefas (máx. 3 por plano, máx. 5 arquivos cada) |
+| **EXECUTE** | Implementa cada tarefa em contexto limpo, executa lint, testes e commit atômico | Código + commits + summary.md por tarefa |
+| **REVIEW** | Revisão de código (bugs, segurança, performance) + auditoria de testes QA (cobertura, lacunas) em paralelo | code-review.md + qa-report.md |
+| **VERIFY** | Validação retroativa a partir do objetivo: "o que precisa ser VERDADEIRO?" em vez de "o que fizemos?" | verify.md com veredicto, fix-plan.md se rejeitado |
 
 **Regras de transição:** cada portão requer aprovação humana. REVIEW deve ser aprovado (zero achados críticos) antes do VERIFY. O VERIFY aprova (concluído) ou gera planos de correção que voltam para o EXECUTE.
 
@@ -71,7 +71,7 @@ Nem tudo precisa das 6 fases:
 
 **Escalonamento automático:** mais de 5 arquivos → Standard. Decisão arquitetural → Standard. Migração/schema → Full.
 
-### SPEC.md — O Contrato Central
+### spec.md — O Contrato Central
 
 Gerado pelo agent-architect, governa toda a execução downstream. 8 seções obrigatórias:
 
@@ -96,15 +96,27 @@ Context 50%+    → Starts cutting corners
 Context 70%+    → Hallucinations, forgets requirements
 ```
 
-**Solução:** cada tarefa executa em **contexto limpo** (subagente) recebendo apenas: tarefa + SPEC.md (seções 1, 6, 7) + skills ativas + arquivos listados. Nada mais. Zero de histórico.
+**Solução:** cada tarefa executa em **contexto limpo** (subagente) recebendo apenas: tarefa + spec.md (seções 1, 6, 7) + skills ativas + arquivos listados. Nada mais. Zero de histórico.
 
-Salvaguardas adicionais: máximo de 3 tarefas por plano, STATE.md para persistência entre sessões, `/pwdev-code:context` para atualizar o contexto antes de retomar após longas pausas.
+Salvaguardas adicionais: máximo de 3 tarefas por plano, state.md para persistência entre sessões, `/pwdev-code:context` para atualizar o contexto antes de retomar após longas pausas.
+
+---
+
+### Novidades da v1.1.0
+
+- **Seleção de Idioma** — Todos os comandos suportam PT-BR e EN. Configurado durante o `/pwdev-code:init`.
+- **Perfis de Modelo** — Modelos dos agentes configuráveis via perfis `performance`, `balanced` ou `economy`.
+- **Trilha de Auditoria (opt-in)** — Registro SQLite opcional de comandos, decisões e artefatos. Desativado por padrão.
+- **Gerenciamento de Skills** — Novo comando `/pwdev-code:skill` para criar skills de backend/frontend, listar skills instaladas e auditar uso.
+- **Setup Unificado** — `setup-mcp` renomeado para `/pwdev-code:setup` com subcomandos (`setup mcp`, `setup stack`).
+- **Health Consolidado** — `/pwdev-code:deps` integrado ao `/pwdev-code:health --deps`.
+- **Estrutura de diretórios organizada** — Artefatos reorganizados em `context/`, `product/`, `phases/{slug}/`, `quick/` e `reports/`. Cada fase tem sua própria pasta com spec, planos, execução, revisão e verificação isolados.
 
 ### Verificação — Retroativa a Partir do Objetivo
 
 O verificador não pergunta "o que fizemos?" — ele pergunta **"o que precisa ser VERDADEIRO para que isso esteja concluído?"**
 
-Fontes de verdade: objetivo + qualidade + DoD do SPEC.md, ACs das tarefas, checklists de skills, proibições (não violadas).
+Fontes de verdade: objetivo + qualidade + DoD do spec.md, ACs das tarefas, checklists de skills, proibições (não violadas).
 
 | Veredicto | Critério |
 |-----------|---------|
@@ -120,32 +132,32 @@ Fontes de verdade: objetivo + qualidade + DoD do SPEC.md, ACs das tarefas, check
 
 | Agente | Papel | Chamado por | O que faz |
 |--------|-------|------------|----------|
-| **agent-prd** | Product Manager | `prd` | Entrevista o usuário (3 rodadas), gera PRD.md com 10 seções, prioriza com MoSCoW |
+| **agent-prd** | Product Manager | `prd` | Entrevista o usuário (3 rodadas), gera prd.md com 10 seções, prioriza com MoSCoW |
 | **agent-roadmap** | Delivery Lead | `roadmap` | Decompõe o PRD em hierarquia Phase → Epic → Feature → Task, gera roadmap multi-arquivo com matriz de rastreabilidade |
 
 ### Descoberta & Design
 
 | Agente | Papel | Chamado por | O que faz |
 |--------|-------|------------|----------|
-| **agent-interviewer** | Requirements Engineer | `discover` | Mapeia o código-base silenciosamente, conduz entrevista estruturada (máx. 3 rodadas), sintetiza PROJECT.md + REQUIREMENTS.md |
-| **agent-researcher** | Technical Analyst | `discover` | Investiga versões do stack, compatibilidade, problemas conhecidos, gera research/domain.md, stack.md, pitfalls.md |
-| **agent-architect** | Software Architect | `design` | Toma decisões de design documentadas (opções/escolha/trade-off), gera SPEC.md (8 seções) + CONTEXT.md |
+| **agent-interviewer** | Requirements Engineer | `discover` | Mapeia o código-base silenciosamente, conduz entrevista estruturada (máx. 3 rodadas), sintetiza project.md + requirements.md |
+| **agent-researcher** | Technical Analyst | `discover` | Investiga versões do stack, compatibilidade, problemas conhecidos, gera context/domain.md, stack.md, pitfalls.md |
+| **agent-architect** | Software Architect | `design` | Toma decisões de design documentadas (opções/escolha/trade-off), gera spec.md (8 seções) + decisions.md |
 
 ### Planejamento & Execução
 
 | Agente | Papel | Chamado por | O que faz |
 |--------|-------|------------|----------|
-| **agent-planner** | Planning Engineer | `plan` | Decompõe o SPEC.md em tarefas atômicas organizadas em ondas, valida 100% de cobertura contra a spec |
-| **agent-executor** | Implementation Engineer | `execute`, `quick`, fix-plans | Implementa uma tarefa por vez em contexto limpo, segue SPEC + skills, commita atomicamente, gera SUMMARY.md |
+| **agent-planner** | Planning Engineer | `plan` | Decompõe o spec.md em tarefas atômicas organizadas em ondas, valida 100% de cobertura contra a spec |
+| **agent-executor** | Implementation Engineer | `execute`, `quick`, fix-plans | Implementa uma tarefa por vez em contexto limpo, segue SPEC + skills, commita atomicamente, gera summary.md |
 | **agent-quick** | Generalist Engineer | `quick` | Tudo-em-um para tarefas simples: mini-discovery → mini-plan → implementa → mini-review → mini-verify → commit |
 
 ### Qualidade & Revisão
 
 | Agente | Papel | Chamado por | O que faz |
 |--------|-------|------------|----------|
-| **agent-code-reviewer** | Senior Code Reviewer | `review` | Revisa código quanto a bugs, segurança, performance, arquitetura e convenções — gera CODE-REVIEW.md |
-| **agent-qa** | QA Test Specialist | `review`, `qa` | Audita cobertura de testes, rastreia requisitos até os testes, identifica lacunas, sugere esboços de testes — gera QA-REPORT.md |
-| **agent-verifier** | Spec Verifier | `verify` | Validação retroativa a partir do objetivo contra SPEC.md + ACs das tarefas + checklists de skills, gera VERIFY.md ou FIX-PLAN.md |
+| **agent-code-reviewer** | Senior Code Reviewer | `review` | Revisa código quanto a bugs, segurança, performance, arquitetura e convenções — gera code-review.md |
+| **agent-qa** | QA Test Specialist | `review`, `qa` | Audita cobertura de testes, rastreia requisitos até os testes, identifica lacunas, sugere esboços de testes — gera qa-report.md |
+| **agent-verifier** | Spec Verifier | `verify` | Validação retroativa a partir do objetivo contra spec.md + ACs das tarefas + checklists de skills, gera verify.md ou fix-plan.md |
 
 ---
 
@@ -155,26 +167,26 @@ Fontes de verdade: objetivo + qualidade + DoD do SPEC.md, ACs das tarefas, check
 
 | Comando | O que faz |
 |---------|----------|
-| `/pwdev-code:init` | Inicializa o framework no repositório — cria `.planning/`, CLAUDE.md, configurações |
-| `/pwdev-code:setup-mcp` | Configura servidores MCP interativamente — detecta o stack, sugere servidores relevantes, gera `.mcp.json` |
+| `/pwdev-code:init` | Inicializa o framework no repositório — cria `.planning/`, CLAUDE.md, configurações, configura idioma e perfil de modelo |
+| `/pwdev-code:setup` | Setup do projeto — servidores MCP, detecção de stack (`setup mcp`, `setup stack`) |
 
 ### Planejamento de Produto
 
 | Comando | O que faz | Saída |
 |---------|----------|-------|
-| `/pwdev-code:prd` | Entrevista de descoberta de produto → PRD estruturado | PRD.md (10 seções) |
+| `/pwdev-code:prd` | Entrevista de descoberta de produto → PRD estruturado | prd.md (10 seções) |
 | `/pwdev-code:roadmap` | Decompõe o PRD em roadmap executável | .planning/roadmap/ (multi-arquivo com rastreabilidade) |
 
 ### Fluxo de Desenvolvimento
 
 | Comando | Fase | Portão de Entrada | Saída |
 |---------|------|------------------|-------|
-| `/pwdev-code:discover` | DISCOVER | `.planning/` existe | PROJECT.md, REQUIREMENTS.md |
-| `/pwdev-code:design` | DESIGN | PROJECT.md + REQUIREMENTS.md | SPEC.md, CONTEXT.md |
-| `/pwdev-code:plan` | PLAN | SPEC.md aprovado | PLAN.md (tarefas atômicas em ondas) |
-| `/pwdev-code:execute` | EXECUTE | PLANs aprovados | Código + commits + SUMMARY.md |
-| `/pwdev-code:review` | REVIEW | Alterações de código existem | CODE-REVIEW.md + QA-REPORT.md |
-| `/pwdev-code:verify` | VERIFY | SUMMARYs existem | VERIFY.md, FIX-PLAN.md |
+| `/pwdev-code:discover` | DISCOVER | `.planning/` existe | project.md, requirements.md |
+| `/pwdev-code:design` | DESIGN | project.md + requirements.md | spec.md, decisions.md |
+| `/pwdev-code:plan` | PLAN | spec.md aprovado | plan.md (tarefas atômicas em ondas) |
+| `/pwdev-code:execute` | EXECUTE | PLANs aprovados | Código + commits + summary.md |
+| `/pwdev-code:review` | REVIEW | Alterações de código existem | code-review.md + qa-report.md |
+| `/pwdev-code:verify` | VERIFY | SUMMARYs existem | verify.md, fix-plan.md |
 | `/pwdev-code:quick` | Tudo-em-um | Descrição da tarefa | Código + commit (para tarefas simples) |
 
 ### Sessão & Progresso
@@ -182,7 +194,7 @@ Fontes de verdade: objetivo + qualidade + DoD do SPEC.md, ACs das tarefas, check
 | Comando | Quando usar |
 |---------|------------|
 | `/pwdev-code:status` | Verificar fase atual, plano, tarefa e progresso |
-| `/pwdev-code:resume` | Retomar de onde parou (lê STATE.md) |
+| `/pwdev-code:resume` | Retomar de onde parou (lê state.md) |
 | `/pwdev-code:context` | Atualizar contexto antes de executar após uma longa pausa |
 
 ### Análise & Diagnóstico
@@ -191,7 +203,8 @@ Fontes de verdade: objetivo + qualidade + DoD do SPEC.md, ACs das tarefas, check
 |---------|------------|
 | `/pwdev-code:map-codebase` | Primeiro contato com repositório existente — analisa stack, padrões, convenções, riscos |
 | `/pwdev-code:health` | Scorecard de saúde do projeto — testes, lint, dependências, segurança |
-| `/pwdev-code:deps` | Auditoria de dependências — versões, vulnerabilidades, pacotes depreciados |
+| `/pwdev-code:health --deps` | Auditoria focada de dependências — versões, vulnerabilidades, pacotes depreciados |
+| `/pwdev-code:skill` | Criar, listar ou auditar skills (`skill create backend`, `skill create frontend`, `skill list`, `skill audit`) |
 
 ### Release & Manutenção
 
@@ -200,6 +213,69 @@ Fontes de verdade: objetivo + qualidade + DoD do SPEC.md, ACs das tarefas, check
 | `/pwdev-code:checklist` | Gerar checklists antes de release, revisão, deploy ou auditoria de segurança |
 | `/pwdev-code:changelog` | Gerar changelog a partir do histórico de commits |
 | `/pwdev-code:cleanup` | Arquivar artefatos de fases concluídas em `.planning/archive/` |
+
+---
+
+## Configuração de Idioma e Modelo
+
+### Idioma
+
+Todos os comandos suportam **Português (PT-BR)** e **Inglês (EN)**. Configurado durante o `/pwdev-code:init` e armazenado em `.planning/config.json`.
+
+- `/pwdev-code:init` — sempre pergunta a preferência de idioma
+- Outros comandos — usam a preferência salva silenciosamente
+- Override — mude de idioma durante a conversa e confirme quando solicitado
+
+### Perfil de Modelo
+
+Os modelos dos agentes são configuráveis via perfis definidos durante o `/pwdev-code:init`:
+
+| Perfil | architect / planner / roadmap | interviewer / prd | executor / quick | code-reviewer / qa | researcher | verifier |
+|--------|:---------------------------:|:-----------------:|:----------------:|:------------------:|:----------:|:--------:|
+| **performance** | Opus | Opus | Opus | Sonnet | Sonnet | Sonnet |
+| **balanced** | Sonnet | Sonnet | Sonnet | Sonnet | Sonnet | Haiku |
+| **economy** | Sonnet | Sonnet | Sonnet | Haiku | Haiku | Haiku |
+
+Override de agentes específicos com `model_overrides` em `.planning/config.json`:
+
+```json
+{
+  "lang": "pt-BR",
+  "model_profile": "balanced",
+  "model_overrides": {
+    "agent-architect": "opus"
+  }
+}
+```
+
+---
+
+## Trilha de Auditoria
+
+Todos os plugins compartilham um banco de dados SQLite opcional em `.planning/pwdev-audit.db`. Ele é **desativado por padrão** e configurado durante o `/init`. O arquivo do banco nunca é versionado (adicionado automaticamente ao `.gitignore`).
+
+A trilha de auditoria registra:
+- **Eventos** — cada execução de comando (início, conclusão, falha) com timestamp, agente, modelo e fase
+- **Decisões** — decisões arquiteturais e de produto com justificativa e alternativas consideradas
+- **Artefatos** — arquivos criados ou modificados pelo framework, com rastreamento de status
+- **Alterações de config** — histórico de alterações de idioma, perfil de modelo e outras configurações
+
+O banco de auditoria funciona **em paralelo** com os arquivos Markdown — os agentes continuam lendo e escrevendo Markdown como antes. O SQLite é uma camada adicional para histórico e análise.
+
+### Consultando a Trilha de Auditoria
+
+```bash
+# Últimos 20 eventos
+sqlite3 .planning/pwdev-audit.db "SELECT timestamp, plugin, command, action, target FROM events ORDER BY timestamp DESC LIMIT 20;"
+
+# Todas as decisões com justificativa
+sqlite3 .planning/pwdev-audit.db "SELECT timestamp, phase, decision, rationale FROM decisions ORDER BY timestamp;"
+
+# Frequência de comandos
+sqlite3 .planning/pwdev-audit.db "SELECT command, COUNT(*) as runs FROM events WHERE action='completed' GROUP BY command ORDER BY runs DESC;"
+```
+
+Adicione `.planning/pwdev-audit.db` ao `.gitignore` (recomendado).
 
 ---
 
@@ -236,24 +312,77 @@ skill-testing, skill-performance, skill-devops, skill-data-modeling, skill-docs
 
 ---
 
-## Artefatos
+## Artefatos & Estrutura de Diretórios
 
-| Artefato | Gerado por | Consumido por | Localização |
-|----------|-----------|--------------|-------------|
-| CLAUDE.md | init | Todos os agentes | Raiz do projeto |
-| PRD.md | agent-prd | agent-roadmap | Raiz do projeto |
-| PROJECT.md | agent-interviewer | Todos | .planning/ |
-| REQUIREMENTS.md | agent-interviewer | agent-architect | .planning/ |
-| **SPEC.md** | **agent-architect** | **Todos os executores** | **.planning/** |
-| PLAN.md | agent-planner | agent-executor | .planning/phases/ |
-| SUMMARY.md | agent-executor | agent-code-reviewer, agent-qa | .planning/phases/ |
-| CODE-REVIEW.md | agent-code-reviewer | agent-verifier | .planning/phases/ |
-| QA-REPORT.md | agent-qa | agent-verifier | .planning/phases/ |
-| VERIFY.md | agent-verifier | Humano | .planning/phases/ |
-| FIX-PLAN.md | agent-verifier | agent-executor | .planning/phases/ |
-| STATE.md | Todos (atualizam) | Todos (leem) | .planning/ |
+```
+.planning/
+├── config.json                       # Configuração unificada
+├── state.md                          # Estado global do workflow
+├── pwdev-audit.db                    # Trilha de auditoria (opt-in, .gitignore)
+│
+├── context/                          # Conhecimento do projeto (permanente)
+│   ├── project.md                    # Visão do produto (discover)
+│   ├── requirements.md               # Requisitos (discover)
+│   ├── domain.md                     # Conceitos do domínio (researcher)
+│   ├── stack.md                      # Stack técnico (researcher)
+│   ├── pitfalls.md                   # Riscos conhecidos (researcher)
+│   ├── architecture.md               # Arquitetura (map-codebase)
+│   ├── conventions.md                # Convenções (map-codebase)
+│   ├── dependencies.md               # Dependências (map-codebase)
+│   └── concerns.md                   # Preocupações técnicas (map-codebase)
+│
+├── product/                          # Planejamento de produto
+│   ├── prd.md                        # Documento de Requisitos do Produto
+│   └── roadmap/                      # Roadmap hierárquico
+│       ├── roadmap.md, traceability.md, risks.md, metrics.md
+│       └── F01-slug/                 # Fase → Épico → Feature
+│
+├── phases/                           # Execução (uma pasta por fase)
+│   └── F01-user-auth/                # Pasta da fase
+│       ├── spec.md                   # Contrato de design desta fase
+│       ├── decisions.md              # Decisões arquiteturais
+│       ├── plans/                    # Planos de execução (waves)
+│       │   ├── 01-models.md
+│       │   └── 02-services.md
+│       ├── execution/                # Resultados da implementação
+│       │   ├── 01-summary.md
+│       │   └── executor-context.md
+│       ├── review/                   # Verificações de qualidade
+│       │   ├── code-review.md
+│       │   └── qa-report.md
+│       └── verify/                   # Aceitação
+│           ├── verify.md
+│           └── fix-01.md             # Plano de correção (se rejeitado)
+│
+├── quick/                            # Tarefas leves (sem fluxo de fases)
+│   └── fix-login/
+│       ├── plan.md, summary.md, verify.md
+│
+├── reports/                          # Diagnósticos e checklists
+│   ├── health/, deps/, checklists/
+│
+├── templates/                        # Templates reutilizáveis
+└── archive/                          # Fases concluídas (movidas pelo cleanup)
+```
 
-**Numeração de tarefas:** `{phase}-{plan}-{task}` — ex.: `01-02-03` = fase 1, plano 2, tarefa 3.
+| Artefato | Criado por | Localização |
+|----------|-----------|-------------|
+| config.json | init | `.planning/config.json` |
+| state.md | init, todos | `.planning/state.md` |
+| project.md | discover | `.planning/context/project.md` |
+| requirements.md | discover | `.planning/context/requirements.md` |
+| domain/stack/pitfalls | researcher | `.planning/context/` |
+| architecture/conventions | map-codebase | `.planning/context/` |
+| prd.md | prd | `.planning/product/prd.md` |
+| roadmap | roadmap | `.planning/product/roadmap/` |
+| spec.md | design | `.planning/phases/{slug}/spec.md` |
+| decisions.md | design | `.planning/phases/{slug}/decisions.md` |
+| plans | plan | `.planning/phases/{slug}/plans/` |
+| summaries | execute | `.planning/phases/{slug}/execution/` |
+| code-review.md | review | `.planning/phases/{slug}/review/` |
+| qa-report.md | review | `.planning/phases/{slug}/review/` |
+| verify.md | verify | `.planning/phases/{slug}/verify/` |
+| fix plans | verify | `.planning/phases/{slug}/verify/` |
 
 ---
 
@@ -278,5 +407,5 @@ skill-testing, skill-performance, skill-devops, skill-data-modeling, skill-docs
 
 Apache-2.0 — Veja [LICENSE](./LICENSE)
 
-*PWDEV-CODE v1.0.0 — A complexidade vive no sistema, não no seu fluxo de trabalho.*
-*Mantido por [Paulo Soares](https://github.com/pwdev-solucoes)*
+*PWDEV-CODE v1.1.0 — A complexidade vive no sistema, não no seu fluxo de trabalho.*
+*Mantido por [Paulo Soares](https://github.com/soarescbm)*

@@ -14,6 +14,13 @@ PWDEV-CODE verifications. Follows the [Keep a Changelog](https://keepachangelog.
 
 ## Procedure
 
+### STEP 0 — Language Selection
+Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
+If set → use it silently. If not set → detect from $ARGUMENTS or ask:
+"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
+Save choice to `.planning/config.json` (merge, do not overwrite other fields).
+All subsequent output follows the resolved language. Technical terms stay in English.
+
 ```bash
 # 1. Detect latest tag
 LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
@@ -27,9 +34,9 @@ else
 fi
 
 # 3. Collect summaries (real evidence)
-ls .planning/phases/*-SUMMARY.md 2>/dev/null
-ls .planning/phases/*-VERIFY.md 2>/dev/null
-ls .planning/quick/*/SUMMARY.md 2>/dev/null
+ls .planning/phases/*/execution/*-summary.md 2>/dev/null
+ls .planning/phases/*/verify/verify.md 2>/dev/null
+ls .planning/quick/*/summary.md 2>/dev/null
 ```
 
 Categorize commits by type (Conventional Commits):
@@ -64,7 +71,7 @@ Categorize commits by type (Conventional Commits):
 
 ### Verification
 - Verified phases: [list]
-- Verdict: [result from latest VERIFY.md]
+- Verdict: [result from latest verify.md]
 ```
 
 Save to `CHANGELOG.md` (append at the top if it already exists).
