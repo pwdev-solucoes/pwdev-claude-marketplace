@@ -40,9 +40,10 @@ Filosofia central em todos os plugins:
 | Plugin | Descrição | Versão | Licença |
 |--------|-----------|:------:|:------:|
 | [**pwdev-code**](./plugins/pwdev-code/) | Framework de desenvolvimento orientado a especificação — 11 agentes, 6 fases, 14 comandos | 1.2.0 | Apache-2.0 |
-| [**pwdev-uiux**](./plugins/pwdev-uiux/) | Framework de engenharia UI/UX — 7 agentes, fluxo de 5 fases, integração com Figma, WCAG 2.1 AA | 1.1.2 | Apache-2.0 |
+| [**pwdev-uiux**](./plugins/pwdev-uiux/) | Framework de engenharia UI/UX — 8 agentes, fluxo de 5 fases, integração com Figma, WCAG 2.1 AA | 1.1.2 | Apache-2.0 |
 | [**pwdev-feat**](./plugins/pwdev-feat/) | Desenvolvimento simplificado de features — planos PWDEVIA com 7 perguntas + executor, rápido e prático | 1.1.2 | Apache-2.0 |
 | [**pwdev-prd**](./plugins/pwdev-prd/) | Criação de PRD guiada por entrevista — entrevista estruturada em 12 etapas, Markdown + JSON, agnóstico de tecnologia | 1.1.2 | Apache-2.0 |
+| [**pwdev-statusline**](./plugins/pwdev-statusline/) | Barra de status rica para o terminal — modelo, branch git, barra de contexto, rate limits, tokens | 1.0.0 | Apache-2.0 |
 
 ### pwdev-code
 
@@ -58,13 +59,13 @@ Veja a [documentação completa do plugin](./plugins/pwdev-code/README.md).
 
 ### pwdev-uiux
 
-Framework de engenharia UI/UX para **Vue 3 + shadcn-vue (Reka UI v2)** que orquestra **7 agentes especializados** em um fluxo de trabalho de 5 fases.
+Framework de engenharia UI/UX agnóstico de stack que orquestra **8 agentes especializados** em um fluxo de trabalho de 5 fases.
 
 ```
 UNDERSTAND ─▶ STRUCTURE ─▶ IMPLEMENT ─▶ REVIEW ─▶ HANDOFF
 ```
 
-**Agentes:** Orchestrator, UX Analyst, Design Bridge, UI Scanner, UI Builder, A11y Reviewer, UX Critic
+**Agentes:** Orchestrator, UX Analyst, Design Bridge, UI Scanner, UI Builder, Theme Builder, A11y Reviewer, UX Critic
 
 **Principais funcionalidades:** integração com Figma MCP, auditoria WCAG 2.1 AA, revisão UX em 7 eixos, habilidades contextuais específicas por projeto
 
@@ -98,6 +99,20 @@ Interview (12 steps) ─▶ PRD.md ─▶ Export (JSON / GitHub Issue)
 
 Veja a [documentação completa do plugin](./plugins/pwdev-prd/README.md).
 
+### pwdev-statusline
+
+**Barra de status** rica para o terminal do Claude Code. Exibe modelo, branch git, uso de contexto, rate limits e contagem de tokens em uma linha colorida.
+
+```
+session | ~/projeto | Opus 4.6 | main | ctx:████░░░░░░ 42% | tok:1500 | 5h:15%
+```
+
+**Comandos:** `install`, `uninstall`, `customize`, `preview`
+
+**Seções:** Diretório, Modelo, Branch Git, Barra de Contexto, Rate Limit (com código de cor), Tokens, Nome da Sessão
+
+Veja a [documentação completa do plugin](./plugins/pwdev-statusline/README.pt-BR.md).
+
 ---
 
 ## Instalação
@@ -127,6 +142,9 @@ claude plugin install pwdev-feat@pwdev-claude-marketplace
 
 # Criação de PRD guiada por entrevista (processo em 12 etapas)
 claude plugin install pwdev-prd@pwdev-claude-marketplace
+
+# Barra de status rica para o terminal
+claude plugin install pwdev-statusline@pwdev-claude-marketplace
 ```
 
 Instale apenas os plugins de que você precisa. Cada um funciona de forma independente.

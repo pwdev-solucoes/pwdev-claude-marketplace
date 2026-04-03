@@ -1,6 +1,6 @@
 ---
 description: >
-  Push implemented Vue components to Figma — creates screens, component library,
+  Push implemented UI components to Figma — creates screens, component library,
   or design system from code. Uses the design-bridge agent in reverse mode (Code → Figma).
 argument-hint: "[component-path | 'screen' | 'library' | 'tokens']"
 ---
@@ -49,15 +49,15 @@ Stop here if not connected.
 # Check component-log for implemented components
 cat .planning/ui/component-log.md 2>/dev/null | head -20
 
-# Check for Vue components
-find components/ -name "*.vue" | head -20
+# Check for UI components (adapt extension to stack: .vue, .tsx, .svelte, etc.)
+find components/ src/components/ -name "*.vue" -o -name "*.tsx" -o -name "*.jsx" 2>/dev/null | head -20
 ```
 
 ---
 
 ## Mode: Component Push
 
-When $ARGUMENTS is a component path (e.g., `components/user/UserCard.vue`):
+When $ARGUMENTS is a component path (e.g., `components/user/UserCard.vue` or `src/components/UserCard.tsx`):
 
 ### Step 1 — Analyze the component
 ```bash
@@ -66,7 +66,7 @@ cat [component-path]
 
 Extract:
 - Component name and props
-- shadcn-vue components used
+- Library components used (from configured stack)
 - Tailwind classes → design tokens
 - States (loading, empty, error, success)
 - Variants
@@ -145,11 +145,11 @@ When $ARGUMENTS is `library`:
 ### Step 1 — Inventory code components
 
 ```bash
-# List all project components
-find components/ -name "*.vue" | sort
+# List all project components (adapt extension to stack)
+find components/ src/components/ -name "*.vue" -o -name "*.tsx" -o -name "*.jsx" 2>/dev/null | sort
 
-# List shadcn-vue installed
-ls components/ui/ 2>/dev/null
+# List library components installed
+ls components/ui/ 2>/dev/null || ls src/components/ui/ 2>/dev/null
 
 # Read project UI skill if available
 cat .planning/ui/project-ui-skill.md 2>/dev/null | head -50
@@ -196,7 +196,7 @@ grep -r "^--" app.vue --include="*.vue" 2>/dev/null
 # Tailwind config
 cat tailwind.config.ts 2>/dev/null || cat tailwind.config.js 2>/dev/null
 
-# shadcn-vue theme
+# Library theme/index files
 cat components/ui/*/index.ts 2>/dev/null | head -30
 ```
 

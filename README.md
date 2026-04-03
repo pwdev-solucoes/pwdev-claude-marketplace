@@ -40,9 +40,10 @@ Core philosophy across all plugins:
 | Plugin | Description | Version | License |
 |--------|-------------|:-------:|:-------:|
 | [**pwdev-code**](./plugins/pwdev-code/) | Spec-driven development framework — 11 agents, 6 phases, 14 commands | 1.2.0 | Apache-2.0 |
-| [**pwdev-uiux**](./plugins/pwdev-uiux/) | UI/UX engineering framework — 7 agents, 5-phase workflow, Figma integration, WCAG 2.1 AA | 1.1.2 | Apache-2.0 |
+| [**pwdev-uiux**](./plugins/pwdev-uiux/) | UI/UX engineering framework — 8 agents, 5-phase workflow, Figma integration, WCAG 2.1 AA | 1.1.2 | Apache-2.0 |
 | [**pwdev-feat**](./plugins/pwdev-feat/) | Simplified feature development — PWDEVIA 7-question plans + executor, fast and practical | 1.1.2 | Apache-2.0 |
 | [**pwdev-prd**](./plugins/pwdev-prd/) | Interview-driven PRD creation — 12-step structured interview, Markdown + JSON, technology-agnostic | 1.1.2 | Apache-2.0 |
+| [**pwdev-statusline**](./plugins/pwdev-statusline/) | Rich terminal status line — model, git branch, context bar, rate limits, tokens | 1.0.0 | Apache-2.0 |
 
 ### pwdev-code
 
@@ -58,13 +59,13 @@ See the [full plugin documentation](./plugins/pwdev-code/README.md).
 
 ### pwdev-uiux
 
-UI/UX engineering framework for **Vue 3 + shadcn-vue (Reka UI v2)** that orchestrates **7 specialized agents** across a 5-phase workflow.
+Stack-agnostic UI/UX engineering framework that orchestrates **8 specialized agents** across a 5-phase workflow.
 
 ```
 UNDERSTAND ─▶ STRUCTURE ─▶ IMPLEMENT ─▶ REVIEW ─▶ HANDOFF
 ```
 
-**Agents:** Orchestrator, UX Analyst, Design Bridge, UI Scanner, UI Builder, A11y Reviewer, UX Critic
+**Agents:** Orchestrator, UX Analyst, Design Bridge, UI Scanner, UI Builder, Theme Builder, A11y Reviewer, UX Critic
 
 **Key features:** Figma MCP integration, WCAG 2.1 AA auditing, 7-axis UX review, project-specific contextual skills
 
@@ -98,6 +99,20 @@ Interview (12 steps) ─▶ PRD.md ─▶ Export (JSON / GitHub Issue)
 
 See the [full plugin documentation](./plugins/pwdev-prd/README.md).
 
+### pwdev-statusline
+
+Rich terminal **status line** for Claude Code. Displays model, git branch, context usage, rate limits, and token counts in a colorful single-line bar.
+
+```
+session | ~/project | Opus 4.6 | main | ctx:████░░░░░░ 42% | tok:1500 | 5h:15%
+```
+
+**Commands:** `install`, `uninstall`, `customize`, `preview`
+
+**Sections:** Directory, Model, Git Branch, Context Bar, Rate Limit (color-coded), Tokens, Session Name
+
+See the [full plugin documentation](./plugins/pwdev-statusline/README.md).
+
 ---
 
 ## Installation
@@ -127,6 +142,9 @@ claude plugin install pwdev-feat@pwdev-claude-marketplace
 
 # Interview-driven PRD creation (12-step process)
 claude plugin install pwdev-prd@pwdev-claude-marketplace
+
+# Rich terminal status line
+claude plugin install pwdev-statusline@pwdev-claude-marketplace
 ```
 
 Install only the plugins you need. Each one works independently.

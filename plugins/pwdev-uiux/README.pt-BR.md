@@ -14,59 +14,58 @@ PWDEV-UIUX orquestra **8 agentes especializados** em um **fluxo de 5 fases** par
 
 ## Primeiros Passos
 
-### Passo 1 — Instale o plugin
+### Passo 1 — Instalar
 
 ```bash
 claude plugin install pwdev-uiux@pwdev-claude-marketplace
 ```
 
-### Passo 2 — Inicialize o framework
+### Passo 2 — Inicializar
 
 ```
 /pwdev-uiux:init
 ```
 
-Cria o workspace `.planning/ui/` e detecta o framework do seu projeto.
+Este comando faz tudo de uma vez:
+- Cria o workspace `.planning/ui/`
+- Pergunta idioma (PT-BR / EN) e perfil de modelo
+- Detecta o framework frontend do projeto
+- Solicita a escolha da stack de UI (shadcn-vue, shadcn-react, primevue, untitled-ui, tailwind-plus ou custom)
+- Verifica a conexão com o Figma MCP
 
-### Passo 3 — Configure sua stack
+### Passo 3 — Comece a construir
 
+Escolha o caminho conforme o contexto do projeto:
+
+**Brownfield** (projeto existente com componentes de UI):
 ```
-/pwdev-uiux:stack
-```
-
-Escolha sua stack (shadcn-vue, shadcn-react, primevue, untitled-ui, tailwind-plus ou custom). A configuração é salva em `.planning/ui/stack.json` e utilizada por todos os agentes.
-
-### Passo 4 — (Opcional) Conecte o Figma
-
-```
-/pwdev-uiux:setup-figma
-```
-
-Habilita a integração bidirecional com o Figma: extrai designs em specs de código e envia componentes implementados de volta ao Figma.
-
-### Passo 5 — Analise seu projeto existente
-
-```
-/pwdev-uiux:scan
+/pwdev-uiux:scan                                  # analisa padrões + verificação de conformidade
+/pwdev-uiux:start "descrição da sua tarefa"       # inicia o fluxo de 5 fases
 ```
 
-Analisa sua base de código e gera `.planning/ui/project-ui-skill.md` — uma skill contextual com os padrões, tokens e convenções do seu projeto. Também executa uma **verificação de conformidade com boas práticas** contra mais de 60 regras.
-
-### Passo 6 — Crie seu tema
-
+**Greenfield** (projeto novo, sem UI existente):
 ```
-/pwdev-uiux:theme create
+/pwdev-uiux:theme create                          # gera tema semântico de cores
+/pwdev-uiux:start "descrição da sua tarefa"       # inicia o fluxo de 5 fases
 ```
 
-Gera um tema de cores semântico com CSS custom properties + configuração do Tailwind. Suporta modos claro/escuro com validação de contraste WCAG AA.
-
-### Passo 7 — Comece a construir
-
+**Com designs do Figma disponíveis**:
 ```
-/pwdev-uiux:start "descrição da sua tarefa de UI"
+/pwdev-uiux:setup-figma                           # conecta o Figma MCP (uma vez)
+/pwdev-uiux:theme from-figma                      # extrai tema das variáveis do Figma
+/pwdev-uiux:start "descrição da sua tarefa"       # specs do Figma extraídas na Fase 2
 ```
 
-Inicia o fluxo de 5 fases: Entender → Estruturar → Implementar → Revisar → Entregar.
+Pronto. O orquestrador guia você pelas 5 fases automaticamente.
+
+### Comandos opcionais de configuração
+
+| Comando | Quando usar |
+|---------|------------|
+| `/pwdev-uiux:stack` | Alterar a stack de UI após o init |
+| `/pwdev-uiux:setup-figma` | Conectar a integração com o Figma |
+| `/pwdev-uiux:scan` | Re-analisar após mudanças significativas no projeto |
+| `/pwdev-uiux:theme create` | Gerar um novo tema antes de construir |
 
 ---
 
@@ -88,13 +87,13 @@ Inicia o fluxo de 5 fases: Entender → Estruturar → Implementar → Revisar �
 
 O orquestrador guia você por todas as 5 fases automaticamente.
 
-### Construção rápida de componente (pular fases de spec)
+### Construir um componente a partir de uma spec existente
 
 ```
 /pwdev-uiux:build UserCard
 ```
 
-Implementa um componente diretamente a partir de uma spec existente.
+Implementa um componente específico quando a spec UX já está aprovada. Útil para adicionar componentes um a um após a Fase 1.
 
 ### Revisar componentes existentes
 
@@ -224,7 +223,7 @@ O **ui-scanner** analisa seu projeto existente antes do desenvolvimento e gera u
 | Comando | O que faz |
 |---------|-----------|
 | `/pwdev-uiux:init` | Inicializa o framework, detecta a stack, cria `.planning/ui/`, configura idioma e perfil de modelo |
-| `/pwdev-uiux:stack` | Configura a stack de UI (shadcn-vue, shadcn-react, primevue, untitled-ui, custom) |
+| `/pwdev-uiux:stack` | Configura a stack de UI (shadcn-vue, shadcn-react, primevue, untitled-ui, tailwind-plus, custom) |
 | `/pwdev-uiux:setup-figma` | Conecta o Figma MCP |
 | `/pwdev-uiux:scan` | Analisa a UI do projeto existente + verificação de conformidade com boas práticas |
 
@@ -261,6 +260,11 @@ O **ui-scanner** analisa seu projeto existente antes do desenvolvimento e gera u
 | `/pwdev-uiux:push-to-figma screen` | Envia layout de tela |
 | `/pwdev-uiux:push-to-figma library` | Constrói biblioteca de componentes |
 | `/pwdev-uiux:push-to-figma tokens` | Sincroniza design tokens |
+
+### Auditoria
+
+| Comando | O que faz |
+|---------|-----------|
 | `/pwdev-uiux:audit` | Consultar a trilha de auditoria — resumo, eventos, decisões, artefatos, estatísticas, exportar PDF |
 
 ---

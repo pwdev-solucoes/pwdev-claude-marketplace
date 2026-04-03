@@ -1,7 +1,8 @@
 ---
 name: ux-analyst
 description: >
-  UX analysis specialist for Vue. Creates structured specs before implementation.
+  UX analysis specialist. Creates structured specs before implementation.
+  Stack-agnostic — maps components to the library configured in stack.json.
   Invoked by the orchestrator in PHASE 1 and PHASE 5. Writes to .planning/ui/ux-spec.md.
 model: sonnet
 tools: Read, Write, Bash
@@ -51,8 +52,8 @@ If the config file does not exist or has no `lang` field, follow the language of
 ## Required states
 - default | loading | empty | error | success | no permission
 
-## Required Vue components
-[mapped to shadcn-vue]
+## Required UI components
+[mapped to the configured stack's component library]
 
 ## Priority UX principles (3-5)
 [from the 7 axes — specific to this task]

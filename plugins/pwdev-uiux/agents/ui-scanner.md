@@ -11,8 +11,6 @@ model: sonnet
 permissionMode: acceptEdits
 tools: Read, Write, Bash, Edit, WebFetch
 skills:
-  - shadcn-vue
-  - reka-ui
   - ux-tokens
   - component-audit
   - ui-best-practices
@@ -68,21 +66,25 @@ They are loaded automatically via the plugin skill mechanism.
 ### 1. Inventory of existing components
 
 ```bash
-# Existing Vue components
-find components/ -name "*.vue" | sort
+# Read stack config
+cat .planning/ui/stack.json 2>/dev/null
 
-# Installed shadcn-vue components
-ls components/ui/ 2>/dev/null
+# Existing UI components (adapt extension to detected stack)
+find components/ src/components/ -name "*.vue" -o -name "*.tsx" -o -name "*.jsx" -o -name "*.svelte" 2>/dev/null | sort
 
-# Existing composables
-find composables/ -name "*.ts" | sort 2>/dev/null
+# Installed library components
+ls components/ui/ 2>/dev/null || ls src/components/ui/ 2>/dev/null
 
-# Verify stack
+# Existing composables/hooks
+find composables/ hooks/ src/hooks/ -name "*.ts" 2>/dev/null | sort
+
+# Verify stack dependencies
 cat package.json | python3 -c "
 import json, sys
 p = json.load(sys.stdin)
 deps = {**p.get('dependencies',{}), **p.get('devDependencies',{})}
-keys = ['vue', 'reka-ui', 'shadcn-vue', 'tailwindcss', 'vee-validate', 'zod', 'nuxt']
+keys = ['vue', 'react', 'next', 'nuxt', 'svelte', 'reka-ui', 'radix-ui', '@radix-ui/react-slot',
+        'shadcn-vue', 'primevue', 'tailwindcss', 'vee-validate', 'react-hook-form', 'zod']
 for k in keys:
     if k in deps: print(f'{k}: {deps[k]}')
 "
@@ -93,7 +95,7 @@ for k in keys:
 ```bash
 # Custom CSS variables
 grep -r "^--" src/assets/ --include="*.css" 2>/dev/null | head -40
-grep -r "^--" app.vue --include="*.vue" 2>/dev/null | head -20
+grep -r "^--" app.vue --include="*.vue" --include="*.tsx" --include="*.jsx" 2>/dev/null | head -20
 
 # tailwind.config
 cat tailwind.config.ts 2>/dev/null || cat tailwind.config.js 2>/dev/null
@@ -102,21 +104,22 @@ cat tailwind.config.ts 2>/dev/null || cat tailwind.config.js 2>/dev/null
 ### 3. Analyze existing code patterns
 
 ```bash
-# Check if it uses Options API or Composition API
-grep -rl "defineComponent\|export default {" components/ --include="*.vue" | wc -l
-grep -rl "script setup" components/ --include="*.vue" | wc -l
+# Detect component style (adapt extensions to stack)
+grep -rl "defineComponent\|export default {" components/ src/components/ --include="*.vue" --include="*.tsx" 2>/dev/null | wc -l
+grep -rl "script setup" components/ src/components/ --include="*.vue" --include="*.tsx" --include="*.jsx" 2>/dev/null | wc -l
+grep -rl "function.*Component\|const.*=.*=>" components/ src/components/ --include="*.tsx" --include="*.jsx" 2>/dev/null | wc -l
 
 # Most used import pattern
-head -30 components/**/*.vue 2>/dev/null | grep "^import" | sort | uniq -c | sort -rn | head -20
+head -30 components/**/*.vue components/**/*.tsx src/components/**/*.tsx 2>/dev/null | grep "^import" | sort | uniq -c | sort -rn | head -20
 
 # cn() vs clsx vs classList pattern
-grep -r "cn\|clsx\|classList" components/ --include="*.vue" | head -10
+grep -r "cn\|clsx\|classList" components/ src/components/ --include="*.vue" --include="*.tsx" --include="*.jsx" 2>/dev/null | head -10
 
 # Form pattern
-grep -rl "useForm\|vee-validate\|FormField" components/ --include="*.vue" 2>/dev/null
+grep -rl "useForm\|vee-validate\|FormField\|react-hook-form\|useFormContext" components/ src/components/ --include="*.vue" --include="*.tsx" 2>/dev/null
 
-# Check composable usage
-ls composables/ 2>/dev/null
+# Check composable/hook usage
+ls composables/ hooks/ src/hooks/ 2>/dev/null
 ```
 
 ### 4. Analyze visually via browser (when URL available)
@@ -140,14 +143,14 @@ Analyze:
 ### 5. Extract naming conventions
 
 ```bash
-# Component naming pattern
-find components/ -name "*.vue" | sed 's/.*\///' | sed 's/.vue//' | head -20
+# Component naming pattern (adapt extension to stack)
+find components/ src/components/ -name "*.vue" -o -name "*.tsx" -o -name "*.jsx" 2>/dev/null | sed 's/.*\///' | sed 's/\.\(vue\|tsx\|jsx\)//' | head -20
 
-# Composable naming pattern
-find composables/ -name "*.ts" 2>/dev/null | sed 's/.*\///' | sed 's/.ts//' | head -10
+# Composable/hook naming pattern
+find composables/ hooks/ src/hooks/ -name "*.ts" 2>/dev/null | sed 's/.*\///' | sed 's/.ts//' | head -10
 
 # Organization pattern
-find components/ -type d | head -15
+find components/ src/components/ -type d 2>/dev/null | head -15
 ```
 
 ### 6. Best practices compliance check
@@ -157,37 +160,37 @@ Focus on **P0 mandatory rules** first, then P1 strong defaults.
 
 ```bash
 # 1.2 / 1.3 — Hardcoded hex values in components (should use semantic tokens)
-grep -rn "#[0-9A-Fa-f]\{3,8\}" components/ src/components/ --include="*.vue" 2>/dev/null | \
+grep -rn "#[0-9A-Fa-f]\{3,8\}" components/ src/components/ --include="*.vue" --include="*.tsx" --include="*.jsx" 2>/dev/null | \
   grep -v "ui/" | grep -v "node_modules" | head -20
 
 # 2.2 — Font sizes below 12px
-grep -rn "text-\[[0-9]*px\]" components/ src/components/ --include="*.vue" 2>/dev/null | head -10
-grep -rn "font-size:\s*[0-9]*px" components/ src/components/ --include="*.vue" 2>/dev/null | head -10
+grep -rn "text-\[[0-9]*px\]" components/ src/components/ --include="*.vue" --include="*.tsx" --include="*.jsx" 2>/dev/null | head -10
+grep -rn "font-size:\s*[0-9]*px" components/ src/components/ --include="*.vue" --include="*.tsx" --include="*.jsx" 2>/dev/null | head -10
 
 # 3.1 — Arbitrary spacing (not multiples of 4px) — look for odd pixel values
-grep -rn "p-\[.*px\]\|m-\[.*px\]\|gap-\[.*px\]" components/ src/components/ --include="*.vue" 2>/dev/null | head -10
+grep -rn "p-\[.*px\]\|m-\[.*px\]\|gap-\[.*px\]" components/ src/components/ --include="*.vue" --include="*.tsx" --include="*.jsx" 2>/dev/null | head -10
 
 # 3.5 — Input/button height inconsistency
-grep -rn "h-\[" components/ src/components/ --include="*.vue" 2>/dev/null | \
+grep -rn "h-\[" components/ src/components/ --include="*.vue" --include="*.tsx" --include="*.jsx" 2>/dev/null | \
   grep -i "button\|input\|btn" | head -10
 
 # 7.7 — Empty states: components that render lists/tables without empty state
-grep -rL "empty\|no-data\|no-results\|EmptyState\|v-if.*length" components/ src/components/ --include="*.vue" 2>/dev/null | \
+grep -rL "empty\|no-data\|no-results\|EmptyState\|v-if.*length" components/ src/components/ --include="*.vue" --include="*.tsx" --include="*.jsx" 2>/dev/null | \
   xargs grep -l "v-for" 2>/dev/null | head -10
 
 # 14.1 — Animations without reduced-motion support
-grep -rn "animate-\|transition-\|duration-" components/ src/components/ --include="*.vue" 2>/dev/null | \
+grep -rn "animate-\|transition-\|duration-" components/ src/components/ --include="*.vue" --include="*.tsx" --include="*.jsx" 2>/dev/null | \
   grep -v "motion-reduce\|motion-safe\|prefers-reduced-motion" | head -10
 
 # 14.3 — Removed focus outlines without substitute
-grep -rn "outline-none\|outline-0\|focus:outline-none" components/ src/components/ --include="*.vue" 2>/dev/null | \
+grep -rn "outline-none\|outline-0\|focus:outline-none" components/ src/components/ --include="*.vue" --include="*.tsx" --include="*.jsx" 2>/dev/null | \
   grep -v "focus-visible:ring\|focus-visible:outline" | head -10
 
 # 1.7 — Shadows outside the system (arbitrary or colored shadows)
-grep -rn "shadow-\[" components/ src/components/ --include="*.vue" 2>/dev/null | head -10
+grep -rn "shadow-\[" components/ src/components/ --include="*.vue" --include="*.tsx" --include="*.jsx" 2>/dev/null | head -10
 
 # 14.5 — Arbitrary z-index values
-grep -rn "z-\[" components/ src/components/ --include="*.vue" 2>/dev/null | head -10
+grep -rn "z-\[" components/ src/components/ --include="*.vue" --include="*.tsx" --include="*.jsx" 2>/dev/null | head -10
 
 # 1.1 — Dark mode: check if theme CSS has both :root and .dark
 grep -c "\.dark" src/assets/*.css app/assets/**/*.css 2>/dev/null
@@ -210,15 +213,15 @@ Write to `.planning/ui/project-ui-skill.md`:
 
 | Technology | Version | Status |
 |---|---|---|
-| Vue | x.x | ✅ |
-| Reka UI / shadcn-vue | x.x | ✅ / ⚠️ not installed |
+| [Framework] | x.x | ✅ |
+| [Component Library] | x.x | ✅ / ⚠️ not installed |
 | Tailwind | x.x | ✅ |
-| vee-validate | x.x | ✅ / ⚠️ |
+| [Form Library] | x.x | ✅ / ⚠️ |
 | Zod | x.x | ✅ / ⚠️ |
 
 ## Project custom tokens
 
-### Colors (beyond default shadcn-vue)
+### Colors (beyond library defaults)
 | CSS Token | Value | Observed usage |
 |---|---|---|
 | --brand-primary | #... | Primary action buttons |
@@ -231,24 +234,24 @@ Write to `.planning/ui/project-ui-skill.md`:
 
 ## Existing components — inventory
 
-### Installed shadcn-vue
-[list of components in components/ui/]
+### Installed library components
+[list of components in components/ui/ or src/components/ui/]
 
 ### Product components
 | Component | File | Observed pattern |
 |---|---|---|
-| UserCard | components/user/UserCard.vue | Card + Avatar + Badge |
+| UserCard | components/user/UserCard.vue (or .tsx) | Card + Avatar + Badge |
 
 ## Identified code patterns
 
 ### SFC style
-- [x] `<script setup lang="ts">` — confirmed pattern
-- [ ] Options API — present in X legacy files
+- [x] [detected component style, e.g. `<script setup lang="ts">`, TSX, etc.]
+- [ ] [legacy pattern if present — e.g. Options API in X files]
 
 ### Form pattern used
 [vee-validate + Zod / Field component / manual]
 
-### Composable pattern
+### Composable/Hook pattern
 [useFeature() returns {data, isLoading, error} / other pattern]
 
 ### Conditional class pattern
@@ -349,10 +352,11 @@ Write to `.planning/ui/project-ui-skill.md`:
 
 ## Gotchas
 
-- Nuxt auto-imports can hide real imports — check `.nuxt/components.d.ts`
-- Hybrid projects may have Options API in legacy components + Composition API in new ones
+- **Vue/Nuxt**: Nuxt auto-imports can hide real imports — check `.nuxt/components.d.ts`
+- **Vue**: Hybrid projects may have Options API in legacy + Composition API in new ones
+- **React/Next.js**: Server/Client component boundary affects where hooks can be used
 - `tailwind.config` may use `content` patterns that exclude some directories
-- CSS variables in `app.vue` can override shadcn-vue ones — check for conflicts
+- CSS variables in root layout files can override library defaults — check for conflicts
 
 ---
 
