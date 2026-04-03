@@ -14,59 +14,58 @@ PWDEV-UIUX orchestrates **8 specialized agents** across a **5-phase workflow** t
 
 ## Getting Started
 
-### Step 1 — Install the plugin
+### Step 1 — Install
 
 ```bash
 claude plugin install pwdev-uiux@pwdev-claude-marketplace
 ```
 
-### Step 2 — Initialize the framework
+### Step 2 — Initialize
 
 ```
 /pwdev-uiux:init
 ```
 
-This creates the `.planning/ui/` workspace and detects your project's framework.
+This command handles everything in one go:
+- Creates the `.planning/ui/` workspace
+- Asks for language (PT-BR / EN) and model profile
+- Detects your frontend framework
+- Prompts you to choose your UI stack (shadcn-vue, shadcn-react, primevue, untitled-ui, tailwind-plus, or custom)
+- Checks Figma MCP connection
 
-### Step 3 — Configure your stack
+### Step 3 — Start building
 
+Choose your path based on the project context:
+
+**Brownfield** (existing project with UI components):
 ```
-/pwdev-uiux:stack
-```
-
-Choose your stack (shadcn-vue, shadcn-react, primevue, untitled-ui, tailwind-plus, or custom). The configuration is saved to `.planning/ui/stack.json` and used by all agents.
-
-### Step 4 — (Optional) Connect Figma
-
-```
-/pwdev-uiux:setup-figma
-```
-
-Enables bidirectional Figma integration: extract designs into code specs, push implemented components back to Figma.
-
-### Step 5 — Scan your existing project
-
-```
-/pwdev-uiux:scan
+/pwdev-uiux:scan                              # analyze existing patterns + compliance check
+/pwdev-uiux:start "description of your task"  # start 5-phase flow
 ```
 
-Analyzes your codebase and generates `.planning/ui/project-ui-skill.md` — a contextual skill with your project's patterns, tokens, and conventions. Also runs a **best practices compliance check** against 60+ rules.
-
-### Step 6 — Create your theme
-
+**Greenfield** (new project, no existing UI):
 ```
-/pwdev-uiux:theme create
+/pwdev-uiux:theme create                      # generate semantic color theme
+/pwdev-uiux:start "description of your task"  # start 5-phase flow
 ```
 
-Generates a semantic color theme with CSS custom properties + Tailwind config. Supports light/dark modes with WCAG AA contrast validation.
-
-### Step 7 — Start building
-
+**With Figma designs available**:
 ```
-/pwdev-uiux:start "description of your UI task"
+/pwdev-uiux:setup-figma                       # connect Figma MCP (one-time)
+/pwdev-uiux:theme from-figma                  # extract theme from Figma variables
+/pwdev-uiux:start "description of your task"  # Figma specs extracted in Phase 2
 ```
 
-This launches the 5-phase workflow: Understand → Structure → Implement → Review → Handoff.
+That's it. The orchestrator guides you through the 5 phases automatically.
+
+### Optional setup commands
+
+| Command | When to use |
+|---------|------------|
+| `/pwdev-uiux:stack` | Change the UI stack after init |
+| `/pwdev-uiux:setup-figma` | Connect Figma integration |
+| `/pwdev-uiux:scan` | Re-scan after significant project changes |
+| `/pwdev-uiux:theme create` | Generate a new theme before building |
 
 ---
 
@@ -88,13 +87,13 @@ This launches the 5-phase workflow: Understand → Structure → Implement → R
 
 The orchestrator guides you through all 5 phases automatically.
 
-### Quick component build (skip spec phases)
+### Build a single component from an existing spec
 
 ```
 /pwdev-uiux:build UserCard
 ```
 
-Implements a component directly from an existing spec.
+Implements a specific component when the UX spec is already approved. Useful for adding components one-by-one after Phase 1.
 
 ### Review existing components
 
@@ -224,7 +223,7 @@ The **ui-scanner** analyzes your existing project before development and generat
 | Command | What it does |
 |---------|-------------|
 | `/pwdev-uiux:init` | Initialize framework, detect stack, create `.planning/ui/`, configure language and model profile |
-| `/pwdev-uiux:stack` | Configure UI stack (shadcn-vue, shadcn-react, primevue, untitled-ui, custom) |
+| `/pwdev-uiux:stack` | Configure UI stack (shadcn-vue, shadcn-react, primevue, untitled-ui, tailwind-plus, custom) |
 | `/pwdev-uiux:setup-figma` | Connect Figma MCP |
 | `/pwdev-uiux:scan` | Scan existing project UI + best practices compliance check |
 
@@ -261,6 +260,11 @@ The **ui-scanner** analyzes your existing project before development and generat
 | `/pwdev-uiux:push-to-figma screen` | Push screen layout |
 | `/pwdev-uiux:push-to-figma library` | Build component library |
 | `/pwdev-uiux:push-to-figma tokens` | Sync design tokens |
+
+### Audit
+
+| Command | What it does |
+|---------|-------------|
 | `/pwdev-uiux:audit` | Query the audit trail — summary, events, decisions, artifacts, stats, export PDF |
 
 ---

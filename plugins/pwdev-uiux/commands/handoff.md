@@ -1,5 +1,5 @@
 ---
-description: Generates complete handoff documentation for the implemented and approved Vue components. Consolidates specs, findings and acceptance criteria.
+description: Generates complete handoff documentation for the implemented and approved UI components. Consolidates specs, findings and acceptance criteria.
 ---
 
 # /pwdev-uiux:handoff
@@ -28,7 +28,7 @@ Create `docs/handoff/[task-kebab]-[YYYY-MM-DD].md`:
 **Date**: [date] | **Framework**: pwdev-uiux v1.0.0 | **Status**: APPROVED
 
 ## Stack used
-Vue 3 + shadcn-vue (Reka UI v2) + Tailwind + vee-validate + Zod
+[read from .planning/ui/stack.json — framework + library + forms]
 
 ## Problem solved
 [from ux-spec]
@@ -41,8 +41,8 @@ Vue 3 + shadcn-vue (Reka UI v2) + Tailwind + vee-validate + Zod
 
 ## How to use the components
 
-\`\`\`vue
-[usage examples in Vue 3 SFC]
+\`\`\`
+[usage examples matching the configured stack]
 \`\`\`
 
 ## Applied tokens

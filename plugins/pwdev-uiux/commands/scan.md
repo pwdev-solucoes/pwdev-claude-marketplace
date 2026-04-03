@@ -1,6 +1,6 @@
 ---
 description: >
-  Scans the existing UI of the Vue project and generates a contextual skill in
+  Scans the existing UI of the project and generates a contextual skill in
   .planning/ui/project-ui-skill.md. Use before starting development
   on an existing project to ensure new components are consistent.
 argument-hint: "[optional URL or route, e.g.: http://localhost:3000/dashboard]"
@@ -27,16 +27,21 @@ All subsequent output follows the resolved language. Technical terms stay in Eng
 ## Pre-check
 
 ```bash
-# Confirm this is a Vue project
+# Read stack config to determine expected framework
+cat .planning/ui/stack.json 2>/dev/null || echo "NO_STACK"
+
+# Confirm this is a frontend project with a package.json
 ls package.json && cat package.json | python3 -c "
 import json, sys
 p = json.load(sys.stdin)
 deps = {**p.get('dependencies',{}), **p.get('devDependencies',{})}
-print('Vue project:', 'vue' in deps or 'nuxt' in deps)
+frameworks = ['vue', 'nuxt', 'react', 'next', 'svelte', '@angular/core']
+found = [f for f in frameworks if f in deps]
+print('Frontend project:', bool(found), '— frameworks:', ', '.join(found) if found else 'none detected')
 "
 ```
 
-If not a Vue project: inform and exit.
+If no frontend framework detected and no stack.json: inform and suggest running `/pwdev-uiux:stack` first.
 
 ## Determine analysis mode
 
@@ -91,21 +96,21 @@ After `ui-scanner` completion, present summary:
 ✅ /pwdev-uiux:scan completed
 
 📦 Stack
-  Vue 3.x | shadcn-vue (Reka UI) | Tailwind x.x
-  vee-validate: [yes/no] | TypeScript: [yes/no]
+  [Framework] x.x | [Component Library] | Tailwind x.x
+  Forms: [library] | TypeScript: [yes/no]
 
 📁 Components
-  shadcn-vue installed: N of 58 available
-  Product components: N .vue files
-  Composables: N files
+  Library components installed: N
+  Product components: N files
+  Composables/hooks: N files
 
 🎨 Tokens
   Custom CSS tokens: N found
   Additional colors: [short list]
 
 ⚙️ Identified patterns
-  SFC style: <script setup lang="ts"> [yes/no]
-  Forms: [vee-validate / Field / manual]
+  Component style: [SFC script setup / TSX / Options API / etc.]
+  Forms: [vee-validate / react-hook-form / manual / etc.]
   Organization: [by feature / by type]
 
 📋 Best Practices Compliance

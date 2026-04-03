@@ -1,0 +1,20 @@
+{
+  "name": "pwdev-statusline",
+  "version": "1.0.0",
+  "description": "Configure and manage Claude Code status line — installs a rich bash-based status bar showing model, git branch, context usage, rate limits, and token counts.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "claude-code",
+    "claude-plugin",
+    "statusline",
+    "status-bar",
+    "terminal-ui",
+    "developer-experience"
+  ]
+}
