@@ -1,4 +1,4 @@
-# PWDEV-CODE v1.1.2
+# PWDEV-CODE v1.2.0
 
 *Leia em [English](./README.md)*
 
@@ -8,7 +8,7 @@
 Never execute without a plan. Never ship without verification.
 ```
 
-O PWDEV-CODE orquestra **11 agentes especializados** em **5 fases** usando **3 camadas** para garantir que cada linha de código seja planejada, rastreável e verificada.
+O PWDEV-CODE orquestra **11 agentes especializados** em **6 fases** usando **3 camadas** para garantir que cada linha de código seja planejada, rastreável e verificada.
 
 ---
 
@@ -37,7 +37,7 @@ O framework separa **o que** fazer, **quem** faz e **com qual** conhecimento:
 
 Cada camada é independente: o **agent-executor** é chamado por 3 comandos diferentes (execute, quick, fix-plans) — a persona existe uma vez e é reutilizada. Skills são pacotes de conhecimento intercambiáveis. Os comandos definem o fluxo sem conhecer as regras de implementação.
 
-### 5 Fases
+### 6 Fases
 
 Cada funcionalidade passa por um pipeline estruturado com portões de aprovação humana:
 
@@ -98,19 +98,28 @@ Context 70%+    → Hallucinations, forgets requirements
 
 **Solução:** cada tarefa executa em **contexto limpo** (subagente) recebendo apenas: tarefa + spec.md (seções 1, 6, 7) + skills ativas + arquivos listados. Nada mais. Zero de histórico.
 
-Salvaguardas adicionais: máximo de 3 tarefas por plano, state.md para persistência entre sessões, `/pwdev-code:context` para atualizar o contexto antes de retomar após longas pausas.
+Salvaguardas adicionais: máximo de 3 tarefas por plano, state.md para persistência entre sessões, refresh automático de contexto no `/pwdev-code:execute` quando sessão stale detectada (idle > 2h).
 
 ---
 
-### Novidades da v1.1.2
+### Novidades da v1.2.0
+
+- **Consolidação de Comandos** — De 20 comandos independentes para **14 comandos** com subcomandos lógicos:
+  - `prd` + `roadmap` → `/pwdev-code:product` (subcomandos: `prd`, `roadmap`)
+  - `cleanup` + `changelog` → `/pwdev-code:maintenance` (subcomandos: `cleanup`, `changelog`)
+  - `status` + `resume` → `/pwdev-code:session` (subcomandos: status padrão, `resume`)
+  - `skill` → `/pwdev-code:manager-skills` (subcomandos: `create`, `list`, `audit`)
+  - `context` + `map-codebase` + `setup` → absorvidos nos subcomandos do `/pwdev-code:init`
+- **Detecção de Sessão Inativa** — `/pwdev-code:execute` detecta automaticamente sessões ociosas (>2h) e gera contexto atualizado para o executor com estado atual, mudanças recentes e decisões ativas.
+- **Menus Interativos** — Comandos agrupados (`product`, `maintenance`, `session`, `manager-skills`) exibem menus interativos quando chamados sem argumentos.
+
+### Anterior: v1.1.2
 
 - **Seleção de Idioma** — Todos os comandos suportam PT-BR e EN. Configurado durante o `/pwdev-code:init`.
 - **Perfis de Modelo** — Modelos dos agentes configuráveis via perfis `performance`, `balanced` ou `economy`.
 - **Trilha de Auditoria (opt-in)** — Registro SQLite opcional de comandos, decisões e artefatos. Desativado por padrão.
-- **Gerenciamento de Skills** — Novo comando `/pwdev-code:skill` para criar skills de backend/frontend, listar skills instaladas e auditar uso.
-- **Setup Unificado** — `setup-mcp` renomeado para `/pwdev-code:setup` com subcomandos (`setup mcp`, `setup stack`).
-- **Health Consolidado** — `/pwdev-code:deps` integrado ao `/pwdev-code:health --deps`.
-- **Estrutura de diretórios organizada** — Artefatos reorganizados em `context/`, `product/`, `phases/{slug}/`, `quick/` e `reports/`. Cada fase tem sua própria pasta com spec, planos, execução, revisão e verificação isolados.
+- **Setup Unificado** — `setup-mcp`, `map-codebase` e `setup` integrados ao `/pwdev-code:init` com subcomandos.
+- **Estrutura de diretórios organizada** — Artefatos reorganizados em `context/`, `product/`, `phases/{slug}/`, `quick/` e `reports/`.
 
 ### Verificação — Retroativa a Partir do Objetivo
 
@@ -168,14 +177,16 @@ Fontes de verdade: objetivo + qualidade + DoD do spec.md, ACs das tarefas, check
 | Comando | O que faz |
 |---------|----------|
 | `/pwdev-code:init` | Inicializa o framework no repositório — cria `.planning/`, CLAUDE.md, configurações, configura idioma e perfil de modelo |
-| `/pwdev-code:setup` | Setup do projeto — servidores MCP, detecção de stack (`setup mcp`, `setup stack`) |
+| `/pwdev-code:init mcp` | Configurar servidores MCP (.mcp.json) |
+| `/pwdev-code:init stack` | Detectar e configurar stack do projeto |
+| `/pwdev-code:init claude` | Gerar arquivo CLAUDE.md de memória operacional |
 
 ### Planejamento de Produto
 
 | Comando | O que faz | Saída |
 |---------|----------|-------|
-| `/pwdev-code:prd` | Entrevista de descoberta de produto → PRD estruturado | prd.md (10 seções) |
-| `/pwdev-code:roadmap` | Decompõe o PRD em roadmap executável | .planning/roadmap/ (multi-arquivo com rastreabilidade) |
+| `/pwdev-code:product prd` | Entrevista de descoberta de produto → PRD estruturado | prd.md (10 seções) |
+| `/pwdev-code:product roadmap` | Decompõe o PRD em roadmap executável | .planning/roadmap/ (multi-arquivo com rastreabilidade) |
 
 ### Fluxo de Desenvolvimento
 
@@ -186,6 +197,9 @@ Fontes de verdade: objetivo + qualidade + DoD do spec.md, ACs das tarefas, check
 | `/pwdev-code:plan` | PLAN | spec.md aprovado | plan.md (tarefas atômicas em ondas) |
 | `/pwdev-code:execute` | EXECUTE | PLANs aprovados | Código + commits + summary.md |
 | `/pwdev-code:review` | REVIEW | Alterações de código existem | code-review.md + qa-report.md |
+| `/pwdev-code:review --code-only` | REVIEW | Alterações de código existem | code-review.md apenas |
+| `/pwdev-code:review --tests-only` | REVIEW | Alterações de código existem | qa-report.md apenas |
+| `/pwdev-code:review --diff HEAD~N` | REVIEW | Commits existem | Revisão dos últimos N commits |
 | `/pwdev-code:verify` | VERIFY | SUMMARYs existem | verify.md, fix-plan.md |
 | `/pwdev-code:quick` | Tudo-em-um | Descrição da tarefa | Código + commit (para tarefas simples) |
 
@@ -193,26 +207,25 @@ Fontes de verdade: objetivo + qualidade + DoD do spec.md, ACs das tarefas, check
 
 | Comando | Quando usar |
 |---------|------------|
-| `/pwdev-code:status` | Verificar fase atual, plano, tarefa e progresso |
-| `/pwdev-code:resume` | Retomar de onde parou (lê state.md) |
-| `/pwdev-code:context` | Atualizar contexto antes de executar após uma longa pausa |
+| `/pwdev-code:session` | Verificar fase atual, plano, tarefa e progresso (padrão) |
+| `/pwdev-code:session resume` | Retomar de onde parou (lê state.md) |
 
 ### Análise & Diagnóstico
 
 | Comando | Quando usar |
 |---------|------------|
-| `/pwdev-code:map-codebase` | Primeiro contato com repositório existente — analisa stack, padrões, convenções, riscos |
+| `/pwdev-code:init map` | Primeiro contato com repositório existente — analisa stack, padrões, convenções, riscos |
 | `/pwdev-code:health` | Scorecard de saúde do projeto — testes, lint, dependências, segurança |
 | `/pwdev-code:health --deps` | Auditoria focada de dependências — versões, vulnerabilidades, pacotes depreciados |
 | `/pwdev-code:audit` | Consultar a trilha de auditoria — resumo, eventos, decisões, artefatos, estatísticas, exportar PDF |
-| `/pwdev-code:skill` | Criar, listar ou auditar skills (`skill create backend`, `skill create frontend`, `skill list`, `skill audit`) |
+| `/pwdev-code:manager-skills` | Criar, listar ou auditar skills (`manager-skills create backend`, `manager-skills list`, `manager-skills audit`) |
 
 ### Release & Manutenção
 
 | Comando | Quando usar |
 |---------|------------|
-| `/pwdev-code:changelog` | Gerar changelog a partir do histórico de commits |
-| `/pwdev-code:cleanup` | Arquivar artefatos de fases concluídas em `.planning/archive/` |
+| `/pwdev-code:maintenance cleanup` | Arquivar artefatos de fases concluídas em `.planning/archive/` |
+| `/pwdev-code:maintenance changelog` | Gerar changelog a partir do histórico de commits |
 
 ---
 
@@ -415,5 +428,5 @@ skill-testing, skill-performance, skill-devops, skill-data-modeling, skill-docs
 
 Apache-2.0 — Veja [LICENSE](./LICENSE)
 
-*PWDEV-CODE v1.1.2 — A complexidade vive no sistema, não no seu fluxo de trabalho.*
+*PWDEV-CODE v1.2.0 — A complexidade vive no sistema, não no seu fluxo de trabalho.*
 *Mantido por [Paulo Soares](https://github.com/soarescbm)*

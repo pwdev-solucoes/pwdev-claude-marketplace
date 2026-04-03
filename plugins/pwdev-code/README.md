@@ -1,4 +1,4 @@
-# PWDEV-CODE v1.1.2
+# PWDEV-CODE v1.2.0
 
 *Read this in [Português Brasileiro](./README.pt-BR.md)*
 
@@ -8,7 +8,7 @@
 Never execute without a plan. Never ship without verification.
 ```
 
-PWDEV-CODE orchestrates **11 specialized agents** across **5 phases** using **3 layers** to ensure every line of code is planned, traceable, and verified.
+PWDEV-CODE orchestrates **11 specialized agents** across **6 phases** using **3 layers** to ensure every line of code is planned, traceable, and verified.
 
 ---
 
@@ -37,7 +37,7 @@ The framework separates **what** to do, **who** does it, and **with what** knowl
 
 Each layer is independent: **agent-executor** is called by 3 different commands (execute, quick, fix-plans) — the persona exists once and is reused. Skills are swappable knowledge packs. Commands define flow without knowing implementation rules.
 
-### 5 Phases
+### 6 Phases
 
 Every feature flows through a structured pipeline with human approval gates:
 
@@ -98,19 +98,28 @@ Context 70%+    → Hallucinations, forgets requirements
 
 **Solution:** each task runs in **fresh context** (subagent) receiving only: task + spec.md (sections 1, 6, 7) + active skills + listed files. Nothing else. Zero history.
 
-Additional safeguards: maximum 3 tasks per plan, state.md for cross-session persistence, `/pwdev-code:context` to refresh before resuming after long breaks.
+Additional safeguards: maximum 3 tasks per plan, state.md for cross-session persistence, automatic context refresh in `/pwdev-code:execute` when stale session detected (idle > 2h).
 
 ---
 
-### What's New in v1.1.2
+### What's New in v1.2.0
+
+- **Command Consolidation** — From 20 standalone commands down to **14 commands** with logical subcommands:
+  - `prd` + `roadmap` → `/pwdev-code:product` (subcommands: `prd`, `roadmap`)
+  - `cleanup` + `changelog` → `/pwdev-code:maintenance` (subcommands: `cleanup`, `changelog`)
+  - `status` + `resume` → `/pwdev-code:session` (subcommands: default status, `resume`)
+  - `skill` → `/pwdev-code:manager-skills` (subcommands: `create`, `list`, `audit`)
+  - `context` + `map-codebase` + `setup` → absorbed into `/pwdev-code:init` subcommands
+- **Stale Session Detection** — `/pwdev-code:execute` auto-detects idle sessions (>2h) and generates fresh executor context with current state, recent changes, and active decisions.
+- **Interactive Menus** — Grouped commands (`product`, `maintenance`, `session`, `manager-skills`) show interactive menus when called without arguments.
+
+### Previous: v1.1.2
 
 - **Language Selection** — All commands support PT-BR and EN. Configured during `/pwdev-code:init`.
 - **Model Profiles** — Agent models configurable via `performance`, `balanced`, or `economy` profiles.
 - **Audit Trail (opt-in)** — Optional SQLite logging of commands, decisions, and artifacts. Disabled by default.
-- **Skill Management** — New `/pwdev-code:skill` command to create backend/frontend skills, list installed skills, and audit usage.
-- **Unified Setup** — `setup-mcp` renamed to `/pwdev-code:setup` with subcommands (`setup mcp`, `setup stack`).
-- **Consolidated Health** — `/pwdev-code:deps` merged into `/pwdev-code:health --deps`.
-- **Organized directory structure** — Artifacts reorganized into `context/`, `product/`, `phases/{slug}/`, `quick/`, and `reports/`. Each phase gets its own folder with isolated spec, plans, execution, review, and verify artifacts.
+- **Unified Setup** — `setup-mcp`, `map-codebase` and `setup` merged into `/pwdev-code:init` with subcommands.
+- **Organized directory structure** — Artifacts reorganized into `context/`, `product/`, `phases/{slug}/`, `quick/`, and `reports/`.
 
 ### Verification — Goal-Backward
 
@@ -168,13 +177,15 @@ Sources of truth: spec.md objective + quality + DoD, task ACs, skill checklists,
 | Command | What it does |
 |---------|-------------|
 | `/pwdev-code:init` | Initialize framework in repo — creates `.planning/`, CLAUDE.md, settings, configure language and model profile |
-| `/pwdev-code:setup` | Project setup — MCP servers, stack detection (`setup mcp`, `setup stack`) |
+| `/pwdev-code:init mcp` | Configure MCP servers (.mcp.json) |
+| `/pwdev-code:init stack` | Detect and configure project stack |
+| `/pwdev-code:init claude` | Generate CLAUDE.md operational memory file |
 ### Product Planning
 
 | Command | What it does | Output |
 |---------|-------------|--------|
-| `/pwdev-code:prd` | Product discovery interview → structured PRD | prd.md (10 sections) |
-| `/pwdev-code:roadmap` | Decompose PRD into executable roadmap | .planning/roadmap/ (multi-file with traceability) |
+| `/pwdev-code:product prd` | Product discovery interview → structured PRD | prd.md (10 sections) |
+| `/pwdev-code:product roadmap` | Decompose PRD into executable roadmap | .planning/roadmap/ (multi-file with traceability) |
 
 ### Development Workflow
 
@@ -185,6 +196,9 @@ Sources of truth: spec.md objective + quality + DoD, task ACs, skill checklists,
 | `/pwdev-code:plan` | PLAN | Approved spec.md | plan.md (atomic tasks in waves) |
 | `/pwdev-code:execute` | EXECUTE | Approved PLANs | Code + commits + summary.md |
 | `/pwdev-code:review` | REVIEW | Code changes exist | code-review.md + qa-report.md |
+| `/pwdev-code:review --code-only` | REVIEW | Code changes exist | code-review.md only |
+| `/pwdev-code:review --tests-only` | REVIEW | Code changes exist | qa-report.md only |
+| `/pwdev-code:review --diff HEAD~N` | REVIEW | Commits exist | Review last N commits |
 | `/pwdev-code:verify` | VERIFY | SUMMARYs exist | verify.md, fix-plan.md |
 | `/pwdev-code:quick` | All-in-one | Task description | Code + commit (for simple tasks) |
 
@@ -192,26 +206,25 @@ Sources of truth: spec.md objective + quality + DoD, task ACs, skill checklists,
 
 | Command | When to use |
 |---------|------------|
-| `/pwdev-code:status` | Check current phase, plan, task, and progress |
-| `/pwdev-code:resume` | Resume from where you left off (reads state.md) |
-| `/pwdev-code:context` | Refresh context before executing after a long break |
+| `/pwdev-code:session` | Check current phase, plan, task, and progress (default) |
+| `/pwdev-code:session resume` | Resume from where you left off (reads state.md) |
 
 ### Analysis & Diagnostics
 
 | Command | When to use |
 |---------|------------|
-| `/pwdev-code:map-codebase` | First contact with existing repo — analyzes stack, patterns, conventions, risks |
+| `/pwdev-code:init map` | First contact with existing repo — analyzes stack, patterns, conventions, risks |
 | `/pwdev-code:health` | Project health scorecard — tests, lint, deps, security |
 | `/pwdev-code:health --deps` | Focused dependency audit — versions, vulnerabilities, deprecated packages |
 | `/pwdev-code:audit` | Query the audit trail — summary, events, decisions, artifacts, stats, export PDF |
-| `/pwdev-code:skill` | Create, list, or audit skills (`skill create backend`, `skill create frontend`, `skill list`, `skill audit`) |
+| `/pwdev-code:manager-skills` | Create, list, or audit skills (`manager-skills create backend`, `manager-skills list`, `manager-skills audit`) |
 
 ### Release & Maintenance
 
 | Command | When to use |
 |---------|------------|
-| `/pwdev-code:changelog` | Generate changelog from commit history |
-| `/pwdev-code:cleanup` | Archive completed phase artifacts to `.planning/archive/` |
+| `/pwdev-code:maintenance cleanup` | Archive completed phase artifacts to `.planning/archive/` |
+| `/pwdev-code:maintenance changelog` | Generate changelog from commit history |
 
 ---
 
@@ -414,5 +427,5 @@ skill-testing, skill-performance, skill-devops, skill-data-modeling, skill-docs
 
 Apache-2.0 — See [LICENSE](./LICENSE)
 
-*PWDEV-CODE v1.1.2 — Complexity lives in the system, not in your workflow.*
+*PWDEV-CODE v1.2.0 — Complexity lives in the system, not in your workflow.*
 *Maintained by [Paulo Soares](https://github.com/soarescbm)*

@@ -18,7 +18,15 @@ Core philosophy across all plugins:
 
 ---
 
-## What's New in v1.1.2
+## What's New
+
+### pwdev-code v1.2.0
+
+- **Command Consolidation** — From 20 standalone commands down to **14 commands** with logical subcommands (`product`, `maintenance`, `session`, `manager-skills`).
+- **Stale Session Detection** — `/pwdev-code:execute` auto-detects idle sessions (>2h) and generates fresh executor context.
+- **Interactive Menus** — Grouped commands show interactive menus when called without arguments.
+
+### All Plugins (v1.1.2)
 
 - **Language Selection** — All commands now support Portuguese (PT-BR) and English (EN). Configured once during `/init`, used silently across all commands.
 - **Model Profiles** — Choose between `performance`, `balanced`, or `economy` profiles to control which Claude model (Opus/Sonnet/Haiku) each agent uses.
@@ -31,7 +39,7 @@ Core philosophy across all plugins:
 
 | Plugin | Description | Version | License |
 |--------|-------------|:-------:|:-------:|
-| [**pwdev-code**](./plugins/pwdev-code/) | Spec-driven development framework — 11 agents, 6 phases, 20 commands | 1.1.2 | Apache-2.0 |
+| [**pwdev-code**](./plugins/pwdev-code/) | Spec-driven development framework — 11 agents, 6 phases, 14 commands | 1.2.0 | Apache-2.0 |
 | [**pwdev-uiux**](./plugins/pwdev-uiux/) | UI/UX engineering framework — 7 agents, 5-phase workflow, Figma integration, WCAG 2.1 AA | 1.1.2 | Apache-2.0 |
 | [**pwdev-feat**](./plugins/pwdev-feat/) | Simplified feature development — PWDEVIA 7-question plans + executor, fast and practical | 1.1.2 | Apache-2.0 |
 | [**pwdev-prd**](./plugins/pwdev-prd/) | Interview-driven PRD creation — 12-step structured interview, Markdown + JSON, technology-agnostic | 1.1.2 | Apache-2.0 |
