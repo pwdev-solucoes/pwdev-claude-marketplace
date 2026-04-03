@@ -1,4 +1,4 @@
-# PWDEV-FEAT v1.1.1
+# PWDEV-FEAT v1.1.2
 
 *Read this in [Português Brasileiro](./README.pt-BR.md)*
 
@@ -50,7 +50,7 @@ You describe                    PWDEVIA creates                Executor implemen
 
 ---
 
-## What's New in v1.1.1
+## What's New in v1.1.2
 
 - **Per-feature folders** — Plans now live in `.planning/feat/features/{slug}/plan.md` instead of flat `plans/` directory. Each feature gets its own isolated folder.
 - **Language Selection** — All commands support PT-BR and EN. Configured during `/pwdev-feat:init`.
@@ -266,5 +266,5 @@ Optional context files:
 
 Apache-2.0 — See [LICENSE](./LICENSE)
 
-*PWDEV-FEAT v1.1.1 — Describe, plan, execute. Ship.*
+*PWDEV-FEAT v1.1.2 — Describe, plan, execute. Ship.*
 *Maintained by [Paulo Soares](https://github.com/soarescbm)*

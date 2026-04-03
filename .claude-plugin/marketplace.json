@@ -7,7 +7,7 @@
     {
       "name": "pwdev-code",
       "source": "./plugins/pwdev-code",
-      "description": "Spec-driven development framework — 11 agents, 6 phases, 21 commands"
+      "description": "Spec-driven development framework — 11 agents, 6 phases, 20 commands"
     },
     {
       "name": "pwdev-uiux",

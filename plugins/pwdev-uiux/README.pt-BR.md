@@ -1,4 +1,4 @@
-# PWDEV-UIUX v1.1.1
+# PWDEV-UIUX v1.1.2
 
 > **Framework de Engenharia UI/UX Agnóstico de Stack para Claude Code**
 
@@ -70,7 +70,7 @@ Inicia o fluxo de 5 fases: Entender → Estruturar → Implementar → Revisar �
 
 ---
 
-## Novidades da v1.1.1
+## Novidades da v1.1.2
 
 - **Seleção de Idioma** — Todos os comandos suportam PT-BR e EN. Configurado durante o `/pwdev-uiux:init`.
 - **Perfis de Modelo** — Modelos dos agentes configuráveis via perfis `performance`, `balanced` ou `economy`. Orchestrator usa Opus por padrão no modo balanced.
@@ -375,5 +375,5 @@ Armazenada em `.planning/ui/stack.json`:
 
 Apache-2.0 — Veja [LICENSE](./LICENSE)
 
-*PWDEV-UIUX v1.1.1 — Qualidade como critério de entrega, não como aspiração.*
+*PWDEV-UIUX v1.1.2 — Qualidade como critério de entrega, não como aspiração.*
 *Mantido por [Paulo Soares](https://github.com/soarescbm)*

@@ -1,11 +1,11 @@
 ---
-description: Initialize the PWDEV-CODE v1.1.1 framework in a repository
+description: Initialize the PWDEV-CODE v1.1.2 framework in a repository
 ---
 
 # /pwdev-code:init — Framework Initialization
 
 ## Role
-Utility agent that sets up the PWDEV-CODE v1.1.1 framework (3 layers) in a repository.
+Utility agent that sets up the PWDEV-CODE v1.1.2 framework (3 layers) in a repository.
 
 ## Input
 $ARGUMENTS: "greenfield" or "brownfield" (if empty, auto-detect).
@@ -241,7 +241,7 @@ It is **disabled by default** and the database file is **never versioned** (adde
 - Status: Awaiting /pwdev-code:discover, /pwdev-code:prd or /pwdev-code:quick
 
 ## Decisions
-- [date]: PWDEV-CODE v1.1.1 framework initialized — type [greenfield|brownfield]
+- [date]: PWDEV-CODE v1.1.2 framework initialized — type [greenfield|brownfield]
 
 ## Blockers
 - None
@@ -271,7 +271,7 @@ It is **disabled by default** and the database file is **never versioned** (adde
 ### STEP 3.1 — Log Initialization (if audit enabled)
 
 ```bash
-[ -f ".planning/pwdev-audit.db" ] && sqlite3 .planning/pwdev-audit.db "INSERT INTO events (plugin, command, action, detail) VALUES ('pwdev-code', 'init', 'completed', '{\"type\": \"$TYPE\", \"structure\": \"v1.1.1-organized\"}');" 2>/dev/null
+[ -f ".planning/pwdev-audit.db" ] && sqlite3 .planning/pwdev-audit.db "INSERT INTO events (plugin, command, action, detail) VALUES ('pwdev-code', 'init', 'completed', '{\"type\": \"$TYPE\", \"structure\": \"v1.1.2-organized\"}');" 2>/dev/null
 ```
 
 ### STEP 4 — If Brownfield
@@ -279,7 +279,7 @@ Suggest: "/pwdev-code:map-codebase to analyze existing repo."
 
 ### STEP 5 — Summary
 ```markdown
-## ✅ PWDEV-CODE v1.1.1 Initialized
+## ✅ PWDEV-CODE v1.1.2 Initialized
 
 **Type:** [greenfield|brownfield]
 **Architecture:** 3 layers (commands, agents, skills)
