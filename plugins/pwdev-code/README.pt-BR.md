@@ -211,7 +211,6 @@ Fontes de verdade: objetivo + qualidade + DoD do spec.md, ACs das tarefas, check
 
 | Comando | Quando usar |
 |---------|------------|
-| `/pwdev-code:checklist` | Gerar checklists antes de release, revisão, deploy ou auditoria de segurança |
 | `/pwdev-code:changelog` | Gerar changelog a partir do histórico de commits |
 | `/pwdev-code:cleanup` | Arquivar artefatos de fases concluídas em `.planning/archive/` |
 
