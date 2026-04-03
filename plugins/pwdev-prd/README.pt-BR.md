@@ -1,4 +1,4 @@
-# PWDEV-PRD v1.1.1
+# PWDEV-PRD v1.1.2
 
 *Leia em [English](./README.md)*
 
@@ -39,7 +39,7 @@ Isso torna os PRDs compatíveis com qualquer fluxo de trabalho posterior:
 
 ---
 
-## Novidades da v1.1.1
+## Novidades da v1.1.2
 
 - **Seleção de Idioma** — Todos os comandos suportam PT-BR e EN. Configurado durante o `/pwdev-prd:init`.
 - **Perfis de Modelo** — Modelo do agente configurável via perfis `performance`, `balanced` ou `economy`.
@@ -267,5 +267,5 @@ Quando o usuário não sabe a resposta, o agente oferece os seguintes valores co
 
 Apache-2.0 — Consulte [LICENSE](./LICENSE)
 
-*PWDEV-PRD v1.1.1 — Requisitos claros, documentos consistentes, melhores funcionalidades.*
+*PWDEV-PRD v1.1.2 — Requisitos claros, documentos consistentes, melhores funcionalidades.*
 *Mantido por [Paulo Soares](https://github.com/soarescbm)*
