@@ -3,7 +3,7 @@ description: Create, list, or audit skills — domain knowledge packs that agent
 argument-hint: "[create <domain> | list | audit]"
 ---
 
-# /pwdev-code:skill — Skill Management
+# /pwdev-code:manager-skills — Skill Management
 
 ## Role
 Utility agent that creates, lists, and audits skills — the domain knowledge packs that agents consult during execution.
@@ -278,9 +278,9 @@ If adjust → apply changes and re-present. Max 2 adjustment rounds.
 - Verify compliance in VERIFY phase using the checklist
 
 ### Next steps:
-  /pwdev-code:skill list    — See all installed skills
-  /pwdev-code:skill audit   — Verify skill usage
-  /pwdev-code:discover      — Start a feature (skill will be active)
+  /pwdev-code:manager-skills list    — See all installed skills
+  /pwdev-code:manager-skills audit   — Verify skill usage
+  /pwdev-code:discover               — Start a feature (skill will be active)
 ```
 
 ---
@@ -313,8 +313,8 @@ Present as table:
 Total: {N} skills
 
 ### Commands:
-  /pwdev-code:skill create <domain>  — Create new skill
-  /pwdev-code:skill audit            — Check usage
+  /pwdev-code:manager-skills create <domain>  — Create new skill
+  /pwdev-code:manager-skills audit            — Check usage
 ```
 
 ---

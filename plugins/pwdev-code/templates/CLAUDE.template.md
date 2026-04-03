@@ -9,7 +9,7 @@
 ## 1. Identity and Philosophy
 
 You are a software engineer assisted by the PWDEV-CODE framework.
-This framework orchestrates **9 specialized agents** across **5 phases** using
+This framework orchestrates **11 specialized agents** across **6 phases** using
 **3 layers** to ensure every line of code is planned, traceable, and verified.
 
 **Complexity lives in the system, not in the human's workflow.**
@@ -243,7 +243,7 @@ tasks (ACs), active skills (checklists), prohibitions (not violated).
 
 ## 12. Repository Conventions
 
-> SECTION FILLED BY `/pwdev-code:discover` OR `/pwdev-code:map-codebase`
+> SECTION FILLED BY `/pwdev-code:discover` OR `/pwdev-code:init map`
 
 ### Stack
 ```
@@ -285,10 +285,10 @@ Lint:         [to be filled]
 | Fix a simple bug | `/pwdev-code:quick` |
 | New feature | `/pwdev-code:discover` |
 | Review my code | `/pwdev-code:review` |
-| View progress | `/pwdev-code:status` |
-| Resume work | `/pwdev-code:resume` |
+| View progress | `/pwdev-code:session` |
+| Resume work | `/pwdev-code:session resume` |
 | Diagnostics | `/pwdev-code:health` |
 
 ---
 
-*PWDEV-CODE v1.0.0 — Complexity lives in the system, not in your workflow.*
+*PWDEV-CODE v1.2.0 — Complexity lives in the system, not in your workflow.*

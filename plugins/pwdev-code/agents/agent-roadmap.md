@@ -126,7 +126,7 @@ Relative links. Slugs in kebab-case without accents.
 
 | Condition | Action |
 |-----------|--------|
-| PRD without requirements for 1 phase | Suggest /pwdev-code:prd |
+| PRD without requirements for 1 phase | Suggest /pwdev-code:product prd |
 | >50 features | Suggest splitting into modules |
 | Internal contradictions in PRD | Flag and request resolution |
 | External dependency without alternative | Flag as blocking risk |
