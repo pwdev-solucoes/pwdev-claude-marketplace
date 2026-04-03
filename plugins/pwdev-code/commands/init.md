@@ -69,7 +69,44 @@ Parse $ARGUMENTS:
 
 ## STEP 2 — Framework Initialization (default)
 
-### STEP 2.0.1 — Model Profile Configuration
+### STEP 2.1 — Detection (early exit if already initialized)
+
+```bash
+if [ -f ".planning/state.md" ]; then
+  echo "Already initialized. Use /pwdev-code:session to see current state."
+  exit 0
+fi
+
+FILE_COUNT=$(find . -maxdepth 2 -type f \( -name "*.ts" -o -name "*.js" -o -name "*.php" -o -name "*.py" -o -name "*.vue" -o -name "*.jsx" \) -not -path "*/node_modules/*" -not -path "*/vendor/*" 2>/dev/null | wc -l)
+[ "$FILE_COUNT" -gt 5 ] && TYPE="brownfield" || TYPE="greenfield"
+```
+
+### STEP 2.2 — Create Workspace Structure
+
+```bash
+# Layer 1-3 — Plugin structure
+mkdir -p .claude/{commands,agents,skills}
+
+# Context — project-level knowledge (discover + init map)
+mkdir -p .planning/context
+
+# Product — PRD + Roadmap
+mkdir -p .planning/product/roadmap
+
+# Phases — one folder per phase (created dynamically by design command)
+mkdir -p .planning/phases
+
+# Quick — lightweight tasks outside phase workflow
+mkdir -p .planning/quick
+
+# Reports — health, deps, checklists
+mkdir -p .planning/reports/{health,deps,checklists}
+
+# Templates & Archive
+mkdir -p .planning/{templates,archive}
+```
+
+### STEP 2.3 — Model Profile Configuration
 
 Model profile configuration is **mandatory** during initialization.
 
@@ -116,42 +153,7 @@ Model profile configuration is **mandatory** during initialization.
 
 Agent-to-role mapping: architect/planner/roadmap→sonnet(balanced), interviewer/prd→sonnet(balanced), executor/quick→sonnet(balanced), code-reviewer/qa→sonnet(balanced), researcher→sonnet(balanced), verifier→haiku(balanced). Resolution order: (1) `model_overrides[agent-name]` → (2) profile lookup → (3) agent frontmatter `model:` default.
 
-### STEP 2.1 — Detection
-```bash
-if [ -f ".planning/state.md" ]; then
-  echo "Already initialized. Use /pwdev-code:session to see current state."
-  exit 0
-fi
-
-FILE_COUNT=$(find . -maxdepth 2 -type f \( -name "*.ts" -o -name "*.js" -o -name "*.php" -o -name "*.py" -o -name "*.vue" -o -name "*.jsx" \) -not -path "*/node_modules/*" -not -path "*/vendor/*" 2>/dev/null | wc -l)
-[ "$FILE_COUNT" -gt 5 ] && TYPE="brownfield" || TYPE="greenfield"
-```
-
-### STEP 2.2 — Create Workspace Structure
-```bash
-# Layer 1-3 — Plugin structure
-mkdir -p .claude/{commands,agents,skills}
-
-# Context — project-level knowledge (discover + init map)
-mkdir -p .planning/context
-
-# Product — PRD + Roadmap
-mkdir -p .planning/product/roadmap
-
-# Phases — one folder per phase (created dynamically by design command)
-mkdir -p .planning/phases
-
-# Quick — lightweight tasks outside phase workflow
-mkdir -p .planning/quick
-
-# Reports — health, deps, checklists
-mkdir -p .planning/reports/{health,deps,checklists}
-
-# Templates & Archive
-mkdir -p .planning/{templates,archive}
-```
-
-### STEP 2.3 — Audit Trail (opt-in, disabled by default)
+### STEP 2.4 — Audit Trail (opt-in, disabled by default)
 
 The audit trail records all commands, decisions, and artifacts in a local SQLite database.
 It is **disabled by default** and the database file is **never versioned** (added to `.gitignore`).
@@ -231,17 +233,17 @@ It is **disabled by default** and the database file is **never versioned** (adde
    - PT-BR: `Trilha de auditoria: **{ativada/desativada}**`
    - EN: `Audit trail: **{enabled/disabled}**`
 
-### STEP 2.4 — Initial Files
+### STEP 2.5 — Write Initial Files
 
 **`.planning/config.json`:**
 ```json
 {
   "lang": "[pt-BR|en — from STEP 0]",
-  "model_profile": "[performance|balanced|economy — from STEP 2.0.1]",
+  "model_profile": "[performance|balanced|economy — from STEP 2.3]",
   "model_overrides": {},
   "audit": false,
   "framework": "PWDEV-CODE",
-  "version": "3.0",
+  "version": "1.2.0",
   "architecture": "3-layer (commands, agents, skills)",
   "type": "[greenfield|brownfield]",
   "created": "[date]",
@@ -288,16 +290,16 @@ It is **disabled by default** and the database file is **never versioned** (adde
 }
 ```
 
-### STEP 2.5 — Log Initialization (if audit enabled)
+### STEP 2.6 — Log Initialization (if audit enabled)
 
 ```bash
 [ -f ".planning/pwdev-audit.db" ] && sqlite3 .planning/pwdev-audit.db "INSERT INTO events (plugin, command, action, detail) VALUES ('pwdev-code', 'init', 'completed', '{\"type\": \"$TYPE\", \"structure\": \"v1.2.0-organized\"}');" 2>/dev/null
 ```
 
-### STEP 2.6 — If Brownfield
+### STEP 2.7 — If Brownfield
 Suggest: "/pwdev-code:init map to analyze existing repo."
 
-### STEP 2.7 — Summary
+### STEP 2.8 — Summary
 ```markdown
 ## ✅ PWDEV-CODE v1.2.0 Initialized
 
