@@ -210,7 +210,6 @@ Sources of truth: spec.md objective + quality + DoD, task ACs, skill checklists,
 
 | Command | When to use |
 |---------|------------|
-| `/pwdev-code:checklist` | Generate checklists before release, review, deploy, or security audit |
 | `/pwdev-code:changelog` | Generate changelog from commit history |
 | `/pwdev-code:cleanup` | Archive completed phase artifacts to `.planning/archive/` |
 
