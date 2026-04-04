@@ -17,11 +17,12 @@
 | **Rate Limit** | Verde/Vermelho | Uso do rate limit de 5h (vermelho a partir de 80%) |
 | **Tokens** | Branco | Total de tokens de entrada + saída |
 | **Sessão** | Branco | Nome da sessão (quando definido) |
+| **PWDEV** | Verde | Nome da empresa (sempre visível, primeiro segmento) |
 
 ### Exemplo de saída
 
 ```
-demo | ~/meu-projeto | Opus 4.6 | main | ctx:████░░░░░░ 42% | tok:1500 | 5h:15%
+PWDEV | demo | ~/meu-projeto | Opus 4.6 | main | ctx:████░░░░░░ 42% | tok:1500 | 5h:15%
 ```
 
 ---

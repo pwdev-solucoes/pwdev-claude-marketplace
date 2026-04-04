@@ -11,6 +11,7 @@ Rich terminal status line for Claude Code — shows model, git branch, context u
 - **Rate Limit** — 5-hour rate limit usage, color-coded green/red at 80% threshold
 - **Tokens** — total input + output token count (white)
 - **Session Name** — displayed when a session is named (white)
+- **PWDEV** — company branding, always visible as the first segment (green)
 
 ## Requirements
 

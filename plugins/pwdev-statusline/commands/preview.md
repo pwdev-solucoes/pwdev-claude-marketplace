@@ -32,6 +32,7 @@ echo '{"workspace":{"current_dir":"'$(pwd)'"},"model":{"display_name":"Opus 4.6"
 Print a legend of each section:
 ```
 Legend:
+  🏢 PWDEV         — company branding (always visible)
   📂 Directory     — current working directory
   🤖 Model         — active Claude model
   🌿 Git Branch    — current branch (if in a git repo)

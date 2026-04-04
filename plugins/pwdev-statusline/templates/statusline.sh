@@ -81,9 +81,12 @@ SESSION_NAME=$(echo "$input" | jq -r '.session_name // empty')
 SESSION_PART=""
 [ -n "$SESSION_NAME" ] && SESSION_PART="${WHITE}${SESSION_NAME}${RESET}"
 
+# ── 8. Company branding (green) ──────────────────────────────────────────────
+BRAND_PART="${GREEN}PWDEV${RESET}"
+
 # ── Assemble single line ─────────────────────────────────────────────────────
-LINE=""
-[ -n "$SESSION_PART" ] && LINE="${SESSION_PART}${SEP}"
+LINE="${BRAND_PART}${SEP}"
+[ -n "$SESSION_PART" ] && LINE="${LINE}${SESSION_PART}${SEP}"
 LINE="${LINE}${DIR_PART}${SEP}${MODEL_PART}"
 [ -n "$GIT_PART" ] && LINE="${LINE}${SEP}${GIT_PART}"
 LINE="${LINE}${SEP}${CTX_PART}${SEP}${TOK_PART}"

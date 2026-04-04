@@ -117,7 +117,7 @@ Veja a [documentação completa do plugin](./plugins/pwdev-prd/README.md).
 **Barra de status** rica para o terminal do Claude Code. Exibe modelo, branch git, uso de contexto, rate limits e contagem de tokens em uma linha colorida.
 
 ```
-session | ~/projeto | Opus 4.6 | main | ctx:████░░░░░░ 42% | tok:1500 | 5h:15%
+PWDEV | session | ~/projeto | Opus 4.6 | main | ctx:████░░░░░░ 42% | tok:1500 | 5h:15%
 ```
 
 **Comandos:** `install`, `uninstall`, `customize`, `preview`
