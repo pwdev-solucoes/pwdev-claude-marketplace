@@ -20,6 +20,19 @@ Filosofia central em todos os plugins:
 
 ## Novidades
 
+### pwdev-statusline v1.0.0
+
+- **Novo plugin** — Barra de status rica para o terminal do Claude Code exibindo modelo, branch git, barra de contexto, rate limits e contagem de tokens.
+- **4 comandos** — `install`, `uninstall`, `customize`, `preview`.
+- **Personalizável** — Mostrar/ocultar seções, alterar cores, trocar separador.
+
+### pwdev-uiux v1.1.2 (atualização de consistência)
+
+- **Agnóstico de Stack** — Todos os comandos, agentes e regras agora totalmente agnósticos de stack (removidas referências hardcoded a Vue/shadcn-vue).
+- **8 Agentes** — Corrigida contagem de agentes (era listado como 7), adicionado Theme Builder à documentação.
+- **Primeiros Passos simplificados** — De 7 passos para 3, com caminhos claros para brownfield/greenfield/Figma.
+- **`tailwind-plus`** — Adicionado às stacks suportadas no comando `/pwdev-uiux:stack`.
+
 ### pwdev-code v1.2.0
 
 - **Consolidação de Comandos** — De 20 comandos independentes para **14 comandos** com subcomandos lógicos (`product`, `maintenance`, `session`, `manager-skills`).
@@ -256,6 +269,7 @@ claude plugin install pwdev-code@pwdev-claude-marketplace
 claude plugin install pwdev-uiux@pwdev-claude-marketplace
 claude plugin install pwdev-feat@pwdev-claude-marketplace
 claude plugin install pwdev-prd@pwdev-claude-marketplace
+claude plugin install pwdev-statusline@pwdev-claude-marketplace
 ```
 
 Isso copia os arquivos atualizados do plugin para o cache local. **Os dados do seu projeto (`.planning/`) nunca são tocados** — apenas os comandos e agentes do plugin são atualizados.
