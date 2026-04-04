@@ -33,6 +33,7 @@ Print a legend of each section:
 ```
 Legend:
   🏢 PWDEV         — company branding (always visible)
+  👤 User          — git user name (from git config)
   📂 Directory     — current working directory
   🤖 Model         — active Claude model
   🌿 Git Branch    — current branch (if in a git repo)

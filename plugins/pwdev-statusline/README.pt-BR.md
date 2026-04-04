@@ -18,11 +18,12 @@
 | **Tokens** | Branco | Total de tokens de entrada + saída |
 | **Sessão** | Branco | Nome da sessão (quando definido) |
 | **PWDEV** | Verde | Nome da empresa (sempre visível, primeiro segmento) |
+| **Usuário** | Branco | Nome do usuário git via `git config user.name` |
 
 ### Exemplo de saída
 
 ```
-PWDEV | demo | ~/meu-projeto | Opus 4.6 | main | ctx:████░░░░░░ 42% | tok:1500 | 5h:15%
+PWDEV | Paulo Soares | demo | ~/meu-projeto | Opus 4.6 | main | ctx:████░░░░░░ 42% | tok:1500 | 5h:15%
 ```
 
 ---

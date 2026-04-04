@@ -117,7 +117,7 @@ See the [full plugin documentation](./plugins/pwdev-prd/README.md).
 Rich terminal **status line** for Claude Code. Displays model, git branch, context usage, rate limits, and token counts in a colorful single-line bar.
 
 ```
-PWDEV | session | ~/project | Opus 4.6 | main | ctx:████░░░░░░ 42% | tok:1500 | 5h:15%
+PWDEV | Paulo Soares | session | ~/project | Opus 4.6 | main | ctx:████░░░░░░ 42% | tok:1500 | 5h:15%
 ```
 
 **Commands:** `install`, `uninstall`, `customize`, `preview`

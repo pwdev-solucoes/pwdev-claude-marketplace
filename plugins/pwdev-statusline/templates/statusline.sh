@@ -84,8 +84,14 @@ SESSION_PART=""
 # ── 8. Company branding (green) ──────────────────────────────────────────────
 BRAND_PART="${GREEN}PWDEV${RESET}"
 
+# ── 9. Git user name (white) ────────────────────────────────────────────────
+GIT_USER=$(git -C "${CWD}" config user.name 2>/dev/null)
+USER_PART=""
+[ -n "$GIT_USER" ] && USER_PART="${WHITE}${GIT_USER}${RESET}"
+
 # ── Assemble single line ─────────────────────────────────────────────────────
 LINE="${BRAND_PART}${SEP}"
+[ -n "$USER_PART" ] && LINE="${LINE}${USER_PART}${SEP}"
 [ -n "$SESSION_PART" ] && LINE="${LINE}${SESSION_PART}${SEP}"
 LINE="${LINE}${DIR_PART}${SEP}${MODEL_PART}"
 [ -n "$GIT_PART" ] && LINE="${LINE}${SEP}${GIT_PART}"
