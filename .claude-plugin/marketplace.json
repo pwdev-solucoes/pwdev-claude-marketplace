@@ -7,12 +7,12 @@
     {
       "name": "pwdev-code",
       "source": "./plugins/pwdev-code",
-      "description": "Spec-driven development framework — 11 agents, 6 phases, 20 commands"
+      "description": "Spec-driven development framework — 11 agents, 6 phases, 14 commands"
     },
     {
       "name": "pwdev-uiux",
       "source": "./plugins/pwdev-uiux",
-      "description": "UI/UX engineering framework — 7 agents, Figma integration, WCAG 2.1 AA"
+      "description": "Stack-agnostic UI/UX engineering framework — 8 agents, Figma integration, WCAG 2.1 AA"
     },
     {
       "name": "pwdev-feat",
@@ -23,6 +23,11 @@
       "name": "pwdev-prd",
       "source": "./plugins/pwdev-prd",
       "description": "Interview-driven PRD creation — 12-step structured interview, Markdown + JSON export, technology-agnostic"
+    },
+    {
+      "name": "pwdev-statusline",
+      "source": "./plugins/pwdev-statusline",
+      "description": "Rich terminal status line — model, git branch, context bar, rate limits, tokens"
     }
   ]
 }
