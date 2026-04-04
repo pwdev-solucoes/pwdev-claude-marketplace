@@ -48,6 +48,7 @@ Present a table of current color assignments and ask the user which section to r
 ```
 Section       Current Color
 ─────────────────────────────
+PWDEV         Green
 Directory     Blue
 Model         Cyan
 Git Branch    Magenta
