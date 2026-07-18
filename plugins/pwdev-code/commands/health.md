@@ -68,6 +68,19 @@ fi
 # .mcp.json at root (optional)
 [ -f ".mcp.json" ] && echo "✅ Found: .mcp.json" || echo "ℹ️ Optional: .mcp.json not found"
 
+# Memory index consistency (if memory exists)
+if [ -f ".planning/memory/MEMORY.md" ]; then
+  grep -o '(memory/[^)]*)' .planning/memory/MEMORY.md | tr -d '()' | while read -r m; do
+    [ -f ".planning/$m" ] || echo "⚠️ Memory index points to missing file: $m"
+  done
+  for f in .planning/memory/*.md; do
+    [ "$(basename "$f")" = "MEMORY.md" ] && continue
+    if grep -q "status: active" "$f" 2>/dev/null; then
+      grep -q "$(basename "$f")" .planning/memory/MEMORY.md || echo "⚠️ Active memory not indexed: $(basename "$f")"
+    fi
+  done
+fi
+
 # Audit DB integrity (when enabled)
 if grep -q '"audit"[[:space:]]*:[[:space:]]*true' .planning/config.json 2>/dev/null; then
   if [ -f ".planning/pwdev-audit.db" ] && command -v sqlite3 >/dev/null 2>&1; then

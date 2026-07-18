@@ -90,6 +90,10 @@ mkdir -p .claude/skills
 # Context — project-level knowledge (discover + init map)
 mkdir -p .planning/context
 
+# Memory — curated durable knowledge (versioned; see references/memory.md)
+mkdir -p .planning/memory
+[ -f ".planning/memory/MEMORY.md" ] || printf '# Project Memory Index\n<!-- managed by /pwdev-code:memory — one line per ACTIVE memory; edit via the command -->\n\n' > .planning/memory/MEMORY.md
+
 # Product — PRD + Roadmap
 mkdir -p .planning/product/roadmap
 

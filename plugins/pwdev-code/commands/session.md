@@ -65,6 +65,9 @@ Present:
 ### Blockers
 [None | list]
 
+### Memory
+[N active (D decisions / L lessons / C conventions) — from .planning/memory/MEMORY.md]
+
 ### Next action
 👉 [recommended command]
 ```

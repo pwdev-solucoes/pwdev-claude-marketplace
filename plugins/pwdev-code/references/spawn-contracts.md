@@ -99,8 +99,17 @@ OUTPUT CONTRACT:
 
 ## verifier (`subagent_type: "pwdev-code:verifier"`)
 
+In `--strict` mode, add a `LENS:` line right after the goal
+(`LENS: FUNCTIONAL — ...` or `LENS: COMPLIANCE — ...`) and parametrize the
+output paths (`verify-functional.md` / `fix-F{NN}.md` vs.
+`verify-compliance.md` / `fix-C{NN}.md`). Normal mode: no LENS line, default
+paths.
+
 ```
 YOUR GOAL IS TO REFUTE COMPLETION, NOT CONFIRM IT.
+{LENS: FUNCTIONAL|COMPLIANCE — only in --strict mode}
+
+RELEVANT MEMORY: {block per references/memory.md — lessons first; omit if none}
 
 SPEC (full sections 2, 3, 5, 6, 7, 8 of .planning/phases/{slug}/spec.md):
 {...}

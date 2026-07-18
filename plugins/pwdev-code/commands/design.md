@@ -35,7 +35,9 @@ Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
 
 ### STEP 1 — Absorb Inputs (silent)
 Read: context/project.md, context/requirements.md, context/ (domain, stack,
-pitfalls), active skills.
+pitfalls), active skills, and `.planning/memory/MEMORY.md` (if it exists) —
+load `decision` and `convention` memories relevant to the feature (selection
+per `${CLAUDE_PLUGIN_ROOT}/references/memory.md`).
 If `--template` provided → read template from `.planning/templates/`.
 
 ### STEP 2 — Determine Phase Slug
@@ -61,6 +63,9 @@ Reversible? Yes/No
 ```
 
 **Present to the human. Wait for approval.**
+When proposing, cite memories that influenced each decision; if an option
+contradicts an active `decision` memory, **flag it explicitly to the human
+before choosing**.
 
 ### STEP 5 — Generate spec.md (8 required sections)
 After decision approval:
@@ -80,6 +85,11 @@ Record all decisions, discarded alternatives, and trade-offs.
 Save: `.planning/phases/{phase-slug}/decisions.md`
 For each decision, log it:
 `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" decision DESIGN "<decision>" "<rationale>" "<alternatives>"`
+
+After saving, offer memory capture for **durable** decisions only
+(irreversible or cross-phase) — one question, listing the candidates; capture
+per `${CLAUDE_PLUGIN_ROOT}/references/memory.md` (never duplicate the whole
+decisions.md).
 
 ### STEP 7 — Update state.md
 Phase: DESIGN ✅ | Next: /pwdev-code:plan

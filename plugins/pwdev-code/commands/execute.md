@@ -61,6 +61,8 @@ For each task of the current wave, in order:
 - spec.md §1 (Persona), §6 (Stop Conditions), §7 (Prohibitions) — pasted in
 - Active skills paths (from spec §1)
 - "Required Context" paths from the task
+- RELEVANT MEMORY block per `${CLAUDE_PLUGIN_ROOT}/references/memory.md`
+  (conventions first; omit if no match)
 - `LANGUAGE: {lang}`
 
 **2.2 Spawn** via the Task tool:
@@ -96,12 +98,18 @@ After all tasks in a plan:
 ✅ Phase execution complete.
 📁 Summaries in .planning/phases/{active-phase-slug}/execution/
 👉 Next: /pwdev-code:review (code review + QA audit)
+   Optional first: /pwdev-code:simplify (high-confidence cleanup — if it
+   applies changes, review runs on the refactor diff)
    Then: /pwdev-code:verify (spec verification)
 ```
 In `--fix` mode:
 ```
 ✅ Fix iteration {N}/2 executed.
-👉 Next: /pwdev-code:verify (re-verification)
+👉 If review_gate was BLOCKED: re-run review now, scoped to the fix commits:
+   /pwdev-code:review --diff {fix-range}
+   (run it automatically if the SlashCommand tool is available; otherwise
+   instruct the human — the re-review does NOT consume fix_iteration)
+   Then: /pwdev-code:verify (re-verification)
 ```
 
 ## Prohibitions (command-level)

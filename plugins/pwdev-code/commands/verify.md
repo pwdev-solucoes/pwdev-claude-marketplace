@@ -1,6 +1,6 @@
 ---
 description: Run the verification phase to validate implementation against the spec
-argument-hint: "[phase-slug]"
+argument-hint: "[phase-slug] [--strict]"
 ---
 
 # /pwdev-code:verify — Verification Phase
@@ -34,11 +34,13 @@ Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
 Read (for the prompt only): `CLAUDE.md` (section 11 — Verification,
 Goal-Backward), spec.md sections 2, 3, 5, 6, 7, 8 (full text), paths of
 `execution/*-summary.md`, paths of `review/code-review.md` and
-`review/qa-report.md` (if they exist), active skills list. Project
-verification commands come from CLAUDE.md sections 12 and 14.
+`review/qa-report.md` (if they exist), active skills list, and a RELEVANT
+MEMORY block per `${CLAUDE_PLUGIN_ROOT}/references/memory.md` (lessons
+first). Project verification commands come from CLAUDE.md sections 12 and 14.
 
 ### STEP 2 — Spawn the Verifier (real subagent)
-Via the Task tool:
+
+**Normal mode** — one Task call:
 - `subagent_type`: `pwdev-code:verifier`
 - `model`: resolve per `${CLAUDE_PLUGIN_ROOT}/references/model-profiles.md`
 - prompt: follow the **verifier** template in
@@ -49,10 +51,34 @@ Via the Task tool:
 It writes `verify/verify.md` (+ `verify/fix-{NN}.md` if rejected) and replies
 with ≤10 lines.
 
+**`--strict` mode** — TWO Task calls issued in the SAME message (real
+parallelism), same spec, two independent lenses. Cost note: ≈2× the
+verifier's cost/latency — recommended for the phase's final gate or
+pre-release, not for every fix-loop iteration.
+
+1. Lens A: prompt gains `LENS: FUNCTIONAL — prioritize refuting §2 Objective,
+   §3 Inputs, task ACs, §4 outputs.` → writes `verify/verify-functional.md`,
+   fix plans `verify/fix-F{NN}.md`.
+2. Lens B: prompt gains `LENS: COMPLIANCE — prioritize refuting §5 Quality,
+   §6 Stop Conditions, §7 Prohibitions, §8 DoD, security, unresolved review
+   findings.` → writes `verify/verify-compliance.md`, fix plans
+   `verify/fix-C{NN}.md`.
+
 ### STEP 3 — React to the Verdict
-Read ONLY the status reply. Update `.planning/state.md` with the verdict.
+Read ONLY the status replies. Update `.planning/state.md` with the verdict.
+- `--strict`: final verdict = the **worst** of the two
+  (REJECTED > WITH CAVEATS > APPROVED); record both counts in `state.md`.
+  The `--fix` queue consumes `fix-F*` + `fix-C*`; when both lenses target the
+  same file, list the overlap for the human to dedupe.
 Log it: `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" event verify VERIFY gate_passed verify.md '{"verdict":"..."}'`
 (use `gate_rejected` on ❌).
+
+**Auto-capture lesson** (per `${CLAUDE_PLUGIN_ROOT}/references/memory.md`,
+cap 2 auto-lessons/phase):
+- ❌ REJECTED → write ONE consolidated lesson (`source: verify:{slug}`) from
+  the main failed truth.
+- ✅ APPROVED with `fix_iteration > 0` → write ONE lesson about what caused
+  the fix loop.
 
 ### STEP 4 — Present
 

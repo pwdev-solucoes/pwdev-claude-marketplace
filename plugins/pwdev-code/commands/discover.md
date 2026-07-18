@@ -41,8 +41,10 @@ cat .editorconfig tsconfig.json 2>/dev/null | head -20
 ls tests/ test/ 2>/dev/null
 cat .env.example 2>/dev/null | head -20
 cat CLAUDE.md 2>/dev/null | head -50
+cat .planning/memory/MEMORY.md 2>/dev/null
 ```
-DO NOT show raw output. Build a mental summary.
+DO NOT show raw output. Build a mental summary (memories sharpen the
+interview questions).
 
 ### STEP 2 — Greeting + Detected Context
 Present: detected stack, requested feature.

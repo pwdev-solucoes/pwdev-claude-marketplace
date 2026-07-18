@@ -45,8 +45,9 @@ cat .editorconfig CLAUDE.md .planning/phases/{active-phase-slug}/spec.md 2>/dev/
 Evaluate: ≤5 files? No architectural decision? No migration?
 If NOT Quick-eligible → warn and suggest escalation.
 
-### STEP 2 — Load Active Skills
+### STEP 2 — Load Active Skills + Memory
 If active skills in spec.md or CLAUDE.md → read each SKILL.md before implementing.
+Read `.planning/memory/MEMORY.md` (if present) and honor `convention` memories.
 
 ### STEP 3 — Mini-Plan (present to the human)
 ```markdown

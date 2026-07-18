@@ -33,6 +33,10 @@ Or a range:    /pwdev-code:review --diff HEAD~3
 
 ## Flow
 
+**Re-review scope rule:** when re-running after `execute --fix` or
+`/pwdev-code:simplify` (state.md shows `review_gate: STALE`), scope = the
+fix/refactor commits only (`--diff`), never the whole phase again.
+
 ### STEP 0 — Language
 Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
 `.planning/config.json`; ask only if unset).
@@ -51,7 +55,9 @@ echo "$FILES"
 ### STEP 2 — Gather Spawn Inputs
 Read (for the prompts only — do not analyze yourself):
 `.planning/phases/{active-phase-slug}/spec.md` sections 1, 2, 5, 7, 8;
-paths of `execution/*-summary.md`; active skills list.
+paths of `execution/*-summary.md`; active skills list; RELEVANT MEMORY block
+per `${CLAUDE_PLUGIN_ROOT}/references/memory.md` (conventions first) — add
+it to both spawn prompts.
 
 ### STEP 3 — Spawn Subagents (REAL parallelism)
 
@@ -118,8 +124,13 @@ Record in `.planning/state.md`:
 **Gate rule:** if critical findings > 0 (either report) → `review_gate: BLOCKED`.
 While BLOCKED, `/pwdev-code:verify` refuses to run — fix the findings via
 `/pwdev-code:execute` and re-review, or the human explicitly overrides.
+A prior `review_gate: STALE` (set by simplify) is cleared here to OK/BLOCKED.
 Log it: `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" event review REVIEW gate_rejected review '{"critical":N}'`
 (or `gate_passed` when OK).
+
+**Auto-capture lesson** when the gate goes BLOCKED: write ONE consolidated
+lesson from the critical findings (`source: review:{slug}`), per
+`${CLAUDE_PLUGIN_ROOT}/references/memory.md` (cap 2 auto-lessons/phase).
 
 ## Prohibitions
 - ❌ NEVER fix code during review — only report findings

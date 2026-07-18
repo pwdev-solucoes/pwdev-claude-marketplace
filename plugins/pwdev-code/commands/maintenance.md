@@ -81,6 +81,8 @@ Rules:
 - context/ → keep (may be consulted in the future)
 - state.md → NEVER archive
 - Active phase spec.md → NEVER archive (it is the active contract)
+- `.planning/memory/` → NEVER archive (memory is durable by definition;
+  curate it with /pwdev-code:memory forget instead)
 
 ### STEP 2.3 — Ask the Human
 
