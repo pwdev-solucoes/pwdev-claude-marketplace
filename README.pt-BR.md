@@ -20,31 +20,93 @@ Filosofia central em todos os plugins:
 
 ## Novidades
 
-### pwdev-statusline v1.0.0
+### Novos plugins — marketing e operações
 
-- **Novo plugin** — Barra de status rica para o terminal do Claude Code exibindo modelo, branch git, barra de contexto, rate limits e contagem de tokens.
-- **4 comandos** — `install`, `uninstall`, `customize`, `preview`.
-- **Personalizável** — Mostrar/ocultar seções, alterar cores, trocar separador.
+O marketplace agora vai além do fluxo de desenvolvimento:
 
-### pwdev-uiux v1.1.2 (atualização de consistência)
+- **pwdev-copy v1.1.0** — framework de copywriting treinável, expandido para
+  **20 skills / 5 subagentes / 9 comandos**: novas skills de criação (ganchos,
+  reaproveitamento), revisão CRO de página e uma **camada de análise**
+  (`perf-analyzer` / `perf-patterns` / `perf-optimize` + subagente `analyst`)
+  que fecha o ciclo: pesquisa → brief → copy → revisão → publicação → análise.
+- **pwdev-social-media v2.0.0** *(novo)* — geração de criativos para redes
+  sociais com **orquestração de APIs no centro** (Ideogram, Leonardo, Flux,
+  Runway, Freepik/Magnific) via wrappers com trava de gasto: triagem de custo,
+  engenharia de prompt, consistência visual e curadoria de variações. Figma é
+  camada opcional de composição. 19 skills, 4 subagentes.
+- **pwdev-devops v1.0.0** *(novo)* — plataforma, operação e incidente com
+  **postura de execução segura**: leitura livre, mutação sob confirmação por
+  comando, destrutivo bloqueado por guard script (segunda barreira,
+  independente da instrução da skill). 19 skills cobrindo AWS, Kubernetes,
+  Docker, Linux, Nginx, PostgreSQL, observabilidade, incidente, segurança,
+  Proxmox, FinOps e mais; 4 subagentes.
 
-- **Agnóstico de Stack** — Todos os comandos, agentes e regras agora totalmente agnósticos de stack (removidas referências hardcoded a Vue/shadcn-vue).
-- **8 Agentes** — Corrigida contagem de agentes (era listado como 7), adicionado Theme Builder à documentação.
-- **Primeiros Passos simplificados** — De 7 passos para 3, com caminhos claros para brownfield/greenfield/Figma.
-- **`tailwind-plus`** — Adicionado às stacks suportadas no comando `/pwdev-uiux:stack`.
+### A onda v2
 
-### pwdev-code v1.2.0
+Os cinco plugins originais foram reconstruídos sobre o sistema moderno de plugins do
+Claude Code. **Nenhum slash command foi renomeado ou removido** — os internos
+foram reestruturados.
 
-- **Consolidação de Comandos** — De 20 comandos independentes para **14 comandos** com subcomandos lógicos (`product`, `maintenance`, `session`, `manager-skills`).
-- **Detecção de Sessão Inativa** — `/pwdev-code:execute` detecta automaticamente sessões ociosas (>2h) e gera contexto atualizado para o executor.
-- **Menus Interativos** — Comandos agrupados exibem menus interativos quando chamados sem argumentos.
+### Comum aos plugins de workflow (code / feat / prd / uiux)
 
-### Todos os Plugins (v1.1.2)
+- **Orquestração híbrida** — personas que interagem com o humano
+  (entrevistas, gates de aprovação) rodam INLINE no contexto principal; o
+  trabalho pesado roda em **subagentes reais** spawnados via Task tool com
+  frontmatter oficial, contexto fresco e paralelismo genuíno. A prosa antiga
+  de "assuma a persona" acabou.
+- **Auditoria determinística via hooks** — a trilha SQLite compartilhada
+  (`.planning/pwdev-audit.db`, coluna `plugin` distingue as linhas) agora é
+  gravada por hooks: `duration_ms`/`session_id` reais, `config_changes`
+  finalmente populada. Um **hook de guarda de segredos** (PreToolUse)
+  bloqueia leitura de `.env`/`*.pem`/`*.key`/`id_rsa*` em todos os plugins.
+- **References empacotadas** — protocolo de idioma, perfis de modelo,
+  contratos de spawn e schema de auditoria vivem no `references/` de cada
+  plugin, resolvidos via `${CLAUDE_PLUGIN_ROOT}` (fim dos blocos duplicados
+  e paths relativos quebrados).
+- **`/audit` endurecido** — guard de query só-SELECT de statement único;
+  shell POSIX portátil em tudo.
 
-- **Seleção de Idioma** — Todos os comandos agora suportam Português (PT-BR) e Inglês (EN). Configurado uma vez durante o `/init`, usado silenciosamente em todos os comandos.
-- **Perfis de Modelo** — Escolha entre os perfis `performance`, `balanced` ou `economy` para controlar qual modelo Claude (Opus/Sonnet/Haiku) cada agente utiliza.
-- **Trilha de Auditoria (opt-in)** — Banco de dados SQLite opcional em `.planning/pwdev-audit.db` registra todos os comandos, decisões e artefatos. Desativado por padrão, nunca versionado.
-- **Configuração Unificada** — Idioma, perfil de modelo e configuração de auditoria armazenados em `.planning/config.json`, compartilhados entre todos os plugins.
+### pwdev-code v2.1.0
+
+- **7 subagentes reais** (executor, simplifier, code-reviewer, qa, verifier
+  adversarial, researcher, roadmap) + 5 personas inline; 16 comandos.
+- **Memória curada do projeto** (`/pwdev-code:memory` + `.planning/memory/`
+  versionada) alimentando todo spawn; lições auto-capturadas de verificações
+  rejeitadas e reviews bloqueados.
+- **Loops de correção com parada dura** — `verify` → fix plans →
+  `execute --fix` (máx 2 iterações); review gate bloqueia o verify;
+  `verify --strict` roda 2 verifiers em paralelo (vale o pior veredito).
+- **`/pwdev-code:simplify`** — refactor de qualidade em 2 passes (propõe
+  ≥80% de confiança → humano aprova por ID → aplica + commit refactor).
+- **`skill-user-stories`** + `/pwdev-code:product stories` (INVEST, ACs em
+  Gherkin, definition of ready).
+
+### pwdev-feat v2.0.0
+
+- **Subagente executor real** com modos IMPLEMENT/REPORT (planos de review
+  reportam findings sem commitar); planner PWDEVIA inline
+  (`references/pwdevia-method.md`); `/status` agora detecta FAILED/CAVEATS.
+
+### pwdev-prd v2.0.0
+
+- **Entrevistador inline por design** (zero subagentes); estrutura canônica
+  do `prd.json` finalmente definida; init não configura mais perfil de
+  modelo (nada aqui resolve modelo).
+
+### pwdev-uiux v2.0.0
+
+- **6 subagentes reais + 2 personas inline** (orchestrator e theme-builder
+  seguram os gates humanos); campos proibidos removidos dos agents
+  (`permissionMode`, `mcpServers`, `skills:` não-oficial); skills passadas
+  como paths explícitos de SKILL.md nos spawns; overrides de modelo com
+  namespace (`uiux-<agent>`).
+
+### pwdev-statusline v1.1.0
+
+- **Bloco de configuração** (toggles/cores/separador/profundidade como
+  variáveis — o `/customize` edita 1 linha, idempotente); **uma chamada de
+  jq** por render; cores dinâmicas de contexto/rate; tokens formatados
+  (`512k`/`1.2M`); paths truncados; install/uninstall mais seguros.
 
 ---
 
@@ -52,33 +114,42 @@ Filosofia central em todos os plugins:
 
 | Plugin | Descrição | Versão | Licença |
 |--------|-----------|:------:|:------:|
-| [**pwdev-code**](./plugins/pwdev-code/) | Framework de desenvolvimento orientado a especificação — 11 agentes, 6 fases, 14 comandos | 1.2.0 | Apache-2.0 |
-| [**pwdev-uiux**](./plugins/pwdev-uiux/) | Framework de engenharia UI/UX — 8 agentes, fluxo de 5 fases, integração com Figma, WCAG 2.1 AA | 1.1.2 | Apache-2.0 |
-| [**pwdev-feat**](./plugins/pwdev-feat/) | Desenvolvimento simplificado de features — planos PWDEVIA com 7 perguntas + executor, rápido e prático | 1.1.2 | Apache-2.0 |
-| [**pwdev-prd**](./plugins/pwdev-prd/) | Criação de PRD guiada por entrevista — entrevista estruturada em 12 etapas, Markdown + JSON, agnóstico de tecnologia | 1.1.2 | Apache-2.0 |
-| [**pwdev-statusline**](./plugins/pwdev-statusline/) | Barra de status rica para o terminal — modelo, branch git, barra de contexto, rate limits, tokens | 1.0.0 | Apache-2.0 |
+| [**pwdev-code**](./plugins/pwdev-code/) | Desenvolvimento orientado a especificação — 7 subagentes reais, memória curada, loops de correção, 16 comandos | 2.1.0 | Apache-2.0 |
+| [**pwdev-uiux**](./plugins/pwdev-uiux/) | Engenharia UI/UX — 6 subagentes reais, fluxo de 5 fases com gates, Figma, WCAG 2.1 AA | 2.0.0 | Apache-2.0 |
+| [**pwdev-feat**](./plugins/pwdev-feat/) | Desenvolvimento simplificado de features — planos PWDEVIA inline + subagente executor real | 2.0.0 | Apache-2.0 |
+| [**pwdev-prd**](./plugins/pwdev-prd/) | Criação de PRD guiada por entrevista — 12 etapas inline, Markdown + JSON canônico | 2.0.0 | Apache-2.0 |
+| [**pwdev-copy**](./plugins/pwdev-copy/) | Framework de copywriting treinável — 20 skills no ciclo completo (VOC → copy → revisão → análise), 5 subagentes reais | 1.1.0 | Apache-2.0 |
+| [**pwdev-social-media**](./plugins/pwdev-social-media/) | Geração de criativos por IA — orquestração de APIs (Ideogram, Leonardo, Flux, Runway, Freepik) com trava de gasto, 19 skills, 4 subagentes | 2.0.0 | Apache-2.0 |
+| [**pwdev-devops**](./plugins/pwdev-devops/) | Plataforma, operação e incidente — postura de execução segura com guard script, 19 skills, 4 subagentes | 1.0.0 | Apache-2.0 |
+| [**pwdev-statusline**](./plugins/pwdev-statusline/) | Barra de status rica — cores dinâmicas, tokens formatados, totalmente configurável | 1.1.0 | Apache-2.0 |
 
 ### pwdev-code
 
-Framework que orquestra **11 agentes especializados** em **6 fases** para garantir que cada linha de código seja planejada, rastreável e verificada.
+Desenvolvimento orientado a especificação com **orquestração híbrida**: fases
+interativas rodam na conversa principal; o trabalho pesado é delegado a
+**7 subagentes reais** em **6 fases** com loops de correção e **memória
+curada do projeto**.
 
 ```
-PRD ─▶ ROADMAP ─▶ DISCOVER ─▶ DESIGN ─▶ PLAN ─▶ EXECUTE ─▶ REVIEW ─▶ VERIFY
+PRD ─▶ ROADMAP ─▶ DISCOVER ─▶ DESIGN ─▶ PLAN ─▶ EXECUTE ─▶ [SIMPLIFY] ─▶ REVIEW ─▶ VERIFY
 ```
 
-**Agentes:** Product Manager, Delivery Lead, Requirements Engineer, Technical Analyst, Software Architect, Planning Engineer, Implementation Engineer, Code Reviewer, QA Engineer, Spec Verifier, Generalist Engineer
+**Subagentes:** executor, simplifier, code-reviewer, qa, verifier adversarial, researcher, roadmap
+**Personas inline:** interviewer, architect, planner, product manager, quick engineer
 
 Veja a [documentação completa do plugin](./plugins/pwdev-code/README.md).
 
 ### pwdev-uiux
 
-Framework de engenharia UI/UX agnóstico de stack que orquestra **8 agentes especializados** em um fluxo de trabalho de 5 fases.
+Engenharia UI/UX agnóstica de stack: **6 subagentes reais + 2 personas
+inline** em um fluxo de 5 fases com gates humanos.
 
 ```
 UNDERSTAND ─▶ STRUCTURE ─▶ IMPLEMENT ─▶ REVIEW ─▶ HANDOFF
 ```
 
-**Agentes:** Orchestrator, UX Analyst, Design Bridge, UI Scanner, UI Builder, Theme Builder, A11y Reviewer, UX Critic
+**Subagentes:** UX Analyst, Design Bridge, UI Scanner, UI Builder, A11y Reviewer, UX Critic
+**Personas inline:** Orchestrator (gates), Theme Builder (entrevista de marca)
 
 **Principais funcionalidades:** integração com Figma MCP, auditoria WCAG 2.1 AA, revisão UX em 7 eixos, habilidades contextuais específicas por projeto
 
@@ -89,10 +160,10 @@ Veja a [documentação completa do plugin](./plugins/pwdev-uiux/README.md).
 Desenvolvimento de features assistido por IA simplificado, utilizando a **metodologia PWDEVIA com 7 perguntas**. Descreva o que você quer, obtenha um plano estruturado e execute.
 
 ```
-Describe ─▶ Plan ─▶ Execute
+Describe ─▶ Plan (PWDEVIA, inline) ─▶ Execute (subagente real, IMPLEMENT/REPORT)
 ```
 
-**Agentes:** PWDEVIA (Prompt Engineer) + Executor
+**Agentes:** PWDEVIA (planner inline) + executor (subagente real)
 
 **Tipos de plano:** Feature, Backend, Frontend, Test, Review, Quick
 
@@ -100,29 +171,75 @@ Veja a [documentação completa do plugin](./plugins/pwdev-feat/README.md).
 
 ### pwdev-prd
 
-**Criação de PRD** guiada por entrevista com um processo estruturado em 12 etapas. Agnóstico de tecnologia, gera saída em Markdown + JSON opcional.
+**Criação de PRD** guiada por entrevista com um processo estruturado em 12
+etapas — rodando inline (o entrevistador conversa com você; zero subagentes
+por design). Agnóstico de tecnologia, gera Markdown + JSON canônico.
 
 ```
 Interview (12 steps) ─▶ PRD.md ─▶ Export (JSON / GitHub Issue)
 ```
 
-**Agente:** PRD Interview Specialist
-
 **Saídas:** PRD estruturado com objetivos, métricas, requisitos funcionais/não-funcionais, arquitetura, riscos e critérios de aceitação
 
 Veja a [documentação completa do plugin](./plugins/pwdev-prd/README.md).
 
-### pwdev-statusline
+### pwdev-copy
 
-**Barra de status** rica para o terminal do Claude Code. Exibe modelo, branch git, uso de contexto, rate limits e contagem de tokens em uma linha colorida.
+**Framework de copywriting treinável**: um arquivo de contexto define marca,
+ICP e voz; **20 skills** produzem copy consistente a partir dele. A mesma
+instalação atende qualquer cliente — troca-se o arquivo de treino.
 
 ```
-PWDEV | Paulo Soares | session | ~/projeto | Opus 4.6 | main | ctx:████░░░░░░ 42% | tok:1500 | 5h:15%
+treinar ─▶ voc ─▶ brief ─▶ copy ─▶ revisar ─▶ publicar ─▶ analisar ↺
+```
+
+**Subagentes:** voc, copywriter, reviewer, adversarial-copy, analyst
+**Principais funcionalidades:** revisão em 7 sweeps com anti-slop, revisão adversarial de conversão, portão de brief (Ogilvy), ciclo de análise de desempenho
+
+Veja a [documentação completa do plugin](./plugins/pwdev-copy/README.md).
+
+### pwdev-social-media
+
+**Geração de criativos por IA** para redes sociais: orquestração de APIs no
+centro — Ideogram, Leonardo, Flux, Runway, Freepik/Magnific — via wrappers com
+trava de gasto. Figma é camada opcional de composição. Complementa o
+`pwdev-copy`: lá o texto, aqui a peça.
+
+```
+conceito ─▶ [CONFIRMAÇÃO DE CUSTO] ─▶ prompt ─▶ geração via API ─▶ curadoria ─▶ [figma] ─▶ revisão ─▶ export
+```
+
+**Subagentes:** art-director, asset-generator, creative-reviewer, figma-builder
+**Principais funcionalidades:** trava de gasto com triagem de custo, modo prompt sem chaves de API, revisão de acessibilidade obrigatória
+
+Veja a [documentação completa do plugin](./plugins/pwdev-social-media/README.md).
+
+### pwdev-devops
+
+**Plataforma, operação e incidente** com postura de execução segura: leitura
+livre, mutação sob confirmação por comando, destrutivo bloqueado pelo
+`scripts/guard.sh` — segunda barreira, independente da instrução da skill.
+
+```
+init (mapeia ambientes) ─▶ diagnosticar / incidente / auditar / custo / documentar
+```
+
+**Subagentes:** incident-commander, infra-auditor, db-analyst, platform-documenter
+**Principais funcionalidades:** 19 skills (AWS, Kubernetes, Docker, Linux, Nginx, PostgreSQL, observabilidade, incidente, segurança, Proxmox, FinOps, …), auditoria somente-leitura, relatórios FinOps
+
+Veja a [documentação completa do plugin](./plugins/pwdev-devops/README.md).
+
+### pwdev-statusline
+
+**Barra de status** rica para o terminal do Claude Code. Exibe modelo, branch git, uso de contexto, rate limits e contagem de tokens em uma linha colorida — cada segmento pode ser ligado/desligado.
+
+```
+PWDEV | Paulo Soares | session | …/skills-ia/projeto | Fable 5 | main | ctx:████░░░░░░ 42% | tok:1.5k | 5h:15%
 ```
 
 **Comandos:** `install`, `uninstall`, `customize`, `preview`
 
-**Seções:** Diretório, Modelo, Branch Git, Barra de Contexto, Rate Limit (com código de cor), Tokens, Nome da Sessão
+**Seções:** Marca, Usuário, Sessão, Diretório (truncado), Modelo, Branch Git, Barra de Contexto (cor dinâmica), Tokens (formatados), Rate Limit (3 faixas de cor)
 
 Veja a [documentação completa do plugin](./plugins/pwdev-statusline/README.pt-BR.md).
 
@@ -144,10 +261,10 @@ claude plugin marketplace add https://github.com/pwdev-solucoes/pwdev-claude-mar
 ### Instalar plugins
 
 ```bash
-# Desenvolvimento orientado a especificação (11 agentes, 6 fases)
+# Desenvolvimento orientado a especificação (7 subagentes, 6 fases, memória curada)
 claude plugin install pwdev-code@pwdev-claude-marketplace
 
-# Engenharia UI/UX (8 agentes, Figma, WCAG, theming)
+# Engenharia UI/UX (6 subagentes, Figma, WCAG, theming)
 claude plugin install pwdev-uiux@pwdev-claude-marketplace
 
 # Desenvolvimento simplificado de features (planos com 7 perguntas)
@@ -155,6 +272,15 @@ claude plugin install pwdev-feat@pwdev-claude-marketplace
 
 # Criação de PRD guiada por entrevista (processo em 12 etapas)
 claude plugin install pwdev-prd@pwdev-claude-marketplace
+
+# Framework de copywriting treinável (20 skills, ciclo de análise)
+claude plugin install pwdev-copy@pwdev-claude-marketplace
+
+# Geração de criativos por IA (orquestração de APIs, trava de gasto)
+claude plugin install pwdev-social-media@pwdev-claude-marketplace
+
+# Plataforma, operação e incidente (execução segura)
+claude plugin install pwdev-devops@pwdev-claude-marketplace
 
 # Barra de status rica para o terminal
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
@@ -186,23 +312,25 @@ Termos tecnicos (API, CRUD, REST, endpoint) permanecem sempre em inglês, indepe
 
 ### Perfis de Modelo
 
-Cada plugin usa agentes especializados que podem rodar em diferentes modelos Claude. Os perfis de modelo permitem equilibrar qualidade vs. custo:
+Só os **subagentes** resolvem modelo — personas inline rodam no modelo da
+sessão. Cada plugin traz sua própria tabela de perfis em
+`references/model-profiles.md` (fonte única por plugin). O `model_profile`
+compartilhado (`performance` / `balanced` / `economy`) vale para todos os
+plugins; os overrides são por subagente, com chaves namespaced onde
+necessário:
 
-| Perfil | Orquestrador | Planner / Executor | Reviewer | Scanner |
-|--------|:----------:|:-----------------:|:--------:|:-------:|
-| **performance** | Opus | Opus | Sonnet | Sonnet |
-| **balanced** | Opus | Sonnet | Sonnet | Haiku |
-| **economy** | Sonnet | Sonnet | Haiku | Haiku |
-
-- Durante o `/init`: você escolhe um perfil (padrão: balanced)
-- Override de agentes específicos: `model_overrides` no config.json
+- pwdev-code: `"executor"`, `"verifier"`, `"simplifier"`, ...
+- pwdev-feat: `"feat-executor"`
+- pwdev-uiux: `"uiux-ui-builder"`, `"uiux-ux-critic"`, ...
+- pwdev-prd: sem subagentes — nada a configurar
 
 ```json
 {
   "lang": "pt-BR",
   "model_profile": "balanced",
   "model_overrides": {
-    "agent-architect": "opus"
+    "executor": "opus",
+    "uiux-ui-builder": "opus"
   }
 }
 ```
@@ -213,13 +341,16 @@ Cada plugin usa agentes especializados que podem rodar em diferentes modelos Cla
 
 Todos os plugins compartilham um banco de dados SQLite opcional em `.planning/pwdev-audit.db`. Ele é **desativado por padrão** e configurado durante o `/init`. O arquivo do banco nunca é versionado (adicionado automaticamente ao `.gitignore`).
 
-A trilha de auditoria registra:
-- **Eventos** — cada execução de comando (início, conclusão, falha) com timestamp, agente, modelo e fase
-- **Decisões** — decisões arquiteturais e de produto com justificativa e alternativas consideradas
-- **Artefatos** — arquivos criados ou modificados pelo framework, com rastreamento de status
-- **Alterações de config** — histórico de alterações de idioma, perfil de modelo e outras configurações
+**Como os dados chegam aqui (v2 — determinístico, via hooks):** cada plugin
+traz `hooks/hooks.json` + scripts POSIX que registram automaticamente —
+início/fim de sessão, execuções de subagentes com `session_id` e
+`duration_ms` reais, escritas em `.planning/`, marcos de comandos e
+alterações de configuração (`config_changes`). Nenhum agente roda INSERTs
+inline. Um hook de guarda de segredos (PreToolUse, em todos os plugins)
+bloqueia leitura de `.env`/`*.pem`/`*.key`/`id_rsa*`.
 
-O banco de auditoria funciona **em paralelo** com os arquivos Markdown — os agentes continuam lendo e escrevendo Markdown como antes. O SQLite é uma camada adicional para histórico e análise.
+As linhas se distinguem pela coluna `plugin` — filtre com
+`WHERE plugin='pwdev-code'` (ou `pwdev-feat`, `pwdev-prd`, `pwdev-uiux`).
 
 ### Consultando a Trilha de Auditoria
 
@@ -269,6 +400,9 @@ claude plugin install pwdev-code@pwdev-claude-marketplace
 claude plugin install pwdev-uiux@pwdev-claude-marketplace
 claude plugin install pwdev-feat@pwdev-claude-marketplace
 claude plugin install pwdev-prd@pwdev-claude-marketplace
+claude plugin install pwdev-copy@pwdev-claude-marketplace
+claude plugin install pwdev-social-media@pwdev-claude-marketplace
+claude plugin install pwdev-devops@pwdev-claude-marketplace
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
 ```
 

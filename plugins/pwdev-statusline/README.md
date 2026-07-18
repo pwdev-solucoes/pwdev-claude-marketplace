@@ -1,4 +1,4 @@
-# pwdev-statusline v1.1.0
+# PWDEV-STATUSLINE v1.1.0
 
 Rich terminal status line for Claude Code — shows model, git branch, context usage, rate limits, and token counts in a colorful, single-line bar.
 

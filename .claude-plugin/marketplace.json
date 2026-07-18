@@ -1,6 +1,6 @@
 {
   "name": "pwdev-claude-marketplace",
-  "description": "PWDEV plugins for Claude Code — spec-driven development, feature planning, PRD creation, UI/UX engineering, and terminal status line",
+  "description": "PWDEV plugins for Claude Code — spec-driven development, feature planning, PRD creation, UI/UX engineering, copywriting, social media creatives, DevOps, and terminal status line",
   "owner": {
     "name": "Paulo Soares"
   },
@@ -48,6 +48,33 @@
       "description": "Rich terminal status line v1.1 — model, git branch, context bar with dynamic colors, rate limits, formatted tokens; fully configurable",
       "category": "developer-experience",
       "tags": ["statusline", "terminal-ui"],
+      "strict": true
+    },
+    {
+      "name": "pwdev-copy",
+      "displayName": "PWDEV Copy — Framework de Copywriting Treinável",
+      "source": "./plugins/pwdev-copy",
+      "description": "Framework de copy genérico e treinável v1.1 — um arquivo de contexto define marca, ICP e voz, e 20 skills cobrem o ciclo completo: pesquisa VOC, brand voice, criação (landing, social, ganchos, reaproveitamento), revisão em 7 sweeps com anti-slop, e camada de análise que fecha o loop; 5 subagentes reais",
+      "category": "marketing",
+      "tags": ["copywriting", "marketing", "brand-voice", "seo", "analytics", "agents", "pt-br"],
+      "strict": true
+    },
+    {
+      "name": "pwdev-social-media",
+      "displayName": "PWDEV Social Media — Geração de Criativos por IA",
+      "source": "./plugins/pwdev-social-media",
+      "description": "Geração de criativos para redes sociais v2.0 — orquestração de APIs (Ideogram, Leonardo, Flux, Runway, Freepik) com trava de gasto, triagem de custo, engenharia de prompt, consistência visual e curadoria; Figma como camada opcional de composição; 19 skills, 4 subagentes",
+      "category": "marketing",
+      "tags": ["social-media", "image-generation", "ideogram", "flux", "runway", "figma", "accessibility", "pt-br"],
+      "strict": true
+    },
+    {
+      "name": "pwdev-devops",
+      "displayName": "PWDEV DevOps — Plataforma, Operação e Incidente",
+      "source": "./plugins/pwdev-devops",
+      "description": "DevOps com execução segura v1.0 — leitura livre, mutação sob confirmação por comando, destrutivo bloqueado por guard script; 19 skills (AWS, Kubernetes, Docker, Linux, Nginx, PostgreSQL, observabilidade, incidente, segurança, Proxmox, automação, performance, backup, Laravel, confiabilidade, FinOps, IA, documentação) e 4 subagentes",
+      "category": "workflow",
+      "tags": ["devops", "sre", "aws", "kubernetes", "postgresql", "observability", "finops", "agents", "pt-br"],
       "strict": true
     }
   ]

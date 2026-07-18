@@ -1,0 +1,27 @@
+{
+  "name": "pwdev-social-media",
+  "displayName": "PWDEV Social Media — Geração de Criativos por IA",
+  "version": "2.0.0",
+  "description": "Produção de criativos para redes sociais com orquestração de APIs de geração no centro — Ideogram, Leonardo, Flux, Runway e Freepik/Magnific via wrappers com trava de gasto; triagem de custo, engenharia de prompt, consistência visual e curadoria de variações. Figma como camada opcional de composição. 19 skills, 4 subagentes, revisão de acessibilidade obrigatória.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "claude-code",
+    "claude-plugin",
+    "social-media",
+    "image-generation",
+    "ideogram",
+    "flux",
+    "runway",
+    "figma",
+    "creative-production",
+    "accessibility",
+    "pt-br"
+  ],
+  "mcpServers": "./.mcp.json"
+}
