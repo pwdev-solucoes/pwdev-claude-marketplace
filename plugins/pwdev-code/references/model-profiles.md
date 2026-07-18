@@ -8,13 +8,15 @@ Only **subagents** need model resolution — interactive phases (discover, desig
 |---------------|:-------------:|:--------------------:|:---------:|
 | executor      | opus          | sonnet               | sonnet    |
 | roadmap       | opus          | sonnet               | sonnet    |
+| simplifier    | opus          | sonnet               | sonnet    |
 | code-reviewer | sonnet        | sonnet               | haiku     |
 | qa            | sonnet        | sonnet               | haiku     |
 | verifier      | sonnet        | sonnet               | haiku     |
 | researcher    | sonnet        | haiku                | haiku     |
 
 Notes:
-- `performance` gives Opus to the agents that write the most consequential output (executor, roadmap).
+- `performance` gives Opus to the agents that write the most consequential output (executor, roadmap, simplifier).
+- `simplifier` edits production code — never haiku; Opus in `performance` because refactor judgment on working code is consequential.
 - `verifier` needs real reasoning for adversarial refutation — haiku only in `economy`.
 
 ## Resolution order
@@ -42,7 +44,7 @@ Pass the result via the `model` parameter of the Task tool call.
 ```
 Qual perfil de modelo deseja usar para os subagentes?
 
-1. Performance  — Opus para executor/roadmap, Sonnet para os demais (melhor qualidade, maior custo)
+1. Performance  — Opus para executor/roadmap/simplifier, Sonnet para os demais (melhor qualidade, maior custo)
 2. Balanced     — Sonnet para quase tudo, Haiku para pesquisa (recomendado)
 3. Economy      — Sonnet para execucao, Haiku para revisao/verificacao/pesquisa (menor custo)
 
@@ -53,7 +55,7 @@ Escolha (1-3, padrao: 2):
 ```
 Which model profile would you like to use for subagents?
 
-1. Performance  — Opus for executor/roadmap, Sonnet for the rest (best quality, highest cost)
+1. Performance  — Opus for executor/roadmap/simplifier, Sonnet for the rest (best quality, highest cost)
 2. Balanced     — Sonnet for almost everything, Haiku for research (recommended)
 3. Economy      — Sonnet for execution, Haiku for review/verification/research (lowest cost)
 

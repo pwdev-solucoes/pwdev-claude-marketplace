@@ -122,6 +122,56 @@ OUTPUT CONTRACT:
 
 ---
 
+## simplifier (`subagent_type: "pwdev-code:simplifier"`)
+
+### Pass 1 — ANALYZE
+
+```
+MODE: ANALYZE — propose only. Do NOT edit any file in this mode.
+
+SCOPE (diff range or file list):
+{...}
+
+SPEC EXCERPTS (.planning/phases/{slug}/spec.md):
+### §5 Quality Criteria
+### §7 Prohibitions
+{...}
+
+RELEVANT MEMORY: {block per references/memory.md — conventions first; omit if none}
+
+LANGUAGE: {lang}
+
+OUTPUT CONTRACT:
+1. Only proposals with confidence >= 80%: reuse, dead code, complexity,
+   efficiency. NOT bugs, NOT behavior changes, NOT style nits.
+2. Write .planning/phases/{slug}/review/simplify-proposals.md — table:
+   ID | confidence | kind | files | before→after sketch | why safe.
+3. Reply with AT MOST 10 lines: STATUS, proposal count, report path.
+```
+
+### Pass 2 — APPLY
+
+```
+MODE: APPLY — implement ONLY the approved proposals below.
+
+APPROVED PROPOSALS (full text from simplify-proposals.md):
+{#IDs + full text of each approved proposal}
+
+PROJECT VERIFICATION COMMANDS (from CLAUDE.md §12/§14):
+{...}
+
+LANGUAGE: {lang}
+
+OUTPUT CONTRACT:
+1. Apply each proposal; run verification after each; on failure revert that
+   proposal and mark it SKIPPED.
+2. ONE commit: refactor({scope}): <summary>.
+3. Append "## Applied" section to simplify-proposals.md.
+4. Reply with AT MOST 10 lines: STATUS, applied/skipped counts, commit hash.
+```
+
+---
+
 ## researcher (`subagent_type: "pwdev-code:researcher"`)
 
 ```
