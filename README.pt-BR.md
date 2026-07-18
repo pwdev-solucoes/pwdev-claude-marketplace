@@ -114,10 +114,10 @@ foram reestruturados.
 
 | Plugin | Descrição | Versão | Licença |
 |--------|-----------|:------:|:------:|
-| [**pwdev-code**](./plugins/pwdev-code/) | Desenvolvimento orientado a especificação — 7 subagentes reais, memória curada, loops de correção, 16 comandos | 2.1.0 | Apache-2.0 |
-| [**pwdev-uiux**](./plugins/pwdev-uiux/) | Engenharia UI/UX — 6 subagentes reais, fluxo de 5 fases com gates, Figma, WCAG 2.1 AA | 2.0.0 | Apache-2.0 |
-| [**pwdev-feat**](./plugins/pwdev-feat/) | Desenvolvimento simplificado de features — planos PWDEVIA inline + subagente executor real | 2.0.0 | Apache-2.0 |
-| [**pwdev-prd**](./plugins/pwdev-prd/) | Criação de PRD guiada por entrevista — 12 etapas inline, Markdown + JSON canônico | 2.0.0 | Apache-2.0 |
+| [**pwdev-code**](./plugins/pwdev-code/) | Desenvolvimento orientado a especificação — 7 subagentes reais, memória curada, loops de correção, 16 comandos | 2.1.1 | Apache-2.0 |
+| [**pwdev-uiux**](./plugins/pwdev-uiux/) | Engenharia UI/UX — 6 subagentes reais, fluxo de 5 fases com gates, Figma, WCAG 2.1 AA | 2.0.1 | Apache-2.0 |
+| [**pwdev-feat**](./plugins/pwdev-feat/) | Desenvolvimento simplificado de features — planos PWDEVIA inline + subagente executor real | 2.0.1 | Apache-2.0 |
+| [**pwdev-prd**](./plugins/pwdev-prd/) | Criação de PRD guiada por entrevista — 12 etapas inline, Markdown + JSON canônico | 2.0.1 | Apache-2.0 |
 | [**pwdev-copy**](./plugins/pwdev-copy/) | Framework de copywriting treinável — 20 skills no ciclo completo (VOC → copy → revisão → análise), 5 subagentes reais | 1.1.0 | Apache-2.0 |
 | [**pwdev-social-media**](./plugins/pwdev-social-media/) | Geração de criativos por IA — orquestração de APIs (Ideogram, Leonardo, Flux, Runway, Freepik) com trava de gasto, 19 skills, 4 subagentes | 2.0.0 | Apache-2.0 |
 | [**pwdev-devops**](./plugins/pwdev-devops/) | Plataforma, operação e incidente — postura de execução segura com guard script, 19 skills, 4 subagentes | 1.0.0 | Apache-2.0 |

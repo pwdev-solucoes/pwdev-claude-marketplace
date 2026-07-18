@@ -1,7 +1,7 @@
 {
   "name": "pwdev-prd",
   "displayName": "PWDEV PRD — Interview-Driven Requirements",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "PRD creation framework for Claude Code — 12-step interview-driven Product Requirements Documents, run inline (the interviewer talks to you; zero subagents by design), technology-agnostic, Markdown + canonical JSON export, deterministic SQLite audit via hooks.",
   "author": {
     "name": "Paulo Soares",
@@ -20,6 +20,5 @@
     "hooks",
     "documentation",
     "agnostic"
-  ],
-  "hooks": "./hooks/hooks.json"
+  ]
 }
