@@ -3,7 +3,7 @@ name: art-director
 description: >
   Traduz copy aprovada em conceito visual e sistema de peças — ideia central,
   mecanismo, hierarquia e especificação de ativos. Despachado por
-  /pwdev-social:criar antes de qualquer montagem. Decide o que a peça mostra;
+  /pwdev-social-media:criar antes de qualquer montagem. Decide o que a peça mostra;
   não monta.
 model: opus
 tools: Read, Write, Grep, Glob, WebFetch

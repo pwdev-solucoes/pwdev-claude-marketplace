@@ -33,9 +33,9 @@ prompt** — entrega o prompt otimizado para execução manual.
 ## Primeiro uso
 
 ```
-/pwdev-social:init      # brand kit, formatos, chaves, restrições
-/pwdev-social:gerar     # triagem → prompt → custo → geração → curadoria
-/pwdev-social:criar     # produção end-to-end
+/pwdev-social-media:init      # brand kit, formatos, chaves, restrições
+/pwdev-social-media:gerar     # triagem → prompt → custo → geração → curadoria
+/pwdev-social-media:criar     # produção end-to-end
 ```
 
 ---
@@ -64,15 +64,15 @@ export + handoff
 
 | Comando | Função |
 |---|---|
-| `/pwdev-social:init` | Configura brand kit, formatos, chaves |
-| `/pwdev-social:gerar` | Gera ativo — triagem, prompt, custo, curadoria |
-| `/pwdev-social:criar` | Produção end-to-end |
-| `/pwdev-social:carrossel` | Carrossel completo |
-| `/pwdev-social:video` | Roteiro, storyboard e geração via Runway |
-| `/pwdev-social:custo` | Estimativa e acompanhamento de gasto |
-| `/pwdev-social:revisar` | Auditoria de criativo |
-| `/pwdev-social:exportar` | Pacote de entrega |
-| `/pwdev-social:status` | Estado, chaves e gasto acumulado |
+| `/pwdev-social-media:init` | Configura brand kit, formatos, chaves |
+| `/pwdev-social-media:gerar` | Gera ativo — triagem, prompt, custo, curadoria |
+| `/pwdev-social-media:criar` | Produção end-to-end |
+| `/pwdev-social-media:carrossel` | Carrossel completo |
+| `/pwdev-social-media:video` | Roteiro, storyboard e geração via Runway |
+| `/pwdev-social-media:custo` | Estimativa e acompanhamento de gasto |
+| `/pwdev-social-media:revisar` | Auditoria de criativo |
+| `/pwdev-social-media:exportar` | Pacote de entrega |
+| `/pwdev-social-media:status` | Estado, chaves e gasto acumulado |
 
 ### Subagentes
 

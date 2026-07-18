@@ -3,7 +3,7 @@ description: Monta carrossel completo — estrutura de slides, componente com va
 argument-hint: "[plataforma] [tema ou arquivo de copy]"
 ---
 
-# /pwdev-social:carrossel
+# /pwdev-social-media:carrossel
 
 ## STEP 0 — Idioma
 `${CLAUDE_PLUGIN_ROOT}/references/language.md`

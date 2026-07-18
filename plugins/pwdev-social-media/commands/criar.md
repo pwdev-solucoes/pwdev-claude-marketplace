@@ -3,7 +3,7 @@ description: Produz criativos end-to-end — conceito, triagem de custo, geraç�
 argument-hint: "[formato] [descrição da peça]"
 ---
 
-# /pwdev-social:criar — Produzir criativos
+# /pwdev-social-media:criar — Produzir criativos
 
 ## STEP 0 — Idioma
 `${CLAUDE_PLUGIN_ROOT}/references/language.md`
@@ -11,7 +11,7 @@ argument-hint: "[formato] [descrição da peça]"
 ## STEP 1 — Portões
 | Verificar | Se ausente |
 |---|---|
-| `.claude/pwdev-social-context.md` | parar → `/pwdev-social:init` |
+| `.claude/pwdev-social-context.md` | parar → `/pwdev-social-media:init` |
 | Seção 3 — brand kit | parar → `brand-kit` |
 | Copy aprovada | parar → `/pwdev-copy:copy` |
 | Chaves (seção 6) | seguir em modo prompt, avisando |

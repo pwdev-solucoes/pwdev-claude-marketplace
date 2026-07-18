@@ -3,7 +3,7 @@ description: Configura o plugin — Figma, brand kit, formatos ativos, geradores
 argument-hint: "[organização] [--brand para só reextrair o brand kit]"
 ---
 
-# /pwdev-social:init — Configurar
+# /pwdev-social-media:init — Configurar
 
 ## STEP 0 — Idioma
 `${CLAUDE_PLUGIN_ROOT}/references/language.md`. Este comando **sempre** pergunta

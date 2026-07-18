@@ -21,8 +21,8 @@ Herdado de `pwdev-copy`, com os acréscimos da produção visual.
 | Portão | Verificar | Se ausente |
 |---|---|---|
 | **`/figma-use`** | carregada antes de `use_figma` | **parar** — exigência do MCP |
-| Contexto | `.claude/pwdev-social-context.md` | parar → `/pwdev-social:init` |
-| Brand kit | seção 3 do contexto | parar → `/pwdev-social:init --brand` |
+| Contexto | `.claude/pwdev-social-context.md` | parar → `/pwdev-social-media:init` |
+| Brand kit | seção 3 do contexto | parar → `/pwdev-social-media:init --brand` |
 | Copy aprovada | texto validado | parar → `/pwdev-copy:copy` |
 | Chave de API | variável de ambiente | Path C → entregar prompt, não gerar |
 | MCP Figma | conexão ativa | Path B → entregar especificação |

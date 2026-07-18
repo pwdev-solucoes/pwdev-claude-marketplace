@@ -1,7 +1,7 @@
 {
   "name": "pwdev-social-media",
   "displayName": "PWDEV Social Media — Geração de Criativos por IA",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Produção de criativos para redes sociais com orquestração de APIs de geração no centro — Ideogram, Leonardo, Flux, Runway e Freepik/Magnific via wrappers com trava de gasto; triagem de custo, engenharia de prompt, consistência visual e curadoria de variações. Figma como camada opcional de composição. 19 skills, 4 subagentes, revisão de acessibilidade obrigatória.",
   "author": {
     "name": "Paulo Soares",
