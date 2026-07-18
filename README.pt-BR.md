@@ -18,9 +18,32 @@ Filosofia central em todos os plugins:
 
 ---
 
-## Novidades — a onda v2
+## Novidades
 
-Os cinco plugins foram reconstruídos sobre o sistema moderno de plugins do
+### Novos plugins — marketing e operações
+
+O marketplace agora vai além do fluxo de desenvolvimento:
+
+- **pwdev-copy v1.1.0** — framework de copywriting treinável, expandido para
+  **20 skills / 5 subagentes / 9 comandos**: novas skills de criação (ganchos,
+  reaproveitamento), revisão CRO de página e uma **camada de análise**
+  (`perf-analyzer` / `perf-patterns` / `perf-optimize` + subagente `analyst`)
+  que fecha o ciclo: pesquisa → brief → copy → revisão → publicação → análise.
+- **pwdev-social-media v2.0.0** *(novo)* — geração de criativos para redes
+  sociais com **orquestração de APIs no centro** (Ideogram, Leonardo, Flux,
+  Runway, Freepik/Magnific) via wrappers com trava de gasto: triagem de custo,
+  engenharia de prompt, consistência visual e curadoria de variações. Figma é
+  camada opcional de composição. 19 skills, 4 subagentes.
+- **pwdev-devops v1.0.0** *(novo)* — plataforma, operação e incidente com
+  **postura de execução segura**: leitura livre, mutação sob confirmação por
+  comando, destrutivo bloqueado por guard script (segunda barreira,
+  independente da instrução da skill). 19 skills cobrindo AWS, Kubernetes,
+  Docker, Linux, Nginx, PostgreSQL, observabilidade, incidente, segurança,
+  Proxmox, FinOps e mais; 4 subagentes.
+
+### A onda v2
+
+Os cinco plugins originais foram reconstruídos sobre o sistema moderno de plugins do
 Claude Code. **Nenhum slash command foi renomeado ou removido** — os internos
 foram reestruturados.
 
@@ -95,6 +118,9 @@ foram reestruturados.
 | [**pwdev-uiux**](./plugins/pwdev-uiux/) | Engenharia UI/UX — 6 subagentes reais, fluxo de 5 fases com gates, Figma, WCAG 2.1 AA | 2.0.0 | Apache-2.0 |
 | [**pwdev-feat**](./plugins/pwdev-feat/) | Desenvolvimento simplificado de features — planos PWDEVIA inline + subagente executor real | 2.0.0 | Apache-2.0 |
 | [**pwdev-prd**](./plugins/pwdev-prd/) | Criação de PRD guiada por entrevista — 12 etapas inline, Markdown + JSON canônico | 2.0.0 | Apache-2.0 |
+| [**pwdev-copy**](./plugins/pwdev-copy/) | Framework de copywriting treinável — 20 skills no ciclo completo (VOC → copy → revisão → análise), 5 subagentes reais | 1.1.0 | Apache-2.0 |
+| [**pwdev-social-media**](./plugins/pwdev-social-media/) | Geração de criativos por IA — orquestração de APIs (Ideogram, Leonardo, Flux, Runway, Freepik) com trava de gasto, 19 skills, 4 subagentes | 2.0.0 | Apache-2.0 |
+| [**pwdev-devops**](./plugins/pwdev-devops/) | Plataforma, operação e incidente — postura de execução segura com guard script, 19 skills, 4 subagentes | 1.0.0 | Apache-2.0 |
 | [**pwdev-statusline**](./plugins/pwdev-statusline/) | Barra de status rica — cores dinâmicas, tokens formatados, totalmente configurável | 1.1.0 | Apache-2.0 |
 
 ### pwdev-code
@@ -157,6 +183,52 @@ Interview (12 steps) ─▶ PRD.md ─▶ Export (JSON / GitHub Issue)
 
 Veja a [documentação completa do plugin](./plugins/pwdev-prd/README.md).
 
+### pwdev-copy
+
+**Framework de copywriting treinável**: um arquivo de contexto define marca,
+ICP e voz; **20 skills** produzem copy consistente a partir dele. A mesma
+instalação atende qualquer cliente — troca-se o arquivo de treino.
+
+```
+treinar ─▶ voc ─▶ brief ─▶ copy ─▶ revisar ─▶ publicar ─▶ analisar ↺
+```
+
+**Subagentes:** voc, copywriter, reviewer, adversarial-copy, analyst
+**Principais funcionalidades:** revisão em 7 sweeps com anti-slop, revisão adversarial de conversão, portão de brief (Ogilvy), ciclo de análise de desempenho
+
+Veja a [documentação completa do plugin](./plugins/pwdev-copy/README.md).
+
+### pwdev-social-media
+
+**Geração de criativos por IA** para redes sociais: orquestração de APIs no
+centro — Ideogram, Leonardo, Flux, Runway, Freepik/Magnific — via wrappers com
+trava de gasto. Figma é camada opcional de composição. Complementa o
+`pwdev-copy`: lá o texto, aqui a peça.
+
+```
+conceito ─▶ [CONFIRMAÇÃO DE CUSTO] ─▶ prompt ─▶ geração via API ─▶ curadoria ─▶ [figma] ─▶ revisão ─▶ export
+```
+
+**Subagentes:** art-director, asset-generator, creative-reviewer, figma-builder
+**Principais funcionalidades:** trava de gasto com triagem de custo, modo prompt sem chaves de API, revisão de acessibilidade obrigatória
+
+Veja a [documentação completa do plugin](./plugins/pwdev-social-media/README.md).
+
+### pwdev-devops
+
+**Plataforma, operação e incidente** com postura de execução segura: leitura
+livre, mutação sob confirmação por comando, destrutivo bloqueado pelo
+`scripts/guard.sh` — segunda barreira, independente da instrução da skill.
+
+```
+init (mapeia ambientes) ─▶ diagnosticar / incidente / auditar / custo / documentar
+```
+
+**Subagentes:** incident-commander, infra-auditor, db-analyst, platform-documenter
+**Principais funcionalidades:** 19 skills (AWS, Kubernetes, Docker, Linux, Nginx, PostgreSQL, observabilidade, incidente, segurança, Proxmox, FinOps, …), auditoria somente-leitura, relatórios FinOps
+
+Veja a [documentação completa do plugin](./plugins/pwdev-devops/README.md).
+
 ### pwdev-statusline
 
 **Barra de status** rica para o terminal do Claude Code. Exibe modelo, branch git, uso de contexto, rate limits e contagem de tokens em uma linha colorida — cada segmento pode ser ligado/desligado.
@@ -200,6 +272,15 @@ claude plugin install pwdev-feat@pwdev-claude-marketplace
 
 # Criação de PRD guiada por entrevista (processo em 12 etapas)
 claude plugin install pwdev-prd@pwdev-claude-marketplace
+
+# Framework de copywriting treinável (20 skills, ciclo de análise)
+claude plugin install pwdev-copy@pwdev-claude-marketplace
+
+# Geração de criativos por IA (orquestração de APIs, trava de gasto)
+claude plugin install pwdev-social-media@pwdev-claude-marketplace
+
+# Plataforma, operação e incidente (execução segura)
+claude plugin install pwdev-devops@pwdev-claude-marketplace
 
 # Barra de status rica para o terminal
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
@@ -319,6 +400,9 @@ claude plugin install pwdev-code@pwdev-claude-marketplace
 claude plugin install pwdev-uiux@pwdev-claude-marketplace
 claude plugin install pwdev-feat@pwdev-claude-marketplace
 claude plugin install pwdev-prd@pwdev-claude-marketplace
+claude plugin install pwdev-copy@pwdev-claude-marketplace
+claude plugin install pwdev-social-media@pwdev-claude-marketplace
+claude plugin install pwdev-devops@pwdev-claude-marketplace
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
 ```
 
