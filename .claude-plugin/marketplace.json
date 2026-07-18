@@ -49,6 +49,15 @@
       "category": "developer-experience",
       "tags": ["statusline", "terminal-ui"],
       "strict": true
+    },
+    {
+      "name": "pwdev-copy",
+      "displayName": "PWDEV Copy — Framework de Copywriting Treinável",
+      "source": "./plugins/pwdev-copy",
+      "description": "Framework de copy genérico e treinável v1.0 — um arquivo de contexto define marca, ICP e voz, e 14 skills produzem copy consistente; 4 subagentes reais, revisão em 7 sweeps com anti-slop e revisão adversarial de conversão",
+      "category": "marketing",
+      "tags": ["copywriting", "marketing", "brand-voice", "seo", "agents", "pt-br"],
+      "strict": true
     }
   ]
 }

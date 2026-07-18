@@ -1,0 +1,25 @@
+{
+  "name": "pwdev-copy",
+  "displayName": "PWDEV Copy — Framework de Copywriting Treinável",
+  "version": "1.0.0",
+  "description": "Framework de copy genérico e treinável — um arquivo de contexto define marca, ICP e voz, e 14 skills especializadas (VOC, brand voice, landing, e-mail, social, ads, VSL, SEO, UX writing, setor público) produzem copy consistente. Inclui 4 subagentes reais, revisão em 7 sweeps com detecção anti-slop e revisão adversarial de conversão.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "claude-code",
+    "claude-plugin",
+    "copywriting",
+    "marketing",
+    "brand-voice",
+    "conversion",
+    "seo",
+    "subagents",
+    "content-strategy",
+    "pt-br"
+  ]
+}
