@@ -177,6 +177,14 @@ Ver `${CLAUDE_PLUGIN_ROOT}/references/mcp-roadmap.md`.
 
 ---
 
+## Limites
+
+- Não escreve copy — ver as skills `copy-*`
+- Não define estratégia nem pauta — ver `content-strategy`
+- Não analisa desempenho de conteúdo publicado — ver `perf-analyzer`
+- Não acessa plataforma nem API sem MCP conectado
+- Não contorna bloqueio de coleta: fonte bloqueada é fonte não acessada
+
 ## Skills relacionadas
 
 - `brand-voice` — como **nós** falamos (esta skill é como **eles** falam)

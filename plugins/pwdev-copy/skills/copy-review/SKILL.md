@@ -222,6 +222,14 @@ Ao final, entregue a **versão revisada completa** — não só a lista de apont
 
 ---
 
+## Limites
+
+- Não escreve copy do zero — ver as skills `copy-*`
+- Não reescreve a estratégia: divergência de posicionamento é finding, não edição
+- Não avalia estrutura de página — ver `page-cro`
+- Não analisa desempenho publicado — ver `perf-analyzer`
+- Não inventa prova para sustentar afirmação fraca — suaviza a afirmação
+
 ## Skills relacionadas
 
 - `copy-page`, `copy-email`, `copy-ads` — geram o que esta skill revisa

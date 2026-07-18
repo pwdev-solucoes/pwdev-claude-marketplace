@@ -1,7 +1,9 @@
 # PWDEV Copy — Framework de Copywriting Treinável
 
 Plugin genérico de copy para Claude Code. Um arquivo de contexto define marca,
-ICP e voz; 14 skills especializadas produzem copy consistente a partir dele.
+ICP e voz; 20 skills cobrem o ciclo completo — pesquisa VOC, brand voice,
+criação, revisão e análise de desempenho — produzindo copy consistente a
+partir dele.
 
 **A mesma instalação atende qualquer cliente** — troca-se o arquivo de treino.
 
@@ -32,7 +34,9 @@ ICP e voz; 14 skills especializadas produzem copy consistente a partir dele.
 ```
 .claude/pwdev-copy-context.md      ← a memória de treino (9 seções)
         ↓ toda skill lê antes de perguntar
-14 skills → 4 subagentes → 7 comandos
+20 skills → 5 subagentes → 9 comandos
+
+ciclo:  treinar → voc → brief → copy → revisar → publicar → analisar ↺
 ```
 
 ### Comandos
@@ -45,6 +49,8 @@ ICP e voz; 14 skills especializadas produzem copy consistente a partir dele.
 | `/pwdev-copy:copy` | Orquestra brief → escrita → revisão |
 | `/pwdev-copy:revisar` | Anti-slop + 7 sweeps |
 | `/pwdev-copy:variar` | N variações com ângulos distintos |
+| `/pwdev-copy:repurpose` | Uma peça vira vários derivados nativos |
+| `/pwdev-copy:analisar` | Fecha o ciclo — desempenho, padrões, plano |
 | `/pwdev-copy:status` | Estado do treino |
 
 ### Subagentes
@@ -55,14 +61,21 @@ ICP e voz; 14 skills especializadas produzem copy consistente a partir dele.
 | `copywriter` | sonnet | Escreve o rascunho |
 | `reviewer` | sonnet | Anti-slop + 7 sweeps |
 | `adversarial-copy` | opus | Assume que a copy não converte e tenta provar |
+| `analyst` | sonnet | Desempenho → padrões → plano de otimização |
 
 ### Skills
 
-**Completas:** `voc-research`, `brand-voice`, `copy-page`, `copy-review`
+**Pesquisa e voz:** `voc-research`, `brand-voice`
+
+**Criação:** `copy-page`, `copy-social`, `copy-hooks`, `copy-repurpose`
+
+**Revisão:** `copy-review`, `page-cro`
+
+**Análise** (fecha o ciclo): `perf-analyzer`, `perf-patterns`, `perf-optimize`
 
 **Stubs** (estrutura pronta, conteúdo a preencher): `storytelling`, `copy-email`,
-`copy-social`, `copy-ads`, `copy-video`, `ux-writing`, `copy-setor-publico`,
-`seo-audit`, `schema-markup`, `content-strategy`
+`copy-ads`, `copy-video`, `ux-writing`, `copy-setor-publico`, `seo-audit`,
+`schema-markup`, `content-strategy`, `page-cro`
 
 ---
 
@@ -74,6 +87,11 @@ ICP e voz; 14 skills especializadas produzem copy consistente a partir dele.
 3. **Portão de brief.** Sem posicionamento, promessa e big idea, a produção para.
 4. **Rascunho nunca é entrega.** Toda copy passa por revisão.
 5. **Degrada com aviso.** Sem MCP ou sem contexto, funciona — e diz que está degradado.
+6. **Não publica sozinho.** Publicar, agendar ou enviar exige confirmação explícita.
+7. **Correlação não é causalidade.** Na análise, hipótese é rotulada como hipótese.
+8. **Recusa analisar volume insuficiente.** Padrão inventado guia meses na direção errada.
+
+Todas codificadas em `references/anatomia-skill.md`.
 
 ---
 
@@ -95,8 +113,13 @@ e o que exige construção.
 
 ## Créditos
 
-Derivado do catálogo em `skills-ia/skills`, com base em `copywriting`,
-`copy-editing`, `ogilvy`, `content-strategy`, `seo-audit`, `schema-markup`,
-`competitor-alternatives`, `stop-slop` e `adversarial-review`.
+Derivado de dois catálogos:
 
-Licença Apache-2.0.
+- **`skills-ia/skills`** — `copywriting`, `copy-editing`, `ogilvy`,
+  `content-strategy`, `seo-audit`, `schema-markup`, `competitor-alternatives`,
+  `stop-slop`, `adversarial-review`
+- **[social-media-skills](https://github.com/blacktwist/social-media-skills)**
+  (MIT) — camada de análise, biblioteca de ganchos, matriz de reaproveitamento,
+  e os padrões Path A/B e Limites
+
+Detalhamento em `NOTICE.md`. Licença Apache-2.0.

@@ -165,6 +165,14 @@ Toda prova marcada como `[PREENCHER]`, reunida no fim.
 
 Rode `copy-review` no próprio texto. Nunca entregue primeira versão como final.
 
+## Limites
+
+- Não revisa o próprio texto — ver `copy-review`
+- Não avalia estrutura ou UX da página — ver `page-cro`
+- Não escreve e-mail, anúncio, social ou roteiro — ver as demais `copy-*`
+- Não gera imagem, arte nem layout — a saída é texto
+- Não publica nem altera o site
+
 ## Skills relacionadas
 
 - `copy-review` — os 7 sweeps + anti-slop

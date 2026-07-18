@@ -1,8 +1,8 @@
 {
   "name": "pwdev-copy",
   "displayName": "PWDEV Copy — Framework de Copywriting Treinável",
-  "version": "1.0.0",
-  "description": "Framework de copy genérico e treinável — um arquivo de contexto define marca, ICP e voz, e 14 skills especializadas (VOC, brand voice, landing, e-mail, social, ads, VSL, SEO, UX writing, setor público) produzem copy consistente. Inclui 4 subagentes reais, revisão em 7 sweeps com detecção anti-slop e revisão adversarial de conversão.",
+  "version": "1.1.0",
+  "description": "Framework de copy genérico e treinável — um arquivo de contexto define marca, ICP e voz, e 20 skills cobrem o ciclo completo: pesquisa VOC, brand voice, criação (landing, social, ganchos, reaproveitamento), revisão em 7 sweeps com anti-slop, e camada de análise que fecha o loop (perf-analyzer, perf-patterns, perf-optimize). Inclui 5 subagentes reais e revisão adversarial de conversão.",
   "author": {
     "name": "Paulo Soares",
     "url": "https://github.com/soarescbm"
@@ -18,6 +18,7 @@
     "brand-voice",
     "conversion",
     "seo",
+    "analytics",
     "subagents",
     "content-strategy",
     "pt-br"

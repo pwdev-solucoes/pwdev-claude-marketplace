@@ -177,6 +177,13 @@ pelo jurídico.
 
 ---
 
+## Limites
+
+- Não escreve peça de copy — ver as skills `copy-*`
+- Não pesquisa o público — ver `voc-research`
+- Não roda os 7 sweeps — ver `copy-review`
+- Não inventa voz sem amostra: sem material aprovado, a seção 5 fica pendente
+
 ## Skills relacionadas
 
 - `voc-research` — como o público fala (esta skill é como a marca fala)
