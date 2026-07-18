@@ -1,21 +1,24 @@
 ---
-description: Create a PRD or decompose it into an executable roadmap
-argument-hint: "[prd [description] | roadmap [path]]"
+description: Create a PRD, decompose it into an executable roadmap, or generate user stories
+argument-hint: "[prd [description] | roadmap [path] | stories [prd | path | description]]"
 ---
 
 # /pwdev-code:product — Product Planning
 
 ## Role
 Product planning: creates PRDs through a structured interview (interactive,
-main context) or decomposes them into executable multi-file roadmaps via the
-`pwdev-code:roadmap` subagent.
+main context), decomposes them into executable multi-file roadmaps via the
+`pwdev-code:roadmap` subagent, or generates/refines user stories following
+the `skill-user-stories` quality bar.
 
 ## Input
-$ARGUMENTS: subcommand + optional arguments.
+`$1` = subcommand, `$2` = rest.
 - `prd` → create or refine a PRD (interactive interview)
 - `prd <description>` → create PRD with initial context
 - `roadmap` → generate roadmap from existing PRD/requirements
 - `roadmap <path>` → generate roadmap from a specific PRD file
+- `stories` → generate/refine user stories (asks for the source)
+- `stories prd` → stories from the PRD §6 / `stories <path>` → from a file / `stories <text>` → from a free description
 - empty → show interactive menu
 
 ---
@@ -28,10 +31,11 @@ Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
 
 ### STEP 1 — Route Subcommand
 
-Parse $ARGUMENTS:
+Route on `$1`:
 
-- **`prd`** or **`prd <description>`** → go to STEP 2
-- **`roadmap`** or **`roadmap <path>`** → go to STEP 3
+- **`prd`** → go to STEP 2 (`$2` = optional description)
+- **`roadmap`** → go to STEP 3 (`$2` = optional path)
+- **`stories`** → go to STEP 4 (`$2` = `prd` | path | free description)
 - **empty** → present menu:
 
   **PT-BR:**
@@ -40,8 +44,9 @@ Parse $ARGUMENTS:
 
   1. prd      — Criar ou refinar um PRD (Product Requirements Document)
   2. roadmap  — Gerar roadmap executavel a partir do PRD
+  3. stories  — Gerar ou refinar historias de usuario
 
-  Escolha (1-2):
+  Escolha (1-3):
   ```
 
   **EN:**
@@ -50,8 +55,9 @@ Parse $ARGUMENTS:
 
   1. prd      — Create or refine a PRD (Product Requirements Document)
   2. roadmap  — Generate executable roadmap from PRD
+  3. stories  — Generate or refine user stories
 
-  Choose (1-2):
+  Choose (1-3):
   ```
 
 ---
@@ -99,6 +105,9 @@ maximum 3 rounds.
 1. Overview  2. Goals and Metrics  3. Functional Requirements (MoSCoW)
 4. Non-Functional Requirements  5. Scope  6. User Stories with ACs
 7. Technical Constraints  8. Risks  9. Timeline  10. Appendices
+
+Section 6 MUST follow `${CLAUDE_PLUGIN_ROOT}/skills/skill-user-stories/SKILL.md`
+(canonical format, INVEST, Gherkin ACs when applicable).
 
 ### STEP 2.4 — Internal Validation
 Checklist: problem clearly defined; >=1 persona; must-haves verifiable;
@@ -167,3 +176,71 @@ Log it: `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" event product ROADMAP gate
 - ❌ NEVER decompose the PRD yourself — spawn the subagent
 - ❌ NEVER accept a roadmap without TRACEABILITY.md
 - ❌ NEVER finish without presenting the summary for approval
+
+---
+
+## STEP 4 — User Stories (interactive, main context)
+
+### STEP 4.1 — Load the Quality Bar
+Read `${CLAUDE_PLUGIN_ROOT}/skills/skill-user-stories/SKILL.md` — it is the
+MANDATORY standard (canonical format, INVEST, Gherkin, definition of ready,
+anti-patterns, checklist). Also read `.planning/memory/MEMORY.md` (if it
+exists) and load relevant `convention` memories.
+
+### STEP 4.2 — Resolve the Source
+From `$2`:
+- `prd` → `.planning/product/prd.md` section 6 (+ section 3 requirements)
+- a path → that file
+- free text → use it as the raw material
+- empty → detect available sources and ask:
+  ```
+  Fonte das historias / Story source:
+  1. PRD (.planning/product/prd.md)
+  2. Requirements (.planning/context/requirements.md)
+  3. Descricao livre / Free description
+  ```
+
+### STEP 4.3 — Generate and Refine (max 3 rounds)
+1. Draft the stories applying the skill (split epics, name personas from the
+   source, write ACs with happy + error paths, assign MoSCoW).
+2. Present the batch with the 10-item checklist result per story; flag any
+   INVEST failure explicitly.
+3. Human adjusts → refine. Maximum 3 rounds, then persist what is approved.
+
+### STEP 4.4 — Persist
+For each approved story, write `.planning/product/stories/US-{NN}-{slug}.md`:
+
+```markdown
+---
+id: US-{NN}
+epic: {F01-E01 roadmap ref or none}
+priority: must | should | could | wont
+status: ready | draft
+---
+
+# US-{NN} — {title}
+
+Como {persona}, quero {ação}, para {valor}.
+
+## Acceptance Criteria
+{Gherkin or checklist per the skill}
+
+## Dependencies
+{list or "none"}
+```
+
+Update `.planning/product/stories/index.md` (1 line per story:
+`- US-{NN} [{priority}] {title} ({status})`).
+Log: `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" event product STORIES gate_passed stories '{"count":N}'`
+
+### Transition
+```
+✅ {N} user stories in .planning/product/stories/
+👉 Next: /pwdev-code:discover (start a story) or /pwdev-code:product roadmap
+```
+
+### Stories Prohibitions
+- ❌ NEVER generate a story that fails INVEST without flagging it
+- ❌ NEVER invent personas not confirmed by the source/human
+- ❌ NEVER write an AC that is not objectively verifiable
+- ❌ NEVER persist without human approval
