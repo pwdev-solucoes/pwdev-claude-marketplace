@@ -9,7 +9,7 @@
       "name": "pwdev-code",
       "displayName": "PWDEV Code — Spec-Driven Development",
       "source": "./plugins/pwdev-code",
-      "description": "Spec-driven development framework v2.0 — 6 real subagents, hybrid orchestration, correction loops, audit hooks, 14 commands",
+      "description": "Spec-driven development framework v2.1 — 7 real subagents, curated memory, simplification pass, strict verify, audit hooks, 16 commands",
       "category": "workflow",
       "tags": ["sdd", "agents", "hooks", "workflow"],
       "strict": true

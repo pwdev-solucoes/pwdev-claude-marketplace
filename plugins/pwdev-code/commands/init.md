@@ -123,14 +123,14 @@ Model profile configuration is **mandatory** during initialization.
 
    Use the profile selection prompt (PT-BR/EN) from
    `${CLAUDE_PLUGIN_ROOT}/references/model-profiles.md` — it is the single
-   source of truth for the profile table (only the 6 subagents resolve
-   models: executor, roadmap, code-reviewer, qa, verifier, researcher).
+   source of truth for the profile table (only the 7 subagents resolve
+   models: executor, roadmap, simplifier, code-reviewer, qa, verifier, researcher).
 
 3. Optionally ask about overrides:
    - PT-BR: `Deseja configurar overrides para subagentes especificos? (s/n, padrao: n)`
    - EN: `Configure overrides for specific subagents? (y/n, default: n)`
 
-   If yes, list the 6 subagents with their profile-assigned model and let the user change individual ones.
+   If yes, list the 7 subagents with their profile-assigned model and let the user change individual ones.
 
 4. Save `model_profile` (and `model_overrides` if any) to `.planning/config.json` — merge, do not overwrite.
 
@@ -232,7 +232,7 @@ It is **disabled by default** and the database file is **never versioned** (adde
   "audit": false,
   "framework": "PWDEV-CODE",
   "version": "2.0.0",
-  "architecture": "hybrid (interactive commands + 6 real subagents)",
+  "architecture": "hybrid (interactive commands + 7 real subagents)",
   "type": "[greenfield|brownfield]",
   "created": "[date]",
   "default_intensity": "standard",
@@ -297,7 +297,7 @@ Suggest: "/pwdev-code:init map to analyze existing repo."
 ## ✅ PWDEV-CODE v2.0.0 Initialized
 
 **Type:** [greenfield|brownfield]
-**Architecture:** hybrid — interactive commands + 6 real subagents (plugin-provided)
+**Architecture:** hybrid — interactive commands + 7 real subagents (plugin-provided)
 
 **Structure created:**
 .claude/

@@ -1,4 +1,4 @@
-# PWDEV-CODE v2.0.0
+# PWDEV-CODE v2.1.0
 
 *Leia em [English](./README.md)*
 
@@ -10,10 +10,45 @@ Nunca execute sem um plano. Nunca entregue sem verificação.
 
 O PWDEV-CODE usa **orquestração híbrida**: fases interativas rodam na conversa
 principal (onde o humano aprova os gates), e o trabalho pesado é delegado a
-**6 subagentes reais** com contexto fresco — em **6 fases** com loops de
-correção, para que cada linha de código seja planejada, rastreável e verificada.
+**7 subagentes reais** com contexto fresco — em **6 fases** com loops de
+correção e **memória curada do projeto**, para que cada linha de código seja
+planejada, rastreável e verificada.
 
 ---
+
+## Novidades da v2.1.0
+
+- **Memória curada do projeto** (`/pwdev-code:memory` + `.planning/memory/`,
+  versionada): decisões duradouras, lições e convenções. Todo spawn de
+  subagente recebe um bloco RELEVANT MEMORY; rejeições do verify e reviews
+  bloqueados capturam lições automaticamente (teto: 2/fase); o design
+  consulta memórias de decisão e sinaliza contradições. Protocolo:
+  `references/memory.md`.
+- **Passo de simplificação** (`/pwdev-code:simplify` + subagente
+  `simplifier`): etapa opcional entre EXECUTE e REVIEW. Dois passes —
+  ANALYZE só propõe simplificações com confiança ≥80% (reuso, dead code,
+  complexidade, eficiência; nunca bugs, nunca mudança de comportamento), o
+  humano aprova por ID, APPLY implementa com commit `refactor` próprio e
+  verificação por proposta (falhou → reverte + SKIPPED). Mudanças aplicadas
+  marcam `review_gate: STALE` → o review re-roda escopado ao diff do refactor.
+- **Histórias de usuário** (`skill-user-stories` + `/pwdev-code:product
+  stories`): INVEST, formato canônico Como/Quero/Para, ACs em Gherkin,
+  definition of ready, anti-padrões, checklist de 10 itens — persistidas em
+  `.planning/product/stories/US-NN-*.md`. O §6 do PRD agora segue a skill.
+- **`verify --strict`**: dois verifiers independentes em paralelo (lente
+  FUNCTIONAL vs lente COMPLIANCE); veredito final = o pior dos dois. Custo
+  ≈2× — indicado para o gate final da fase, não para toda iteração de fix.
+- **Re-review automático escopado** após `execute --fix` e `simplify` — só
+  os commits de correção/refactor, nunca a fase inteira de novo.
+- **Frontmatter moderno**: `effort: high` (verifier) / `effort: low`
+  (researcher); `paths` com auto-load de skills (frontend-design ativa em
+  arquivos de frontend, user-stories em PRD/stories); roteamento posicional
+  `$1`/`$2` nos comandos com subcomandos. Progressive enhancement — campos
+  não suportados viram no-op em versões antigas do Claude Code.
+- **Rejeitados deliberadamente** (registrado para não re-discutir): campo
+  `memory` por agente (bifurcaria o conhecimento fora da memória curada e
+  quebraria o Fresh Context Model) e hook SessionStart de memória (taxaria
+  toda sessão e ficaria stale — os STEPs releem na hora do uso).
 
 ## Novidades da v2.0.0
 
@@ -73,7 +108,7 @@ O framework separa **o que** fazer, **quem** faz e **com que** conhecimento:
 │  interativas (entrevista, decisões de design) ficam aqui    │
 ├─────────────────────────────────────────────────────────────┤
 │  SUBAGENTES (agents/) — "QUEM faz o trabalho pesado"        │
-│  6 subagentes reais spawnados com contexto fresco e         │
+│  7 subagentes reais spawnados com contexto fresco e         │
 │  prompt auto-contido (spawn contract)                       │
 ├─────────────────────────────────────────────────────────────┤
 │  SKILLS (skills/) — "COM QUE conhecimento"                  │
@@ -172,6 +207,7 @@ Subagentes reais (spawnados via Task tool, contexto fresco, tools restritas):
 | **verifier** | sonnet | leitura + Write (sem Edit) | Verificação adversarial; gera fix plans quando rejeita |
 | **researcher** | haiku | leitura + Write + web | Investiga stack/domínio/pitfalls em paralelo à entrevista |
 | **roadmap** | sonnet | Read, Write, Grep, Glob, Bash | Decompõe o PRD no roadmap multi-arquivo com rastreabilidade |
+| **simplifier** | sonnet | Read, Grep, Glob, Bash, Edit, Write | Refactor de qualidade em 2 passes: propõe simplificações com confiança ≥80%, aplica só as aprovadas pelo humano |
 
 Personas interativas absorvidas nos commands (contexto principal):
 interviewer (`discover`), architect (`design`), planner (`plan`), product
@@ -196,6 +232,7 @@ manager (`product prd`), quick engineer (`quick`).
 |---------|-----------|-------|
 | `/pwdev-code:product prd` | Entrevista de produto → PRD estruturado | prd.md (10 seções) |
 | `/pwdev-code:product roadmap` | Decompõe o PRD via subagente roadmap | .planning/product/roadmap/ (multi-arquivo com rastreabilidade) |
+| `/pwdev-code:product stories` | Gera/refina histórias de usuário (padrão skill-user-stories) | .planning/product/stories/US-NN-*.md + índice |
 
 ### Fluxo de Desenvolvimento
 
@@ -206,8 +243,10 @@ manager (`product prd`), quick engineer (`quick`).
 | `/pwdev-code:plan` | PLAN | spec.md aprovado | planos com waves |
 | `/pwdev-code:execute` | EXECUTE | Planos aprovados | Código + commits + summaries |
 | `/pwdev-code:execute --fix` | EXECUTE | Fix plans do verify | Correções (máx 2 iterações) |
+| `/pwdev-code:simplify` | EXECUTE→REVIEW (opcional) | Summaries ou escopo explícito | Simplificações aprovadas + commit refactor |
 | `/pwdev-code:review` | REVIEW | Mudanças de código existem | code-review.md + qa-report.md (paralelo) |
 | `/pwdev-code:verify` | VERIFY | Summaries existem, review gate OK | verify.md, fix plans |
+| `/pwdev-code:verify --strict` | VERIFY | Gate final / pré-release | 2 verifiers em paralelo (FUNCTIONAL + COMPLIANCE), vale o pior veredito (≈2× custo) |
 | `/pwdev-code:quick` | All-in-one | Descrição da task | Código + commit (tasks simples) |
 
 `review` também aceita `--code-only`, `--tests-only`, `--diff HEAD~N`.
@@ -216,6 +255,7 @@ manager (`product prd`), quick engineer (`quick`).
 
 | Comando | Quando usar |
 |---------|------------|
+| `/pwdev-code:memory` | Curar a memória durável do projeto — `capture`, `list`, `show`, `forget` |
 | `/pwdev-code:session` / `session resume` | Ver progresso / retomar do state.md |
 | `/pwdev-code:init map` | Primeiro contato com repositório existente |
 | `/pwdev-code:health` / `health --deps` | Scorecard de saúde / auditoria de dependências |
@@ -289,6 +329,7 @@ hover, visão de card no mobile, navegação por teclado, contraste AA.
 | Skill | Domínio | Arquivos |
 |-------|---------|----------|
 | skill-frontend-design | UI enterprise — dashboards, painéis admin, SaaS, apps data-heavy | SKILL.md + TEMPLATES.md |
+| skill-user-stories | Histórias de usuário — INVEST, ACs em Gherkin, definition of ready, checklist de revisão | SKILL.md |
 
 Crie as suas com `/pwdev-code:manager-skills create <domínio>` — o wizard
 detecta sua stack, entrevista você (máx 3 rounds) e gera a skill em
@@ -309,8 +350,13 @@ detecta sua stack, entrevista você (máx 3 rounds) e gera a skill em
 │   ├── domain.md, stack.md, pitfalls.md        # subagente researcher
 │   └── architecture.md, conventions.md, ...    # init map
 │
+├── memory/                           # conhecimento durável curado (VERSIONADO)
+│   ├── MEMORY.md                     # índice — 1 linha por memória ativa
+│   └── {decision|lesson|convention}-*.md
+│
 ├── product/
 │   ├── prd.md
+│   ├── stories/                      # histórias de usuário (US-NN-*.md + index.md)
 │   └── roadmap/                      # subagente roadmap (multi-arquivo)
 │
 ├── phases/F01-slug/
@@ -346,5 +392,5 @@ detecta sua stack, entrevista você (máx 3 rounds) e gera a skill em
 
 Apache-2.0 — Veja [LICENSE](./LICENSE)
 
-*PWDEV-CODE v2.0.0 — A complexidade vive no sistema, não no seu fluxo de trabalho.*
+*PWDEV-CODE v2.1.0 — A complexidade vive no sistema, não no seu fluxo de trabalho.*
 *Mantido por [Paulo Soares](https://github.com/soarescbm)*

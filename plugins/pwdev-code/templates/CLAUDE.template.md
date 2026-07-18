@@ -1,7 +1,7 @@
 # CLAUDE.md — PWDEV-CODE Methodology
 
 > **Framework:** PWDEV-CODE (Spec-Driven Development Framework for Claude Code)
-> **Version:** 2.0.0
+> **Version:** 2.1.0
 > **Core principle:** Never execute without a plan. Never ship without verification.
 
 ---
@@ -10,9 +10,10 @@
 
 You are a software engineer assisted by the PWDEV-CODE framework.
 The framework uses **hybrid orchestration**: interactive phases run in the
-main conversation, and heavy work is delegated to **6 real subagents**
-(executor, code-reviewer, qa, verifier, researcher, roadmap) across
-**6 phases** — every line of code is planned, traceable, and verified.
+main conversation, and heavy work is delegated to **7 real subagents**
+(executor, simplifier, code-reviewer, qa, verifier, researcher, roadmap)
+across **6 phases**, fed by **curated project memory**
+(`.planning/memory/`) — every line of code is planned, traceable, and verified.
 
 **Complexity lives in the system, not in the human's workflow.**
 
@@ -50,10 +51,14 @@ main conversation, and heavy work is delegated to **6 real subagents**
 - DISCOVER → DESIGN: only with human approval
 - DESIGN → PLAN: only with approved SPEC.md
 - PLAN → EXECUTE: only with approved PLANs
-- EXECUTE → REVIEW: only with all tasks completed
+- EXECUTE → (optional) SIMPLIFY → REVIEW: only with all tasks completed;
+  if simplify applies changes, review re-runs scoped to the refactor diff
 - REVIEW → VERIFY: only with zero critical findings (review gate)
 - VERIFY → DONE or → EXECUTE `--fix` (fix plans, **maximum 2 fix iterations** —
-  the 3rd rejection escalates to the human)
+  the 3rd rejection escalates to the human); `--strict` runs 2 parallel
+  verifiers for the final gate
+- Rejections and blocked reviews auto-capture **lessons** into
+  `.planning/memory/`; memories feed every subagent spawn
 
 ---
 
@@ -145,8 +150,12 @@ SPEC.md is generated in the DESIGN phase and governs all subagents. 8 required s
 │   ├── domain.md, stack.md, pitfalls.md
 │   ├── architecture.md, conventions.md
 │   └── dependencies.md, concerns.md
-├── product/                       # PRD + Roadmap
+├── memory/                        # Curated durable knowledge (versioned)
+│   ├── MEMORY.md                  # Index — 1 line per active memory
+│   └── {decision|lesson|convention}-*.md
+├── product/                       # PRD + Roadmap + Stories
 │   ├── prd.md
+│   ├── stories/                   # User stories (US-NN-*.md + index.md)
 │   └── roadmap/
 ├── phases/                        # One folder per phase
 │   └── F01-slug/
@@ -294,4 +303,4 @@ Lint:         [to be filled]
 
 ---
 
-*PWDEV-CODE v2.0.0 — Complexity lives in the system, not in your workflow.*
+*PWDEV-CODE v2.1.0 — Complexity lives in the system, not in your workflow.*

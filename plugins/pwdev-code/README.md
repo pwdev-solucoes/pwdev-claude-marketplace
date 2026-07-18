@@ -1,4 +1,4 @@
-# PWDEV-CODE v2.0.0
+# PWDEV-CODE v2.1.0
 
 *Read this in [Português Brasileiro](./README.pt-BR.md)*
 
@@ -10,10 +10,44 @@ Never execute without a plan. Never ship without verification.
 
 PWDEV-CODE uses **hybrid orchestration**: interactive phases run in the main
 conversation (where the human approves gates), and heavy work is delegated to
-**6 real subagents** with fresh context — across **6 phases** with correction
-loops, so every line of code is planned, traceable, and verified.
+**7 real subagents** with fresh context — across **6 phases** with correction
+loops and **curated project memory**, so every line of code is planned,
+traceable, and verified.
 
 ---
+
+## What's New in v2.1.0
+
+- **Curated project memory** (`/pwdev-code:memory` + `.planning/memory/`,
+  versioned): durable decisions, lessons, and conventions. Every subagent
+  spawn gets a RELEVANT MEMORY block; verify rejections and blocked reviews
+  auto-capture lessons (cap: 2/phase); design consults decision memories and
+  flags contradictions. Protocol: `references/memory.md`.
+- **Simplification pass** (`/pwdev-code:simplify` + `simplifier` subagent):
+  optional step between EXECUTE and REVIEW. Two passes — ANALYZE proposes
+  only >=80%-confidence simplifications (reuse, dead code, complexity,
+  efficiency; never bugs, never behavior changes), the human approves by ID,
+  APPLY implements with its own `refactor` commit and per-proposal
+  verification (failure → revert + SKIPPED). Applying changes marks
+  `review_gate: STALE` → review re-runs scoped to the refactor diff.
+- **User stories** (`skill-user-stories` + `/pwdev-code:product stories`):
+  INVEST, canonical As-a/I-want/So-that format, Gherkin ACs, definition of
+  ready, anti-patterns, 10-item checklist — persisted to
+  `.planning/product/stories/US-NN-*.md`. PRD §6 now follows the skill.
+- **`verify --strict`**: two independent verifiers in parallel (FUNCTIONAL
+  lens vs COMPLIANCE lens); final verdict = the worst of the two. ≈2× cost —
+  meant for the phase's final gate, not every fix iteration.
+- **Scoped automatic re-review** after `execute --fix` and `simplify` — only
+  the fix/refactor commits, never the whole phase again.
+- **Modern frontmatter**: `effort: high` (verifier) / `effort: low`
+  (researcher); skill `paths` auto-load (frontend-design activates on
+  frontend files, user-stories on PRD/stories); positional `$1`/`$2` routing
+  in subcommand commands. Progressive enhancement — unsupported fields are
+  no-ops on older Claude Code versions.
+- **Deliberately rejected** (recorded so it isn't re-litigated): per-agent
+  `memory` field (would fork knowledge away from the curated store and break
+  the Fresh Context Model) and a SessionStart memory hook (would tax every
+  session and go stale mid-session — command STEPs re-read at use time).
 
 ## What's New in v2.0.0
 
@@ -73,7 +107,7 @@ The framework separates **what** to do, **who** does it, and **with what** knowl
 │  phases (interview, design decisions) stay here             │
 ├─────────────────────────────────────────────────────────────┤
 │  SUBAGENTS (agents/) — "WHO does the heavy work"            │
-│  6 real subagents spawned with fresh context and a          │
+│  7 real subagents spawned with fresh context and a          │
 │  self-contained prompt (spawn contract)                     │
 ├─────────────────────────────────────────────────────────────┤
 │  SKILLS (skills/) — "WITH WHAT knowledge"                   │
@@ -172,6 +206,7 @@ Real subagents (spawned via the Task tool, fresh context, restricted tools):
 | **verifier** | sonnet | read-only + Write (no Edit) | Adversarial verification; generates fix plans when it rejects |
 | **researcher** | haiku | read + Write + web | Investigates stack/domain/pitfalls in parallel with the interview |
 | **roadmap** | sonnet | Read, Write, Grep, Glob, Bash | Decomposes the PRD into the multi-file roadmap with traceability |
+| **simplifier** | sonnet | Read, Grep, Glob, Bash, Edit, Write | Two-pass quality refactor: proposes >=80%-confidence simplifications, applies only human-approved ones |
 
 Interactive personas absorbed into commands (main context): interviewer
 (`discover`), architect (`design`), planner (`plan`), product manager
@@ -196,6 +231,7 @@ Interactive personas absorbed into commands (main context): interviewer
 |---------|-------------|--------|
 | `/pwdev-code:product prd` | Product discovery interview → structured PRD | prd.md (10 sections) |
 | `/pwdev-code:product roadmap` | Decompose PRD via the roadmap subagent | .planning/product/roadmap/ (multi-file with traceability) |
+| `/pwdev-code:product stories` | Generate/refine user stories (skill-user-stories quality bar) | .planning/product/stories/US-NN-*.md + index |
 
 ### Development Workflow
 
@@ -206,8 +242,10 @@ Interactive personas absorbed into commands (main context): interviewer
 | `/pwdev-code:plan` | PLAN | Approved spec.md | plans with waves |
 | `/pwdev-code:execute` | EXECUTE | Approved plans | Code + commits + summaries |
 | `/pwdev-code:execute --fix` | EXECUTE | Fix plans from verify | Corrections (max 2 iterations) |
+| `/pwdev-code:simplify` | EXECUTE→REVIEW (optional) | Summaries or explicit scope | Approved simplifications + refactor commit |
 | `/pwdev-code:review` | REVIEW | Code changes exist | code-review.md + qa-report.md (parallel) |
 | `/pwdev-code:verify` | VERIFY | Summaries exist, review gate OK | verify.md, fix plans |
+| `/pwdev-code:verify --strict` | VERIFY | Final gate / pre-release | 2 parallel verifiers (FUNCTIONAL + COMPLIANCE), worst verdict wins (≈2× cost) |
 | `/pwdev-code:quick` | All-in-one | Task description | Code + commit (simple tasks) |
 
 `review` also accepts `--code-only`, `--tests-only`, `--diff HEAD~N`.
@@ -216,6 +254,7 @@ Interactive personas absorbed into commands (main context): interviewer
 
 | Command | When to use |
 |---------|------------|
+| `/pwdev-code:memory` | Curate durable project memory — `capture`, `list`, `show`, `forget` |
 | `/pwdev-code:session` / `session resume` | Check progress / resume from state.md |
 | `/pwdev-code:init map` | First contact with an existing repo |
 | `/pwdev-code:health` / `health --deps` | Project health scorecard / dependency audit |
@@ -289,6 +328,7 @@ hover highlight, mobile card view, keyboard nav, AA contrast.
 | Skill | Domain | Files |
 |-------|--------|-------|
 | skill-frontend-design | Enterprise UI design — dashboards, admin panels, SaaS, data-heavy apps | SKILL.md + TEMPLATES.md |
+| skill-user-stories | User stories — INVEST, Gherkin ACs, definition of ready, review checklist | SKILL.md |
 
 Create your own with `/pwdev-code:manager-skills create <domain>` — the wizard
 detects your stack, interviews you (max 3 rounds), and generates a skill in
@@ -309,8 +349,13 @@ detects your stack, interviews you (max 3 rounds), and generates a skill in
 │   ├── domain.md, stack.md, pitfalls.md        # researcher subagent
 │   └── architecture.md, conventions.md, ...    # init map
 │
+├── memory/                           # curated durable knowledge (VERSIONED)
+│   ├── MEMORY.md                     # index — 1 line per active memory
+│   └── {decision|lesson|convention}-*.md
+│
 ├── product/
 │   ├── prd.md
+│   ├── stories/                      # user stories (US-NN-*.md + index.md)
 │   └── roadmap/                      # roadmap subagent (multi-file)
 │
 ├── phases/F01-slug/
@@ -346,5 +391,5 @@ detects your stack, interviews you (max 3 rounds), and generates a skill in
 
 Apache-2.0 — See [LICENSE](./LICENSE)
 
-*PWDEV-CODE v2.0.0 — Complexity lives in the system, not in your workflow.*
+*PWDEV-CODE v2.1.0 — Complexity lives in the system, not in your workflow.*
 *Maintained by [Paulo Soares](https://github.com/soarescbm)*
