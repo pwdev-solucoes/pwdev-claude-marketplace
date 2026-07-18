@@ -3,7 +3,7 @@ description: Produz roteiro, storyboard e prompts de vídeo para Runway, Higgsfi
 argument-hint: "[duração] [tema]"
 ---
 
-# /pwdev-social:video
+# /pwdev-social-media:video
 
 ## STEP 0 — Idioma
 `${CLAUDE_PLUGIN_ROOT}/references/language.md`

@@ -3,7 +3,7 @@ description: Gera ativo por IA — triagem, prompt, confirmação de custo, gera
 argument-hint: "[descrição do ativo]"
 ---
 
-# /pwdev-social:gerar — Gerar ativo
+# /pwdev-social-media:gerar — Gerar ativo
 
 ## STEP 0 — Idioma
 `${CLAUDE_PLUGIN_ROOT}/references/language.md`

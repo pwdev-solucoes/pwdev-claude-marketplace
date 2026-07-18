@@ -3,7 +3,7 @@ name: asset-generator
 description: >
   Agente principal de produção — triagem de custo, construção de prompt, geração
   via Ideogram/Leonardo/Flux/Runway e curadoria das variações. Despachado por
-  /pwdev-social:criar e /pwdev-social:gerar. Isolado porque gasta crédito do
+  /pwdev-social-media:criar e /pwdev-social-media:gerar. Isolado porque gasta crédito do
   usuário e porque a iteração de prompt consome muito contexto.
 model: sonnet
 tools: Read, Write, Bash, Glob, Grep

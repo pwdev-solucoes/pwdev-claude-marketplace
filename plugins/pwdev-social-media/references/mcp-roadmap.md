@@ -83,4 +83,4 @@ Toda skill funciona sem conector nenhum. Ausente o conector, a skill:
 2. entrega especificação em vez de artefato;
 3. registra no relatório o que não pôde ser produzido.
 
-`/pwdev-social:status` mostra o que está conectado.
+`/pwdev-social-media:status` mostra o que está conectado.

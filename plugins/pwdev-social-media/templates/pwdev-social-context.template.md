@@ -1,6 +1,6 @@
 # Contexto de Criativos — {{ORGANIZACAO}}
 
-> Gerado por `/pwdev-social:init`. Toda skill deste plugin lê este arquivo antes
+> Gerado por `/pwdev-social-media:init`. Toda skill deste plugin lê este arquivo antes
 > de perguntar qualquer coisa.
 >
 > Local canônico: `.claude/pwdev-social-context.md`

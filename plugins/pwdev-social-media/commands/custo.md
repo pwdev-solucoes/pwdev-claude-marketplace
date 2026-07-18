@@ -3,7 +3,7 @@ description: Estima, confirma e acompanha o gasto com geradores pagos
 argument-hint: "[campanha ou --estimar]"
 ---
 
-# /pwdev-social:custo — Controle de custo
+# /pwdev-social-media:custo — Controle de custo
 
 ## STEP 0 — Idioma
 `${CLAUDE_PLUGIN_ROOT}/references/language.md`

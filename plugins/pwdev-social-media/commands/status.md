@@ -2,7 +2,7 @@
 description: Mostra o estado — contexto, chaves de API, Figma, e gasto acumulado
 ---
 
-# /pwdev-social:status
+# /pwdev-social-media:status
 
 ## STEP 0 — Idioma
 `${CLAUDE_PLUGIN_ROOT}/references/language.md`

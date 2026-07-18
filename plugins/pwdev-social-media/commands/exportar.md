@@ -3,7 +3,7 @@ description: Exporta peças aprovadas e monta o pacote de entrega com legendas e
 argument-hint: "[campanha]"
 ---
 
-# /pwdev-social:exportar
+# /pwdev-social-media:exportar
 
 ## STEP 0 — Idioma
 `${CLAUDE_PLUGIN_ROOT}/references/language.md`

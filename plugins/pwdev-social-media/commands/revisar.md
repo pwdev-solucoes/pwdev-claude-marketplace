@@ -3,7 +3,7 @@ description: Audita criativos — contraste, legibilidade, área segura, brand k
 argument-hint: "[peça, link do Figma ou pasta]"
 ---
 
-# /pwdev-social:revisar
+# /pwdev-social-media:revisar
 
 ## STEP 0 — Idioma
 `${CLAUDE_PLUGIN_ROOT}/references/language.md`
