@@ -43,8 +43,12 @@
     },
     {
       "name": "pwdev-statusline",
+      "displayName": "PWDEV Status Line",
       "source": "./plugins/pwdev-statusline",
-      "description": "Rich terminal status line — model, git branch, context bar, rate limits, tokens"
+      "description": "Rich terminal status line v1.1 — model, git branch, context bar with dynamic colors, rate limits, formatted tokens; fully configurable",
+      "category": "developer-experience",
+      "tags": ["statusline", "terminal-ui"],
+      "strict": true
     }
   ]
 }
