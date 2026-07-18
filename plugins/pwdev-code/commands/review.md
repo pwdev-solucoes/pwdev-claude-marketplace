@@ -1,9 +1,11 @@
 ---
-description: Run code review + QA test audit on implemented code. Spawns agent-code-reviewer and agent-qa in parallel.
+description: Run code review + QA test audit on implemented code. Spawns the code-reviewer and qa subagents in parallel.
 argument-hint: "[files | --code-only | --tests-only | --diff HEAD~N]"
 ---
 
 # /pwdev-code:review — Code Review + QA Audit
+
+## Role (orchestrator — the subagents review; you consolidate)
 
 ## Input
 $ARGUMENTS: optional scope filter
@@ -16,12 +18,9 @@ $ARGUMENTS: optional scope filter
 | `--tests-only` | Run only QA test audit (skip code review) |
 | `--diff HEAD~N` | Review last N commits |
 
----
-
 ## Entry Gate
 
 ```bash
-# Verify there's code to review
 git diff --name-only HEAD~1..HEAD 2>/dev/null || git diff --staged --name-only 2>/dev/null
 ```
 
@@ -32,75 +31,47 @@ Specify files: /pwdev-code:review src/UserService.ts
 Or a range:    /pwdev-code:review --diff HEAD~3
 ```
 
----
-
 ## Flow
 
-### STEP 0 — Language Selection
-Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
-If set → use it silently. If not set → detect from $ARGUMENTS or ask:
-"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
-Save choice to `.planning/config.json` (merge, do not overwrite other fields).
-All subsequent output follows the resolved language. Technical terms stay in English.
+### STEP 0 — Language
+Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
+`.planning/config.json`; ask only if unset).
 
 ### STEP 1 — Determine Scope
 
 ```bash
-# Detect what to review
 if [ -n "$ARGUMENTS" ]; then
-  # Use provided scope
   FILES="$ARGUMENTS"
 else
-  # Default: changes from last commit or staged
   FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null || git diff --staged --name-only)
 fi
-
-echo "Files to review:"
 echo "$FILES"
-echo "---"
-echo "Total: $(echo "$FILES" | wc -l) files"
 ```
 
-### STEP 2 — Load Context
+### STEP 2 — Gather Spawn Inputs
+Read (for the prompts only — do not analyze yourself):
+`.planning/phases/{active-phase-slug}/spec.md` sections 1, 2, 5, 7, 8;
+paths of `execution/*-summary.md`; active skills list.
 
-```bash
-# Read project conventions
-cat CLAUDE.md 2>/dev/null | head -50
-cat .planning/context/conventions.md 2>/dev/null | head -30
-cat .planning/phases/{active-phase-slug}/spec.md 2>/dev/null | head -80
-```
+### STEP 3 — Spawn Subagents (REAL parallelism)
 
-### STEP 3 — Spawn Agents
+**Default:** issue BOTH Task tool calls in a SINGLE message so they run in
+parallel. `--code-only` → only code-reviewer; `--tests-only` → only qa.
+Resolve each `model` per `${CLAUDE_PLUGIN_ROOT}/references/model-profiles.md`.
 
-**If `--code-only`:** spawn only `agent-code-reviewer`
-**If `--tests-only`:** spawn only `agent-qa`
-**Default:** spawn both **in parallel**
-
-#### Code Review Agent
-```
-Spawn: agent-code-reviewer
-Scope: [file list]
-Context:
-  - spec.md sections 1, 5, 7 (persona, quality, prohibitions)
-  - CLAUDE.md conventions
-  - Active skills
-Output: .planning/phases/{active-phase-slug}/review/code-review.md
-```
-
-#### QA Agent
-```
-Spawn: agent-qa
-Scope: [file list]
-Context:
-  - spec.md sections 2, 5, 8 (objective, quality, DoD)
-  - execution/*-summary.md files (what was implemented)
-  - Active skills
-Output: .planning/phases/{active-phase-slug}/review/qa-report.md
-```
+1. `subagent_type: "pwdev-code:code-reviewer"` — prompt from the
+   **code-reviewer** template in
+   `${CLAUDE_PLUGIN_ROOT}/references/spawn-contracts.md`
+   (scope = file list/diff range, spec §1/5/7, conventions pointer, skills,
+   `LANGUAGE: {lang}`).
+   Writes: `review/code-review.md`.
+2. `subagent_type: "pwdev-code:qa"` — prompt from the **qa** template
+   (spec §2/5/8, summary paths, skills, `LANGUAGE: {lang}`).
+   Writes: `review/qa-report.md`.
 
 ### STEP 4 — Consolidate Results
-
-Wait for both agents to complete. Merge findings into a single summary.
+Wait for both status replies (≤10 lines each). Read ONLY the replies — do
+not paste the report files into your context.
 
 ### STEP 5 — Present Report
 
@@ -123,7 +94,6 @@ Wait for both agents to complete. Merge findings into a single summary.
 
 ## Action Items
   1. [highest priority fix]
-  2. [next fix]
   ...
 
 ## Next Steps
@@ -132,9 +102,9 @@ Wait for both agents to complete. Merge findings into a single summary.
   /pwdev-code:review     → Re-review after fixes
 ```
 
-### STEP 6 — Update state.md
+### STEP 6 — Review Gate + state.md
 
-Record review results in `.planning/state.md`:
+Record in `.planning/state.md`:
 ```markdown
 ## Last Review
 - Date: [timestamp]
@@ -142,13 +112,19 @@ Record review results in `.planning/state.md`:
 - QA: [verdict]
 - Combined: [verdict]
 - Open items: [N]
+- review_gate: [OK | BLOCKED]
 ```
 
----
+**Gate rule:** if critical findings > 0 (either report) → `review_gate: BLOCKED`.
+While BLOCKED, `/pwdev-code:verify` refuses to run — fix the findings via
+`/pwdev-code:execute` and re-review, or the human explicitly overrides.
+Log it: `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" event review REVIEW gate_rejected review '{"critical":N}'`
+(or `gate_passed` when OK).
 
 ## Prohibitions
-- NEVER fix code during review — only report findings
-- NEVER skip the QA agent unless explicitly `--code-only`
-- NEVER approve with critical security findings
-- NEVER fabricate test results — run real commands
-- NEVER review generated/build/vendor files
+- ❌ NEVER fix code during review — only report findings
+- ❌ NEVER review the code yourself — spawn the subagents
+- ❌ NEVER skip the qa subagent unless explicitly `--code-only`
+- ❌ NEVER approve with critical security findings
+- ❌ NEVER paste report files into your context — status replies only
+- ❌ NEVER review generated/build/vendor files

@@ -1,7 +1,8 @@
 {
   "name": "pwdev-code",
-  "version": "1.2.0",
-  "description": "Spec-driven development framework for Claude Code — 11 specialized agents, 6 phases (including code review + QA), and extensible skills that turn requirements into verified, traceable code.",
+  "displayName": "PWDEV Code — Spec-Driven Development",
+  "version": "2.0.0",
+  "description": "Spec-driven development framework — hybrid orchestration with 6 real subagents (executor, code-reviewer, QA, adversarial verifier, researcher, roadmap), 6 phases with correction loops, deterministic SQLite audit via hooks, and extensible skills that turn requirements into verified, traceable code.",
   "author": {
     "name": "Paulo Soares",
     "url": "https://github.com/soarescbm"
@@ -14,9 +15,11 @@
     "claude-plugin",
     "workflow",
     "agents",
-    "prompt-engineering",
+    "subagents",
+    "hooks",
     "software-development",
     "spec-driven",
     "quality-assurance"
-  ]
+  ],
+  "hooks": "./hooks/hooks.json"
 }

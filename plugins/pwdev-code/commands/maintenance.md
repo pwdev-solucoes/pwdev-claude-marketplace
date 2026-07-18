@@ -1,6 +1,7 @@
 ---
 description: Project maintenance — archive completed artifacts or generate changelog
 argument-hint: "[cleanup | changelog [version]]"
+disable-model-invocation: true
 ---
 
 # /pwdev-code:maintenance — Project Maintenance
@@ -17,12 +18,9 @@ $ARGUMENTS: subcommand + optional arguments.
 
 ## Procedure
 
-### STEP 0 — Language Selection
-Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
-If set → use it silently. If not set → detect from $ARGUMENTS or ask:
-"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
-Save choice to `.planning/config.json` (merge, do not overwrite other fields).
-All subsequent output follows the resolved language. Technical terms stay in English.
+### STEP 0 — Language
+Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
+`.planning/config.json`; ask only if unset).
 
 ### STEP 1 — Route Subcommand
 

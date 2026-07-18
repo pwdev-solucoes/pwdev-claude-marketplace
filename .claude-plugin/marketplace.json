@@ -1,13 +1,18 @@
 {
   "name": "pwdev-claude-marketplace",
+  "description": "PWDEV plugins for Claude Code — spec-driven development, feature planning, PRD creation, UI/UX engineering, and terminal status line",
   "owner": {
     "name": "Paulo Soares"
   },
   "plugins": [
     {
       "name": "pwdev-code",
+      "displayName": "PWDEV Code — Spec-Driven Development",
       "source": "./plugins/pwdev-code",
-      "description": "Spec-driven development framework — 11 agents, 6 phases, 14 commands"
+      "description": "Spec-driven development framework v2.0 — 6 real subagents, hybrid orchestration, correction loops, audit hooks, 14 commands",
+      "category": "workflow",
+      "tags": ["sdd", "agents", "hooks", "workflow"],
+      "strict": true
     },
     {
       "name": "pwdev-uiux",

@@ -1,16 +1,15 @@
 ---
 name: skill-frontend-design
-version: 1.0.0
 description: >
   Design precise, production-grade enterprise UI — dashboards, admin panels, SaaS interfaces,
   and data-heavy applications. Use this skill for professional software interfaces that need
   Jony Ive-level craft: clean, minimal, functional, with intentional personality.
   Do NOT use for creative landing pages, marketing sites, or experimental/artistic frontends.
-compatible_with:
-  - "any modern frontend framework"
-  - "tailwindcss >=3.0"
-author: Pwdev
-updated: 2026-03-29
+metadata:
+  version: 1.0.0
+  compatible_with: "any modern frontend framework; tailwindcss >=3.0"
+  author: Pwdev
+  updated: 2026-07-18
 ---
 
 # Enterprise UI Design Skill
