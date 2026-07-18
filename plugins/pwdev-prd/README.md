@@ -1,4 +1,4 @@
-# PWDEV-PRD v1.1.2
+# PWDEV-PRD v2.0.0
 
 *Read this in [Português Brasileiro](./README.pt-BR.md)*
 
@@ -38,6 +38,29 @@ This makes PRDs compatible with any downstream workflow:
 - Manual handoff to engineering teams
 
 ---
+
+## What's New in v2.0.0
+
+Rebuilt on the modern Claude Code plugin system. No slash command renamed or
+removed.
+
+- **Interviewer is inline by design** (`references/interview-method.md`): it
+  talks to you one question at a time — subagents cannot do that, so this
+  plugin has **zero subagents**. The old prose-persona agent file is gone,
+  along with the dead "Model Resolution" blocks (nothing here resolves a
+  model; the interview runs on the session model).
+- **Canonical prd.json structure** finally defined (in
+  `references/interview-method.md`) — `create` and `export` used to point at
+  a JSON structure that didn't exist anywhere.
+- **Deterministic audit via hooks** on the shared `.planning/pwdev-audit.db`
+  (rows filtered with `WHERE plugin='pwdev-prd'`): session events with real
+  `session_id`, `.planning/` artifact writes, command milestones and
+  `config_changes` via `audit-log.sh`. Secret-guard PreToolUse hook included.
+- **Fixes**: hardened audit query guard (single-statement SELECT only);
+  `echo -e` → `printf`; dead `$SUB_COMMAND` removed; phantom model-profile
+  roles (orchestrator/builder/scanner...) removed; wrong inherited audit
+  examples (DISCOVER phases) removed; paths now resolve via
+  `${CLAUDE_PLUGIN_ROOT}`.
 
 ## What's New in v1.1.2
 
@@ -80,9 +103,9 @@ Before generating the final PRD, the agent validates:
 
 ## Agent
 
-| Agent | Role | What it does |
-|-------|------|-------------|
-| **agent-interviewer** | PRD Interview Specialist | Conducts the 12-step interview, validates consistency, generates PRD.md + prd.json |
+| Persona | Where it runs | What it does |
+|---------|---------------|-------------|
+| **PRD interviewer** | Inline, main context (`references/interview-method.md`) — zero subagents by design | Conducts the 12-step interview, validates consistency, generates PRD.md + prd.json |
 
 ### Agent Boundaries
 - Never chooses specific technologies
@@ -98,7 +121,7 @@ Before generating the final PRD, the agent validates:
 
 | Command | What it does |
 |---------|-------------|
-| `/pwdev-prd:init` | Create `.planning/prds/` workspace, configure language and model profile |
+| `/pwdev-prd:init` | Create `.planning/prds/` workspace, configure language and audit |
 
 ### PRD Creation
 
@@ -129,23 +152,19 @@ All commands support **Portuguese (PT-BR)** and **English (EN)**. Configured dur
 - Other commands — use saved preference silently
 - Override — switch language mid-conversation and confirm when prompted
 
-### Model Profile
+### Model
 
-Agent model is configurable via profiles set during `/pwdev-prd:init`:
+This plugin has **zero subagents** — the interview runs inline on the
+session model, so there is nothing to configure. `model_profile` in the
+shared `.planning/config.json` belongs to the plugins with subagents
+(pwdev-code, pwdev-feat) and is left untouched by `/pwdev-prd:init`.
 
-| Profile | agent-interviewer |
-|---------|:-----------------:|
-| **performance** | Opus |
-| **balanced** | Sonnet |
-| **economy** | Sonnet |
-
-Override with `model_overrides` in `.planning/config.json`:
+The shared config still holds `lang` and `audit`:
 
 ```json
 {
   "lang": "pt-BR",
-  "model_profile": "balanced",
-  "model_overrides": {}
+  "audit": false
 }
 ```
 
@@ -155,11 +174,16 @@ Override with `model_overrides` in `.planning/config.json`:
 
 All plugins share an optional SQLite audit database at `.planning/pwdev-audit.db`. It is **disabled by default** and configured during `/init`. The database file is never versioned (automatically added to `.gitignore`).
 
-The audit trail records:
-- **Events** — every command execution (start, complete, fail) with timestamp, agent, model, and phase
-- **Decisions** — architectural and product decisions with rationale and alternatives considered
-- **Artifacts** — files created or modified by the framework, with status tracking
-- **Config changes** — history of language, model profile, and other configuration changes
+**How data gets here (v2.0 — deterministic, via hooks):**
+- `scripts/audit-hook.sh` (SessionStart, PostToolUse, Stop) → session events
+  with real `session_id`, `.planning/` artifact writes
+- `scripts/audit-log.sh` → command milestones (`event`) and configuration
+  changes (`config` → the `config_changes` table, populated by `/init`)
+- `scripts/guard-secrets.sh` (PreToolUse) → blocks reads of `.env`, `*.pem`,
+  `*.key`, `id_rsa*` (`.env.example` allowed)
+
+The database is **shared with pwdev-code/pwdev-feat** — filter this plugin's
+rows with `WHERE plugin='pwdev-prd'`.
 
 The audit database runs **in parallel** with Markdown files — agents continue to read and write Markdown as before. SQLite is a bonus layer for history and analysis.
 
@@ -267,5 +291,5 @@ When the user doesn't know, the agent offers these as **hypotheses** (explicitly
 
 Apache-2.0 — See [LICENSE](./LICENSE)
 
-*PWDEV-PRD v1.1.2 — Clear requirements, consistent documents, better features.*
+*PWDEV-PRD v2.0.0 — Clear requirements, consistent documents, better features.*
 *Maintained by [Paulo Soares](https://github.com/soarescbm)*

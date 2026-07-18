@@ -30,8 +30,12 @@
     },
     {
       "name": "pwdev-prd",
+      "displayName": "PWDEV PRD — Interview-Driven Requirements",
       "source": "./plugins/pwdev-prd",
-      "description": "Interview-driven PRD creation — 12-step structured interview, Markdown + JSON export, technology-agnostic"
+      "description": "Interview-driven PRD creation v2.0 — 12-step inline interview, canonical JSON export, audit hooks, 6 commands",
+      "category": "workflow",
+      "tags": ["prd", "requirements", "hooks"],
+      "strict": true
     },
     {
       "name": "pwdev-statusline",

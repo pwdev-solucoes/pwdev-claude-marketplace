@@ -5,39 +5,34 @@ argument-hint: "[prd-slug]"
 
 # /pwdev-prd:refine — Refine Existing PRD
 
-## Agent
-Assume the persona of `agents/agent-interviewer.md`.
-
-## Model Resolution
-Read `.planning/config.json` for `model_profile` and `model_overrides`.
-Resolution order: (1) `model_overrides[agent-name]` → (2) profile lookup → (3) agent frontmatter `model:` default.
-Profiles — **performance**: opus for all except reviewer/scanner (sonnet). **balanced**: opus for orchestrator, sonnet for planner/executor/builder/interviewer/reviewer/researcher, haiku for scanner. **economy**: sonnet for most, haiku for reviewer/scanner.
-When spawning the agent, pass the resolved model via the `model` parameter.
+## Method (inline — you run in the MAIN context)
+You are the PRD interviewer. Follow
+`${CLAUDE_PLUGIN_ROOT}/references/interview-method.md` (persona, principles,
+consistency checks). No Task tool, no model resolution — you interview the
+human.
 
 ## Input
 $ARGUMENTS: PRD slug (required).
 
 ## Flow
 
-### STEP 0 — Language Selection
-Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
-If set → use it silently. If not set → detect from $ARGUMENTS or ask:
-"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
-Save choice to `.planning/config.json` (merge, do not overwrite other fields).
-All subsequent output follows the resolved language. Technical terms stay in English.
+### STEP 0 — Language
+Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
+`.planning/config.json`; ask only if unset).
 
 ### STEP 1 — Load existing PRD
 
 ```bash
 PRD_DIR=".planning/prds/$ARGUMENTS"
 if [ ! -f "$PRD_DIR/PRD.md" ]; then
-  echo "❌ PRD not found: $PRD_DIR/PRD.md"
-  echo "Available PRDs:"
+  echo "PRD_NOT_FOUND"
   ls .planning/prds/ 2>/dev/null
-  exit 1
+else
+  cat "$PRD_DIR/PRD.md"
 fi
-cat "$PRD_DIR/PRD.md"
 ```
+
+If `PRD_NOT_FOUND` → show the available slugs and STOP.
 
 ### STEP 2 — Ask what to refine
 
@@ -66,7 +61,9 @@ Validate the entire PRD after changes.
 ### STEP 5 — Update PRD.md
 
 Rewrite the complete PRD.md with the changes incorporated.
-If prd.json exists, update it too.
+If prd.json exists, update it too (canonical structure in
+`${CLAUDE_PLUGIN_ROOT}/references/interview-method.md`).
+Log: `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" event refine "" completed ".planning/prds/{slug}/PRD.md" ""`
 
 ### STEP 6 — Ask about commit
 
