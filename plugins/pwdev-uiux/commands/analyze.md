@@ -7,20 +7,23 @@ argument-hint: "[task description | Figma URL | both separated by space]"
 
 **Argument**: $ARGUMENTS
 
-## STEP 0 — Language Selection
-Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
-If set → use it silently. If not set → detect from $ARGUMENTS or ask:
-"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
-Save choice to `.planning/config.json` (merge, do not overwrite other fields).
-All subsequent output follows the resolved language. Technical terms stay in English.
+## STEP 0 — Language
+Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
+`.planning/config.json`; ask only if unset).
 
-## Detect input type
+## Detect input type and spawn (real subagents, Task tool)
 
-If $ARGUMENTS contains Figma URL (`figma.com`):
-→ Spawn `design-bridge` with URL + `ux-analyst` in parallel
+Prompts per `${CLAUDE_PLUGIN_ROOT}/references/spawn-contracts.md`; models per
+`${CLAUDE_PLUGIN_ROOT}/references/model-profiles.md`.
 
-If $ARGUMENTS is description only:
-→ Spawn `ux-analyst` only
+If $ARGUMENTS contains a Figma URL (`figma.com`):
+→ TWO Task calls in the SAME message (real parallelism):
+  `pwdev-uiux:design-bridge` (MODE: READ, the URL) + `pwdev-uiux:ux-analyst`.
+
+If $ARGUMENTS is a description only:
+→ ONE Task call: `pwdev-uiux:ux-analyst`.
+
+Read only the ≤10-line status replies; never paste the specs into your context.
 
 ## Expected result
 

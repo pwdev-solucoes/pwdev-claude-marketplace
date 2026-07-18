@@ -50,43 +50,28 @@ Model profile configuration is **mandatory** during initialization.
    - EN: `Current model profile: {model_profile}. Keep it? (y/n)`
    If yes → proceed. If no → go to step 2.
 
-2. If no config or user wants to change, present the profiles (use `{{LANG}}`):
-
-   **PT-BR:**
-   ```
-   Qual perfil de modelo deseja usar para os agentes?
-
-   1. Performance  — Opus para maioria dos agentes (melhor qualidade, maior custo)
-   2. Balanced     — Opus para orquestracao, Sonnet para execucao, Haiku para scans (recomendado)
-   3. Economy      — Sonnet para maioria, Haiku para scans (menor custo)
-
-   Escolha (1-3, padrao: 2):
-   ```
-
-   **EN:**
-   ```
-   Which model profile would you like to use for agents?
-
-   1. Performance  — Opus for most agents (best quality, highest cost)
-   2. Balanced     — Opus for orchestration, Sonnet for execution, Haiku for scans (recommended)
-   3. Economy      — Sonnet for most, Haiku for scans (lowest cost)
-
-   Choose (1-3, default: 2):
-   ```
+2. If no config or user wants to change, present the profile selection prompt
+   (PT-BR/EN) from `${CLAUDE_PLUGIN_ROOT}/references/model-profiles.md` — the
+   single source of truth: only the 6 subagents resolve models (ux-analyst,
+   ui-builder, design-bridge, a11y-reviewer, ux-critic, ui-scanner); the
+   orchestrator and theme personas run inline on the session model.
 
 3. Optionally ask about overrides:
-   - PT-BR: `Deseja configurar overrides para agentes especificos? (s/n, padrao: n)`
-   - EN: `Configure overrides for specific agents? (y/n, default: n)`
+   - PT-BR: `Deseja configurar overrides para subagentes especificos? (s/n, padrao: n)`
+   - EN: `Configure overrides for specific subagents? (y/n, default: n)`
 
-   If yes, list this plugin's agents with their profile-assigned model and let the user change individual ones.
+   If yes, save them under **namespaced keys `uiux-<agent>`** (e.g.
+   `"uiux-ui-builder"`) — the config file is shared with the other PWDEV
+   plugins; never use plain agent names.
 
 4. Save `model_profile` (and `model_overrides` if any) to `.planning/config.json` — merge, do not overwrite.
 
-5. Confirm:
+5. Confirm and record (best-effort):
    - PT-BR: `Perfil de modelo definido: **{profile}**`
    - EN: `Model profile set: **{profile}**`
-
-Agent-to-role mapping: orchestrator→opus(balanced), ux-analyst/ui-builder/design-bridge/theme-builder→sonnet(balanced), a11y-reviewer/ux-critic→sonnet(balanced), ui-scanner→haiku(balanced). Resolution order: (1) `model_overrides[agent-name]` → (2) profile lookup → (3) agent frontmatter `model:` default.
+   ```bash
+   "${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" config model_profile "$OLD_PROFILE" "$NEW_PROFILE" init
+   ```
 
 ## STEP 1 — Check if already initialized
 
@@ -211,7 +196,7 @@ It is **disabled by default** and the database file is **never versioned** (adde
    Ensure `.planning/pwdev-audit.db` is in `.gitignore`:
    ```bash
    if ! grep -q "pwdev-audit.db" .gitignore 2>/dev/null; then
-     echo -e "\n# PWDEV audit trail (not versioned)\n.planning/pwdev-audit.db\n.planning/pwdev-audit.db-journal\n.planning/pwdev-audit.db-wal" >> .gitignore
+     printf '\n# PWDEV audit trail (not versioned)\n.planning/pwdev-audit.db\n.planning/pwdev-audit.db-journal\n.planning/pwdev-audit.db-wal\n.planning/.audit-tmp/\n' >> .gitignore
    fi
    ```
 
@@ -285,7 +270,8 @@ To set up: /pwdev-uiux:setup-figma
 ## STEP 5.1 — Log Initialization (if audit enabled)
 
 ```bash
-[ -f ".planning/pwdev-audit.db" ] && sqlite3 .planning/pwdev-audit.db "INSERT INTO events (plugin, command, action, detail) VALUES ('pwdev-uiux', 'init', 'completed', '{\"workspace\": \".planning/ui/\"}');" 2>/dev/null
+"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" event init "" completed .planning/ui/ ""
+"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" config lang "$OLD_LANG" "$NEW_LANG" init
 ```
 
 ## STEP 6 — Initialization report

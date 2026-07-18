@@ -5,14 +5,11 @@ argument-hint: "[create | update | from-figma | validate]"
 
 # /pwdev-uiux:theme — Semantic Theme Builder
 
-## Agent
-Assume the persona of `agents/theme-builder.md`.
-
-## Model Resolution
-Read `.planning/config.json` for `model_profile` and `model_overrides`.
-Resolution order: (1) `model_overrides[agent-name]` → (2) profile lookup → (3) agent frontmatter `model:` default.
-Profiles — **performance**: opus for all except reviewer/scanner (sonnet). **balanced**: opus for orchestrator, sonnet for planner/executor/builder/interviewer/reviewer/researcher, haiku for scanner. **economy**: sonnet for most, haiku for reviewer/scanner.
-When spawning the agent, pass the resolved model via the `model` parameter.
+## Method (inline — you run in the MAIN context)
+You are the Theme Builder. Follow
+`${CLAUDE_PLUGIN_ROOT}/references/theme-method.md` end-to-end — it interviews
+the human about brand guidelines, so it runs inline. No Task tool, no model
+resolution.
 
 ## Input
 $ARGUMENTS: mode of operation.
@@ -27,12 +24,9 @@ $ARGUMENTS: mode of operation.
 
 ---
 
-## STEP 0 — Language Selection
-Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
-If set → use it silently. If not set → detect from $ARGUMENTS or ask:
-"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
-Save choice to `.planning/config.json` (merge, do not overwrite other fields).
-All subsequent output follows the resolved language. Technical terms stay in English.
+## STEP 0 — Language
+Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
+`.planning/config.json`; ask only if unset).
 
 ## Mode: create
 

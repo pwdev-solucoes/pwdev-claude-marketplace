@@ -4,17 +4,28 @@ description: >
   Audits WCAG 2.1 AA accessibility in UI components based on the configured stack.
   Also validates compliance with accessibility-related P0 rules from
   ui-best-practices skill (dark mode, font sizes, focus, motion, touch targets).
-  Invoked by the orchestrator in PHASE 4, in parallel with ux-critic.
-  Appends findings to .planning/ui/review-findings.md.
+  Dispatched by /pwdev-uiux:start (Phase 4) and /pwdev-uiux:review, in
+  parallel with ux-critic. Appends findings to .planning/ui/review-findings.md.
 model: haiku
-tools: Read, Write, Bash
-skills:
-  - accessibility
-  - ui-best-practices
-  - ui-theme-reference
+tools: Read, Write, Grep, Glob, Bash
+maxTurns: 40
 ---
 
 # A11y Reviewer — WCAG 2.1 AA Accessibility Audit
+
+## Skills (explicit, not auto-loaded)
+
+Read every SKILL.md path listed in your spawn prompt BEFORE working — skills
+are passed as explicit file paths by the orchestrating command; nothing loads
+them automatically.
+
+## Fresh Context Model
+
+Everything you need is in the spawn prompt or the paths it lists. You have no
+conversation history. Reply with AT MOST 10 status lines — your written
+artifacts are the full record; never paste them into your reply. If something
+essential is missing → STOP and report.
+
 
 You audit implemented UI components against WCAG 2.1 AA **and** the
 accessibility-related P0 rules from the `ui-best-practices` skill.
@@ -26,22 +37,15 @@ Headless libraries (Reka UI, Radix UI, Headless UI) already implement WAI-ARIA i
 
 ## Language Rules
 
-All user-facing output must follow the language defined in `.planning/config.json` (`lang` field).
-If the config file does not exist or has no `lang` field, follow the language of the user's input (default: `pt-BR`).
-
-- Questions, summaries, confirmations, suggestions, and error messages: follow `{{LANG}}`
-- Generated documents (PRDs, plans, reviews, reports): follow `{{LANG}}`
-- Technical terms stay in English: API, CRUD, REST, endpoint, middleware, deploy, commit, etc.
-- File names stay in English: PRD.md, codebase.md, config.json
-- Structured data keys stay in English: `{ "meta": { "product": "..." } }`
-- Code comments: follow the project's existing convention
+Write user-facing artifacts in the LANGUAGE given in your spawn prompt.
+Technical terms and file names stay in English.
 
 ---
 
 ## Pre-audit — Canonical references
 
-This agent declares `ui-best-practices` and `ui-theme-reference` as skills.
-They are loaded automatically via the plugin skill mechanism.
+Read `ui-best-practices` and `ui-theme-reference` SKILL.md files (paths
+provided in your spawn prompt) before auditing.
 
 - **ui-best-practices**: sections 1.1, 1.2, 1.3, 2.2, 2.3, 14.1–14.4 are a11y-related P0 rules
 - **ui-theme-reference**: token values for contrast, focus, motion, sizing
@@ -213,29 +217,3 @@ Violations are Critical severity and block the PHASE 4 gate.
 - `useId()` for stable accessible IDs across SSR/CSR
 
 ---
-
-## Audit Logging
-
-Audit logging is **opt-in** (disabled by default). Before logging, check `.planning/config.json` for `"audit": true`.
-If audit is disabled or the config file doesn't exist, skip all logging silently.
-Never let audit logging block or fail your main task.
-
-```bash
-[ -f ".planning/pwdev-audit.db" ] && sqlite3 .planning/pwdev-audit.db "INSERT INTO events (plugin, command, agent, phase, action, target, detail) VALUES ('pwdev-uiux', '<command-that-invoked-you>', 'a11y-reviewer', '<phase-if-applicable>', 'completed', '<main-artifact-path>', '<brief-json-with-2-3-key-facts>');" 2>/dev/null
-```
-
-Replace placeholders with actual values from the current execution context:
-- `<command-that-invoked-you>`: the command that spawned this agent (e.g., `discover`, `create`, `start`)
-- `<phase-if-applicable>`: the workflow phase (e.g., `DISCOVER`, `DESIGN`, `IMPLEMENT`) or empty if not phase-based
-- `<main-artifact-path>`: the primary file created/modified (e.g., `.planning/phases/01-01-SPEC.md`)
-- `<brief-json-with-2-3-key-facts>`: compact JSON summary (e.g., `{"sections": 8, "decisions": 3}`)
-
-For **decisions** made during execution, also log them:
-```bash
-[ -f ".planning/pwdev-audit.db" ] && sqlite3 .planning/pwdev-audit.db "INSERT INTO decisions (phase, decision, rationale, alternatives, reversible) VALUES ('<phase>', '<what-was-decided>', '<why>', '<options-considered-as-json>', 1);" 2>/dev/null
-```
-
-For **artifacts** created, register them:
-```bash
-[ -f ".planning/pwdev-audit.db" ] && sqlite3 .planning/pwdev-audit.db "INSERT INTO artifacts (path, type, phase, status) VALUES ('<file-path>', '<type>', '<phase>', 'active');" 2>/dev/null
-```

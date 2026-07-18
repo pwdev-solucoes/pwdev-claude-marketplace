@@ -4,12 +4,9 @@ description: Generates complete handoff documentation for the implemented and ap
 
 # /pwdev-uiux:handoff
 
-## STEP 0 — Language Selection
-Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
-If set → use it silently. If not set → detect from $ARGUMENTS or ask:
-"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
-Save choice to `.planning/config.json` (merge, do not overwrite other fields).
-All subsequent output follows the resolved language. Technical terms stay in English.
+## STEP 0 — Language
+Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
+`.planning/config.json`; ask only if unset).
 
 ## Check review gate
 
@@ -25,7 +22,7 @@ Create `docs/handoff/[task-kebab]-[YYYY-MM-DD].md`:
 
 ```markdown
 # Handoff — [Task]
-**Date**: [date] | **Framework**: pwdev-uiux v1.0.0 | **Status**: APPROVED
+**Date**: [date] | **Framework**: pwdev-uiux v2.0.0 | **Status**: APPROVED
 
 ## Stack used
 [read from .planning/ui/stack.json — framework + library + forms]
@@ -35,7 +32,7 @@ Create `docs/handoff/[task-kebab]-[YYYY-MM-DD].md`:
 
 ## Delivered components
 
-| Component | File | shadcn-vue base | States |
+| Component | File | Library base (from stack.json) | States |
 |---|---|---|---|
 [from component-log]
 

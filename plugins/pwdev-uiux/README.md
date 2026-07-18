@@ -1,4 +1,4 @@
-# PWDEV-UIUX v1.1.2
+# PWDEV-UIUX v2.0.0
 
 > **Stack-Agnostic UI/UX Engineering Framework for Claude Code**
 
@@ -8,7 +8,7 @@
 Configure your stack → Analyze → Implement → Review → Ship
 ```
 
-PWDEV-UIUX orchestrates **8 specialized agents** across a **5-phase workflow** to produce UI components that are spec-driven, accessible (WCAG 2.1 AA), and consistent with your project. Works with any modern frontend stack.
+PWDEV-UIUX orchestrates **6 real subagents + 2 inline personas** across a **5-phase workflow** to produce UI components that are spec-driven, accessible (WCAG 2.1 AA), and consistent with your project. Works with any modern frontend stack.
 
 ---
 
@@ -28,7 +28,7 @@ claude plugin install pwdev-uiux@pwdev-claude-marketplace
 
 This command handles everything in one go:
 - Creates the `.planning/ui/` workspace
-- Asks for language (PT-BR / EN) and model profile
+- Asks for language (PT-BR / EN), model profile, and audit
 - Detects your frontend framework
 - Prompts you to choose your UI stack (shadcn-vue, shadcn-react, primevue, untitled-ui, tailwind-plus, or custom)
 - Checks Figma MCP connection
@@ -68,6 +68,37 @@ That's it. The orchestrator guides you through the 5 phases automatically.
 | `/pwdev-uiux:theme create` | Generate a new theme before building |
 
 ---
+
+## What's New in v2.0.0
+
+Rebuilt on the modern Claude Code plugin system. No slash command renamed or
+removed.
+
+- **Hybrid orchestration**: the orchestrator and theme-builder are now
+  INLINE personas (`references/workflow.md`, `references/theme-method.md`) —
+  they interact with the human at gates and interviews, which subagents
+  cannot do. The other 6 agents became **real subagents** spawned via the
+  Task tool with official frontmatter (description dispatch, restricted
+  tools, `maxTurns`) and real parallelism (a11y-reviewer + ux-critic in one
+  message; design-bridge + ux-analyst with Figma).
+- **Prohibited agent fields removed**: `permissionMode`, `mcpServers`, and
+  the non-official `skills:` are gone. Skills are passed as explicit
+  SKILL.md paths in every spawn prompt (the old "loaded automatically via
+  frontmatter" premise was false). Figma MCP tools live at the SESSION
+  level (`/pwdev-uiux:setup-figma`); `push-to-figma` runs inline where those
+  tools exist.
+- **Deterministic audit via hooks** on the shared `.planning/pwdev-audit.db`
+  (`WHERE plugin='pwdev-uiux'`): real `duration_ms`/`session_id`,
+  `config_changes` populated by init, secret-guard PreToolUse hook.
+- **Packaged references**: workflow, theme-method, spawn-contracts,
+  model-profiles (single source — the 3 divergent copies with phantom roles
+  are gone), language, audit-schema.
+- **Namespaced model overrides**: `uiux-<agent>` keys in the shared config
+  (never plain agent names).
+- **Fixes**: hardened audit query guard (single-statement SELECT only);
+  `echo -e` → `printf`; dead `$SUB_COMMAND`; stale "v1.0.0" strings in
+  start/handoff; hardcoded "shadcn-vue"/"Vue 3 + Reka" in stack-agnostic
+  prompts now read stack.json.
 
 ## What's New in v1.1.2
 
@@ -201,18 +232,26 @@ The **ui-scanner** analyzes your existing project before development and generat
 
 ## Agents
 
-| Agent | Model | What it does |
-|-------|-------|-------------|
-| **orchestrator** | Opus | Coordinates phases, reads stack.json. Never writes code. |
-| **ux-analyst** | Sonnet | Requirements into structured UX specs |
-| **design-bridge** | Sonnet | Bidirectional Figma bridge (read + write) |
-| **ui-scanner** | Sonnet | Analyzes existing UI, generates contextual skill + compliance report |
-| **ui-builder** | Sonnet | Reads stack.json, loads skills, implements components following best practices |
-| **theme-builder** | Sonnet | Creates semantic color themes (CSS vars + Tailwind), light/dark, WCAG AA contrast |
-| **a11y-reviewer** | Haiku | WCAG 2.1 AA + best practices P0 accessibility rules audit |
-| **ux-critic** | Sonnet | 7-axis UX review + best practices rule compliance with P0–P3 findings |
+**Inline personas** (main context — they talk to the human):
 
-*Agent models shown are defaults for the "balanced" profile. Configure with /pwdev-uiux:init or model_overrides in config.json.*
+| Persona | Where | What it does |
+|---------|-------|-------------|
+| **orchestrator** | `references/workflow.md` via /start | Coordinates the 5 phases and gates, spawns subagents. Never writes code. |
+| **theme-builder** | `references/theme-method.md` via /theme | Semantic color themes (CSS vars + Tailwind), light/dark, WCAG AA contrast — interviews you about brand |
+
+**Real subagents** (Task tool, fresh context):
+
+| Subagent | Model (balanced) | What it does |
+|----------|:----------------:|-------------|
+| **ux-analyst** | Sonnet | Requirements into structured UX specs |
+| **design-bridge** | Sonnet | Bidirectional Figma bridge (read + write; session-level Figma MCP) |
+| **ui-scanner** | Sonnet | Analyzes existing UI, generates contextual skill + compliance report |
+| **ui-builder** | Sonnet | Reads stack.json, reads the listed skills, implements components |
+| **a11y-reviewer** | Haiku | WCAG 2.1 AA + best practices P0 accessibility audit |
+| **ux-critic** | Sonnet | 7-axis UX review + best practices compliance (P0–P3) |
+
+*Models per profile in `references/model-profiles.md`; override with
+namespaced keys (`"uiux-ui-builder"`) in the shared config.*
 
 ---
 
@@ -281,22 +320,24 @@ All commands support **Portuguese (PT-BR)** and **English (EN)**. Configured dur
 
 ### Model Profile
 
-Agent models are configurable via profiles set during `/pwdev-uiux:init`:
+Only the 6 **subagents** resolve models (the orchestrator and theme personas
+run inline on the session model). Single source of truth:
+`references/model-profiles.md`.
 
-| Profile | orchestrator | ux-analyst / ui-builder / design-bridge / theme-builder | a11y-reviewer / ux-critic | ui-scanner |
-|---------|:----------:|:------------------------------------------------------:|:------------------------:|:----------:|
-| **performance** | Opus | Opus | Sonnet | Sonnet |
-| **balanced** | Opus | Sonnet | Sonnet | Haiku |
+| Profile | ui-builder | ux-analyst / design-bridge | ux-critic / ui-scanner | a11y-reviewer |
+|---------|:----------:|:--------------------------:|:----------------------:|:-------------:|
+| **performance** | Opus | Sonnet | Sonnet | Sonnet |
+| **balanced** (default) | Sonnet | Sonnet | Sonnet | Haiku |
 | **economy** | Sonnet | Sonnet | Haiku | Haiku |
 
-Override specific agents with `model_overrides` in `.planning/config.json`:
+Override with **namespaced keys** in the shared `.planning/config.json`:
 
 ```json
 {
   "lang": "pt-BR",
   "model_profile": "balanced",
   "model_overrides": {
-    "orchestrator": "opus"
+    "uiux-ui-builder": "opus"
   }
 }
 ```
@@ -307,13 +348,17 @@ Override specific agents with `model_overrides` in `.planning/config.json`:
 
 All plugins share an optional SQLite audit database at `.planning/pwdev-audit.db`. It is **disabled by default** and configured during `/init`. The database file is never versioned (automatically added to `.gitignore`).
 
-The audit trail records:
-- **Events** — every command execution (start, complete, fail) with timestamp, agent, model, and phase
-- **Decisions** — architectural and product decisions with rationale and alternatives considered
-- **Artifacts** — files created or modified by the framework, with status tracking
-- **Config changes** — history of language, model profile, and other configuration changes
+**How data gets here (v2.0 — deterministic, via hooks):**
+- `scripts/audit-hook.sh` (SessionStart, SubagentStart/Stop, PostToolUse,
+  Stop) → session events, subagent runs with real `session_id` and
+  `duration_ms`, `.planning/` artifact writes
+- `scripts/audit-log.sh` → command milestones (`event`) and configuration
+  changes (`config` → `config_changes`, populated by `/init`)
+- `scripts/guard-secrets.sh` (PreToolUse) → blocks reads of `.env`, `*.pem`,
+  `*.key`, `id_rsa*` (`.env.example` allowed)
 
-The audit database runs **in parallel** with Markdown files — agents continue to read and write Markdown as before. SQLite is a bonus layer for history and analysis.
+The database is **shared with the other PWDEV plugins** — filter this
+plugin's rows with `WHERE plugin='pwdev-uiux'`.
 
 ### Querying the Audit Trail
 
@@ -379,5 +424,5 @@ Stored in `.planning/ui/stack.json`:
 
 Apache-2.0 — See [LICENSE](./LICENSE)
 
-*PWDEV-UIUX v1.1.2 — Quality as a gate, not an aspiration.*
+*PWDEV-UIUX v2.0.0 — Quality as a gate, not an aspiration.*
 *Maintained by [Paulo Soares](https://github.com/soarescbm)*

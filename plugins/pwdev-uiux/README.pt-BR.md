@@ -1,4 +1,4 @@
-# PWDEV-UIUX v1.1.2
+# PWDEV-UIUX v2.0.0
 
 > **Framework de Engenharia UI/UX Agnóstico de Stack para Claude Code**
 
@@ -8,7 +8,7 @@
 Configure sua stack → Analise → Implemente → Revise → Entregue
 ```
 
-PWDEV-UIUX orquestra **8 agentes especializados** em um **fluxo de 5 fases** para produzir componentes de UI orientados por especificação, acessíveis (WCAG 2.1 AA) e consistentes com o seu projeto. Funciona com qualquer stack frontend moderno.
+PWDEV-UIUX orquestra **6 subagentes reais + 2 personas inline** em um **fluxo de 5 fases** para produzir componentes de UI orientados por especificação, acessíveis (WCAG 2.1 AA) e consistentes com o seu projeto. Funciona com qualquer stack frontend moderno.
 
 ---
 
@@ -68,6 +68,38 @@ Pronto. O orquestrador guia você pelas 5 fases automaticamente.
 | `/pwdev-uiux:theme create` | Gerar um novo tema antes de construir |
 
 ---
+
+## Novidades da v2.0.0
+
+Reconstruído sobre o sistema moderno de plugins do Claude Code. Nenhum slash
+command renomeado ou removido.
+
+- **Orquestração híbrida**: orchestrator e theme-builder agora são personas
+  INLINE (`references/workflow.md`, `references/theme-method.md`) — eles
+  interagem com o humano nos gates e entrevistas, o que subagentes não
+  fazem. Os outros 6 agents viraram **subagentes reais** spawnados via Task
+  tool com frontmatter oficial (description, tools restritas, `maxTurns`) e
+  paralelismo real (a11y-reviewer + ux-critic na mesma mensagem;
+  design-bridge + ux-analyst com Figma).
+- **Campos proibidos removidos dos agents**: `permissionMode`, `mcpServers`
+  e o `skills:` não-oficial. Skills são passadas como paths explícitos de
+  SKILL.md em cada spawn (a premissa antiga de "carregamento automático via
+  frontmatter" era falsa). As tools MCP do Figma vivem no nível da SESSÃO
+  (`/pwdev-uiux:setup-figma`); `push-to-figma` roda inline onde essas tools
+  existem.
+- **Auditoria determinística via hooks** no banco compartilhado
+  `.planning/pwdev-audit.db` (`WHERE plugin='pwdev-uiux'`):
+  `duration_ms`/`session_id` reais, `config_changes` populada pelo init,
+  hook de guarda de segredos.
+- **References empacotadas**: workflow, theme-method, spawn-contracts,
+  model-profiles (fonte única — as 3 cópias divergentes com papéis
+  fantasmas sumiram), language, audit-schema.
+- **Overrides de modelo com namespace**: chaves `uiux-<agent>` na config
+  compartilhada (nunca nomes simples).
+- **Correções**: guard de query do audit endurecido (só SELECT de statement
+  único); `echo -e` → `printf`; `$SUB_COMMAND` morto; strings "v1.0.0"
+  velhas em start/handoff; hardcodes "shadcn-vue"/"Vue 3 + Reka" em prompts
+  agnósticos agora leem stack.json.
 
 ## Novidades da v1.1.2
 
@@ -201,18 +233,26 @@ O **ui-scanner** analisa seu projeto existente antes do desenvolvimento e gera u
 
 ## Agentes
 
-| Agente | Modelo | O que faz |
-|--------|--------|-----------|
-| **orchestrator** | Opus | Coordena as fases, lê stack.json. Nunca escreve código. |
-| **ux-analyst** | Sonnet | Transforma requisitos em specs de UX estruturadas |
-| **design-bridge** | Sonnet | Bridge bidirecional com Figma (leitura + escrita) |
-| **ui-scanner** | Sonnet | Analisa UI existente, gera skill contextual + relatório de conformidade |
-| **ui-builder** | Sonnet | Lê stack.json, carrega skills, implementa componentes seguindo boas práticas |
-| **theme-builder** | Sonnet | Cria temas de cores semânticos (CSS vars + Tailwind), claro/escuro, contraste WCAG AA |
-| **a11y-reviewer** | Haiku | Auditoria de WCAG 2.1 AA + regras de acessibilidade P0 de boas práticas |
-| **ux-critic** | Sonnet | Revisão UX de 7 eixos + conformidade com regras de boas práticas com findings P0–P3 |
+**Personas inline** (contexto principal — conversam com o humano):
 
-*Os modelos dos agentes mostrados são os padrões do perfil "balanced". Configure com /pwdev-uiux:init ou model_overrides no config.json.*
+| Persona | Onde | O que faz |
+|---------|------|-----------|
+| **orchestrator** | `references/workflow.md` via /start | Coordena as 5 fases e gates, spawna subagentes. Nunca escreve código. |
+| **theme-builder** | `references/theme-method.md` via /theme | Temas semânticos (CSS vars + Tailwind), claro/escuro, WCAG AA — entrevista sobre a marca |
+
+**Subagentes reais** (Task tool, contexto fresco):
+
+| Subagente | Modelo (balanced) | O que faz |
+|-----------|:-----------------:|-----------|
+| **ux-analyst** | Sonnet | Transforma requisitos em specs de UX estruturadas |
+| **design-bridge** | Sonnet | Bridge bidirecional com Figma (MCP no nível da sessão) |
+| **ui-scanner** | Sonnet | Analisa UI existente, gera skill contextual + conformidade |
+| **ui-builder** | Sonnet | Lê stack.json, lê as skills listadas, implementa componentes |
+| **a11y-reviewer** | Haiku | Auditoria WCAG 2.1 AA + regras P0 de acessibilidade |
+| **ux-critic** | Sonnet | Revisão UX de 7 eixos + conformidade (P0–P3) |
+
+*Modelos por perfil em `references/model-profiles.md`; override com chaves
+namespaced (`"uiux-ui-builder"`) na config compartilhada.*
 
 ---
 
@@ -281,22 +321,23 @@ Todos os comandos suportam **Português (PT-BR)** e **Inglês (EN)**. Configurad
 
 ### Perfil de Modelo
 
-Os modelos dos agentes são configuráveis via perfis definidos durante o `/pwdev-uiux:init`:
+Só os 6 **subagentes** resolvem modelo (orchestrator e theme rodam inline no
+modelo da sessão). Fonte única: `references/model-profiles.md`.
 
-| Perfil | orchestrator | ux-analyst / ui-builder / design-bridge / theme-builder | a11y-reviewer / ux-critic | ui-scanner |
-|--------|:----------:|:------------------------------------------------------:|:------------------------:|:----------:|
-| **performance** | Opus | Opus | Sonnet | Sonnet |
-| **balanced** | Opus | Sonnet | Sonnet | Haiku |
+| Perfil | ui-builder | ux-analyst / design-bridge | ux-critic / ui-scanner | a11y-reviewer |
+|--------|:----------:|:--------------------------:|:----------------------:|:-------------:|
+| **performance** | Opus | Sonnet | Sonnet | Sonnet |
+| **balanced** (padrão) | Sonnet | Sonnet | Sonnet | Haiku |
 | **economy** | Sonnet | Sonnet | Haiku | Haiku |
 
-Override de agentes específicos com `model_overrides` em `.planning/config.json`:
+Override com **chaves namespaced** na config compartilhada:
 
 ```json
 {
   "lang": "pt-BR",
   "model_profile": "balanced",
   "model_overrides": {
-    "orchestrator": "opus"
+    "uiux-ui-builder": "opus"
   }
 }
 ```
@@ -307,13 +348,17 @@ Override de agentes específicos com `model_overrides` em `.planning/config.json
 
 Todos os plugins compartilham um banco de dados SQLite opcional em `.planning/pwdev-audit.db`. Ele é **desativado por padrão** e configurado durante o `/init`. O arquivo do banco nunca é versionado (adicionado automaticamente ao `.gitignore`).
 
-A trilha de auditoria registra:
-- **Eventos** — cada execução de comando (início, conclusão, falha) com timestamp, agente, modelo e fase
-- **Decisões** — decisões arquiteturais e de produto com justificativa e alternativas consideradas
-- **Artefatos** — arquivos criados ou modificados pelo framework, com rastreamento de status
-- **Alterações de config** — histórico de alterações de idioma, perfil de modelo e outras configurações
+**Como os dados chegam aqui (v2.0 — determinístico, via hooks):**
+- `scripts/audit-hook.sh` (SessionStart, SubagentStart/Stop, PostToolUse,
+  Stop) → eventos de sessão, execuções de subagentes com `session_id` e
+  `duration_ms` reais, escritas em `.planning/`
+- `scripts/audit-log.sh` → marcos de comandos (`event`) e alterações de
+  configuração (`config` → `config_changes`, populada pelo `/init`)
+- `scripts/guard-secrets.sh` (PreToolUse) → bloqueia leitura de `.env`,
+  `*.pem`, `*.key`, `id_rsa*` (`.env.example` permitido)
 
-O banco de auditoria funciona **em paralelo** com os arquivos Markdown — os agentes continuam lendo e escrevendo Markdown como antes. O SQLite é uma camada adicional para histórico e análise.
+O banco é **compartilhado com os demais plugins PWDEV** — filtre as linhas
+deste plugin com `WHERE plugin='pwdev-uiux'`.
 
 ### Consultando a Trilha de Auditoria
 
@@ -379,5 +424,5 @@ Armazenada em `.planning/ui/stack.json`:
 
 Apache-2.0 — Veja [LICENSE](./LICENSE)
 
-*PWDEV-UIUX v1.1.2 — Qualidade como critério de entrega, não como aspiração.*
+*PWDEV-UIUX v2.0.0 — Qualidade como critério de entrega, não como aspiração.*
 *Mantido por [Paulo Soares](https://github.com/soarescbm)*

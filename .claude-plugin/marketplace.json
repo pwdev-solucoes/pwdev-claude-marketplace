@@ -16,8 +16,12 @@
     },
     {
       "name": "pwdev-uiux",
+      "displayName": "PWDEV UI/UX — Stack-Agnostic UI Engineering",
       "source": "./plugins/pwdev-uiux",
-      "description": "Stack-agnostic UI/UX engineering framework — 8 agents, Figma integration, WCAG 2.1 AA"
+      "description": "Stack-agnostic UI/UX engineering v2.0 — 6 real subagents, 5-phase workflow with gates, Figma integration, WCAG 2.1 AA, audit hooks",
+      "category": "workflow",
+      "tags": ["ui-ux", "agents", "hooks", "figma", "accessibility"],
+      "strict": true
     },
     {
       "name": "pwdev-feat",
