@@ -1,7 +1,8 @@
 {
   "name": "pwdev-feat",
-  "version": "1.1.2",
-  "description": "Simplified AI-assisted feature development — generates structured action plans using the PWDEVIA 7-question methodology and executes them. Fast, practical, no ceremony.",
+  "displayName": "PWDEV Feat — Fast Feature Plans & Execution",
+  "version": "2.0.0",
+  "description": "Simplified AI-assisted feature development — PWDEVIA 7-question action plans created inline (interviewing you, max 2 rounds), executed by a real executor subagent with fresh context and IMPLEMENT/REPORT modes, deterministic SQLite audit via hooks. Fast, practical, no ceremony.",
   "author": {
     "name": "Paulo Soares",
     "url": "https://github.com/soarescbm"
@@ -15,8 +16,11 @@
     "feature-development",
     "prompt-engineering",
     "action-plans",
+    "subagents",
+    "hooks",
     "code-generation",
     "testing",
     "code-review"
-  ]
+  ],
+  "hooks": "./hooks/hooks.json"
 }

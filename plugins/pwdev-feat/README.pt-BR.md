@@ -1,4 +1,4 @@
-# PWDEV-FEAT v1.1.2
+# PWDEV-FEAT v2.0.0
 
 *Leia em [English](./README.md)*
 
@@ -8,7 +8,44 @@
 Descreva o que você quer → receba um plano estruturado → execute-o.
 ```
 
-PWDEV-FEAT utiliza a **metodologia PWDEVIA de 7 perguntas** para gerar planos de ação estruturados que um agente executor segue com precisão. Sem cerimônias complexas — basta descrever, planejar e executar.
+PWDEV-FEAT utiliza a **metodologia PWDEVIA de 7 perguntas** para gerar planos
+de ação estruturados — criados inline, entrevistando você (máx. 2 rodadas) —
+que um **subagente executor real** implementa com contexto fresco. Sem
+cerimônias complexas — basta descrever, planejar e executar.
+
+---
+
+## Novidades da v2.0.0
+
+Reconstruído sobre o sistema moderno de plugins do Claude Code. Nenhum slash
+command foi renomeado ou removido; os internos foram reestruturados.
+
+- **Subagente executor real** (`pwdev-feat:executor`): o `/pwdev-feat:exec`
+  agora spawna um subagente de verdade via Task tool com prompt auto-contido
+  — contexto fresco por plano, frontmatter oficial, tools restritas.
+- **Planner PWDEVIA inline por design** (`references/pwdevia-method.md`): ele
+  entrevista você, e subagentes não conversam com o usuário. Os antigos
+  arquivos de persona em prosa foram removidos.
+- **Modos IMPLEMENT / REPORT**: planos de review (e planos só-relatório)
+  rodam em modo REPORT — findings vão para `report.md`, sem alterar código,
+  sem commit. Corrige o conflito antigo em que executar um plano de review
+  tentava commitar.
+- **Auditoria determinística via hooks**: início/fim de sessão, execuções do
+  executor com `duration_ms`/`session_id` reais e escritas em `.planning/`
+  são registradas por hooks do plugin — sem INSERTs inline. `config_changes`
+  agora é populada de verdade (via `audit-log.sh config`). Hook de guarda de
+  segredos bloqueia leitura de `.env`/`*.pem`/`*.key`/`id_rsa*`.
+- **References empacotadas** (`${CLAUDE_PLUGIN_ROOT}/references/`): método
+  PWDEVIA, protocolo de idioma, perfis de modelo (fonte única), contrato de
+  spawn, schema de auditoria — substitui 11 blocos de idioma duplicados e 6
+  blocos divergentes de Model Resolution.
+- **Correções**: `/pwdev-feat:status` agora detecta ❌ FAILED e ⚠️ WITH
+  CAVEATS; guard de query do audit endurecido (só SELECT de statement único);
+  verificação lê os comandos do CLAUDE.md primeiro (sem correntes
+  `npm || composer`); `echo -e` e o `$SUB_COMMAND` morto removidos.
+- **Config compartilhada, com namespace**: `.planning/config.json` e o DB de
+  auditoria são compartilhados com o pwdev-code de propósito; a chave de
+  override de modelo do pwdev-feat é `"feat-executor"`.
 
 ---
 
@@ -86,15 +123,15 @@ Você descreve               PWDEVIA cria                   Executor implementa
 
 ## Agentes
 
-| Agente | Papel | O que faz |
-|--------|-------|-----------|
-| **agent-planner** (PWDEVIA) | Engenheiro de Prompt | Aplica as 7 perguntas para criar planos de ação estruturados. Nunca escreve código. |
-| **agent-executor** | Engenheiro de Implementação | Segue os planos passo a passo. Implementa, testa e faz commits. Reporta desvios. |
+| Agente | Onde roda | O que faz |
+|--------|-----------|-----------|
+| **PWDEVIA** (planner) | Inline, contexto principal (`references/pwdevia-method.md`) | Aplica as 7 perguntas, entrevistando você (máx. 2 rodadas). Nunca escreve código. |
+| **executor** (subagente) | Subagente real via Task tool, contexto fresco | Segue o plano passo a passo. IMPLEMENT: código + testes + commit + relatório. REPORT: só findings, sem commit. |
 
 ### Limites dos Agentes
 
 - **PWDEVIA** cria planos — nunca escreve código de produção
-- **Executor** segue planos — nunca desvia sem perguntar antes
+- **Executor** segue planos — nunca desvia sem perguntar antes (status STOPPED)
 - Ambos leem CLAUDE.md e codebase.md para obter contexto do projeto
 
 ---
@@ -142,21 +179,24 @@ Todos os comandos suportam **Português (PT-BR)** e **Inglês (EN)**. Configurad
 
 ### Perfil de Modelo
 
-Os modelos dos agentes são configuráveis via perfis definidos durante o `/pwdev-feat:init`:
+Só o subagente **executor** resolve modelo (o planner PWDEVIA roda inline no
+modelo da sessão). Fonte única de verdade: `references/model-profiles.md`.
 
-| Perfil | agent-planner | agent-executor |
-|--------|:------------:|:--------------:|
-| **performance** | Opus | Opus |
-| **balanced** | Sonnet | Sonnet |
-| **economy** | Sonnet | Sonnet |
+| Perfil | executor |
+|--------|:--------:|
+| **performance** | Opus |
+| **balanced** (padrão) | Sonnet |
+| **economy** | Sonnet |
 
-Override de agentes específicos com `model_overrides` em `.planning/config.json`:
+Override com a **chave namespaced `"feat-executor"`** em
+`.planning/config.json` (o arquivo é compartilhado com o pwdev-code — a chave
+simples `"executor"` pertence a ele):
 
 ```json
 {
   "lang": "pt-BR",
   "model_profile": "balanced",
-  "model_overrides": {}
+  "model_overrides": { "feat-executor": "opus" }
 }
 ```
 
@@ -166,13 +206,17 @@ Override de agentes específicos com `model_overrides` em `.planning/config.json
 
 Todos os plugins compartilham um banco de dados SQLite opcional em `.planning/pwdev-audit.db`. Ele é **desativado por padrão** e configurado durante o `/init`. O arquivo do banco nunca é versionado (adicionado automaticamente ao `.gitignore`).
 
-A trilha de auditoria registra:
-- **Eventos** — cada execução de comando (início, conclusão, falha) com timestamp, agente, modelo e fase
-- **Decisões** — decisões arquiteturais e de produto com justificativa e alternativas consideradas
-- **Artefatos** — arquivos criados ou modificados pelo framework, com rastreamento de status
-- **Alterações de config** — histórico de alterações de idioma, perfil de modelo e outras configurações
+**Como os dados chegam aqui (v2.0 — determinístico, via hooks):**
+- `scripts/audit-hook.sh` (SessionStart, SubagentStart/Stop, PostToolUse,
+  Stop) → eventos de sessão, execuções do executor com `session_id` e
+  `duration_ms` reais, escritas de artefatos em `.planning/`
+- `scripts/audit-log.sh` → marcos de comandos (`event`) e alterações de
+  configuração (`config` → tabela `config_changes`, populada pelo `/init`)
+- `scripts/guard-secrets.sh` (PreToolUse) → bloqueia leitura de `.env`,
+  `*.pem`, `*.key`, `id_rsa*` (`.env.example` permitido)
 
-O banco de auditoria funciona **em paralelo** com os arquivos Markdown — os agentes continuam lendo e escrevendo Markdown como antes. O SQLite é uma camada adicional para histórico e análise.
+O banco é **compartilhado com o pwdev-code** — as linhas se distinguem pela
+coluna `plugin` (`WHERE plugin='pwdev-feat'`).
 
 ### Consultando a Trilha de Auditoria
 
@@ -231,8 +275,9 @@ Os planos são armazenados em `.planning/feat/features/{slug}/plan.md` e executa
 │   ├── user-crud/
 │   │   ├── plan.md                # Plano de ação
 │   │   └── plan.done.md           # Relatório de execução
-│   ├── auth-tests/
-│   │   ├── plan.md
+│   ├── api-review/
+│   │   ├── plan.md                # Plano de review (Type: review)
+│   │   ├── report.md              # Findings (modo REPORT — sem commit)
 │   │   └── plan.done.md
 │   └── ...
 └── codebase.md                    # Gerado por /pwdev-feat:map-codebase
@@ -252,8 +297,8 @@ Arquivos de contexto opcionais:
 |---------|-----------|------------|
 | **Filosofia** | Rápido e prático | Rigoroso e rastreável |
 | **Fases** | Plan → Execute | DISCOVER → DESIGN → PLAN → EXECUTE → REVIEW → VERIFY |
-| **Agentes** | 2 (planner + executor) | 11 agentes especializados |
-| **Comandos** | 10 | 21 |
+| **Agentes** | PWDEVIA inline + 1 subagente executor | 7 subagentes reais + personas inline |
+| **Comandos** | 12 | 16 |
 | **Ideal para** | Features individuais, iterações rápidas, equipes pequenas | Projetos complexos, conformidade, equipes grandes |
 | **Cerimônia** | Mínima | Estruturada com gates |
 | **Estilo de plano** | Plano de ação com 7 perguntas | SPEC.md (8 seções) + tarefas atômicas |
@@ -267,5 +312,5 @@ Arquivos de contexto opcionais:
 
 Apache-2.0 — Veja [LICENSE](./LICENSE)
 
-*PWDEV-FEAT v1.1.2 — Descreva, planeje, execute. Entregue.*
+*PWDEV-FEAT v2.0.0 — Descreva, planeje, execute. Entregue.*
 *Mantido por [Paulo Soares](https://github.com/soarescbm)*

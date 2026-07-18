@@ -21,8 +21,12 @@
     },
     {
       "name": "pwdev-feat",
+      "displayName": "PWDEV Feat — Fast Feature Plans & Execution",
       "source": "./plugins/pwdev-feat",
-      "description": "Simplified feature development — PWDEVIA 7-question plans + executor, fast and practical"
+      "description": "Simplified feature development v2.0 — PWDEVIA 7-question plans inline + real executor subagent, audit hooks, 12 commands",
+      "category": "workflow",
+      "tags": ["feature-planning", "agents", "hooks", "workflow"],
+      "strict": true
     },
     {
       "name": "pwdev-prd",
