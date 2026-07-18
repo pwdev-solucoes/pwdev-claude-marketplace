@@ -1,0 +1,12 @@
+{
+  "name": "pwdev-devops",
+  "displayName": "PWDEV DevOps — Plataforma, Operação e Incidente",
+  "version": "1.0.0",
+  "description": "Framework de DevOps com postura de execução segura — leitura livre, mutação sob confirmação por comando, destrutivo bloqueado. 19 skills cobrindo AWS, Kubernetes, Docker, Linux, Nginx, PostgreSQL, observabilidade, incidente, segurança, Proxmox, automação, performance, backup, Laravel, confiabilidade, FinOps, infraestrutura de IA e documentação contínua. 4 subagentes e guard script como segunda barreira.",
+  "author": { "name": "Paulo Soares", "url": "https://github.com/soarescbm" },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": ["claude-code","claude-plugin","devops","sre","aws","kubernetes","postgresql","observability","incident-response","finops","pt-br"],
+  "mcpServers": "./.mcp.json"
+}
