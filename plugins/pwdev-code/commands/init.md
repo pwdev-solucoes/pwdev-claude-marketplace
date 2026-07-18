@@ -57,7 +57,7 @@ Technical terms (API, CRUD, REST, endpoint) always stay in English regardless of
 
 ### STEP 1 — Route Subcommand
 
-Parse $ARGUMENTS:
+Route on `$1`:
 
 - **`map`** → go to STEP 5 (Codebase Mapping)
 - **`mcp`** → go to STEP 6 (MCP Server Configuration)

@@ -5,6 +5,13 @@ description: >
   and data-heavy applications. Use this skill for professional software interfaces that need
   Jony Ive-level craft: clean, minimal, functional, with intentional personality.
   Do NOT use for creative landing pages, marketing sites, or experimental/artistic frontends.
+paths:
+  - "**/*.vue"
+  - "**/*.tsx"
+  - "**/*.jsx"
+  - "**/components/**"
+  - "**/pages/**"
+  - "**/*.css"
 metadata:
   version: 1.0.0
   compatible_with: "any modern frontend framework; tailwindcss >=3.0"

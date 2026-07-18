@@ -25,9 +25,9 @@ Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
 
 ### STEP 1 — Route Subcommand
 
-Parse $ARGUMENTS:
+Route on `$1` (`$2` = optional domain):
 
-- **`create <domain>`** → go to STEP 2
+- **`create`** → go to STEP 2 (`$2` = domain)
 - **`list`** → go to STEP 3
 - **`audit`** → go to STEP 4
 - **empty** → present menu:

@@ -6,6 +6,7 @@ description: >
   /pwdev-code:discover in parallel with the interview. Read-mostly;
   never makes design decisions.
 model: haiku
+effort: low
 tools: Read, Grep, Glob, Bash, Write, WebSearch, WebFetch
 maxTurns: 30
 ---

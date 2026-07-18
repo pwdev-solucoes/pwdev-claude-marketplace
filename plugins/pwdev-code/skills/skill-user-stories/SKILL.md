@@ -6,6 +6,10 @@ description: >
   ready, anti-patterns, and a review checklist. Use when creating or reviewing
   user stories, PRD section 6, backlog items, or acceptance criteria.
   Do NOT use for technical specs, architecture decisions, or task decomposition.
+paths:
+  - "**/PRD.md"
+  - "**/prd.md"
+  - ".planning/product/stories/**"
 metadata:
   version: 1.0.0
   author: Pwdev

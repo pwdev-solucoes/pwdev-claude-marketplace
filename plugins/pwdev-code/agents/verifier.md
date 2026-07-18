@@ -6,6 +6,7 @@ description: >
   commands. Dispatched by /pwdev-code:verify. Generates fix plans when it
   rejects.
 model: sonnet
+effort: high
 tools: Read, Grep, Glob, Bash, Write
 disallowedTools: Edit
 maxTurns: 50

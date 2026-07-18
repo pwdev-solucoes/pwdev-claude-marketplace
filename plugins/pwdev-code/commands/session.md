@@ -23,7 +23,7 @@ Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
 
 ### STEP 1 — Route Subcommand
 
-Parse $ARGUMENTS:
+Route on `$1`:
 
 - **`resume`** → go to STEP 3
 - **empty** → go to STEP 2 (Status Report)

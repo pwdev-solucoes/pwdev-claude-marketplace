@@ -24,10 +24,10 @@ Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
 
 ### STEP 1 — Route Subcommand
 
-Parse $ARGUMENTS:
+Route on `$1` (`$2` = optional version):
 
 - **`cleanup`** → go to STEP 2
-- **`changelog`** or **`changelog <version>`** → go to STEP 3
+- **`changelog`** → go to STEP 3 (`$2` = optional version)
 - **empty** → present menu:
 
   **PT-BR:**
