@@ -23,12 +23,9 @@ $ARGUMENTS: task description (required).
 
 ## Flow
 
-### STEP 0 — Language Selection
-Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
-If set → use it silently. If not set → detect from $ARGUMENTS or ask:
-"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
-Save choice to `.planning/config.json` (merge, do not overwrite other fields).
-All subsequent output follows the resolved language. Technical terms stay in English.
+### STEP 0 — Language
+Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
+`.planning/config.json`; ask only if unset).
 
 ### STEP 1 — Quick Assessment (~10s, silent)
 ```bash
@@ -55,10 +52,11 @@ Proceed? (y/n)
 Follow CLAUDE.md conventions. If unexpected → STOP.
 
 ### STEP 4 — Verify + Commit
-```bash
-npm run lint 2>&1 || composer run lint 2>&1
-npm test 2>&1 || php artisan test 2>&1
-```
+Read the project's verification commands from CLAUDE.md ("Commands" /
+"Quality" section) and run those. Only if CLAUDE.md does not define them,
+detect the toolchain (package.json scripts, composer.json, artisan,
+pyproject) and run its lint + tests. **Never chain unrelated toolchains
+with `||`** — a real failure must not be masked by a fallback command.
 
 Conventional Commit + result summary.
 

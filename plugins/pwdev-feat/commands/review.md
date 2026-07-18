@@ -5,45 +5,40 @@ argument-hint: "[files or scope to review, e.g. 'src/services/' or 'last 3 commi
 
 # /pwdev-feat:review — Create Review Plan
 
-## Agent
-Assume the persona of `agents/agent-planner.md` (PWDEVIA).
-
-## Model Resolution
-Read `.planning/config.json` for `model_profile` and `model_overrides`.
-Resolution order: (1) `model_overrides[agent-name]` → (2) profile lookup → (3) agent frontmatter `model:` default.
-Profiles — **performance**: opus for all except reviewer/scanner (sonnet). **balanced**: opus for orchestrator, sonnet for planner/executor/builder/interviewer/reviewer/researcher, haiku for scanner. **economy**: sonnet for most, haiku for reviewer/scanner.
-When spawning the agent, pass the resolved model via the `model` parameter.
+## Method (inline — you run in the MAIN context)
+You are PWDEVIA. Follow `${CLAUDE_PLUGIN_ROOT}/references/pwdevia-method.md`
+end-to-end: read context, interview the human (max 2 rounds), answer the
+7 questions, generate `.planning/feat/features/{slug}/plan.md`, present the
+summary. No Task tool, no model resolution.
 
 ## Input
 $ARGUMENTS: what to review (required — file paths, directory, or commit range).
 
 ## Plan Type
-**Review** — code review with structured criteria.
+**Review** — code review with structured criteria. Review plans run in
+**REPORT mode**: the executor reports findings only, never changes code,
+never commits.
 
 ## Flow
 
-### STEP 0 — Language Selection
-Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
-If set → use it silently. If not set → detect from $ARGUMENTS or ask:
-"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
-Save choice to `.planning/config.json` (merge, do not overwrite other fields).
-All subsequent output follows the resolved language. Technical terms stay in English.
+### STEP 0 — Language
+Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
+`.planning/config.json`; ask only if unset).
 
-1. Read context: CLAUDE.md + .planning/feat/codebase.md
-2. Identify files to review:
-   ```bash
-   # If argument is a path
-   find $ARGUMENTS -type f \( -name "*.ts" -o -name "*.js" -o -name "*.vue" -o -name "*.php" \) | head -20
-   # If argument mentions commits
-   git diff --name-only HEAD~3..HEAD 2>/dev/null
-   ```
-3. Apply the 7 fundamental questions with review focus:
-   - Persona: Senior Code Reviewer
-   - Objective: identify bugs, security issues, performance problems, convention violations
-   - Quality: findings must have file:line, description, and fix suggestion
-   - Output: review report (not code fixes)
-4. Create feature directory and generate plan: `mkdir -p .planning/feat/features/{slug}` then write `.planning/feat/features/{slug}/plan.md`
-5. Present summary with next step: `/pwdev-feat:exec {slug}`
+### STEP 1 — Identify files to review
+```bash
+# If argument is a path
+find $ARGUMENTS -type f \( -name "*.ts" -o -name "*.js" -o -name "*.vue" -o -name "*.php" \) | head -20
+# If argument mentions commits
+git diff --name-only HEAD~3..HEAD 2>/dev/null
+```
+
+### STEP 2 — Plan (per pwdevia-method.md), with this command's focus
+- Persona: Senior Code Reviewer
+- Objective: identify bugs, security issues, performance problems, convention violations
+- Quality: findings must have file:line, description, and fix suggestion
+- **Output Format MUST list `.planning/feat/features/{slug}/report.md` —
+  never code files** (this is what puts the executor in REPORT mode)
 
 ## Review Dimensions
 
@@ -54,6 +49,7 @@ All subsequent output follows the resolved language. Technical terms stay in Eng
 5. **Test coverage** — changed code has tests?
 
 ## Prohibitions
-- NEVER fix code in a review plan — only report findings
-- NEVER skip security checks
-- NEVER report cosmetic issues as high severity
+- ❌ NEVER fix code in a review plan — only report findings
+- ❌ NEVER list code files in the plan's Output Format
+- ❌ NEVER skip security checks
+- ❌ NEVER report cosmetic issues as high severity

@@ -1,12 +1,25 @@
 ---
 description: Query the audit trail database for events, decisions, artifacts, and statistics. Export full PDF report.
 argument-hint: "[summary | events | decisions | artifacts | stats | export | query <SQL>]"
+disable-model-invocation: true
+allowed-tools: Read, Bash
 ---
 
 # /pwdev-feat:audit — Audit Trail Query
 
 ## Role
 Utility command that queries the SQLite audit database (`.planning/pwdev-audit.db`) and presents results in readable format.
+
+## How data gets here (v2.0)
+Recording is deterministic — no agent runs INSERTs manually:
+- **Plugin hooks** (`hooks/hooks.json` → `scripts/audit-hook.sh`): session
+  start/stop, executor started/completed with real `duration_ms` and
+  `session_id`, and `.planning/` artifact writes.
+- **Commands** call `scripts/audit-log.sh` at milestones (`event`) and for
+  configuration changes (`config` → `config_changes` table).
+Schema reference: `${CLAUDE_PLUGIN_ROOT}/references/audit-schema.md`.
+The database is SHARED with pwdev-code — rows from both plugins appear here;
+filter this plugin's with `WHERE plugin='pwdev-feat'`.
 
 ## Pre-check
 
@@ -30,12 +43,9 @@ Utility command that queries the SQLite audit database (`.planning/pwdev-audit.d
    - PT-BR: `sqlite3 nao encontrado. Instale o SQLite para usar este comando.`
    - EN: `sqlite3 not found. Install SQLite to use this command.`
 
-## STEP 0 — Language Selection
-Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
-If set, use it silently. If not set, detect from $ARGUMENTS or ask:
-"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
-Save choice to `.planning/config.json` (merge, do not overwrite other fields).
-All subsequent output follows the resolved language. Technical terms stay in English.
+## STEP 0 — Language
+Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
+`.planning/config.json`; ask only if unset).
 
 ## STEP 1 — Parse Sub-command
 
@@ -572,7 +582,7 @@ If PDF_FAIL (but Markdown exists):
 Ensure both files are in `.gitignore`:
 ```bash
 if ! grep -q "audit-report" .gitignore 2>/dev/null; then
-  echo -e "\n# Audit reports (not versioned)\n.planning/audit-report.md\n.planning/audit-report.pdf" >> .gitignore
+  printf '\n# Audit reports (not versioned)\n.planning/audit-report.md\n.planning/audit-report.pdf\n' >> .gitignore
 fi
 ```
 
@@ -582,10 +592,16 @@ fi
 
 Extract the SQL from `$ARGUMENTS` after `query `.
 
-**Safety rules:**
-- Only allow `SELECT` statements. If the query starts with `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `CREATE`, or `PRAGMA`, reject with:
-  - PT-BR: `Apenas consultas SELECT sao permitidas. O banco de auditoria e somente leitura.`
-  - EN: `Only SELECT queries are allowed. The audit database is read-only.`
+**Safety rules (ALL must pass — otherwise reject as a read-only violation):**
+1. Trim whitespace; strip at most ONE trailing `;`.
+2. The remaining SQL must start with `SELECT` (case-insensitive).
+3. Reject if it still CONTAINS `;` anywhere (multi-statement injection,
+   e.g. `SELECT 1; DELETE FROM events`).
+4. Reject if it contains `ATTACH` or `PRAGMA` (case-insensitive).
+
+Rejection message:
+- PT-BR: `Apenas consultas SELECT (statement unico) sao permitidas. O banco de auditoria e somente leitura.`
+- EN: `Only single-statement SELECT queries are allowed. The audit database is read-only.`
 
 Execute:
 ```bash
@@ -605,11 +621,4 @@ Present the raw result in a formatted table. If the query fails, show the SQLite
 **config_changes columns:** id, timestamp, field, old_value, new_value, changed_by
 ```
 
----
-
-## STEP 9 — Audit Log (self-referential)
-
-After presenting results, log this query:
-```bash
-[ -f ".planning/pwdev-audit.db" ] && sqlite3 .planning/pwdev-audit.db "INSERT INTO events (plugin, command, action, detail) VALUES ('pwdev-feat', 'audit', 'completed', '{\"sub_command\": \"$SUB_COMMAND\"}');" 2>/dev/null
-```
+(Queries are not self-logged — the plugin's Stop hook already records the turn.)
