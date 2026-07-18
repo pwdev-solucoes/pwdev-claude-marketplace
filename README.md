@@ -113,10 +113,10 @@ The five original plugins were rebuilt on the modern Claude Code plugin system.
 
 | Plugin | Description | Version | License |
 |--------|-------------|:-------:|:-------:|
-| [**pwdev-code**](./plugins/pwdev-code/) | Spec-driven development — 7 real subagents, curated memory, correction loops, 16 commands | 2.1.0 | Apache-2.0 |
-| [**pwdev-uiux**](./plugins/pwdev-uiux/) | UI/UX engineering — 6 real subagents, 5-phase workflow with gates, Figma, WCAG 2.1 AA | 2.0.0 | Apache-2.0 |
-| [**pwdev-feat**](./plugins/pwdev-feat/) | Simplified feature development — PWDEVIA 7-question plans inline + real executor subagent | 2.0.0 | Apache-2.0 |
-| [**pwdev-prd**](./plugins/pwdev-prd/) | Interview-driven PRD creation — 12-step inline interview, Markdown + canonical JSON | 2.0.0 | Apache-2.0 |
+| [**pwdev-code**](./plugins/pwdev-code/) | Spec-driven development — 7 real subagents, curated memory, correction loops, 16 commands | 2.1.1 | Apache-2.0 |
+| [**pwdev-uiux**](./plugins/pwdev-uiux/) | UI/UX engineering — 6 real subagents, 5-phase workflow with gates, Figma, WCAG 2.1 AA | 2.0.1 | Apache-2.0 |
+| [**pwdev-feat**](./plugins/pwdev-feat/) | Simplified feature development — PWDEVIA 7-question plans inline + real executor subagent | 2.0.1 | Apache-2.0 |
+| [**pwdev-prd**](./plugins/pwdev-prd/) | Interview-driven PRD creation — 12-step inline interview, Markdown + canonical JSON | 2.0.1 | Apache-2.0 |
 | [**pwdev-copy**](./plugins/pwdev-copy/) | Trainable copywriting framework — 20 skills across the full cycle (VOC research → copy → review → analysis), 5 real subagents | 1.1.0 | Apache-2.0 |
 | [**pwdev-social-media**](./plugins/pwdev-social-media/) | AI creative generation for social — API orchestration (Ideogram, Leonardo, Flux, Runway, Freepik) with spend guard, 19 skills, 4 subagents | 2.0.0 | Apache-2.0 |
 | [**pwdev-devops**](./plugins/pwdev-devops/) | Platform, operations & incident response — safe-execution posture with guard script, 19 skills, 4 subagents | 1.0.0 | Apache-2.0 |

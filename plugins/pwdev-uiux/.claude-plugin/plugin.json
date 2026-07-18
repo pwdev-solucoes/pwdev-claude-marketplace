@@ -1,7 +1,7 @@
 {
   "name": "pwdev-uiux",
   "displayName": "PWDEV UI/UX — Stack-Agnostic UI Engineering",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Stack-agnostic UI/UX engineering framework for Claude Code — 6 real subagents + inline orchestrator/theme personas, 5-phase workflow with human gates, Figma integration, WCAG 2.1 AA, deterministic SQLite audit via hooks. Supports shadcn-vue, shadcn/ui, PrimeVue, Untitled UI, Tailwind Plus, and custom stacks.",
   "author": {
     "name": "Paulo Soares",
@@ -26,6 +26,5 @@
     "wcag",
     "figma",
     "design-system"
-  ],
-  "hooks": "./hooks/hooks.json"
+  ]
 }

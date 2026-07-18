@@ -1,7 +1,7 @@
 {
   "name": "pwdev-feat",
   "displayName": "PWDEV Feat — Fast Feature Plans & Execution",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Simplified AI-assisted feature development — PWDEVIA 7-question action plans created inline (interviewing you, max 2 rounds), executed by a real executor subagent with fresh context and IMPLEMENT/REPORT modes, deterministic SQLite audit via hooks. Fast, practical, no ceremony.",
   "author": {
     "name": "Paulo Soares",
@@ -21,6 +21,5 @@
     "code-generation",
     "testing",
     "code-review"
-  ],
-  "hooks": "./hooks/hooks.json"
+  ]
 }
