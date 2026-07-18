@@ -61,20 +61,7 @@ Each agent maps to a role category:
 | ux-critic | reviewer |
 | ui-scanner | scanner |
 
-**pwdev-code:**
-| Agent | Role Category |
-|-------|---------------|
-| agent-architect | planner |
-| agent-planner | planner |
-| agent-researcher | researcher |
-| agent-interviewer | interviewer |
-| agent-prd | interviewer |
-| agent-roadmap | planner |
-| agent-executor | executor |
-| agent-quick | executor |
-| agent-code-reviewer | reviewer |
-| agent-qa | reviewer |
-| agent-verifier | scanner |
+**pwdev-code (v2.0+):** does not use this table — it ships its own single-source profile table in `references/model-profiles.md` inside the plugin (only its 6 real subagents resolve models: executor, roadmap, code-reviewer, qa, verifier, researcher; interactive phases run in the main context).
 
 ---
 

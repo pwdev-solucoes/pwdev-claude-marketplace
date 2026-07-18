@@ -1,6 +1,8 @@
 ---
 description: Check project status or resume a previous session
 argument-hint: "[resume]"
+disable-model-invocation: true
+allowed-tools: Read, Bash, Glob, Grep
 ---
 
 # /pwdev-code:session — Session Management
@@ -15,16 +17,13 @@ $ARGUMENTS: subcommand (optional).
 
 ## Procedure
 
-### STEP 0 — Language Selection
-Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
-If set → use it silently. If not set → detect from $ARGUMENTS or ask:
-"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
-Save choice to `.planning/config.json` (merge, do not overwrite other fields).
-All subsequent output follows the resolved language. Technical terms stay in English.
+### STEP 0 — Language
+Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
+`.planning/config.json`; ask only if unset).
 
 ### STEP 1 — Route Subcommand
 
-Parse $ARGUMENTS:
+Route on `$1`:
 
 - **`resume`** → go to STEP 3
 - **empty** → go to STEP 2 (Status Report)
@@ -37,7 +36,7 @@ Read and present the current state:
 
 ```bash
 cat .planning/state.md 2>/dev/null || echo "❌ state.md not found. No active project."
-cat .planning/product/roadmap/roadmap.md 2>/dev/null
+cat .planning/product/roadmap/ROADMAP.md 2>/dev/null
 ls .planning/phases/*/plans/*.md 2>/dev/null
 ls .planning/phases/*/execution/*-summary.md 2>/dev/null
 ls .planning/phases/*/review/code-review.md 2>/dev/null
@@ -66,6 +65,9 @@ Present:
 ### Blockers
 [None | list]
 
+### Memory
+[N active (D decisions / L lessons / C conventions) — from .planning/memory/MEMORY.md]
+
 ### Next action
 👉 [recommended command]
 ```
@@ -77,7 +79,7 @@ Present:
 ### STEP 3.1 — Read persisted state
 ```bash
 cat .planning/state.md
-cat .planning/product/roadmap/roadmap.md 2>/dev/null
+cat .planning/product/roadmap/ROADMAP.md 2>/dev/null
 ls -la .planning/phases/ 2>/dev/null
 ```
 

@@ -10,21 +10,19 @@ $ARGUMENTS: `{slug} --json` or `{slug} --github` or just `{slug}` (interactive).
 
 ## Flow
 
-### STEP 0 — Language Selection
-Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
-If set → use it silently. If not set → detect from $ARGUMENTS or ask:
-"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
-Save choice to `.planning/config.json` (merge, do not overwrite other fields).
-All subsequent output follows the resolved language. Technical terms stay in English.
+### STEP 0 — Language
+Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
+`.planning/config.json`; ask only if unset).
 
 ### STEP 1 — Load PRD
 
 ```bash
 SLUG=$(echo "$ARGUMENTS" | awk '{print $1}')
 PRD_DIR=".planning/prds/$SLUG"
-[ -f "$PRD_DIR/PRD.md" ] || { echo "❌ PRD not found: $SLUG"; exit 1; }
-cat "$PRD_DIR/PRD.md"
+[ -f "$PRD_DIR/PRD.md" ] && cat "$PRD_DIR/PRD.md" || { echo "PRD_NOT_FOUND"; ls .planning/prds/ 2>/dev/null; }
 ```
+
+If `PRD_NOT_FOUND` → show the available slugs and STOP.
 
 ### STEP 2 — Determine export type
 
@@ -41,7 +39,8 @@ Export PRD "{slug}" as:
 
 ### Mode: JSON Export
 
-Generate `.planning/prds/{slug}/prd.json` following the JSON structure defined in agent-interviewer.md:
+Generate `.planning/prds/{slug}/prd.json` following the canonical JSON
+structure in `${CLAUDE_PLUGIN_ROOT}/references/interview-method.md`:
 
 - Keys in English
 - Values in the PRD language (as written)

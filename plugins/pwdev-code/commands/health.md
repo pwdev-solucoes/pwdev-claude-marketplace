@@ -1,13 +1,15 @@
 ---
 description: Run a comprehensive project health diagnostic across code, tests, dependencies, security, and process. Use --deps for a focused dependency audit.
 argument-hint: "[--deps]"
+disable-model-invocation: true
+allowed-tools: Read, Bash, Glob, Grep, Write
 ---
 
 # /pwdev-code:health — Project Health Diagnostics
 
 ## Role
 Utility agent that runs a comprehensive assessment of project health:
-code, tests, dependencies, security, documentation, framework process, and **plugin structure**.
+code, tests, dependencies, security, documentation, and **framework workspace** (.planning/).
 
 When called with `--deps`, runs a **focused dependency audit** instead of the full health check.
 
@@ -18,76 +20,75 @@ $ARGUMENTS: Optional flags.
 
 ## Procedure
 
-### STEP 0 — Language Selection
-Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
-If set → use it silently. If not set → detect from $ARGUMENTS or ask:
-"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
-Save choice to `.planning/config.json` (merge, do not overwrite other fields).
-All subsequent output follows the resolved language. Technical terms stay in English.
+### STEP 0 — Language
+Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
+`.planning/config.json`; ask only if unset).
 
-### STEP 0.1 — Plugin Structure Validation
+### STEP 0.1 — Framework Workspace Validation
+
+Validates the PROJECT's pwdev-code workspace (the plugin itself is validated
+with `claude plugin validate`, not here).
 
 ```bash
-echo "=== PLUGIN STRUCTURE VALIDATION ==="
-
-# Verify directory structure
+echo "=== WORKSPACE VALIDATION ==="
 ERRORS=0
 
-# .claude/ must exist with subfolders
-[ -d ".claude" ] || { echo "❌ Missing: .claude/"; ERRORS=$((ERRORS+1)); }
-[ -d ".claude/commands" ] || { echo "❌ Missing: .claude/commands/"; ERRORS=$((ERRORS+1)); }
-[ -d ".claude/agents" ] || { echo "❌ Missing: .claude/agents/"; ERRORS=$((ERRORS+1)); }
-[ -d ".claude/skills" ] || { echo "❌ Missing: .claude/skills/"; ERRORS=$((ERRORS+1)); }
+# .planning/ workspace
+[ -d ".planning" ] || { echo "❌ Missing: .planning/ (run /pwdev-code:init)"; ERRORS=$((ERRORS+1)); }
+[ -f ".planning/state.md" ] && echo "✅ Found: .planning/state.md" || echo "⚠️ Missing: .planning/state.md"
 
-# plugin.json must exist and have required fields
-if [ -f ".claude/plugin.json" ]; then
-  echo "✅ Found: .claude/plugin.json"
-  # Verify required fields
-  for field in name version description; do
-    grep -q "\"$field\"" .claude/plugin.json || { echo "⚠️ Missing field in plugin.json: $field"; }
+# config.json required fields
+if [ -f ".planning/config.json" ]; then
+  echo "✅ Found: .planning/config.json"
+  for field in lang model_profile audit version; do
+    grep -q "\"$field\"" .planning/config.json || echo "⚠️ Missing field in config.json: $field"
   done
 else
-  echo "❌ Missing: .claude/plugin.json"
+  echo "❌ Missing: .planning/config.json (run /pwdev-code:init)"
   ERRORS=$((ERRORS+1))
 fi
 
-# Verify commands exist
-CMD_COUNT=$(ls -1 .claude/commands/*.md 2>/dev/null | wc -l)
-echo "📁 Commands: $CMD_COUNT files"
-
-# Verify agents exist
-AGENT_COUNT=$(ls -1 .claude/agents/*.md 2>/dev/null | wc -l)
-echo "📁 Agents: $AGENT_COUNT files"
-
-# Verify skills
-for skill_dir in .claude/skills/*/; do
-  skill_name=$(basename "$skill_dir")
-  if [ -f "$skill_dir/SKILL.md" ]; then
-    # Check for version in frontmatter
-    if grep -q "^version:" "$skill_dir/SKILL.md"; then
-      echo "✅ Skill: $skill_name (versioned)"
+# Project skills (optional)
+if [ -d ".claude/skills" ]; then
+  for skill_dir in .claude/skills/*/; do
+    [ -d "$skill_dir" ] || continue
+    skill_name=$(basename "$skill_dir")
+    if [ -f "$skill_dir/SKILL.md" ]; then
+      echo "✅ Skill: $skill_name"
     else
-      echo "⚠️ Skill: $skill_name (missing version in frontmatter)"
+      echo "❌ Skill: $skill_name (missing SKILL.md)"
+      ERRORS=$((ERRORS+1))
     fi
-  else
-    echo "❌ Skill: $skill_name (missing SKILL.md)"
-    ERRORS=$((ERRORS+1))
-  fi
-done
-
-# Verify skill naming convention
-for skill_dir in .claude/skills/*/; do
-  skill_name=$(basename "$skill_dir")
-  if [[ ! "$skill_name" =~ ^skill- ]]; then
-    echo "⚠️ Skill naming: $skill_name should start with 'skill-'"
-  fi
-done
+  done
+fi
 
 # CLAUDE.md must exist
 [ -f "CLAUDE.md" ] && echo "✅ Found: CLAUDE.md" || echo "⚠️ Missing: CLAUDE.md"
 
-# mcp.json at root (optional but recommended)
-[ -f "mcp.json" ] && echo "✅ Found: mcp.json" || echo "ℹ️ Optional: mcp.json not found"
+# .mcp.json at root (optional)
+[ -f ".mcp.json" ] && echo "✅ Found: .mcp.json" || echo "ℹ️ Optional: .mcp.json not found"
+
+# Memory index consistency (if memory exists)
+if [ -f ".planning/memory/MEMORY.md" ]; then
+  grep -o '(memory/[^)]*)' .planning/memory/MEMORY.md | tr -d '()' | while read -r m; do
+    [ -f ".planning/$m" ] || echo "⚠️ Memory index points to missing file: $m"
+  done
+  for f in .planning/memory/*.md; do
+    [ "$(basename "$f")" = "MEMORY.md" ] && continue
+    if grep -q "status: active" "$f" 2>/dev/null; then
+      grep -q "$(basename "$f")" .planning/memory/MEMORY.md || echo "⚠️ Active memory not indexed: $(basename "$f")"
+    fi
+  done
+fi
+
+# Audit DB integrity (when enabled)
+if grep -q '"audit"[[:space:]]*:[[:space:]]*true' .planning/config.json 2>/dev/null; then
+  if [ -f ".planning/pwdev-audit.db" ] && command -v sqlite3 >/dev/null 2>&1; then
+    sqlite3 .planning/pwdev-audit.db "PRAGMA integrity_check;" 2>/dev/null | head -1
+  else
+    echo "⚠️ Audit enabled but DB or sqlite3 missing"
+  fi
+fi
 
 echo "=== STRUCTURE ERRORS: $ERRORS ==="
 ```
@@ -126,7 +127,7 @@ git diff --stat 2>/dev/null
 git stash list 2>/dev/null
 
 echo "=== FRAMEWORK ==="
-ls .planning/state.md .planning/phases/*/spec.md .planning/product/roadmap/roadmap.md 2>/dev/null
+ls .planning/state.md .planning/phases/*/spec.md .planning/product/roadmap/ROADMAP.md 2>/dev/null
 ```
 
 ### STEP 1.5 — Dependency Audit
@@ -207,7 +208,7 @@ If `--deps` was used, stop here. Do not continue to STEP 2.
 
 | Area | Score | Details |
 |------|:-----:|---------|
-| 🏗️ Plugin Structure | [A-F] | .claude/ [✅/❌], plugin.json [✅/❌], skills versioned [✅/❌] |
+| 🏗️ Workspace | [A-F] | .planning/ [✅/❌], config.json [✅/❌], state.md [✅/❌] |
 | 🧪 Tests | [A-F] | [X] test files, coverage ~[X%] |
 | 🔍 Lint/Types | [A-F] | [X] lint errors, [X] type errors |
 | 🔒 Security | [A-F] | [X] vulnerabilities, [X] exposed secrets |

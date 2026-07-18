@@ -1,5 +1,6 @@
 ---
 description: Remove the PWDEV status line from Claude Code settings and delete the script
+disable-model-invocation: true
 ---
 
 # /pwdev-statusline:uninstall — Remove Status Line
@@ -8,6 +9,16 @@ description: Remove the PWDEV status line from Claude Code settings and delete t
 Removes the PWDEV status line configuration and script.
 
 ## Procedure
+
+### STEP 0 — Confirm (destructive)
+
+Ask before touching anything — the user's `~/.claude/statusline.sh` may carry
+customizations:
+```
+This will remove the statusLine entry from ~/.claude/settings.json and
+DELETE ~/.claude/statusline.sh (including any customizations). Proceed? (y/n)
+```
+If no → stop.
 
 ### STEP 1 — Remove settings entry
 

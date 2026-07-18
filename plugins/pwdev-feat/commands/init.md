@@ -50,43 +50,30 @@ Model profile configuration is **mandatory** during initialization.
    - EN: `Current model profile: {model_profile}. Keep it? (y/n)`
    If yes → proceed. If no → go to step 2.
 
-2. If no config or user wants to change, present the profiles (use `{{LANG}}`):
+2. If no config or user wants to change, present the profile selection prompt
+   (PT-BR/EN) from `${CLAUDE_PLUGIN_ROOT}/references/model-profiles.md` — it
+   is the single source of truth: only the **executor** subagent resolves a
+   model here (the PWDEVIA planner runs inline in the main context).
 
-   **PT-BR:**
-   ```
-   Qual perfil de modelo deseja usar para os agentes?
+3. Optionally ask about an override:
+   - PT-BR: `Deseja configurar um override para o executor? (s/n, padrao: n)`
+   - EN: `Configure an override for the executor? (y/n, default: n)`
 
-   1. Performance  — Opus para maioria dos agentes (melhor qualidade, maior custo)
-   2. Balanced     — Opus para orquestracao, Sonnet para execucao, Haiku para scans (recomendado)
-   3. Economy      — Sonnet para maioria, Haiku para scans (menor custo)
-
-   Escolha (1-3, padrao: 2):
-   ```
-
-   **EN:**
-   ```
-   Which model profile would you like to use for agents?
-
-   1. Performance  — Opus for most agents (best quality, highest cost)
-   2. Balanced     — Opus for orchestration, Sonnet for execution, Haiku for scans (recommended)
-   3. Economy      — Sonnet for most, Haiku for scans (lowest cost)
-
-   Choose (1-3, default: 2):
-   ```
-
-3. Optionally ask about overrides:
-   - PT-BR: `Deseja configurar overrides para agentes especificos? (s/n, padrao: n)`
-   - EN: `Configure overrides for specific agents? (y/n, default: n)`
-
-   If yes, list this plugin's agents with their profile-assigned model and let the user change individual ones.
+   If yes, save it under the namespaced key **`"feat-executor"`** in
+   `model_overrides` (never the plain `"executor"` key — it belongs to
+   pwdev-code; the config file is shared).
 
 4. Save `model_profile` (and `model_overrides` if any) to `.planning/config.json` — merge, do not overwrite.
 
-5. Confirm:
+5. Confirm and record the change (best-effort):
    - PT-BR: `Perfil de modelo definido: **{profile}**`
    - EN: `Model profile set: **{profile}**`
-
-Agent-to-role mapping: planner→sonnet(balanced), executor→sonnet(balanced). Resolution order: (1) `model_overrides[agent-name]` → (2) profile lookup → (3) agent frontmatter `model:` default.
+   ```bash
+   "${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" config model_profile "$OLD_PROFILE" "$NEW_PROFILE" init
+   ```
+   (Also record `lang` and `audit` changes the same way whenever STEP 0 /
+   STEP 3.1 modify them — on first audit activation, log the initial state of
+   the three fields.)
 
 ## STEP 1 — Check if already initialized
 
@@ -192,16 +179,21 @@ It is **disabled by default** and the database file is **never versioned** (adde
    fi
    ```
 
+   (Full schema reference: `${CLAUDE_PLUGIN_ROOT}/references/audit-schema.md`.
+   The database is SHARED with pwdev-code — either plugin's init may create
+   it. Once the DB exists, recording is automatic via the plugin's hooks —
+   no agent runs INSERTs.)
+
    Ensure `.planning/pwdev-audit.db` is in `.gitignore`:
    ```bash
    if ! grep -q "pwdev-audit.db" .gitignore 2>/dev/null; then
-     echo -e "\n# PWDEV audit trail (not versioned)\n.planning/pwdev-audit.db\n.planning/pwdev-audit.db-journal\n.planning/pwdev-audit.db-wal" >> .gitignore
+     printf '\n# PWDEV audit trail (not versioned)\n.planning/pwdev-audit.db\n.planning/pwdev-audit.db-journal\n.planning/pwdev-audit.db-wal\n.planning/.audit-tmp/\n' >> .gitignore
    fi
    ```
 
    Log the initialization event:
    ```bash
-   [ -f ".planning/pwdev-audit.db" ] && sqlite3 .planning/pwdev-audit.db "INSERT INTO events (plugin, command, action, detail) VALUES ('pwdev-feat', 'init', 'completed', '{\"workspace\": \".planning/feat/\"}');" 2>/dev/null
+   "${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" event init "" completed .planning/feat/ ""
    ```
 
 5. If audit is **disabled**, skip silently. Confirm:
@@ -221,6 +213,8 @@ It is **disabled by default** and the database file is **never versioned** (adde
           └── plan.done.md   # Execution report
 
 📦 Detected stack: [stack info]
+🔎 Audit hooks: {active (audit on) | dormant (audit off)} — sessions, executor
+   runs and .planning writes are recorded automatically
 
 🚀 Next steps:
   /pwdev-feat:map-codebase  → Analyze existing codebase (recommended for existing projects)

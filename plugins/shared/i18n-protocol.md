@@ -3,6 +3,9 @@
 > **INTERNAL REFERENCE** — This file is the canonical specification for the language selection behavior.
 > It is NOT shipped with individual plugins. Each plugin has self-contained inline instructions
 > derived from this spec. Edit this file to update the spec, then sync to each plugin's commands/agents.
+>
+> **pwdev-code (v2.0+)** ships its own packaged copy at `references/language.md` inside the plugin
+> (resolved via `${CLAUDE_PLUGIN_ROOT}`); sync changes there too.
 
 This protocol MUST be executed as **STEP 0** of every command, before any other step.
 

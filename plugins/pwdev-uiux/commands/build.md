@@ -7,12 +7,9 @@ argument-hint: "[component name or 'all']"
 
 **Argument**: $ARGUMENTS
 
-## STEP 0 — Language Selection
-Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
-If set → use it silently. If not set → detect from $ARGUMENTS or ask:
-"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
-Save choice to `.planning/config.json` (merge, do not overwrite other fields).
-All subsequent output follows the resolved language. Technical terms stay in English.
+## STEP 0 — Language
+Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
+`.planning/config.json`; ask only if unset).
 
 ## Check prerequisites
 
@@ -27,23 +24,33 @@ ls .planning/ui/project-ui-skill.md 2>/dev/null && echo "Skill OK" || echo "No s
 If ux-spec gate not approved:
 > Run `/pwdev-uiux:analyze` first to create and approve the UX spec.
 
-## Context for ui-builder
+## Spawn the ui-builder (real subagent, Task tool)
+
+- `subagent_type`: `pwdev-uiux:ui-builder`
+- `model`: resolve per `${CLAUDE_PLUGIN_ROOT}/references/model-profiles.md`
+  (override key `uiux-ui-builder`)
+- prompt per `${CLAUDE_PLUGIN_ROOT}/references/spawn-contracts.md`:
 
 ```
-Required stack: [read from .planning/ui/stack.json — framework, library, forms, icons]
+TASK: implement component(s): $ARGUMENTS
+STACK: {path .planning/ui/stack.json — read it yourself}
+SKILLS — read these files BEFORE working:
+  ${CLAUDE_PLUGIN_ROOT}/skills/ui-best-practices/SKILL.md
+  ${CLAUDE_PLUGIN_ROOT}/skills/ui-theme-reference/SKILL.md
+  ${CLAUDE_PLUGIN_ROOT}/skills/ux-tokens/SKILL.md
+  {+ every skill listed in stack.json skills[]}
+ARTIFACTS TO READ: .planning/ui/ux-spec.md, .planning/ui/figma-spec.md (if
+exists), .planning/ui/project-ui-skill.md (if exists)
+LANGUAGE: {lang}
 
-UX Spec: [content from ux-spec.md]
-Figma Spec: [content from figma-spec.md if exists]
-Project UI Skill: [content from project-ui-skill.md if exists]
-Component: $ARGUMENTS
-
-Implement with:
-- All states: loading (Skeleton), empty (Empty), error (Alert), success (toast)
-- Minimum accessibility: aria-label on icons, aria-live on dynamic elements
-- Typed props with TypeScript (when available in the stack)
-- Class prop for extensibility
-- Register in .planning/ui/component-log.md upon completion
+OUTPUT CONTRACT:
+1. Implement with ALL states (loading/empty/error/success), a11y minimums,
+   typed props, class prop; register each component in
+   .planning/ui/component-log.md.
+2. Reply with AT MOST 10 lines: STATUS, components registered, NOTE.
 ```
+
+Read only the status reply.
 
 ## Update phase
 

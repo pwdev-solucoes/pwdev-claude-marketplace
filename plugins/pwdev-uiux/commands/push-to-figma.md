@@ -1,13 +1,19 @@
 ---
 description: >
   Push implemented UI components to Figma — creates screens, component library,
-  or design system from code. Uses the design-bridge agent in reverse mode (Code → Figma).
+  or design system from code (Code → Figma).
 argument-hint: "[component-path | 'screen' | 'library' | 'tokens']"
 ---
 
 # /pwdev-uiux:push-to-figma — Push Designs to Figma
 
 **Argument**: $ARGUMENTS
+
+> Runs INLINE in the main context on purpose: the Figma MCP tools live at the
+> session level (configured by /pwdev-uiux:setup-figma), so the push protocol
+> below drives `mcp:figma` directly. The same WRITE protocol is documented in
+> `agents/design-bridge.md` for Phase-2 orchestrated flows. Before working,
+> read `${CLAUDE_PLUGIN_ROOT}/skills/figma/SKILL.md`.
 
 ## Modes
 
@@ -21,12 +27,9 @@ argument-hint: "[component-path | 'screen' | 'library' | 'tokens']"
 
 ---
 
-## STEP 0 — Language Selection
-Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
-If set → use it silently. If not set → detect from $ARGUMENTS or ask:
-"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
-Save choice to `.planning/config.json` (merge, do not overwrite other fields).
-All subsequent output follows the resolved language. Technical terms stay in English.
+## STEP 0 — Language
+Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
+`.planning/config.json`; ask only if unset).
 
 ## Pre-verification
 

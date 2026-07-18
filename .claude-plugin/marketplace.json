@@ -1,33 +1,54 @@
 {
   "name": "pwdev-claude-marketplace",
+  "description": "PWDEV plugins for Claude Code — spec-driven development, feature planning, PRD creation, UI/UX engineering, and terminal status line",
   "owner": {
     "name": "Paulo Soares"
   },
   "plugins": [
     {
       "name": "pwdev-code",
+      "displayName": "PWDEV Code — Spec-Driven Development",
       "source": "./plugins/pwdev-code",
-      "description": "Spec-driven development framework — 11 agents, 6 phases, 14 commands"
+      "description": "Spec-driven development framework v2.1 — 7 real subagents, curated memory, simplification pass, strict verify, audit hooks, 16 commands",
+      "category": "workflow",
+      "tags": ["sdd", "agents", "hooks", "workflow"],
+      "strict": true
     },
     {
       "name": "pwdev-uiux",
+      "displayName": "PWDEV UI/UX — Stack-Agnostic UI Engineering",
       "source": "./plugins/pwdev-uiux",
-      "description": "Stack-agnostic UI/UX engineering framework — 8 agents, Figma integration, WCAG 2.1 AA"
+      "description": "Stack-agnostic UI/UX engineering v2.0 — 6 real subagents, 5-phase workflow with gates, Figma integration, WCAG 2.1 AA, audit hooks",
+      "category": "workflow",
+      "tags": ["ui-ux", "agents", "hooks", "figma", "accessibility"],
+      "strict": true
     },
     {
       "name": "pwdev-feat",
+      "displayName": "PWDEV Feat — Fast Feature Plans & Execution",
       "source": "./plugins/pwdev-feat",
-      "description": "Simplified feature development — PWDEVIA 7-question plans + executor, fast and practical"
+      "description": "Simplified feature development v2.0 — PWDEVIA 7-question plans inline + real executor subagent, audit hooks, 12 commands",
+      "category": "workflow",
+      "tags": ["feature-planning", "agents", "hooks", "workflow"],
+      "strict": true
     },
     {
       "name": "pwdev-prd",
+      "displayName": "PWDEV PRD — Interview-Driven Requirements",
       "source": "./plugins/pwdev-prd",
-      "description": "Interview-driven PRD creation — 12-step structured interview, Markdown + JSON export, technology-agnostic"
+      "description": "Interview-driven PRD creation v2.0 — 12-step inline interview, canonical JSON export, audit hooks, 6 commands",
+      "category": "workflow",
+      "tags": ["prd", "requirements", "hooks"],
+      "strict": true
     },
     {
       "name": "pwdev-statusline",
+      "displayName": "PWDEV Status Line",
       "source": "./plugins/pwdev-statusline",
-      "description": "Rich terminal status line — model, git branch, context bar, rate limits, tokens"
+      "description": "Rich terminal status line v1.1 — model, git branch, context bar with dynamic colors, rate limits, formatted tokens; fully configurable",
+      "category": "developer-experience",
+      "tags": ["statusline", "terminal-ui"],
+      "strict": true
     }
   ]
 }

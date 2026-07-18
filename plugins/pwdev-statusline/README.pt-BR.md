@@ -1,4 +1,4 @@
-# PWDEV-STATUSLINE v1.0.0
+# PWDEV-STATUSLINE v1.1.0
 
 *Read in [English](./README.md)*
 
@@ -6,24 +6,42 @@
 
 ---
 
+## Novidades da v1.1.0
+
+- **Bloco de configuração**: toda a personalização (toggles SHOW_*, cores,
+  separador, profundidade do diretório) vive em variáveis no topo do script —
+  o `/customize` edita 1 linha, de forma idempotente, em vez de comentar código.
+- **Uma chamada de jq**: todos os campos extraídos em UMA passada (eram ~8
+  por render) — atualização visivelmente mais rápida.
+- **Cores dinâmicas**: a barra de contexto fica verde/amarela/vermelha
+  (<60 / 60-79 / ≥80%); o rate limit ganha faixa amarela (50-79%).
+- **Segmentos legíveis**: tokens formatados como `512k` / `1.2M`; diretório
+  com `~` e truncado aos últimos N segmentos (`…/a/b/c`, configurável).
+- **Robustez**: valores não-numéricos no payload não causam mais erros — o
+  segmento apenas some; template lido via `${CLAUDE_PLUGIN_ROOT}` (o path
+  relativo antigo quebrava instalações via marketplace).
+- **Comandos mais seguros**: `uninstall` confirma antes de apagar; `install`
+  é idempotente quando já atualizado; os 4 comandos são manuais
+  (`disable-model-invocation`).
+
 ## Funcionalidades
 
 | Seção | Cor | O que exibe |
 |-------|-----|-------------|
-| **Diretório** | Azul | Diretório de trabalho atual |
+| **Diretório** | Azul | Diretório atual com `~`, truncado aos últimos N segmentos |
 | **Modelo** | Ciano | Nome do modelo Claude ativo |
 | **Branch Git** | Magenta | Branch atual (quando dentro de um repositório git) |
-| **Contexto** | Amarelo | Barra de progresso visual + porcentagem da janela de contexto |
-| **Rate Limit** | Verde/Vermelho | Uso do rate limit de 5h (vermelho a partir de 80%) |
-| **Tokens** | Branco | Total de tokens de entrada + saída |
+| **Contexto** | Verde/Amarelo/Vermelho | Barra visual + porcentagem (vermelho ≥80%) |
+| **Rate Limit** | Verde/Amarelo/Vermelho | Uso do rate limit de 5h (amarelo ≥50%, vermelho ≥80%) |
+| **Tokens** | Branco | Total entrada+saída, formatado (`512k`, `1.2M`) |
 | **Sessão** | Branco | Nome da sessão (quando definido) |
-| **PWDEV** | Verde | Nome da empresa (sempre visível, primeiro segmento) |
+| **PWDEV** | Verde | Nome da empresa (primeiro segmento; todos os segmentos são configuráveis) |
 | **Usuário** | Branco | Nome do usuário git via `git config user.name` |
 
 ### Exemplo de saída
 
 ```
-PWDEV | Paulo Soares | demo | ~/meu-projeto | Opus 4.6 | main | ctx:████░░░░░░ 42% | tok:1500 | 5h:15%
+PWDEV | Paulo Soares | demo | …/skills-ia/meu-projeto | Fable 5 | main | ctx:████░░░░░░ 42% | tok:1.5k | 5h:15%
 ```
 
 ---
@@ -82,6 +100,9 @@ Reinicie o Claude Code para ver a barra de status.
 
 # Alterar cores das seções
 /pwdev-statusline:customize colors
+
+# Profundidade do diretório
+/pwdev-statusline:customize dir-depth 2
 
 # Trocar separador (padrão: " | ")
 /pwdev-statusline:customize separator ·

@@ -1,29 +1,27 @@
 ---
-description: Show current features — pending, executed, and failed.
+description: Show current features — pending, executed, with caveats, and failed.
+disable-model-invocation: true
+allowed-tools: Read, Bash
 ---
 
 # /pwdev-feat:status — Feature Status
 
-## STEP 0 — Language Selection
-Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
-If set → use it silently. If not set → detect from $ARGUMENTS or ask:
-"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
-Save choice to `.planning/config.json` (merge, do not overwrite other fields).
-All subsequent output follows the resolved language. Technical terms stay in English.
+## STEP 0 — Language
+Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
+`.planning/config.json`; ask only if unset).
 
 ## Procedure
 
 ```bash
-echo "=== PENDING FEATURES ==="
 for dir in .planning/feat/features/*/; do
+  [ -f "${dir}plan.md" ] || continue
   slug=$(basename "$dir")
-  [ -f "$dir/plan.md" ] && [ ! -f "$dir/plan.done.md" ] && echo "$slug"
-done 2>/dev/null
-
-echo "=== EXECUTED FEATURES ==="
-for dir in .planning/feat/features/*/; do
-  slug=$(basename "$dir")
-  [ -f "$dir/plan.done.md" ] && echo "$slug"
+  if [ ! -f "${dir}plan.done.md" ]; then
+    echo "PENDING $slug"
+  else
+    st=$(grep -m1 -oE 'FAILED|WITH CAVEATS|COMPLETE' "${dir}plan.done.md")
+    echo "${st:-EXECUTED} $slug"
+  fi
 done 2>/dev/null
 
 echo "=== CODEBASE CONTEXT ==="
@@ -37,17 +35,21 @@ Present:
 ```
 📊 pwdev-feat Status
 
-Pending features: {N}
-Executed features: {N}
+Pending: {N} | Complete: {N} | With caveats: {N} | Failed: {N}
 Codebase context: {present / missing}
 CLAUDE.md: {present / missing}
 
 Pending:
   user-crud       → /pwdev-feat:exec user-crud
-  auth-tests      → /pwdev-feat:exec auth-tests
 
-Executed:
-  login-page      → ✅ COMPLETE
+Complete:
+  login-page      → ✅
+
+With caveats:
+  profile-page    → ⚠️ see .planning/feat/features/profile-page/plan.done.md
+
+Failed:
+  auth-tests      → ❌ re-run: /pwdev-feat:exec auth-tests
 
 👉 Next: /pwdev-feat:exec {next pending slug}
 ```

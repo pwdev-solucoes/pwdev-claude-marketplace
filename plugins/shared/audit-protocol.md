@@ -3,6 +3,10 @@
 > **INTERNAL REFERENCE** — This file is the canonical specification for the audit trail system.
 > It is NOT shipped with individual plugins. Each plugin has self-contained inline instructions
 > derived from this spec. Edit this file to update the spec, then sync to each plugin's init/agents.
+>
+> **pwdev-code (v2.0+)** no longer uses inline agent INSERTs: recording is deterministic via
+> plugin hooks (`hooks/hooks.json` + `scripts/audit-hook.sh` + `scripts/audit-log.sh`) and the
+> schema is packaged at `references/audit-schema.md`; sync schema changes there too.
 
 The audit trail provides a persistent, queryable log of all actions taken by plugins.
 It runs **in parallel** with the existing Markdown-based state — Markdown remains the

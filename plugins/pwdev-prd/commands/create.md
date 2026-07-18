@@ -5,14 +5,12 @@ argument-hint: "[feature or system description]"
 
 # /pwdev-prd:create — Create New PRD
 
-## Agent
-Assume the persona of `agents/agent-interviewer.md`.
-
-## Model Resolution
-Read `.planning/config.json` for `model_profile` and `model_overrides`.
-Resolution order: (1) `model_overrides[agent-name]` → (2) profile lookup → (3) agent frontmatter `model:` default.
-Profiles — **performance**: opus for all except reviewer/scanner (sonnet). **balanced**: opus for orchestrator, sonnet for planner/executor/builder/interviewer/reviewer/researcher, haiku for scanner. **economy**: sonnet for most, haiku for reviewer/scanner.
-When spawning the agent, pass the resolved model via the `model` parameter.
+## Method (inline — you run in the MAIN context)
+You are the PRD interviewer. Follow
+`${CLAUDE_PLUGIN_ROOT}/references/interview-method.md` end-to-end: persona,
+principles, the 12-step process, smart defaults, consistency checks, opening
+message. No Task tool, no model resolution — you interview the human, and
+subagents cannot do that (this plugin has zero subagents by design).
 
 ## Input
 $ARGUMENTS: brief description of the feature or system (required).
@@ -25,12 +23,9 @@ mkdir -p .planning/prds
 
 ## Flow
 
-### STEP 0 — Language Selection
-Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
-If set → use it silently. If not set → detect from $ARGUMENTS or ask:
-"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
-Save choice to `.planning/config.json` (merge, do not overwrite other fields).
-All subsequent output follows the resolved language. Technical terms stay in English.
+### STEP 0 — Language
+Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
+`.planning/config.json`; ask only if unset).
 
 ### STEP 1 — Determine PRD slug
 
@@ -43,7 +38,7 @@ mkdir -p .planning/prds/{slug}
 
 ### STEP 2 — Start Interview
 
-Follow the 12-step interview process from agent-interviewer.md:
+Follow the 12-step interview process from `references/interview-method.md`:
 
 1. Context and overview
 2. Problem and opportunity
@@ -66,12 +61,14 @@ Follow the 12-step interview process from agent-interviewer.md:
 
 ### STEP 3 — Consistency Checks
 
-Before generating, run all consistency checks from agent-interviewer.md.
+Before generating, run all consistency checks from `references/interview-method.md`.
 Flag any issues and resolve with the user.
 
 ### STEP 4 — Generate PRD.md
 
-Write to `.planning/prds/{slug}/PRD.md` following exactly the template in `templates/PRD.template.md`.
+Write to `.planning/prds/{slug}/PRD.md` following exactly the template in
+`${CLAUDE_PLUGIN_ROOT}/templates/PRD.template.md`.
+Log: `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" event create "" completed ".planning/prds/{slug}/PRD.md" ""`
 
 ### STEP 5 — Ask about JSON export
 
@@ -81,7 +78,8 @@ The PRD has been generated in Markdown.
 Would you also like a JSON export with English keys? (y/n)
 ```
 
-If yes → generate `.planning/prds/{slug}/prd.json` following the JSON structure from agent-interviewer.md.
+If yes → generate `.planning/prds/{slug}/prd.json` following the canonical
+JSON structure in `${CLAUDE_PLUGIN_ROOT}/references/interview-method.md`.
 
 ### STEP 6 — Ask about commit
 

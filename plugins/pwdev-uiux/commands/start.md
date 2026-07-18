@@ -7,12 +7,9 @@ argument-hint: "[UI task description, e.g.: 'create 3-step onboarding form']"
 
 **Argument**: $ARGUMENTS
 
-## STEP 0 — Language Selection
-Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
-If set → use it silently. If not set → detect from $ARGUMENTS or ask:
-"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
-Save choice to `.planning/config.json` (merge, do not overwrite other fields).
-All subsequent output follows the resolved language. Technical terms stay in English.
+## STEP 0 — Language
+Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
+`.planning/config.json`; ask only if unset).
 
 ## Pre-check
 
@@ -55,36 +52,29 @@ Update `.planning/ui/current-flow.md`:
 - **Started**: [timestamp]
 ```
 
-## Model Resolution
-Read `.planning/config.json` for `model_profile` and `model_overrides`.
-Resolution order: (1) `model_overrides[agent-name]` → (2) profile lookup → (3) agent frontmatter `model:` default.
-Profiles — **performance**: opus for all except reviewer/scanner (sonnet). **balanced**: opus for orchestrator, sonnet for planner/executor/builder/interviewer/reviewer/researcher, haiku for scanner. **economy**: sonnet for most, haiku for reviewer/scanner.
-When spawning the agent, pass the resolved model via the `model` parameter.
+## Orchestrate (inline — you run in the MAIN context)
 
-## Activate orchestrator
+You are the orchestrator. Follow
+`${CLAUDE_PLUGIN_ROOT}/references/workflow.md` end-to-end: it defines the
+5 phases, their gates (which you verify with the human — that is why
+orchestration runs inline), and the REAL subagent spawns per phase via the
+Task tool with prompts from
+`${CLAUDE_PLUGIN_ROOT}/references/spawn-contracts.md` and models from
+`${CLAUDE_PLUGIN_ROOT}/references/model-profiles.md`.
 
-Invoke `orchestrator` with:
-```
-New task started via /pwdev-uiux:start:
-
-Task: $ARGUMENTS
-Stack: [read from .planning/ui/stack.json — framework, library, forms]
-
-Project UI Skill available: [yes/no — include content if yes]
-
-Start PHASE 1: spawn ux-analyst to create spec in .planning/ui/ux-spec.md
-Wait for approval gate before advancing to PHASE 2.
-```
+Start PHASE 1 now: spawn `pwdev-uiux:ux-analyst` with the task
+`$ARGUMENTS`, the stack from `.planning/ui/stack.json`, the skill paths, and
+`LANGUAGE: {lang}`. Wait for its status reply, present the spec to the human,
+and only advance to PHASE 2 after the gate is approved.
 
 ## Inform user
 
 ```
-🚀 pwdev-uiux v1.0.0 — Flow started
+🚀 pwdev-uiux v2.0.0 — Flow started
 
 Task: $ARGUMENTS
 Phase: PHASE 1 — Understand
-Agent: ux-analyst
+Subagent: pwdev-uiux:ux-analyst
 
-The ux-analyst is analyzing the context and creating the UX spec.
 Use /pwdev-uiux:status to track progress.
 ```

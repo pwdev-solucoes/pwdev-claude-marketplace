@@ -17,12 +17,9 @@ Activates the `ui-scanner` agent to analyze the current project and generate
 as a reference for the `ui-builder` to build components consistent
 with what already exists in the project.
 
-## STEP 0 — Language Selection
-Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
-If set → use it silently. If not set → detect from $ARGUMENTS or ask:
-"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
-Save choice to `.planning/config.json` (merge, do not overwrite other fields).
-All subsequent output follows the resolved language. Technical terms stay in English.
+## STEP 0 — Language
+Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
+`.planning/config.json`; ask only if unset).
 
 ## Pre-check
 
@@ -58,34 +55,41 @@ If no frontend framework detected and no stack.json: inform and suggest running 
 → Code analysis + browser attempt on localhost:3000 and localhost:5173
 
 ## Model Resolution
-Read `.planning/config.json` for `model_profile` and `model_overrides`.
-Resolution order: (1) `model_overrides[agent-name]` → (2) profile lookup → (3) agent frontmatter `model:` default.
-Profiles — **performance**: opus for all except reviewer/scanner (sonnet). **balanced**: opus for orchestrator, sonnet for planner/executor/builder/interviewer/reviewer/researcher, haiku for scanner. **economy**: sonnet for most, haiku for reviewer/scanner.
-When spawning the agent, pass the resolved model via the `model` parameter.
+Resolve subagent models per `${CLAUDE_PLUGIN_ROOT}/references/model-profiles.md`
+(override keys `uiux-<agent>`); pass via the Task tool `model` parameter.
 
-## Activate ui-scanner
+## Spawn the ui-scanner (real subagent, Task tool)
 
-Spawn `ui-scanner` agent with:
+- `subagent_type`: `pwdev-uiux:ui-scanner`
+- `model`: per model-profiles.md (override key `uiux-ui-scanner`)
+- prompt:
+
 ```
-Task: Analyze the current project's UI and generate .planning/ui/project-ui-skill.md
+TASK: analyze the current project's UI and generate .planning/ui/project-ui-skill.md
 
 Mode: [determined above]
 Analysis URL: [ARGUMENTS or default localhost]
+STACK: {from .planning/ui/stack.json — component library comes from here,
+never assume one}
+SKILLS — read these files BEFORE scanning:
+  ${CLAUDE_PLUGIN_ROOT}/skills/ux-tokens/SKILL.md
+  ${CLAUDE_PLUGIN_ROOT}/skills/component-audit/SKILL.md
+  ${CLAUDE_PLUGIN_ROOT}/skills/ui-best-practices/SKILL.md
+  ${CLAUDE_PLUGIN_ROOT}/skills/ui-theme-reference/SKILL.md
+LANGUAGE: {lang}
 
 Execute all protocol analysis steps:
 1. Structure and stack inventory
-2. Component analysis (shadcn-vue + product)
+2. Component analysis (library + product components)
 3. CSS token and tailwind.config extraction
 4. Visual analysis (if URL available)
-5. Best practices compliance check (using ui-best-practices skill)
-6. Generate project-ui-skill.md (including compliance report section)
+5. Best practices compliance check
+6. Generate project-ui-skill.md (including the compliance report section)
 
-The ui-scanner agent has ui-best-practices and ui-theme-reference declared as skills
-in its frontmatter — they are loaded automatically.
-
-Prioritize: most recurring patterns, most used tokens, most complex components.
-Document inconsistencies as observations — not judgments.
-The compliance report should flag P0 violations as issues and P1 as recommendations.
+Prioritize: most recurring patterns, most used tokens, most complex
+components. Document inconsistencies as observations — not judgments.
+Flag P0 violations as issues and P1 as recommendations.
+Reply with AT MOST 10 status lines.
 ```
 
 ## Final report

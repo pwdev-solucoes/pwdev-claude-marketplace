@@ -1,10 +1,11 @@
 {
   "name": "pwdev-prd",
-  "version": "1.1.2",
-  "description": "PRD creation framework for Claude Code — structured interview-driven Product Requirements Documents for features and systems, technology-agnostic, with Markdown + JSON export.",
+  "displayName": "PWDEV PRD — Interview-Driven Requirements",
+  "version": "2.0.0",
+  "description": "PRD creation framework for Claude Code — 12-step interview-driven Product Requirements Documents, run inline (the interviewer talks to you; zero subagents by design), technology-agnostic, Markdown + canonical JSON export, deterministic SQLite audit via hooks.",
   "author": {
     "name": "Paulo Soares",
-      "url": "https://github.com/soarescbm"
+    "url": "https://github.com/soarescbm"
   },
   "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
   "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
@@ -16,7 +17,9 @@
     "product-requirements",
     "requirements-engineering",
     "interview",
+    "hooks",
     "documentation",
     "agnostic"
-  ]
+  ],
+  "hooks": "./hooks/hooks.json"
 }

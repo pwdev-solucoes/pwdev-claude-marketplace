@@ -8,12 +8,9 @@ description: >
 
 # /pwdev-uiux:review
 
-## STEP 0 — Language Selection
-Read `.planning/config.json` for the `lang` field (`pt-BR` or `en`).
-If set → use it silently. If not set → detect from $ARGUMENTS or ask:
-"Em qual idioma deseja seguir? / Which language would you like to use? 1. Portugues (PT-BR) 2. English (EN)"
-Save choice to `.planning/config.json` (merge, do not overwrite other fields).
-All subsequent output follows the resolved language. Technical terms stay in English.
+## STEP 0 — Language
+Follow `${CLAUDE_PLUGIN_ROOT}/references/language.md` (resolve `lang` from
+`.planning/config.json`; ask only if unset).
 
 ## Check components
 
@@ -23,66 +20,49 @@ grep -c "##" .planning/ui/component-log.md 2>/dev/null || echo "0 components"
 
 If no components: `Run /pwdev-uiux:build first.`
 
-## Pre-check — Verify skills available
+## Parallel dispatch (REAL subagents — TWO Task calls in the SAME message)
 
-Both `ui-best-practices` and `ui-theme-reference` skills must be installed in the plugin.
-These are loaded automatically by the agents via their `skills:` frontmatter declaration.
+Models per `${CLAUDE_PLUGIN_ROOT}/references/model-profiles.md`
+(`uiux-a11y-reviewer`, `uiux-ux-critic`). Skills are NOT auto-loaded — the
+prompts list the SKILL.md paths explicitly. Read the stack from
+`.planning/ui/stack.json` and pass it in (never hardcode a framework).
 
-```bash
-ls skills/ui-best-practices/SKILL.md skills/ui-theme-reference/SKILL.md 2>/dev/null
+1. `subagent_type: "pwdev-uiux:a11y-reviewer"`:
+```
+TASK: audit components in .planning/ui/component-log.md against WCAG 2.1 AA
+AND the accessibility-related P0 rules from ui-best-practices.
+STACK: {from .planning/ui/stack.json — headless libs handle WAI-ARIA for
+primitives; focus on project extensions}
+SKILLS — read these files BEFORE auditing:
+  ${CLAUDE_PLUGIN_ROOT}/skills/accessibility/SKILL.md
+  ${CLAUDE_PLUGIN_ROOT}/skills/ui-best-practices/SKILL.md (1.1-1.3, 2.2-2.3, 14.1, 14.3, 14.4)
+  ${CLAUDE_PLUGIN_ROOT}/skills/ui-theme-reference/SKILL.md
+LANGUAGE: {lang}
+OUTPUT CONTRACT: WCAG findings + P0 compliance table appended to
+.planning/ui/review-findings.md (do not overwrite); reply ≤10 status lines.
 ```
 
-If missing: warn that compliance review will be incomplete without canonical reference skills.
-
-## Parallel dispatch
-
-**a11y-reviewer**:
+2. `subagent_type: "pwdev-uiux:ux-critic"`:
 ```
-Audit components in component-log.md against WCAG 2.1 AA AND the
-accessibility-related P0 rules from the ui-best-practices skill.
-
-Skills loaded automatically via frontmatter:
-  - ui-best-practices (sections 1.1, 1.2, 1.3, 2.2, 2.3, 14.1, 14.3, 14.4)
-  - ui-theme-reference (token values for contrast, focus, motion, sizing)
-
-Stack: Vue 3 + Reka UI v2. Reka manages WAI-ARIA for primitives.
-Focus on: project extensions, icons without label, contrast, aria-live,
-PLUS best practices P0 rules: dark mode (1.1), semantic tokens (1.2),
-reserved colors (1.3), min font size (2.2), type scale (2.3),
-reduced motion (14.1), focus indicators (14.3), touch targets (14.4).
-
-Output must include:
-  1. Standard WCAG findings
-  2. Best practices P0 compliance table (per rule, pass/fail)
-
-Append to .planning/ui/review-findings.md (do not overwrite).
-```
-
-**ux-critic**:
-```
-Review components in component-log.md by:
-  1. The 7 Playbook axes (qualitative UX assessment)
-  2. The ui-best-practices skill ruleset (concrete rules, P0–P3)
-
-Skills loaded automatically via frontmatter:
-  - ui-best-practices (all 14 sections)
-  - ui-theme-reference (all token definitions)
-
-Each finding must cite the violated principle (Part A) or rule ID + priority (Part B).
-P0 violations are always Critical severity.
-
-Output must include:
-  1. Part A — 7-axis findings
-  2. Part B — Best practices compliance table with pass/fail per rule
-  3. Compliance summary with counts by priority (P0/P1/P2)
-
-Append to .planning/ui/review-findings.md (do not overwrite).
+TASK: review components in .planning/ui/component-log.md by the 7 Playbook
+axes AND the ui-best-practices ruleset (P0-P3).
+STACK: {from .planning/ui/stack.json}
+SKILLS — read these files BEFORE reviewing:
+  ${CLAUDE_PLUGIN_ROOT}/skills/component-audit/SKILL.md
+  ${CLAUDE_PLUGIN_ROOT}/skills/ux-tokens/SKILL.md
+  ${CLAUDE_PLUGIN_ROOT}/skills/ui-best-practices/SKILL.md (all 14 sections)
+  ${CLAUDE_PLUGIN_ROOT}/skills/ui-theme-reference/SKILL.md
+LANGUAGE: {lang}
+OUTPUT CONTRACT: Part A (7 axes) + Part B (compliance table) + priority
+summary appended to .planning/ui/review-findings.md (do not overwrite);
+every finding cites principle or rule ID; P0 violations are Critical;
+reply ≤10 status lines.
 ```
 
 ## Consolidate result
 
-After both agents complete, read `.planning/ui/review-findings.md` and generate
-a unified compliance report:
+After BOTH status replies arrive, read `.planning/ui/review-findings.md` and
+generate a unified compliance report:
 
 ```
 ## /pwdev-uiux:review Result

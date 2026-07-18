@@ -41,52 +41,15 @@ All subsequent output in this command must follow the resolved language.
 
 Technical terms (API, CRUD, REST, endpoint) always stay in English regardless of language choice.
 
-## STEP 0.1 — Model Profile Configuration
+## STEP 0.1 — Model Profile (informational only)
 
-Model profile configuration is **mandatory** during initialization.
+This plugin has **zero subagents** — the interview runs inline on the
+session model, so pwdev-prd never resolves a model. Do NOT configure
+`model_profile` here:
 
-1. Read `.planning/config.json` — if `model_profile` already exists, show current setting and ask:
-   - PT-BR: `Perfil de modelo atual: {model_profile}. Deseja manter? (s/n)`
-   - EN: `Current model profile: {model_profile}. Keep it? (y/n)`
-   If yes → proceed. If no → go to step 2.
-
-2. If no config or user wants to change, present the profiles (use `{{LANG}}`):
-
-   **PT-BR:**
-   ```
-   Qual perfil de modelo deseja usar para os agentes?
-
-   1. Performance  — Opus para maioria dos agentes (melhor qualidade, maior custo)
-   2. Balanced     — Opus para orquestracao, Sonnet para execucao, Haiku para scans (recomendado)
-   3. Economy      — Sonnet para maioria, Haiku para scans (menor custo)
-
-   Escolha (1-3, padrao: 2):
-   ```
-
-   **EN:**
-   ```
-   Which model profile would you like to use for agents?
-
-   1. Performance  — Opus for most agents (best quality, highest cost)
-   2. Balanced     — Opus for orchestration, Sonnet for execution, Haiku for scans (recommended)
-   3. Economy      — Sonnet for most, Haiku for scans (lowest cost)
-
-   Choose (1-3, default: 2):
-   ```
-
-3. Optionally ask about overrides:
-   - PT-BR: `Deseja configurar overrides para agentes especificos? (s/n, padrao: n)`
-   - EN: `Configure overrides for specific agents? (y/n, default: n)`
-
-   If yes, list this plugin's agents with their profile-assigned model and let the user change individual ones.
-
-4. Save `model_profile` (and `model_overrides` if any) to `.planning/config.json` — merge, do not overwrite.
-
-5. Confirm:
-   - PT-BR: `Perfil de modelo definido: **{profile}**`
-   - EN: `Model profile set: **{profile}**`
-
-Agent-to-role mapping: interviewer→sonnet(balanced). Resolution order: (1) `model_overrides[agent-name]` → (2) profile lookup → (3) agent frontmatter `model:` default.
+- If `.planning/config.json` already has `model_profile` (set by pwdev-code
+  or pwdev-feat), leave it untouched — it belongs to plugins with subagents.
+- If it's absent, skip silently — nothing in this plugin reads it.
 
 ## STEP 1 — Check if already initialized
 
@@ -182,16 +145,23 @@ It is **disabled by default** and the database file is **never versioned** (adde
    fi
    ```
 
+   (Full schema reference: `${CLAUDE_PLUGIN_ROOT}/references/audit-schema.md`.
+   The database is SHARED with pwdev-code/pwdev-feat — any plugin's init may
+   create it. Once the DB exists, recording is automatic via the plugin's
+   hooks — no inline INSERTs.)
+
    Ensure `.planning/pwdev-audit.db` is in `.gitignore`:
    ```bash
    if ! grep -q "pwdev-audit.db" .gitignore 2>/dev/null; then
-     echo -e "\n# PWDEV audit trail (not versioned)\n.planning/pwdev-audit.db\n.planning/pwdev-audit.db-journal\n.planning/pwdev-audit.db-wal" >> .gitignore
+     printf '\n# PWDEV audit trail (not versioned)\n.planning/pwdev-audit.db\n.planning/pwdev-audit.db-journal\n.planning/pwdev-audit.db-wal\n.planning/.audit-tmp/\n' >> .gitignore
    fi
    ```
 
-   Log the initialization event:
+   Log the initialization event and config changes (best-effort):
    ```bash
-   [ -f ".planning/pwdev-audit.db" ] && sqlite3 .planning/pwdev-audit.db "INSERT INTO events (plugin, command, action, detail) VALUES ('pwdev-prd', 'init', 'completed', '{\"workspace\": \".planning/prds/\"}');" 2>/dev/null
+   "${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" event init "" completed .planning/prds/ ""
+   "${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" config lang "$OLD_LANG" "$NEW_LANG" init
+   "${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" config audit "$OLD_AUDIT" "$NEW_AUDIT" init
    ```
 
 5. If audit is **disabled**, skip silently. Confirm:

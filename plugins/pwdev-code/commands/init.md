@@ -57,7 +57,7 @@ Technical terms (API, CRUD, REST, endpoint) always stay in English regardless of
 
 ### STEP 1 — Route Subcommand
 
-Parse $ARGUMENTS:
+Route on `$1`:
 
 - **`map`** → go to STEP 5 (Codebase Mapping)
 - **`mcp`** → go to STEP 6 (MCP Server Configuration)
@@ -84,11 +84,15 @@ FILE_COUNT=$(find . -maxdepth 2 -type f \( -name "*.ts" -o -name "*.js" -o -name
 ### STEP 2.2 — Create Workspace Structure
 
 ```bash
-# Layer 1-3 — Plugin structure
-mkdir -p .claude/{commands,agents,skills}
+# Project skills (commands and agents are provided by the plugin itself)
+mkdir -p .claude/skills
 
 # Context — project-level knowledge (discover + init map)
 mkdir -p .planning/context
+
+# Memory — curated durable knowledge (versioned; see references/memory.md)
+mkdir -p .planning/memory
+[ -f ".planning/memory/MEMORY.md" ] || printf '# Project Memory Index\n<!-- managed by /pwdev-code:memory — one line per ACTIVE memory; edit via the command -->\n\n' > .planning/memory/MEMORY.md
 
 # Product — PRD + Roadmap
 mkdir -p .planning/product/roadmap
@@ -117,41 +121,22 @@ Model profile configuration is **mandatory** during initialization.
 
 2. If no config or user wants to change, present the profiles:
 
-   **PT-BR:**
-   ```
-   Qual perfil de modelo deseja usar para os agentes?
-
-   1. Performance  — Opus para maioria dos agentes (melhor qualidade, maior custo)
-   2. Balanced     — Opus para orquestracao, Sonnet para execucao, Haiku para scans (recomendado)
-   3. Economy      — Sonnet para maioria, Haiku para scans (menor custo)
-
-   Escolha (1-3, padrao: 2):
-   ```
-
-   **EN:**
-   ```
-   Which model profile would you like to use for agents?
-
-   1. Performance  — Opus for most agents (best quality, highest cost)
-   2. Balanced     — Opus for orchestration, Sonnet for execution, Haiku for scans (recommended)
-   3. Economy      — Sonnet for most, Haiku for scans (lowest cost)
-
-   Choose (1-3, default: 2):
-   ```
+   Use the profile selection prompt (PT-BR/EN) from
+   `${CLAUDE_PLUGIN_ROOT}/references/model-profiles.md` — it is the single
+   source of truth for the profile table (only the 7 subagents resolve
+   models: executor, roadmap, simplifier, code-reviewer, qa, verifier, researcher).
 
 3. Optionally ask about overrides:
-   - PT-BR: `Deseja configurar overrides para agentes especificos? (s/n, padrao: n)`
-   - EN: `Configure overrides for specific agents? (y/n, default: n)`
+   - PT-BR: `Deseja configurar overrides para subagentes especificos? (s/n, padrao: n)`
+   - EN: `Configure overrides for specific subagents? (y/n, default: n)`
 
-   If yes, list this plugin's agents with their profile-assigned model and let the user change individual ones.
+   If yes, list the 7 subagents with their profile-assigned model and let the user change individual ones.
 
 4. Save `model_profile` (and `model_overrides` if any) to `.planning/config.json` — merge, do not overwrite.
 
 5. Confirm:
    - PT-BR: `Perfil de modelo definido: **{profile}**`
    - EN: `Model profile set: **{profile}**`
-
-Agent-to-role mapping: architect/planner/roadmap→sonnet(balanced), interviewer/prd→sonnet(balanced), executor/quick→sonnet(balanced), code-reviewer/qa→sonnet(balanced), researcher→sonnet(balanced), verifier→haiku(balanced). Resolution order: (1) `model_overrides[agent-name]` → (2) profile lookup → (3) agent frontmatter `model:` default.
 
 ### STEP 2.4 — Audit Trail (opt-in, disabled by default)
 
@@ -225,9 +210,12 @@ It is **disabled by default** and the database file is **never versioned** (adde
    Ensure `.planning/pwdev-audit.db` is in `.gitignore`:
    ```bash
    if ! grep -q "pwdev-audit.db" .gitignore 2>/dev/null; then
-     echo -e "\n# PWDEV audit trail (not versioned)\n.planning/pwdev-audit.db\n.planning/pwdev-audit.db-journal\n.planning/pwdev-audit.db-wal" >> .gitignore
+     printf '\n# PWDEV audit trail (not versioned)\n.planning/pwdev-audit.db\n.planning/pwdev-audit.db-journal\n.planning/pwdev-audit.db-wal\n.planning/.audit-tmp/\n' >> .gitignore
    fi
    ```
+
+   (Full schema reference: `${CLAUDE_PLUGIN_ROOT}/references/audit-schema.md`.
+   Once the DB exists, recording is automatic via the plugin's hooks.)
 
 5. If audit is **disabled**, skip silently. Confirm:
    - PT-BR: `Trilha de auditoria: **{ativada/desativada}**`
@@ -243,8 +231,8 @@ It is **disabled by default** and the database file is **never versioned** (adde
   "model_overrides": {},
   "audit": false,
   "framework": "PWDEV-CODE",
-  "version": "1.2.0",
-  "architecture": "3-layer (commands, agents, skills)",
+  "version": "2.0.0",
+  "architecture": "hybrid (interactive commands + 7 real subagents)",
   "type": "[greenfield|brownfield]",
   "created": "[date]",
   "default_intensity": "standard",
@@ -263,37 +251,42 @@ It is **disabled by default** and the database file is **never versioned** (adde
 - Status: Awaiting /pwdev-code:discover, /pwdev-code:product prd or /pwdev-code:quick
 
 ## Decisions
-- [date]: PWDEV-CODE v1.2.0 framework initialized — type [greenfield|brownfield]
+- [date]: PWDEV-CODE v2.0.0 framework initialized — type [greenfield|brownfield]
 
 ## Blockers
 - None
 ```
 
-**`.claude/settings.json`:**
+**`.claude/settings.json`** (merge if it already exists — never overwrite):
 ```json
 {
   "permissions": {
     "allow": [
-      "git add", "git commit", "git status", "git log", "git diff",
-      "git tag", "git branch", "git checkout", "git stash",
-      "mkdir -p", "cat", "ls", "find", "grep", "wc",
-      "npm run", "npm test", "npm audit",
-      "composer run", "composer test", "composer audit",
-      "npx vitest", "npx playwright", "npx eslint", "npx tsc"
+      "Bash(git add:*)", "Bash(git commit:*)", "Bash(git status:*)",
+      "Bash(git log:*)", "Bash(git diff:*)", "Bash(git tag:*)",
+      "Bash(git branch:*)", "Bash(git checkout:*)", "Bash(git stash:*)",
+      "Bash(mkdir -p:*)", "Bash(ls:*)", "Bash(wc:*)",
+      "Bash(npm run:*)", "Bash(npm test:*)", "Bash(npm audit:*)",
+      "Bash(composer run:*)", "Bash(composer test:*)", "Bash(composer audit:*)",
+      "Bash(npx vitest:*)", "Bash(npx playwright:*)", "Bash(npx eslint:*)", "Bash(npx tsc:*)"
     ],
     "deny": [
-      "rm -rf /", "git push --force", "git reset --hard",
-      "cat .env", "cat .env.local", "cat .env.production",
-      "cat *.pem", "cat *.key", "cat id_rsa*"
+      "Bash(rm -rf /:*)", "Bash(git push --force:*)", "Bash(git reset --hard:*)",
+      "Read(./.env)", "Read(./.env.*)", "Read(**/*.pem)", "Read(**/*.key)",
+      "Read(**/id_rsa*)", "Bash(cat .env:*)"
     ]
   }
 }
 ```
 
+Note: secret access is also blocked deterministically by the plugin's
+PreToolUse hook (`scripts/guard-secrets.sh`) — the deny rules are a second
+layer, not the only defense.
+
 ### STEP 2.6 — Log Initialization (if audit enabled)
 
 ```bash
-[ -f ".planning/pwdev-audit.db" ] && sqlite3 .planning/pwdev-audit.db "INSERT INTO events (plugin, command, action, detail) VALUES ('pwdev-code', 'init', 'completed', '{\"type\": \"$TYPE\", \"structure\": \"v1.2.0-organized\"}');" 2>/dev/null
+"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" event init INIT completed .planning "{\"type\": \"$TYPE\", \"version\": \"2.0.0\"}"
 ```
 
 ### STEP 2.7 — If Brownfield
@@ -301,16 +294,14 @@ Suggest: "/pwdev-code:init map to analyze existing repo."
 
 ### STEP 2.8 — Summary
 ```markdown
-## ✅ PWDEV-CODE v1.2.0 Initialized
+## ✅ PWDEV-CODE v2.0.0 Initialized
 
 **Type:** [greenfield|brownfield]
-**Architecture:** 3 layers (commands, agents, skills)
+**Architecture:** hybrid — interactive commands + 7 real subagents (plugin-provided)
 
 **Structure created:**
 .claude/
-├── commands/        # Orchestration (14 commands)
-├── agents/          # Personas (11 agents)
-├── skills/          # Knowledge packs
+├── skills/          # Project knowledge packs (commands/agents come from the plugin)
 └── settings.json
 
 .planning/
@@ -617,7 +608,7 @@ ls .claude/skills/*/SKILL.md 2>/dev/null
 
 ### STEP 8.3 — Generate from Template
 
-Read the template from `.claude/templates/CLAUDE.template.md` (if it exists in the plugin) or use the built-in structure.
+Read the template from `${CLAUDE_PLUGIN_ROOT}/templates/CLAUDE.template.md`.
 
 Fill in the sections using detected project data:
 - Section 12 (Repository Conventions): stack, framework, database, test runner, linter
