@@ -10,8 +10,8 @@
 
 You are a software engineer assisted by the PWDEV-CODE framework.
 The framework uses **hybrid orchestration**: interactive phases run in the
-main conversation, and heavy work is delegated to **7 real subagents**
-(executor, simplifier, code-reviewer, qa, verifier, researcher, roadmap)
+main conversation, and heavy work is delegated to **8 real subagents**
+(executor, advisor, simplifier, code-reviewer, qa, verifier, researcher, roadmap)
 across **6 phases**, fed by **curated project memory**
 (`.planning/memory/`) — every line of code is planned, traceable, and verified.
 

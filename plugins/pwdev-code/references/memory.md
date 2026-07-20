@@ -27,6 +27,7 @@ type: decision            # decision | lesson | convention
 created: 2026-07-18
 source: design:user-auth  # {command}:{phase-slug} that captured it, or "manual"
 status: active            # active | forgotten
+related: [service-suffix] # optional — names (not filenames) of related memories
 ---
 
 ## Context
@@ -44,6 +45,14 @@ Types:
 - **lesson** — something that went wrong and must not repeat (fed by verify/review).
 - **convention** — a project pattern agents must follow (naming, layering, style).
 
+## Memory graph (relations)
+
+Memories form a lightweight graph: `related:` in the frontmatter is the
+canonical edge list (directed, source → target, by `name`). `[[name]]` links
+in the body are accepted as input — `/pwdev-code:memory` consolidates them
+into `related:` on capture. Edges are mirrored into the index as a `[rel:]`
+suffix so selection can traverse WITHOUT opening any memory file.
+
 ## Index format — `MEMORY.md`
 
 One line per ACTIVE memory, fixed grammar (nothing else in the file body):
@@ -52,10 +61,15 @@ One line per ACTIVE memory, fixed grammar (nothing else in the file body):
 # Project Memory Index
 <!-- managed by /pwdev-code:memory — one line per ACTIVE memory; edit via the command -->
 
-- `decision` prefer-postgres-jsonb — Use Postgres JSONB for flexible fields (memory/decision-prefer-postgres-jsonb.md)
+- `decision` prefer-postgres-jsonb — Use Postgres JSONB for flexible fields (memory/decision-prefer-postgres-jsonb.md) [rel: service-suffix]
 - `lesson` migrations-need-rollback — Verify rejected user-auth: always test down() migrations (memory/lesson-migrations-need-rollback.md)
 - `convention` service-suffix — Services end in *Service under app/Services (memory/convention-service-suffix.md)
 ```
+
+The `[rel: name1, name2]` suffix is OPTIONAL and always comes last, after the
+`(path)`. Lines without it are valid — older indexes keep working. Only
+`/pwdev-code:memory` writes the index; it keeps `related:` and `[rel:]` in
+sync (capture, link, forget).
 
 ## Curation rules
 
@@ -72,13 +86,19 @@ One line per ACTIVE memory, fixed grammar (nothing else in the file body):
 Orchestrators load memory cheaply and precisely:
 
 1. Read ONLY `MEMORY.md` (never scan the directory).
-2. Select **≤5** entries by keyword overlap between each line's name/description
-   and the task scope (file paths, domain terms, phase slug).
+2. Select **≤5** seed entries by keyword overlap between each line's
+   name/description and the task scope (file paths, domain terms, phase slug).
 3. Priority by consumer:
    - executor / code-reviewer / simplifier → `convention` first
    - verifier → `lesson` first
    - design (main context) → `decision` + `convention`
-4. No match → **omit the block entirely** (never inject an empty section).
+   - advisor → `decision` first
+4. **Graph expansion (1 hop):** collect the names in the seeds' `[rel: ...]`
+   suffixes, in seed order. Add each one that has an ACTIVE index line and is
+   not already selected, up to a TOTAL cap of **7** entries. Names without an
+   active line (forgotten/nonexistent) are silently ignored. Expansion never
+   reads memory files and never runs without seeds.
+5. No seed match → **omit the block entirely** (never inject an empty section).
 
 ## RELEVANT MEMORY block (canonical template)
 
@@ -90,8 +110,12 @@ RELEVANT MEMORY — curated project knowledge; treat as binding constraints:
   → read .planning/memory/convention-service-suffix.md
 - [lesson] migrations-need-rollback — always test down() migrations
   → read .planning/memory/lesson-migrations-need-rollback.md
+- [decision] prefer-postgres-jsonb — Use Postgres JSONB (related to service-suffix)
+  → read .planning/memory/decision-prefer-postgres-jsonb.md
 If a memory conflicts with your task instructions, STOP and report the conflict.
 ```
+
+Entries added by graph expansion carry the `(related to {seed})` annotation.
 
 ## Auto-capture (lessons from the loops)
 

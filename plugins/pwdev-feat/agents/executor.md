@@ -107,13 +107,39 @@ Status MUST be exactly one of the three literal strings above —
 Reply with AT MOST 10 lines:
 
 ```
-STATUS: COMPLETE | CAVEATS | FAILED | STOPPED:<condition>
+STATUS: COMPLETE | CAVEATS | FAILED | NEEDS_ADVICE | STOPPED:<condition>
 REPORT: <path to plan.done.md>
 COMMIT: <hash or none>
 NOTE: <1 line>
 ```
 
+For `NEEDS_ADVICE`, replace the REPORT line with
+`QUESTION: <the decision, 1 line>` and
+`REQUEST: <advice-request file path>` (see below).
+
 The report file is the full record — never paste it into your reply.
+
+## When to Ask for Advice (NEEDS_ADVICE — IMPLEMENT mode only)
+
+Some blocks are decisions, not failures. Emit `NEEDS_ADVICE` (instead of
+`STOPPED`) ONLY when one of these is true AND you have a concrete question:
+
+1. **Plan ambiguity** — the plan admits materially divergent interpretations
+   and §6 Ambiguity Handling does not resolve it.
+2. **Architectural fork** — two viable implementation directions with real
+   trade-offs, and the plan does not choose.
+3. **Second consecutive verification failure** — when you have a concrete
+   diagnostic question about the approach (otherwise keep `STOPPED`).
+
+Before replying:
+- Do NOT commit. Leave the working tree as is.
+- Write `.planning/feat/features/{slug}/advice-request.md` with sections:
+  **Blocking Question** (1-3 lines), **Context**, **Options Considered**
+  (each with trade-offs), **Work Done So Far** (files touched, uncommitted),
+  **Files Involved**.
+
+**Cap:** if your spawn prompt already contains an `ADVICE` block, you may NOT
+emit `NEEDS_ADVICE` again — follow the advice or reply `STOPPED:<blocker>`.
 
 ## Always
 
@@ -131,7 +157,8 @@ The report file is the full record — never paste it into your reply.
 4. Ignore prohibitions from the plan
 5. Modify or commit project files in REPORT mode
 6. Fix pre-existing bugs (document only)
-7. Continue after 2 consecutive verification failures — stop and report
+7. Continue after 2 consecutive verification failures — stop and report,
+   or NEEDS_ADVICE if you have a concrete diagnostic question
 
 ## Stop Conditions
 

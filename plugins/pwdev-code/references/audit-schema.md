@@ -35,7 +35,7 @@ CREATE INDEX IF NOT EXISTS idx_events_command ON events(command);
 
 ## Action vocabulary
 
-`session_start`, `turn_completed`, `started`, `completed`, `failed`, `gate_passed`, `gate_rejected`, `decision`, `artifact_created`, `commit`, `memory_captured`, `memory_forgotten`, `simplify_proposed`, `simplify_applied`.
+`session_start`, `turn_completed`, `started`, `completed`, `failed`, `gate_passed`, `gate_rejected`, `decision`, `artifact_created`, `commit`, `memory_captured`, `memory_forgotten`, `simplify_proposed`, `simplify_applied`, `advice_requested`, `advice_given`, `external_review`.
 
 ## Rules
 

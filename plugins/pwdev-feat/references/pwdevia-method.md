@@ -72,8 +72,18 @@ outside the plan scope.
 cat CLAUDE.md 2>/dev/null | head -80
 cat .planning/feat/codebase.md 2>/dev/null | head -50
 ls .planning/feat/features/ 2>/dev/null
+cat .planning/memory/MEMORY.md 2>/dev/null
 ```
 Understand: stack, conventions, existing plans.
+
+**Project memory (read-only, when present):** `.planning/memory/` is curated
+by pwdev-code — pwdev-feat NEVER writes there. If the index exists, pick ≤3
+entries by keyword overlap with the request (index lines only; expand 1 hop
+via `[rel: ...]` suffixes within the cap of 3; `decision`/`convention`
+first). Fold them into the plan: decisions/conventions become Assumptions
+(§6) or Quality Criteria (§5) when applicable. If a memory conflicts with
+the human's request → raise it in the interview (Step 3), don't silently
+override either side.
 
 ### Step 2 — Interpret the Request
 Identify: plan type (feature / backend / frontend / test / review), scope,

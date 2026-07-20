@@ -1,4 +1,4 @@
-# PWDEV-FEAT v2.0.0
+# PWDEV-FEAT v2.1.0
 
 *Leia em [English](./README.md)*
 
@@ -14,6 +14,25 @@ que um **subagente executor real** implementa com contexto fresco. Sem
 cerimônias complexas — basta descrever, planejar e executar.
 
 ---
+
+## Novidades da v2.1.0
+
+- **Subagente advisor** (`pwdev-feat:advisor` + status `NEEDS_ADVICE`):
+  quando o executor trava numa decisão difícil no meio do plano (ambiguidade,
+  fork arquitetural, falha repetida de verificação com pergunta concreta),
+  ele para e pergunta. O `/pwdev-feat:exec` consulta o advisor — o modelo
+  forte (Opus mesmo em `balanced`), somente leitura, `effort: high` — e
+  re-spawna o executor com a decisão anexada. Máx. 1 consulta por plano;
+  chave de override `feat-advisor` no config compartilhado.
+- **Memória compartilhada do projeto (somente leitura)**: quando o projeto
+  mantém memória curada (`.planning/memory/`, gerida pelo pwdev-code), o
+  planner PWDEVIA incorpora ≤3 memórias relevantes nas
+  Assumptions/Quality Criteria do plano e o `/pwdev-feat:exec` injeta um
+  bloco RELEVANT MEMORY no spawn do executor. O pwdev-feat nunca escreve na
+  memória — a curadoria fica com o pwdev-code.
+- A segunda opinião via CLI externa é recurso do `/pwdev-code:review` — não
+  existe aqui (planos de review do feat rodam dentro de um subagente, sem
+  canal para confirmar um comando externo com o humano).
 
 ## Novidades da v2.0.0
 
@@ -297,7 +316,7 @@ Arquivos de contexto opcionais:
 |---------|-----------|------------|
 | **Filosofia** | Rápido e prático | Rigoroso e rastreável |
 | **Fases** | Plan → Execute | DISCOVER → DESIGN → PLAN → EXECUTE → REVIEW → VERIFY |
-| **Agentes** | PWDEVIA inline + 1 subagente executor | 7 subagentes reais + personas inline |
+| **Agentes** | PWDEVIA inline + subagentes executor e advisor | 8 subagentes reais + personas inline |
 | **Comandos** | 12 | 16 |
 | **Ideal para** | Features individuais, iterações rápidas, equipes pequenas | Projetos complexos, conformidade, equipes grandes |
 | **Cerimônia** | Mínima | Estruturada com gates |
@@ -312,5 +331,5 @@ Arquivos de contexto opcionais:
 
 Apache-2.0 — Veja [LICENSE](./LICENSE)
 
-*PWDEV-FEAT v2.0.0 — Descreva, planeje, execute. Entregue.*
+*PWDEV-FEAT v2.1.0 — Descreva, planeje, execute. Entregue.*
 *Mantido por [Paulo Soares](https://github.com/soarescbm)*

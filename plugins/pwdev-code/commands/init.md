@@ -221,6 +221,41 @@ It is **disabled by default** and the database file is **never versioned** (adde
    - PT-BR: `Trilha de auditoria: **{ativada/desativada}**`
    - EN: `Audit trail: **{enabled/disabled}**`
 
+### STEP 2.45 — Execution Options (opt-in)
+
+Ask about parallel execution (default: disabled):
+
+**PT-BR:**
+```
+Ativar execucao paralela de tarefas independentes? (experimental)
+Requer Task tool com suporte a isolation: worktree (Claude Code recente).
+Tarefas marcadas Parallel-safe executam em worktrees isolados e sao
+integradas por merge sequencial.
+
+1. Nao — execucao serial (padrao)
+2. Sim — ativar parallel_execution
+
+Escolha (1-2, padrao: 1):
+```
+
+**EN:**
+```
+Enable parallel execution of independent tasks? (experimental)
+Requires a Task tool with isolation: worktree support (recent Claude Code).
+Parallel-safe tasks run in isolated worktrees and are integrated by
+sequential merge.
+
+1. No — serial execution (default)
+2. Yes — enable parallel_execution
+
+Choose (1-2, default: 1):
+```
+
+Merge the choice into config: `"parallel_execution": true|false` (and
+`"max_parallel_executors": 3` when enabled). Do NOT ask about
+`external_models` interactively — it is a manual, documented configuration
+(see README: optional external reviewer CLI for /pwdev-code:review).
+
 ### STEP 2.5 — Write Initial Files
 
 **`.planning/config.json`:**
@@ -230,9 +265,10 @@ It is **disabled by default** and the database file is **never versioned** (adde
   "model_profile": "[performance|balanced|economy — from STEP 2.3]",
   "model_overrides": {},
   "audit": false,
+  "parallel_execution": false,
   "framework": "PWDEV-CODE",
-  "version": "2.0.0",
-  "architecture": "hybrid (interactive commands + 7 real subagents)",
+  "version": "2.2.0",
+  "architecture": "hybrid (interactive commands + 8 real subagents)",
   "type": "[greenfield|brownfield]",
   "created": "[date]",
   "default_intensity": "standard",
@@ -251,7 +287,7 @@ It is **disabled by default** and the database file is **never versioned** (adde
 - Status: Awaiting /pwdev-code:discover, /pwdev-code:product prd or /pwdev-code:quick
 
 ## Decisions
-- [date]: PWDEV-CODE v2.0.0 framework initialized — type [greenfield|brownfield]
+- [date]: PWDEV-CODE v2.2.0 framework initialized — type [greenfield|brownfield]
 
 ## Blockers
 - None
@@ -297,7 +333,7 @@ Suggest: "/pwdev-code:init map to analyze existing repo."
 ## ✅ PWDEV-CODE v2.0.0 Initialized
 
 **Type:** [greenfield|brownfield]
-**Architecture:** hybrid — interactive commands + 7 real subagents (plugin-provided)
+**Architecture:** hybrid — interactive commands + 8 real subagents (plugin-provided)
 
 **Structure created:**
 .claude/

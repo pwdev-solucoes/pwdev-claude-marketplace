@@ -74,7 +74,24 @@ declare, right after its title:
 ```markdown
 Wave: N
 Depends on: [PP-TT, ...] | none
+Complexity: low | medium | high
+Parallel-safe: yes | no
 ```
+
+`Complexity` drives per-task model routing (see
+`references/model-profiles.md`). Default **medium**. Guide:
+- `low` — mechanical, isolated change touching 1-2 files (rename, config,
+  simple CRUD boilerplate following an existing pattern).
+- `high` — core business logic, migration, concurrency, security-sensitive
+  code, or a non-trivial algorithm. Declaring `high` REQUIRES a 1-line
+  justification comment right below the header.
+- When in doubt → `medium`. Never inflate to `high` without justification.
+
+`Parallel-safe: yes` ONLY when ALL of these hold (else `no`; omitted = `no`):
+- No `Depends on:` entry pointing to a task in the SAME wave;
+- The task's Files set is disjoint from every other `Parallel-safe: yes`
+  task in the same wave;
+- The task touches no migration, global config, or lockfile.
 
 Include active skills in "Required Context" when relevant:
 ```
@@ -87,7 +104,9 @@ endpoint/entity (§3), every planned test (§5), DoD achievable (§8).
 
 Per-task checklist: files <=5, actions <=7, ACs verifiable with commands,
 >=1 executable verification command, stop conditions cover destructive
-actions, context explicit, Conventional Commit message, skills referenced.
+actions, context explicit, Conventional Commit message, skills referenced,
+`Complexity` declared (justified when `high`), `Parallel-safe` consistent
+with the Files section (no overlap with other parallel-safe tasks).
 
 ### STEP 5 — Present and Wait for Approval
 Show: N plans, N tasks, N waves, coverage N/N.
@@ -112,5 +131,7 @@ Show: N plans, N tasks, N waves, coverage N/N.
 ## Prohibitions (command-level)
 - ❌ NEVER generate code
 - ❌ NEVER create a task with >5 files or a plan with >3 tasks
-- ❌ NEVER omit the `Wave:` / `Depends on:` header
+- ❌ NEVER omit the `Wave:` / `Depends on:` / `Complexity:` header
+  (`Parallel-safe:` may be omitted — it defaults to `no`)
+- ❌ NEVER declare `Complexity: high` without a 1-line justification
 - ❌ NEVER proceed without approval

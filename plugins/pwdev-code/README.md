@@ -1,4 +1,4 @@
-# PWDEV-CODE v2.1.0
+# PWDEV-CODE v2.2.0
 
 *Read this in [Português Brasileiro](./README.pt-BR.md)*
 
@@ -10,11 +10,40 @@ Never execute without a plan. Never ship without verification.
 
 PWDEV-CODE uses **hybrid orchestration**: interactive phases run in the main
 conversation (where the human approves gates), and heavy work is delegated to
-**7 real subagents** with fresh context — across **6 phases** with correction
+**8 real subagents** with fresh context — across **6 phases** with correction
 loops and **curated project memory**, so every line of code is planned,
 traceable, and verified.
 
 ---
+
+## What's New in v2.2.0
+
+- **Advisor subagent** (`advisor` + `NEEDS_ADVICE` status): when the executor
+  hits a hard decision mid-task (spec ambiguity, architectural fork, repeated
+  verification failure with a concrete question), it stops and asks. The
+  orchestrator consults the advisor — the strong model (Opus even in
+  `balanced`), read-only, `effort: high` — and re-spawns the executor with
+  the decision attached. Max 1 consultation per task; high-confidence advice
+  is captured as a `decision` memory.
+- **Per-task model routing**: plans now declare `Complexity: low|medium|high`
+  in the wave header; `/pwdev-code:execute` resolves the executor's model per
+  task via the complexity matrix in `references/model-profiles.md`
+  (e.g. `balanced`: low/medium → sonnet, high → opus; fix plans are
+  implicitly high). Backward compatible — no field means `medium`, exactly
+  the old behavior.
+- **Memory graph**: memories can relate to each other (`related:` frontmatter,
+  `[[name]]` links, `[rel:]` suffix in the index). Spawn-time selection
+  expands 1 hop through relations (total cap 7) without opening any file.
+  New subcommands: `/pwdev-code:memory link <a> <b>` and
+  `/pwdev-code:memory graph`.
+- **Opt-in parallel waves** (`"parallel_execution": true`): tasks marked
+  `Parallel-safe: yes` with disjoint file sets run as a batch of executors in
+  isolated git worktrees (`isolation: worktree`), then merge sequentially.
+  Default remains serial; any doubt falls back to serial.
+- **Optional external reviewer CLI** (`external_models.reviewer` in
+  `.planning/config.json`): `/pwdev-code:review` can run a second opinion via
+  an external CLI (codex, gemini, opencode, qwen — allowlisted, human-confirmed).
+  External findings are advisory only — they never block the review gate.
 
 ## What's New in v2.1.0
 
@@ -107,7 +136,7 @@ The framework separates **what** to do, **who** does it, and **with what** knowl
 │  phases (interview, design decisions) stay here             │
 ├─────────────────────────────────────────────────────────────┤
 │  SUBAGENTS (agents/) — "WHO does the heavy work"            │
-│  7 real subagents spawned with fresh context and a          │
+│  8 real subagents spawned with fresh context and a          │
 │  self-contained prompt (spawn contract)                     │
 ├─────────────────────────────────────────────────────────────┤
 │  SKILLS (skills/) — "WITH WHAT knowledge"                   │
@@ -201,6 +230,7 @@ Real subagents (spawned via the Task tool, fresh context, restricted tools):
 | Subagent | Model (balanced) | Tools | What it does |
 |----------|:---------------:|-------|-------------|
 | **executor** | sonnet | Read, Write, Edit, Grep, Glob, Bash | Implements ONE atomic task: code, verification, atomic commit, summary |
+| **advisor** | opus | read-only + Write (no Edit) | Resolves ONE hard decision raised by a blocked executor (NEEDS_ADVICE) — picks a direction, never implements |
 | **code-reviewer** | sonnet | read-only + Write (no Edit) | Reviews diff across 6 dimensions (correctness, security, perf, arch, conventions, tests) |
 | **qa** | sonnet | read-only + Write (no Edit) | Runs the real test suite, traces requirement→test, proposes skeletons |
 | **verifier** | sonnet | read-only + Write (no Edit) | Adversarial verification; generates fix plans when it rejects |
@@ -254,7 +284,7 @@ Interactive personas absorbed into commands (main context): interviewer
 
 | Command | When to use |
 |---------|------------|
-| `/pwdev-code:memory` | Curate durable project memory — `capture`, `list`, `show`, `forget` |
+| `/pwdev-code:memory` | Curate durable project memory — `capture`, `list`, `show`, `forget`, `link`, `graph` |
 | `/pwdev-code:session` / `session resume` | Check progress / resume from state.md |
 | `/pwdev-code:init map` | First contact with an existing repo |
 | `/pwdev-code:health` / `health --deps` | Project health scorecard / dependency audit |
@@ -280,8 +310,14 @@ Single source of truth: `references/model-profiles.md`.
 | Subagent | performance | balanced (default) | economy |
 |----------|:-----------:|:------------------:|:-------:|
 | executor / roadmap | opus | sonnet | sonnet |
+| advisor | opus | opus | sonnet |
 | code-reviewer / qa / verifier | sonnet | sonnet | haiku |
 | researcher | sonnet | haiku | haiku |
+
+The executor additionally routes **per task**: plans declare
+`Complexity: low|medium|high`, and e.g. `balanced` sends `high` tasks to opus
+while `low`/`medium` stay on sonnet (matrix in `references/model-profiles.md`;
+the executor never runs on haiku).
 
 Override specific subagents with `model_overrides` in `.planning/config.json`:
 
@@ -289,9 +325,17 @@ Override specific subagents with `model_overrides` in `.planning/config.json`:
 {
   "lang": "pt-BR",
   "model_profile": "balanced",
-  "model_overrides": { "executor": "opus" }
+  "model_overrides": { "executor": "opus" },
+  "parallel_execution": false,
+  "external_models": { "reviewer": { "cmd": "codex exec", "enabled": false, "timeout_s": 300 } }
 }
 ```
+
+`parallel_execution` (default false) enables opt-in parallel wave batches
+with worktree isolation. `external_models.reviewer` (optional, manual) lets
+`/pwdev-code:review` collect an advisory second opinion from an external CLI
+— the command is shown to you before its first run, and external findings
+never block the review gate on their own.
 
 ---
 
@@ -340,7 +384,7 @@ detects your stack, interviews you (max 3 rounds), and generates a skill in
 
 ```
 .planning/
-├── config.json                       # lang, model_profile, audit, version
+├── config.json                       # lang, model_profile, audit, parallel_execution, external_models, version
 ├── state.md                          # Source of truth: position, gates, fix_iteration
 ├── pwdev-audit.db                    # Audit trail (opt-in, gitignored)
 │
@@ -391,5 +435,5 @@ detects your stack, interviews you (max 3 rounds), and generates a skill in
 
 Apache-2.0 — See [LICENSE](./LICENSE)
 
-*PWDEV-CODE v2.1.0 — Complexity lives in the system, not in your workflow.*
+*PWDEV-CODE v2.2.0 — Complexity lives in the system, not in your workflow.*
 *Maintained by [Paulo Soares](https://github.com/soarescbm)*

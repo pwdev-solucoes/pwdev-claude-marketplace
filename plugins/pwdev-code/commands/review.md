@@ -75,9 +75,38 @@ Resolve each `model` per `${CLAUDE_PLUGIN_ROOT}/references/model-profiles.md`.
    (spec §2/5/8, summary paths, skills, `LANGUAGE: {lang}`).
    Writes: `review/qa-report.md`.
 
+### STEP 3.5 — External Second Opinion (opt-in)
+
+Read `.planning/config.json` → `external_models.reviewer`. If absent or
+`"enabled" != true` → skip silently. Config shape:
+
+```json
+"external_models": { "reviewer": { "cmd": "codex exec", "enabled": false, "timeout_s": 300 } }
+```
+
+1. **Safety check.** Extract the first token of `cmd`. If it is NOT in the
+   allowlist (`codex`, `gemini`, `opencode`, `qwen`) OR this is the first
+   external run in the session → show the human the EXACT command that will
+   run and ask for confirmation. The value comes from user config and is
+   executed via Bash — never proceed silently outside the allowlist.
+2. **Availability.** `command -v <binary>` fails → warn
+   `⚠️ External reviewer CLI not found — continuing with Claude-only review`
+   and skip. Same graceful degradation on non-zero exit or timeout.
+3. **Run.** Write the scope diff (from STEP 1) to a temp file plus a short
+   criteria header (spec §5/§7 summarized). Invoke `{cmd}` with
+   `timeout {timeout_s}`, passing the diff via the file — NEVER interpolate
+   diff content into the shell command line. Redirect output to
+   `.planning/phases/{slug}/review/external-review.md`.
+4. **Log.** `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" event review REVIEW external_review external-review.md '{"cmd":"<binary>","exit":N}'`
+
 ### STEP 4 — Consolidate Results
 Wait for both status replies (≤10 lines each). Read ONLY the replies — do
 not paste the report files into your context.
+
+If STEP 3.5 produced `external-review.md`: read AT MOST ~120 lines of it and
+extract findings tagged `source: external`. External findings are
+**advisory**: they appear in the report and in Action Items but NEVER set
+`review_gate: BLOCKED` on their own.
 
 ### STEP 5 — Present Report
 
@@ -94,6 +123,11 @@ not paste the report files into your context.
   Tests: [N] passed, [N] failed, [N] skipped
   Coverage gaps: [N] critical, [N] important
   Report: .planning/phases/{active-phase-slug}/review/qa-report.md
+
+## External Review (source: external — advisory only; omit if not run)
+  Tool: [binary]
+  Findings: [N] (do not block the gate)
+  Report: .planning/phases/{active-phase-slug}/review/external-review.md
 
 ## Combined Verdict
   [PASS | FIX REQUIRED | BLOCKED]
@@ -121,7 +155,8 @@ Record in `.planning/state.md`:
 - review_gate: [OK | BLOCKED]
 ```
 
-**Gate rule:** if critical findings > 0 (either report) → `review_gate: BLOCKED`.
+**Gate rule:** if critical findings > 0 (code-review or qa report) →
+`review_gate: BLOCKED`. External findings never count toward the gate.
 While BLOCKED, `/pwdev-code:verify` refuses to run — fix the findings via
 `/pwdev-code:execute` and re-review, or the human explicitly overrides.
 A prior `review_gate: STALE` (set by simplify) is cleared here to OK/BLOCKED.
@@ -139,3 +174,6 @@ lesson from the critical findings (`source: review:{slug}`), per
 - ❌ NEVER approve with critical security findings
 - ❌ NEVER paste report files into your context — status replies only
 - ❌ NEVER review generated/build/vendor files
+- ❌ NEVER run an external CLI without showing the exact command and getting
+  confirmation (first use in session, or any binary outside the allowlist)
+- ❌ NEVER let external findings alone set review_gate: BLOCKED

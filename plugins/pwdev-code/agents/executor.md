@@ -114,13 +114,40 @@ Write `execution/{PP}-summary.md` (path given in your spawn prompt):
 Reply with AT MOST 10 lines:
 
 ```
-STATUS: COMPLETE | CAVEATS | FAILED | STOPPED:<condition>
+STATUS: COMPLETE | CAVEATS | FAILED | NEEDS_ADVICE | STOPPED:<condition>
 SUMMARY: <summary path>
 COMMIT: <hash or none>
 NOTE: <1 line>
 ```
 
+For `NEEDS_ADVICE`, replace the SUMMARY line with
+`QUESTION: <the decision, 1 line>` and
+`REQUEST: <advice-request file path>` (see below).
+
 The summary file is the full record — never paste it into your reply.
+
+## When to Ask for Advice (NEEDS_ADVICE)
+
+Some blocks are decisions, not failures. Emit `NEEDS_ADVICE` (instead of
+`STOPPED`) ONLY when one of these is true AND you have a concrete question:
+
+1. **Spec ambiguity** — the task/spec admits materially divergent
+   interpretations, and neither the task, spec §6, nor RELEVANT MEMORY
+   resolves it.
+2. **Architectural fork** — two viable implementation directions with real
+   trade-offs, and the plan does not choose.
+3. **Second consecutive verification failure** — when you have a concrete
+   diagnostic question about the approach (otherwise keep `STOPPED`).
+
+Before replying:
+- Do NOT commit. Leave the working tree as is.
+- Write `execution/{PP}-advice-request.md` with sections: **Blocking
+  Question** (1-3 lines), **Context**, **Options Considered** (each with
+  trade-offs), **Work Done So Far** (files touched, uncommitted), **Files
+  Involved**.
+
+**Cap:** if your spawn prompt already contains an `ADVICE` block, you may NOT
+emit `NEEDS_ADVICE` again — follow the advice or reply `STOPPED:<blocker>`.
 
 ## Skill Consumption
 
@@ -138,7 +165,7 @@ Stop IMMEDIATELY (reply `STOPPED:<condition>`) if:
 |-----------|--------|
 | File outside scope needs modification | Stop, list file and reason |
 | Unplanned dependency is needed | Stop, describe dependency |
-| Verification failed 2x consecutively | Stop, show errors |
+| Verification failed 2x consecutively | Stop, show errors — or NEEDS_ADVICE if you have a concrete diagnostic question |
 | Hardcoded secret found in code | Stop, flag location |
 | Non-trivial compilation error or merge conflict | Stop, show it |
 | Task or spec stop condition is true | Stop, cite the condition |
