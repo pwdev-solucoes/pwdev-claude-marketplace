@@ -18,6 +18,12 @@ traceable, and verified.
 
 ## What's New in v2.2.0
 
+> **Upgrading from 2.1.x?** Installed plugins are cached copies — merging or
+> pulling this repo does NOT update them. Run
+> `claude plugin marketplace update pwdev-claude-marketplace` followed by
+> `claude plugin update pwdev-code@pwdev-claude-marketplace`, then **restart
+> Claude Code** so the new `advisor` subagent registers in the session.
+
 - **Advisor subagent** (`advisor` + `NEEDS_ADVICE` status): when the executor
   hits a hard decision mid-task (spec ambiguity, architectural fork, repeated
   verification failure with a concrete question), it stops and asks. The

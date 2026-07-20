@@ -17,6 +17,12 @@ ceremonies — just describe, plan, execute.
 
 ## What's New in v2.1.0
 
+> **Upgrading from 2.0.x?** Installed plugins are cached copies — merging or
+> pulling this repo does NOT update them. Run
+> `claude plugin marketplace update pwdev-claude-marketplace` followed by
+> `claude plugin update pwdev-feat@pwdev-claude-marketplace`, then **restart
+> Claude Code** so the new `advisor` subagent registers in the session.
+
 - **Advisor subagent** (`pwdev-feat:advisor` + `NEEDS_ADVICE` status): when
   the executor hits a hard decision mid-plan (plan ambiguity, architectural
   fork, repeated verification failure with a concrete question), it stops and
