@@ -21,13 +21,38 @@ Notes:
 - `verifier` needs real reasoning for adversarial refutation — haiku only in `economy`.
 - `advisor` exists to BE the strong model at the moment of doubt — opus even in `balanced`; `economy` uses sonnet (the agent's `effort: high` still applies).
 
+## Per-task complexity routing (executor only)
+
+Plans declare `Complexity: low | medium | high` in their wave-contract
+header (see `commands/plan.md`). When /pwdev-code:execute spawns the
+executor, the model comes from this matrix instead of the plain profile row:
+
+| Complexity        | `performance` | `balanced` | `economy` |
+|-------------------|:-------------:|:----------:|:---------:|
+| high              | opus          | **opus**   | sonnet    |
+| medium (default)  | opus          | sonnet     | sonnet    |
+| low               | **sonnet**    | sonnet     | sonnet    |
+
+Rules:
+- The `medium` row equals the profile table — a plan without the field
+  behaves exactly as before (backward compatible).
+- Floor: the executor NEVER runs on haiku — it edits production code and
+  commits (same rationale as the simplifier note above).
+- Ceiling: `economy` never escalates to opus — the profile is a cost
+  promise. For a one-off boost use `model_overrides["executor"]`.
+- Fix plans (`verify/fix-*.md`) are implicitly `high` — the first attempt
+  at the normal tier already failed.
+- `model_overrides["executor"]` beats the matrix, always.
+
 ## Resolution order
 
 When a command spawns a subagent:
 
 1. `.planning/config.json` → `model_overrides["<agent>"]` (e.g. `"executor": "opus"`) — if present, use it.
-2. Profile table above, using `.planning/config.json` → `model_profile` (default `balanced`).
-3. Agent frontmatter `model:` (fallback when no config exists).
+2. For the executor, when the plan declares `Complexity:` → the complexity
+   matrix above (absent → `medium`).
+3. Profile table above, using `.planning/config.json` → `model_profile` (default `balanced`).
+4. Agent frontmatter `model:` (fallback when no config exists).
 
 Pass the result via the `model` parameter of the Task tool call.
 

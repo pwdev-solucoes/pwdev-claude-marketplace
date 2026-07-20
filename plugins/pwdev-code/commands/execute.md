@@ -68,6 +68,8 @@ For each task of the current wave, in order:
 **2.2 Spawn** via the Task tool:
 - `subagent_type`: `pwdev-code:executor`
 - `model`: resolve per `${CLAUDE_PLUGIN_ROOT}/references/model-profiles.md`
+  using the plan's `Complexity:` header (per-task matrix; absent → medium;
+  fix plans are implicitly high; `model_overrides` still wins)
 
 **2.3 Collect the status reply** (≤10 lines). Read ONLY the status — do not
 open the summary file unless the status demands it.
