@@ -99,9 +99,45 @@ open the summary file unless the status demands it.
 **2.5 Wave checkpoint:** when a wave completes, note it in `state.md` before
 starting the next wave.
 
-> Tasks within a wave are independent by contract, but run them sequentially —
-> parallel executors would race on git commits. (Future evolution: parallel
-> waves with `isolation: worktree` executors, at the cost of merge semantics.)
+### STEP 2-P — Parallel wave batches (opt-in)
+
+Default is SEQUENTIAL (STEP 2 loop above). Run a parallel batch ONLY when ALL
+of these hold — otherwise fall back to serial with a 1-line notice:
+
+1. `.planning/config.json` → `"parallel_execution": true` (default false);
+2. NOT `--fix` mode and NOT a retry/advice re-spawn (those are always serial);
+3. The wave has ≥2 pending tasks with `Parallel-safe: yes`;
+4. **Orchestrator re-check (never trust the planner alone):** extract each
+   candidate's Files section and confirm pairwise-disjoint sets. Any overlap,
+   glob, or ambiguous path → that task leaves the batch and runs serially.
+
+Batch flow:
+
+1. **Spawn** up to `max_parallel_executors` (config, default 3) executor Task
+   calls in a SINGLE message, each with `isolation: worktree` and the normal
+   prompt plus this extra line:
+   `PARALLEL MODE: you run in an isolated git worktree. Commit as usual in
+   your worktree branch. Do NOT push, do NOT merge, do NOT touch any file
+   outside your task's Files list.`
+   Remaining tasks wait for the next batch (successive batches until the
+   wave is exhausted).
+2. **Collect** ALL status replies of the batch before reacting — never
+   interleave merges with new spawns.
+3. **Integrate sequentially:** for each `COMPLETE`/`CAVEATS` task, in spawn
+   order: `git merge --no-ff <worktree-branch>` into the main branch.
+   Expected clean (disjoint files). On conflict → `git merge --abort`, mark
+   the task `FAILED` with note "merge conflict — scope violation suspected"
+   and re-run it SERIALLY on the main tree via the normal retry.
+4. **Non-green statuses** (`NEEDS_ADVICE` / `STOPPED` / `FAILED`) are handled
+   AFTER the green merges, one at a time, always serially (advisor/retry/
+   escalation never run in parallel).
+5. **Checkpoint:** the wave only closes when every batch is merged. Note in
+   `state.md`: `wave N: parallel batch of K, merged K`. Log:
+   `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" event execute EXECUTE completed wave-N '{"parallel":true,"batch":K}'`
+
+> Requires a Task tool with `isolation: worktree` support (recent Claude Code
+> versions). If the parameter is rejected at spawn time, fall back to the
+> serial loop and tell the human to keep `parallel_execution: false`.
 
 ### STEP 3 — Persistence
 The executor writes `execution/{PP}-summary.md` itself. After each task,
@@ -134,5 +170,7 @@ In `--fix` mode:
 - ❌ NEVER execute a task without an approved plan
 - ❌ NEVER ignore a `STOPPED:` condition from the executor
 - ❌ NEVER consult the advisor more than once per task
+- ❌ NEVER run parallel executors without `parallel_execution: true` +
+  `Parallel-safe: yes` + orchestrator-verified disjoint file sets
 - ❌ NEVER exceed 2 fix iterations — escalate to the human
 - ❌ NEVER continue to verify with tasks neither completed nor explicitly paused

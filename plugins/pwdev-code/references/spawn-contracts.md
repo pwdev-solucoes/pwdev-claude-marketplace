@@ -75,6 +75,9 @@ Follow this direction. Do NOT emit NEEDS_ADVICE again for this task —
 if still blocked, reply STOPPED:<specific blocker>.
 ```
 
+When running in a parallel wave batch (see `commands/execute.md` STEP 2-P),
+also append the `PARALLEL MODE:` line defined there.
+
 ---
 
 ## advisor (`subagent_type: "pwdev-code:advisor"`)
