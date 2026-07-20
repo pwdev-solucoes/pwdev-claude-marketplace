@@ -20,6 +20,34 @@ Core philosophy across all plugins:
 
 ## What's New
 
+### Orchestration patterns — pwdev-code v2.2.0 & pwdev-feat v2.1.0
+
+The development plugins absorbed three orchestration patterns — plan,
+specialize, review is now also *ask the strong model at the moment of doubt*:
+
+- **Advisor subagent** (both plugins) — an executor blocked on a hard
+  decision emits `NEEDS_ADVICE`; the orchestrator consults the new `advisor`
+  (Opus even in `balanced`, read-only, `effort: high`) and re-spawns the
+  executor with the decision attached. Max 1 consultation per task.
+- **Per-task model routing** (pwdev-code) — plans declare
+  `Complexity: low|medium|high`; the executor's model is resolved per task
+  (e.g. `balanced`: high → opus, low/medium → sonnet). Backward compatible.
+- **Memory graph** (pwdev-code) — memories relate via `related:` / `[[name]]`
+  / `[rel:]` index suffix; spawn selection expands 1 hop without opening
+  files; new `memory link` and `memory graph` subcommands. pwdev-feat now
+  consumes the shared memory read-only.
+- **Opt-in parallel waves** (pwdev-code) — `Parallel-safe` tasks with
+  disjoint files run as executor batches in isolated git worktrees, merged
+  sequentially. Default remains serial.
+- **Optional external reviewer CLI** (pwdev-code) — `/review` can collect an
+  advisory second opinion from an allowlisted CLI (codex, gemini, opencode,
+  qwen); external findings never block the gate.
+
+> **Upgrading?** Installed plugins are cached copies — run
+> `claude plugin marketplace update pwdev-claude-marketplace` +
+> `claude plugin update <plugin>@pwdev-claude-marketplace`, then restart
+> Claude Code so the new agents register.
+
 ### New plugins — marketing & operations
 
 The marketplace now goes beyond the development workflow:
@@ -113,9 +141,9 @@ The five original plugins were rebuilt on the modern Claude Code plugin system.
 
 | Plugin | Description | Version | License |
 |--------|-------------|:-------:|:-------:|
-| [**pwdev-code**](./plugins/pwdev-code/) | Spec-driven development — 7 real subagents, curated memory, correction loops, 16 commands | 2.1.1 | Apache-2.0 |
+| [**pwdev-code**](./plugins/pwdev-code/) | Spec-driven development — 8 real subagents (incl. advisor), per-task model routing, memory graph, opt-in parallel waves, 16 commands | 2.2.0 | Apache-2.0 |
 | [**pwdev-uiux**](./plugins/pwdev-uiux/) | UI/UX engineering — 6 real subagents, 5-phase workflow with gates, Figma, WCAG 2.1 AA | 2.0.1 | Apache-2.0 |
-| [**pwdev-feat**](./plugins/pwdev-feat/) | Simplified feature development — PWDEVIA 7-question plans inline + real executor subagent | 2.0.1 | Apache-2.0 |
+| [**pwdev-feat**](./plugins/pwdev-feat/) | Simplified feature development — PWDEVIA 7-question plans inline + executor and advisor subagents | 2.1.0 | Apache-2.0 |
 | [**pwdev-prd**](./plugins/pwdev-prd/) | Interview-driven PRD creation — 12-step inline interview, Markdown + canonical JSON | 2.0.1 | Apache-2.0 |
 | [**pwdev-copy**](./plugins/pwdev-copy/) | Trainable copywriting framework — 20 skills across the full cycle (VOC research → copy → review → analysis), 5 real subagents | 1.1.0 | Apache-2.0 |
 | [**pwdev-social-media**](./plugins/pwdev-social-media/) | AI creative generation for social — API orchestration (Ideogram, Leonardo, Flux, Runway, Freepik) with spend guard, 19 skills, 4 subagents | 2.0.1 | Apache-2.0 |
@@ -125,14 +153,15 @@ The five original plugins were rebuilt on the modern Claude Code plugin system.
 ### pwdev-code
 
 Spec-driven development with **hybrid orchestration**: interactive phases run
-in the main conversation; heavy work is delegated to **7 real subagents**
-across **6 phases** with correction loops and **curated project memory**.
+in the main conversation; heavy work is delegated to **8 real subagents**
+across **6 phases** with correction loops and a **curated project memory
+graph**.
 
 ```
 PRD ─▶ ROADMAP ─▶ DISCOVER ─▶ DESIGN ─▶ PLAN ─▶ EXECUTE ─▶ [SIMPLIFY] ─▶ REVIEW ─▶ VERIFY
 ```
 
-**Subagents:** executor, simplifier, code-reviewer, qa, adversarial verifier, researcher, roadmap
+**Subagents:** executor, advisor, simplifier, code-reviewer, qa, adversarial verifier, researcher, roadmap
 **Inline personas:** interviewer, architect, planner, product manager, quick engineer
 
 See the [full plugin documentation](./plugins/pwdev-code/README.md).
@@ -161,7 +190,7 @@ Simplified AI-assisted feature development using the **PWDEVIA 7-question method
 Describe ─▶ Plan (PWDEVIA, inline) ─▶ Execute (real subagent, IMPLEMENT/REPORT)
 ```
 
-**Agents:** PWDEVIA (inline planner) + executor (real subagent)
+**Agents:** PWDEVIA (inline planner) + executor and advisor (real subagents); reads pwdev-code's curated project memory when present
 
 **Plan types:** Feature, Backend, Frontend, Test, Review, Quick
 
@@ -260,7 +289,7 @@ claude plugin marketplace add https://github.com/pwdev-solucoes/pwdev-claude-mar
 ### Install plugins
 
 ```bash
-# Spec-driven development (7 subagents, 6 phases, curated memory)
+# Spec-driven development (8 subagents, 6 phases, memory graph)
 claude plugin install pwdev-code@pwdev-claude-marketplace
 
 # UI/UX engineering (6 subagents, Figma, WCAG, theming)
@@ -317,8 +346,9 @@ Each plugin ships its own profile table in `references/model-profiles.md`
 (`performance` / `balanced` / `economy`) applies across plugins; overrides
 are per-subagent, with namespaced keys where needed:
 
-- pwdev-code: `"executor"`, `"verifier"`, `"simplifier"`, ...
-- pwdev-feat: `"feat-executor"`
+- pwdev-code: `"executor"`, `"advisor"`, `"verifier"`, `"simplifier"`, ...
+  (the executor also routes per task via the plan's `Complexity:` header)
+- pwdev-feat: `"feat-executor"`, `"feat-advisor"`
 - pwdev-uiux: `"uiux-ui-builder"`, `"uiux-ux-critic"`, ...
 - pwdev-prd: no subagents — nothing to configure
 
