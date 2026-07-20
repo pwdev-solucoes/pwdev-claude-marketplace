@@ -5,10 +5,12 @@
 #
 # Usage:
 #   audit-log.sh event <command> <phase> <action> [target] [detail]
+#   audit-log.sh spawn <command> <phase> <agent> <model> [detail]
 #   audit-log.sh decision <phase> <decision> [rationale] [alternatives]
 #
 # Examples:
 #   audit-log.sh event design DESIGN gate_passed spec.md '{"decisions":4}'
+#   audit-log.sh spawn execute EXECUTE pwdev-code:executor opus '{"complexity":"high"}'
 #   audit-log.sh decision DESIGN "Use PostgreSQL" "Relational fit" "MongoDB, SQLite"
 
 DB=".planning/pwdev-audit.db"
@@ -27,6 +29,12 @@ case "$MODE" in
     TARGET=$(esc "${5:-}"); DETAIL=$(esc "${6:-}")
     sqlite3 "$DB" "INSERT INTO events (plugin, command, phase, action, target, detail) \
       VALUES ('pwdev-code', '$CMD', '$PHASE', '$ACTION', '$TARGET', '$DETAIL');" 2>/dev/null
+    ;;
+  spawn)
+    CMD=$(esc "$2"); PHASE=$(esc "$3"); AGENT=$(esc "$4")
+    MODEL=$(esc "$5"); DETAIL=$(esc "${6:-}")
+    sqlite3 "$DB" "INSERT INTO events (plugin, command, phase, agent, model, action, detail) \
+      VALUES ('pwdev-code', '$CMD', '$PHASE', '$AGENT', '$MODEL', 'model_resolved', '$DETAIL');" 2>/dev/null
     ;;
   decision)
     PHASE=$(esc "$2"); DECISION=$(esc "$3")

@@ -9,8 +9,11 @@ Harness rules that apply to EVERY spawn:
    `.planning/feat/...` files. Its chat reply is a short status block
    (≤10 lines). The orchestrator reads the status and NEVER pastes full
    reports back into its own context.
-3. **Model.** Resolve per `references/model-profiles.md` (override key
-   `feat-executor`) and pass via the Task tool `model` parameter.
+3. **Model.** Resolve per `references/model-profiles.md` (override keys
+   `feat-executor` / `feat-advisor`) and pass via the Task tool `model`
+   parameter. Right after issuing the spawn, record the resolution (the
+   script no-ops when audit is off):
+   `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" spawn exec "" {subagent_type} {model} ""`
 4. **Language.** Always include `LANGUAGE: {{lang}}`.
 
 ---

@@ -49,7 +49,13 @@ CREATE INDEX IF NOT EXISTS idx_events_command ON events(command);
 ## Action vocabulary (subset used by pwdev-feat)
 
 `session_start`, `turn_completed`, `started`, `completed`, `failed`,
-`advice_requested`, `advice_given`.
+`advice_requested`, `advice_given`, `model_resolved`.
+
+Note on `model_resolved`: the hook payload does NOT expose the subagent's
+model, so the `model` column is populated semantically — `/pwdev-feat:exec`
+calls `audit-log.sh spawn exec "" <agent> <model>` right after each Task
+spawn (rule 3 of `references/spawn-contracts.md`). Mechanical
+`started`/`completed` rows from the hooks keep `model` NULL.
 
 ## Rules
 
