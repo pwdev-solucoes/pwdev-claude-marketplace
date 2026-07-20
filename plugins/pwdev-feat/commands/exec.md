@@ -77,6 +77,17 @@ Read ONLY the ≤10-line status reply — do not open plan.done.md unless the
 status demands it.
 - `COMPLETE` / `CAVEATS` → STEP 5.
 - `STOPPED:<condition>` → present the condition, wait for the human.
+- `NEEDS_ADVICE` → max ONE consultation per plan:
+  1. Spawn `pwdev-feat:advisor` (template in spawn-contracts; `model` per
+     model-profiles, override key `feat-advisor`) with the advice-request
+     content and plan §1/§2/§7.
+  2. Log `advice_requested` / `advice_given` via the audit script (when
+     audit is enabled).
+  3. Re-spawn the executor with the original prompt + the ADVICE block
+     (spawn-contracts). If it replies `NEEDS_ADVICE` again → present to the
+     human and stop.
+  Advice and FAILED-retry counters are independent: at most 1 advice + 1
+  retry per plan.
 - `FAILED` → re-spawn ONCE with the retry block appended (spawn-contracts);
   fails again → stop and report both status notes.
 

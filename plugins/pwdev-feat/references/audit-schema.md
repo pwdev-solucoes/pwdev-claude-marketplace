@@ -14,7 +14,8 @@ in the project. Rows are distinguished by the `plugin` column (`pwdev-feat` vs
 `pwdev-code`). Either plugin's `init` may create the schema — it is identical.
 Query this plugin's rows with `WHERE plugin='pwdev-feat'`. Note: an
 `agent_type` without a plugin namespace could be logged by both plugins'
-hooks; spawns always use `pwdev-feat:executor`, so this is rare.
+hooks; spawns always use `pwdev-feat:executor` / `pwdev-feat:advisor`, so
+this is rare.
 
 ## Schema
 
@@ -47,7 +48,8 @@ CREATE INDEX IF NOT EXISTS idx_events_command ON events(command);
 
 ## Action vocabulary (subset used by pwdev-feat)
 
-`session_start`, `turn_completed`, `started`, `completed`, `failed`.
+`session_start`, `turn_completed`, `started`, `completed`, `failed`,
+`advice_requested`, `advice_given`.
 
 ## Rules
 
