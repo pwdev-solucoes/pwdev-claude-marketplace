@@ -17,6 +17,12 @@ cerimônias complexas — basta descrever, planejar e executar.
 
 ## Novidades da v2.1.0
 
+> **Atualizando da 2.0.x?** Plugins instalados são cópias em cache — fazer
+> merge ou pull deste repo NÃO os atualiza. Rode
+> `claude plugin marketplace update pwdev-claude-marketplace` e depois
+> `claude plugin update pwdev-feat@pwdev-claude-marketplace`, e **reinicie o
+> Claude Code** para o novo subagente `advisor` registrar na sessão.
+
 - **Subagente advisor** (`pwdev-feat:advisor` + status `NEEDS_ADVICE`):
   quando o executor trava numa decisão difícil no meio do plano (ambiguidade,
   fork arquitetural, falha repetida de verificação com pergunta concreta),
