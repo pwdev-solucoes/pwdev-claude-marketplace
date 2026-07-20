@@ -9,7 +9,7 @@
       "name": "pwdev-code",
       "displayName": "PWDEV Code — Spec-Driven Development",
       "source": "./plugins/pwdev-code",
-      "description": "Spec-driven development framework v2.1 — 7 real subagents, curated memory, simplification pass, strict verify, audit hooks, 16 commands",
+      "description": "Spec-driven development framework v2.2 — 8 real subagents (incl. advisor), per-task model routing, curated memory graph, opt-in parallel waves, simplification pass, strict verify, audit hooks, 16 commands",
       "category": "workflow",
       "tags": ["sdd", "agents", "hooks", "workflow"],
       "strict": true
@@ -27,7 +27,7 @@
       "name": "pwdev-feat",
       "displayName": "PWDEV Feat — Fast Feature Plans & Execution",
       "source": "./plugins/pwdev-feat",
-      "description": "Simplified feature development v2.0 — PWDEVIA 7-question plans inline + real executor subagent, audit hooks, 12 commands",
+      "description": "Simplified feature development v2.1 — PWDEVIA 7-question plans inline + executor and advisor subagents, shared project memory (read-only), audit hooks, 12 commands",
       "category": "workflow",
       "tags": ["feature-planning", "agents", "hooks", "workflow"],
       "strict": true

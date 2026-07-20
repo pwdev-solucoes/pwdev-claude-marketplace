@@ -1,8 +1,8 @@
 {
   "name": "pwdev-feat",
   "displayName": "PWDEV Feat — Fast Feature Plans & Execution",
-  "version": "2.0.1",
-  "description": "Simplified AI-assisted feature development — PWDEVIA 7-question action plans created inline (interviewing you, max 2 rounds), executed by a real executor subagent with fresh context and IMPLEMENT/REPORT modes, deterministic SQLite audit via hooks. Fast, practical, no ceremony.",
+  "version": "2.1.0",
+  "description": "Simplified AI-assisted feature development — PWDEVIA 7-question action plans created inline (interviewing you, max 2 rounds), executed by a real executor subagent with fresh context and IMPLEMENT/REPORT modes, an advisor subagent (strong model) for hard mid-task decisions, read-only consumption of pwdev-code's curated project memory when present, deterministic SQLite audit via hooks. Fast, practical, no ceremony.",
   "author": {
     "name": "Paulo Soares",
     "url": "https://github.com/soarescbm"

@@ -1,4 +1,4 @@
-# PWDEV-FEAT v2.0.0
+# PWDEV-FEAT v2.1.0
 
 *Read this in [Português Brasileiro](./README.pt-BR.md)*
 
@@ -14,6 +14,24 @@ action plans — created inline while interviewing you (max 2 rounds) — that a
 ceremonies — just describe, plan, execute.
 
 ---
+
+## What's New in v2.1.0
+
+- **Advisor subagent** (`pwdev-feat:advisor` + `NEEDS_ADVICE` status): when
+  the executor hits a hard decision mid-plan (plan ambiguity, architectural
+  fork, repeated verification failure with a concrete question), it stops and
+  asks. `/pwdev-feat:exec` consults the advisor — the strong model (Opus even
+  in `balanced`), read-only, `effort: high` — and re-spawns the executor with
+  the decision attached. Max 1 consultation per plan; override key
+  `feat-advisor` in the shared config.
+- **Shared project memory (read-only)**: when the project keeps a curated
+  memory (`.planning/memory/`, managed by pwdev-code), the PWDEVIA planner
+  folds ≤3 relevant memories into the plan's Assumptions/Quality Criteria and
+  `/pwdev-feat:exec` injects a RELEVANT MEMORY block into the executor spawn.
+  pwdev-feat never writes to the memory — curation stays with pwdev-code.
+- External reviewer CLI second opinion is a `/pwdev-code:review` feature —
+  not available here (feat review plans run inside a subagent, with no
+  channel to confirm an external command with the human).
 
 ## What's New in v2.0.0
 
@@ -296,7 +314,7 @@ Optional context files:
 |--------|-----------|------------|
 | **Philosophy** | Fast and practical | Rigorous and traceable |
 | **Phases** | Plan → Execute | DISCOVER → DESIGN → PLAN → EXECUTE → REVIEW → VERIFY |
-| **Agents** | PWDEVIA inline + 1 executor subagent | 7 real subagents + inline personas |
+| **Agents** | PWDEVIA inline + executor and advisor subagents | 8 real subagents + inline personas |
 | **Commands** | 12 | 16 |
 | **Best for** | Individual features, quick iterations, small teams | Complex projects, compliance, large teams |
 | **Ceremony** | Minimal | Structured with gates |
@@ -311,5 +329,5 @@ Optional context files:
 
 Apache-2.0 — See [LICENSE](./LICENSE)
 
-*PWDEV-FEAT v2.0.0 — Describe, plan, execute. Ship.*
+*PWDEV-FEAT v2.1.0 — Describe, plan, execute. Ship.*
 *Maintained by [Paulo Soares](https://github.com/soarescbm)*
