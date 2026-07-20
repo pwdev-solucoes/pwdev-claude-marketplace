@@ -35,7 +35,13 @@ CREATE INDEX IF NOT EXISTS idx_events_command ON events(command);
 
 ## Action vocabulary
 
-`session_start`, `turn_completed`, `started`, `completed`, `failed`, `gate_passed`, `gate_rejected`, `decision`, `artifact_created`, `commit`, `memory_captured`, `memory_forgotten`, `simplify_proposed`, `simplify_applied`, `advice_requested`, `advice_given`, `external_review`.
+`session_start`, `turn_completed`, `started`, `completed`, `failed`, `gate_passed`, `gate_rejected`, `decision`, `artifact_created`, `commit`, `memory_captured`, `memory_forgotten`, `simplify_proposed`, `simplify_applied`, `advice_requested`, `advice_given`, `external_review`, `model_resolved`.
+
+Note on `model_resolved`: the hook payload does NOT expose the subagent's
+model, so the `model` column is populated semantically — orchestrator
+commands call `audit-log.sh spawn <command> <phase> <agent> <model> [detail]`
+right after each Task spawn (rule 3 of `references/spawn-contracts.md`).
+Mechanical `started`/`completed` rows from the hooks keep `model` NULL.
 
 ## Rules
 
@@ -61,4 +67,7 @@ SELECT agent, COUNT(*) n, AVG(duration_ms) avg_ms FROM events
 WHERE action='completed' AND duration_ms IS NOT NULL GROUP BY agent;
 -- Decisions per phase
 SELECT phase, decision, rationale FROM decisions ORDER BY id DESC;
+-- Which model ran each spawn (per-task complexity routing evidence)
+SELECT timestamp, command, agent, model, detail FROM events
+WHERE action='model_resolved' ORDER BY id DESC;
 ```

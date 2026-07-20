@@ -4,7 +4,9 @@ Harness rules that apply to EVERY spawn:
 
 1. **Self-contained prompt.** The subagent gets everything it needs *inside the prompt* (full task content, spec excerpts) or as explicit file paths to read. It never depends on conversation history.
 2. **Artifacts are the contract.** The subagent writes its full output to `.planning/...` files. Its chat reply to the orchestrator is a short status block (≤10 lines). The orchestrator reads the status, updates `state.md`, and NEVER pastes full reports back into its own context — only paths + status.
-3. **Model.** Resolve per `references/model-profiles.md` and pass via the Task tool `model` parameter.
+3. **Model.** Resolve per `references/model-profiles.md` and pass via the Task tool `model` parameter. Right after issuing the spawn, record the resolution (audit is best-effort; the script no-ops when audit is off):
+   `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" spawn {command} {PHASE} {subagent_type} {model} '{"complexity":"{low|medium|high}"}'`
+   (the `complexity` detail applies to executor spawns only — omit the detail argument for other agents).
 4. **Language.** Always include `LANGUAGE: {{lang}}` — subagents write user-facing artifacts in that language.
 5. **Parallelism.** When two subagents are independent (code-reviewer + qa), issue both Task calls in a SINGLE message so they run concurrently.
 

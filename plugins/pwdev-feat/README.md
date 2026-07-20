@@ -1,4 +1,4 @@
-# PWDEV-FEAT v2.1.0
+# PWDEV-FEAT v2.1.1
 
 *Read this in [Português Brasileiro](./README.pt-BR.md)*
 
@@ -335,5 +335,5 @@ Optional context files:
 
 Apache-2.0 — See [LICENSE](./LICENSE)
 
-*PWDEV-FEAT v2.1.0 — Describe, plan, execute. Ship.*
+*PWDEV-FEAT v2.1.1 — Describe, plan, execute. Ship.*
 *Maintained by [Paulo Soares](https://github.com/soarescbm)*

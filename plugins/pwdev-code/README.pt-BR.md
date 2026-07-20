@@ -1,4 +1,4 @@
-# PWDEV-CODE v2.2.0
+# PWDEV-CODE v2.2.1
 
 *Leia em [English](./README.md)*
 
@@ -444,5 +444,5 @@ detecta sua stack, entrevista você (máx 3 rounds) e gera a skill em
 
 Apache-2.0 — Veja [LICENSE](./LICENSE)
 
-*PWDEV-CODE v2.2.0 — A complexidade vive no sistema, não no seu fluxo de trabalho.*
+*PWDEV-CODE v2.2.1 — A complexidade vive no sistema, não no seu fluxo de trabalho.*
 *Mantido por [Paulo Soares](https://github.com/soarescbm)*
