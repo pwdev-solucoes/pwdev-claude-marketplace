@@ -43,7 +43,7 @@ case "$EVENT" in
   subagent_start)
     AGENT=$(jget agent_type)
     case "$AGENT" in
-      pwdev-code:*|executor|code-reviewer|qa|verifier|researcher|roadmap|simplifier) ;;
+      pwdev-code:*|executor|advisor|code-reviewer|qa|verifier|researcher|roadmap|simplifier) ;;
       *) exit 0 ;;
     esac
     mkdir -p "$TMP" 2>/dev/null
@@ -55,7 +55,7 @@ case "$EVENT" in
   subagent_stop)
     AGENT=$(jget agent_type)
     case "$AGENT" in
-      pwdev-code:*|executor|code-reviewer|qa|verifier|researcher|roadmap|simplifier) ;;
+      pwdev-code:*|executor|advisor|code-reviewer|qa|verifier|researcher|roadmap|simplifier) ;;
       *) exit 0 ;;
     esac
     START_F="$TMP/${SESSION}-${AGENT##*:}.start"

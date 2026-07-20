@@ -76,6 +76,20 @@ open the summary file unless the status demands it.
 - `COMPLETE` / `CAVEATS` → update `state.md` (position + status), next task.
 - `STOPPED:<condition>` → present the condition to the human, wait for
   decision before continuing.
+- `NEEDS_ADVICE` → max ONE consultation per task:
+  1. Spawn `pwdev-code:advisor` (template in spawn-contracts; `model` per
+     model-profiles) with the advice-request content, spec §1/§2/§7, and the
+     RELEVANT MEMORY block (decisions first).
+  2. Log `advice_requested` (agent=executor, target=advice-request path) and
+     `advice_given` (agent=advisor, detail: confidence) via audit-log.sh.
+  3. Re-spawn the executor with the original prompt + the ADVICE block
+     (see spawn-contracts). If the re-spawned executor replies
+     `NEEDS_ADVICE` again → treat as `STOPPED` and escalate to the human.
+  4. If the advisor replied `CONFIDENCE: high` → capture ONE memory
+     `type: decision` per `references/memory.md` (source: execute:{slug};
+     cap 1 advice-decision per phase).
+  Advice and FAILED-retry counters are independent: at most 1 advice + 1
+  retry per task.
 - `FAILED` → re-spawn ONCE with the failure note appended to the prompt
   (see "retry" block in spawn-contracts). If it fails again → STOP the loop
   and report to the human with both status notes.
@@ -117,5 +131,6 @@ In `--fix` mode:
 - ❌ NEVER paste a summary file's content into your context — status lines only
 - ❌ NEVER execute a task without an approved plan
 - ❌ NEVER ignore a `STOPPED:` condition from the executor
+- ❌ NEVER consult the advisor more than once per task
 - ❌ NEVER exceed 2 fix iterations — escalate to the human
 - ❌ NEVER continue to verify with tasks neither completed nor explicitly paused

@@ -36,10 +36,23 @@ OUTPUT CONTRACT:
 1. Implement, verify, and commit atomically (Conventional Commits; only files in the task scope).
 2. Write .planning/phases/{slug}/execution/{PP}-summary.md — every AC with real command evidence.
 3. Reply with AT MOST 10 lines:
-   STATUS: COMPLETE | CAVEATS | FAILED | STOPPED:<condition>
+   STATUS: COMPLETE | CAVEATS | FAILED | NEEDS_ADVICE | STOPPED:<condition>
    SUMMARY: <path>
    COMMIT: <hash or none>
    NOTE: <1 line>
+```
+
+On `NEEDS_ADVICE` the executor writes
+`.planning/phases/{slug}/execution/{PP}-advice-request.md` first (Blocking
+Question, Context, Options Considered, Work Done So Far, Files Involved),
+does NOT commit, and replies instead:
+
+```
+STATUS: NEEDS_ADVICE
+QUESTION: <the decision, 1 line>
+REQUEST: .planning/phases/{slug}/execution/{PP}-advice-request.md
+COMMIT: none
+NOTE: <1 line — what was done / working tree state>
 ```
 
 On retry after FAILED, append:
@@ -48,6 +61,44 @@ On retry after FAILED, append:
 PREVIOUS ATTEMPT FAILED WITH:
 {error/status note from the failed run}
 Do not repeat the same approach blindly — diagnose first.
+```
+
+On re-spawn after the advisor answered a `NEEDS_ADVICE`, append:
+
+```
+ADVICE — a senior advisor resolved your NEEDS_ADVICE question:
+DECISION: {RECOMMENDATION line from the advisor's reply}
+KEY POINTS:
+{up to 3 KEY POINTS lines}
+Full rationale: read {advice file path}
+Follow this direction. Do NOT emit NEEDS_ADVICE again for this task —
+if still blocked, reply STOPPED:<specific blocker>.
+```
+
+---
+
+## advisor (`subagent_type: "pwdev-code:advisor"`)
+
+```
+ADVICE REQUEST (full content of .planning/phases/{slug}/execution/{PP}-advice-request.md):
+{...}
+
+SPEC EXCERPTS (.planning/phases/{slug}/spec.md):
+### §1 Persona
+{...}
+### §2 Objective
+{...}
+### §7 Prohibitions
+{...}
+
+RELEVANT MEMORY: {block per references/memory.md — decisions first; omit if none}
+
+LANGUAGE: {lang}
+
+OUTPUT CONTRACT:
+1. Investigate read-only (Read/Grep/Glob/Bash). Pick ONE direction — never "it depends".
+2. Write .planning/phases/{slug}/execution/{PP}-advice.md (Decision, Rationale, Rejected Options, Risks).
+3. Reply with AT MOST 10 lines: RECOMMENDATION, CONFIDENCE (high|medium|low), ADVICE path, KEY POINTS (≤3).
 ```
 
 ---
