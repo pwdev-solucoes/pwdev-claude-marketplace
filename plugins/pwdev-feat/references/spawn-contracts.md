@@ -28,6 +28,10 @@ Commands, and Golden Rules sections.
 CODEBASE CONTEXT — read yourself: .planning/feat/codebase.md (if it exists).
 EXISTING FILES — read every path in the plan's "Existing Files to Read".
 
+RELEVANT MEMORY — curated project knowledge; treat as binding constraints:
+{≤3 entries: [type] name — description → read .planning/memory/{file}.md}
+{omit this whole block when there is no match or no .planning/memory/MEMORY.md}
+
 LANGUAGE: {lang}
 
 OUTPUT CONTRACT:

@@ -51,6 +51,14 @@ Per the mode rule in `${CLAUDE_PLUGIN_ROOT}/references/spawn-contracts.md`:
 Type `review` → **MODE: REPORT**; otherwise, Output Format with no code files
 to create/modify (report-only) → **MODE: REPORT**; else → **MODE: IMPLEMENT**.
 
+### STEP 1.7 — Project Memory (optional, read-only)
+If `.planning/memory/MEMORY.md` exists (curated by pwdev-code — pwdev-feat
+NEVER writes there), read ONLY that index. Select ≤3 entries by keyword
+overlap with the plan's scope (`convention` first; expand 1 hop via the
+`[rel: ...]` suffixes within the cap of 3). Build a `RELEVANT MEMORY` block
+with descriptions + file paths (spawn-contracts template). No match or no
+index → omit the block entirely.
+
 ### STEP 2 — Confirm with human
 
 ```
@@ -67,7 +75,8 @@ Proceed? (y/n)
 ### STEP 3 — Spawn the Executor
 Build the prompt per `${CLAUDE_PLUGIN_ROOT}/references/spawn-contracts.md`
 (full plan.md content pasted in + MODE + CLAUDE.md pointer + codebase.md path
-+ `LANGUAGE: {lang}`). Task tool call:
++ RELEVANT MEMORY block from STEP 1.7 when present + `LANGUAGE: {lang}`).
+Task tool call:
 - `subagent_type`: `pwdev-feat:executor`
 - `model`: resolve per `${CLAUDE_PLUGIN_ROOT}/references/model-profiles.md`
   (override key `feat-executor`)
