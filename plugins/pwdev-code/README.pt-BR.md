@@ -1,4 +1,4 @@
-# PWDEV-CODE v2.2.1
+# PWDEV-CODE v2.3.0
 
 *Leia em [English](./README.md)*
 
@@ -16,13 +16,37 @@ planejada, rastreável e verificada.
 
 ---
 
-## Novidades da v2.2.0
+## Novidades da v2.3.0
 
-> **Atualizando da 2.1.x?** Plugins instalados são cópias em cache — fazer
-> merge ou pull deste repo NÃO os atualiza. Rode
+> **Atualizando?** Plugins instalados são cópias em cache — fazer merge ou
+> pull deste repo NÃO os atualiza. Rode
 > `claude plugin marketplace update pwdev-claude-marketplace` e depois
 > `claude plugin update pwdev-code@pwdev-claude-marketplace`, e **reinicie o
-> Claude Code** para o novo subagente `advisor` registrar na sessão.
+> Claude Code** para os novos comandos registrarem na sessão.
+
+- **Delegação a CLIs externas — Claude Code como orquestrador de outros
+  agentes de código.** 6 novos comandos: `/pwdev-code:codex`,
+  `/pwdev-code:opencode`, `/pwdev-code:kimi`, `/pwdev-code:gemini`,
+  `/pwdev-code:kiro` e `/pwdev-code:delegate` (escolhe o melhor agente por
+  tarefa e anuncia o porquê). Toda delegação passa por um runner único e
+  endurecido (`scripts/run-agent.sh`): allowlist de binários, prompt de
+  segurança padronizado com 10 regras (nunca commit/push, nunca tocar
+  segredos, escopo estrito, rodar testes), timeout configurável, trava de
+  escrita (nunca dois agentes write ao mesmo tempo), verificação read-only
+  (`gemini` é somente leitura por padrão), output espelhado em
+  `.planning/delegation/` e log de auditoria best-effort. Após CADA
+  delegação, o Claude executa um protocolo de revisão obrigatório —
+  `git diff` completo, checagem de escopo, roda os testes ele mesmo,
+  veredito crítico próprio — e nunca commita. Config opcional por agente via
+  `external_models.<agent>` (`model`, `timeout_s`, `extra_args`).
+  Protocolo: `references/delegation.md`.
+- **Allowlist do reviewer estendida**: a segunda opinião externa do
+  `/pwdev-code:review` agora também aceita `kimi` e `kiro-cli`.
+
+## Novidades da v2.2.0
+
+- **Nota (v2.2.1):** o `/pwdev-code:audit` agora registra o modelo resolvido
+  por spawn via o novo modo `audit-log.sh spawn`.
 
 - **Subagente advisor** (`advisor` + status `NEEDS_ADVICE`): quando o executor
   trava numa decisão difícil no meio da task (ambiguidade de spec, fork
@@ -289,6 +313,26 @@ manager (`product prd`), quick engineer (`quick`).
 
 `review` também aceita `--code-only`, `--tests-only`, `--diff HEAD~N`.
 
+### Delegação Externa
+
+Delegue trabalho para outras CLIs de código atuando no mesmo repositório — o
+Claude orquestra, revisa o diff completo, roda os testes e dá o veredito
+próprio (nunca commita). Protocolo: `references/delegation.md`.
+
+| Comando | Agente (binário) | Modo padrão | Melhor para |
+|---------|------------------|:-----------:|-------------|
+| `/pwdev-code:codex` | Codex CLI (`codex`) | write | Implementação objetiva, bugfixes, testes |
+| `/pwdev-code:opencode` | OpenCode (`opencode`) | write | Roteamento de modelo/provedor específico (`--model`, `OPENCODE_MODEL`) |
+| `/pwdev-code:kimi` | Kimi Code CLI (`kimi`) | write | Repos grandes, refatorações extensas |
+| `/pwdev-code:kiro` | Kiro CLI (`kiro-cli`) | write | Implementação agêntica/spec-driven, tarefas com stack AWS |
+| `/pwdev-code:gemini` | Gemini CLI (`gemini`) | **read-only** | Análise de contexto amplo, arquitetura, revisão (`--write` para liberar mudanças) |
+| `/pwdev-code:delegate` | escolhido automaticamente | por agente | Seleciona UM agente pela matriz e anuncia o porquê |
+
+Flags: `--read-only` nos comandos com padrão write; `--write` no `gemini`.
+Segurança: só binários da allowlist, confirmação humana antes da primeira
+execução externa da sessão, timeout, trava de escrita e verificação de
+violação read-only.
+
 ### Sessão, Diagnóstico & Manutenção
 
 | Comando | Quando usar |
@@ -336,7 +380,11 @@ Override por subagente com `model_overrides` no `.planning/config.json`:
   "model_profile": "balanced",
   "model_overrides": { "executor": "opus" },
   "parallel_execution": false,
-  "external_models": { "reviewer": { "cmd": "codex exec", "enabled": false, "timeout_s": 300 } }
+  "external_models": {
+    "reviewer": { "cmd": "codex exec", "enabled": false, "timeout_s": 300 },
+    "codex":    { "timeout_s": 600 },
+    "gemini":   { "model": "gemini-2.5-pro" }
+  }
 }
 ```
 
@@ -344,7 +392,10 @@ Override por subagente com `model_overrides` no `.planning/config.json`:
 isolamento por worktree. `external_models.reviewer` (opcional, manual)
 permite ao `/pwdev-code:review` colher uma segunda opinião consultiva de uma
 CLI externa — o comando é mostrado antes da primeira execução, e findings
-externos nunca bloqueiam o gate sozinhos.
+externos nunca bloqueiam o gate sozinhos. Os comandos de delegação usam o
+mesmo namespace: entradas opcionais `external_models.<agent>`
+(`codex`, `opencode`, `kimi`, `gemini`, `kiro`) aceitam `model`, `timeout_s`
+e `extra_args` — ver `references/delegation.md`.
 
 ---
 
@@ -418,6 +469,8 @@ detecta sua stack, entrevista você (máx 3 rounds) e gera a skill em
 │   ├── review/                       # code-review.md, qa-report.md
 │   └── verify/                       # verify.md, fix-NN.md
 │
+├── delegation/                       # outputs das CLIs externas (<ts>-<agent>.md)
+│
 ├── quick/, reports/, templates/, archive/
 ```
 
@@ -444,5 +497,5 @@ detecta sua stack, entrevista você (máx 3 rounds) e gera a skill em
 
 Apache-2.0 — Veja [LICENSE](./LICENSE)
 
-*PWDEV-CODE v2.2.1 — A complexidade vive no sistema, não no seu fluxo de trabalho.*
+*PWDEV-CODE v2.3.0 — A complexidade vive no sistema, não no seu fluxo de trabalho.*
 *Mantido por [Paulo Soares](https://github.com/soarescbm)*

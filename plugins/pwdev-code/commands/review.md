@@ -85,7 +85,7 @@ Read `.planning/config.json` → `external_models.reviewer`. If absent or
 ```
 
 1. **Safety check.** Extract the first token of `cmd`. If it is NOT in the
-   allowlist (`codex`, `gemini`, `opencode`, `qwen`) OR this is the first
+   allowlist (`codex`, `gemini`, `opencode`, `qwen`, `kimi`, `kiro-cli`) OR this is the first
    external run in the session → show the human the EXACT command that will
    run and ask for confirmation. The value comes from user config and is
    executed via Bash — never proceed silently outside the allowlist.

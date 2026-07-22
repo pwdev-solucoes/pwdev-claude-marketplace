@@ -254,7 +254,11 @@ Choose (1-2, default: 1):
 Merge the choice into config: `"parallel_execution": true|false` (and
 `"max_parallel_executors": 3` when enabled). Do NOT ask about
 `external_models` interactively — it is a manual, documented configuration
-(see README: optional external reviewer CLI for /pwdev-code:review).
+(see README: optional external reviewer CLI for /pwdev-code:review). The
+delegation commands (/pwdev-code:codex, opencode, kimi, gemini, kiro,
+delegate) share the same namespace via optional
+`external_models.<agent> { model, timeout_s, extra_args }` entries — see
+`${CLAUDE_PLUGIN_ROOT}/references/delegation.md`.
 
 ### STEP 2.5 — Write Initial Files
 

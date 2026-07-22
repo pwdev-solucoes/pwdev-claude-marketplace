@@ -20,6 +20,17 @@ Filosofia central em todos os plugins:
 
 ## Novidades
 
+### Delegação a CLIs externas — pwdev-code v2.3.0
+
+Claude Code como **orquestrador de outros agentes de código**: 6 novos
+comandos (`/pwdev-code:codex`, `opencode`, `kimi`, `gemini`, `kiro` e o
+inteligente `/pwdev-code:delegate`) roteiam tarefas por um runner único e
+endurecido — allowlist de binários, prompt de segurança com 10 regras,
+timeout, trava de escrita, verificação read-only (`gemini` é somente leitura
+por padrão) — e o Claude então revisa o `git diff` completo, roda os testes
+ele mesmo e dá o veredito próprio (nunca commita). Config opcional por
+agente via `external_models.<agent>`.
+
 ### Padrões de orquestração — pwdev-code v2.2.0 e pwdev-feat v2.1.0
 
 Os plugins de desenvolvimento absorveram três padrões de orquestração —
@@ -143,7 +154,7 @@ foram reestruturados.
 
 | Plugin | Descrição | Versão | Licença |
 |--------|-----------|:------:|:------:|
-| [**pwdev-code**](./plugins/pwdev-code/) | Desenvolvimento orientado a especificação — 8 subagentes reais (incl. advisor), roteamento por task, grafo de memória, waves paralelas opt-in, 16 comandos | 2.2.0 | Apache-2.0 |
+| [**pwdev-code**](./plugins/pwdev-code/) | Desenvolvimento orientado a especificação — 8 subagentes reais (incl. advisor), roteamento por task, grafo de memória, waves paralelas opt-in, delegação a CLIs externas (Codex/OpenCode/Kimi/Gemini/Kiro), 22 comandos | 2.3.0 | Apache-2.0 |
 | [**pwdev-uiux**](./plugins/pwdev-uiux/) | Engenharia UI/UX — 6 subagentes reais, fluxo de 5 fases com gates, Figma, WCAG 2.1 AA | 2.0.1 | Apache-2.0 |
 | [**pwdev-feat**](./plugins/pwdev-feat/) | Desenvolvimento simplificado de features — planos PWDEVIA inline + subagentes executor e advisor | 2.1.0 | Apache-2.0 |
 | [**pwdev-prd**](./plugins/pwdev-prd/) | Criação de PRD guiada por entrevista — 12 etapas inline, Markdown + JSON canônico | 2.0.1 | Apache-2.0 |
