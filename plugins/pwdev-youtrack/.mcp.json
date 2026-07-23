@@ -1,0 +1,9 @@
+{
+  "youtrack": {
+    "type": "http",
+    "url": "${YOUTRACK_BASE_URL:-https://example.youtrack.cloud}/mcp",
+    "headers": {
+      "Authorization": "Bearer ${YOUTRACK_TOKEN:-}"
+    }
+  }
+}

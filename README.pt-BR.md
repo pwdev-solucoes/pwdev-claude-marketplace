@@ -161,6 +161,7 @@ foram reestruturados.
 | [**pwdev-copy**](./plugins/pwdev-copy/) | Framework de copywriting treinável — 20 skills no ciclo completo (VOC → copy → revisão → análise), 5 subagentes reais | 1.1.0 | Apache-2.0 |
 | [**pwdev-social-media**](./plugins/pwdev-social-media/) | Geração de criativos por IA — orquestração de APIs (Ideogram, Leonardo, Flux, Runway, Freepik) com trava de gasto, 19 skills, 4 subagentes | 2.0.1 | Apache-2.0 |
 | [**pwdev-devops**](./plugins/pwdev-devops/) | Plataforma, operação e incidente — postura de execução segura com guard script, 19 skills, 4 subagentes | 1.0.0 | Apache-2.0 |
+| [**pwdev-youtrack**](./plugins/pwdev-youtrack/) | Gestão do YouTrack — MCP oficial embutido (2025.3+) para issues, artigos e log de trabalho; fallback REST para boards, sprints e relatórios de tempo | 1.0.0 | Apache-2.0 |
 | [**pwdev-statusline**](./plugins/pwdev-statusline/) | Barra de status rica — cores dinâmicas, tokens formatados, totalmente configurável | 1.1.0 | Apache-2.0 |
 
 ### pwdev-code
@@ -269,6 +270,23 @@ init (mapeia ambientes) ─▶ diagnosticar / incidente / auditar / custo / docu
 
 Veja a [documentação completa do plugin](./plugins/pwdev-devops/README.md).
 
+### pwdev-youtrack
+
+**Gestão do YouTrack** pelo MCP server oficial embutido da JetBrains
+(YouTrack 2025.3+): CRUD de issues, busca com a query language, comentários,
+tags, artigos da knowledge base e log de trabalho — mais um fallback REST
+autenticado para o que o MCP não cobre (agile boards, sprints, relatórios de
+tempo, anexos, comandos em lote).
+
+```
+init (token → Keychain) ─▶ conversa natural via MCP ─▶ sprint / report via REST
+```
+
+**Skills:** youtrack (MCP oficial), youtrack-rest (boards/sprints/relatórios)
+**Principais funcionalidades:** setup guiado com token no Keychain do macOS, token nunca em arquivo nem no transcript, mutação só com confirmação
+
+Veja a [documentação completa do plugin](./plugins/pwdev-youtrack/README.pt-BR.md).
+
 ### pwdev-statusline
 
 **Barra de status** rica para o terminal do Claude Code. Exibe modelo, branch git, uso de contexto, rate limits e contagem de tokens em uma linha colorida — cada segmento pode ser ligado/desligado.
@@ -321,6 +339,9 @@ claude plugin install pwdev-social-media@pwdev-claude-marketplace
 
 # Plataforma, operação e incidente (execução segura)
 claude plugin install pwdev-devops@pwdev-claude-marketplace
+
+# Gestão do YouTrack (MCP oficial + fallback REST)
+claude plugin install pwdev-youtrack@pwdev-claude-marketplace
 
 # Barra de status rica para o terminal
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
@@ -444,6 +465,7 @@ claude plugin install pwdev-prd@pwdev-claude-marketplace
 claude plugin install pwdev-copy@pwdev-claude-marketplace
 claude plugin install pwdev-social-media@pwdev-claude-marketplace
 claude plugin install pwdev-devops@pwdev-claude-marketplace
+claude plugin install pwdev-youtrack@pwdev-claude-marketplace
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
 ```
 

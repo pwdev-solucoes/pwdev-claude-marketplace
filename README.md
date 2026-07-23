@@ -158,6 +158,7 @@ The five original plugins were rebuilt on the modern Claude Code plugin system.
 | [**pwdev-copy**](./plugins/pwdev-copy/) | Trainable copywriting framework — 20 skills across the full cycle (VOC research → copy → review → analysis), 5 real subagents | 1.1.0 | Apache-2.0 |
 | [**pwdev-social-media**](./plugins/pwdev-social-media/) | AI creative generation for social — API orchestration (Ideogram, Leonardo, Flux, Runway, Freepik) with spend guard, 19 skills, 4 subagents | 2.0.1 | Apache-2.0 |
 | [**pwdev-devops**](./plugins/pwdev-devops/) | Platform, operations & incident response — safe-execution posture with guard script, 19 skills, 4 subagents | 1.0.0 | Apache-2.0 |
+| [**pwdev-youtrack**](./plugins/pwdev-youtrack/) | YouTrack management — official built-in MCP server (2025.3+) for issues, articles & work log; REST fallback for boards, sprints, time reports | 1.0.0 | Apache-2.0 |
 | [**pwdev-statusline**](./plugins/pwdev-statusline/) | Rich terminal status line — dynamic colors, formatted tokens, fully configurable | 1.1.0 | Apache-2.0 |
 
 ### pwdev-code
@@ -267,6 +268,23 @@ init (env mapping) ─▶ diagnosticar / incidente / auditar / custo / documenta
 
 See the [full plugin documentation](./plugins/pwdev-devops/README.md) (PT-BR).
 
+### pwdev-youtrack
+
+**YouTrack management** (docs in PT-BR) through JetBrains' official built-in
+MCP server (YouTrack 2025.3+): issues CRUD, search with the query language,
+comments, tags, knowledge-base articles, and work log — plus an authenticated
+REST fallback for what the MCP does not cover (agile boards, sprints, time
+reports, attachments, bulk commands).
+
+```
+init (token → Keychain) ─▶ natural conversation via MCP ─▶ sprint / report via REST
+```
+
+**Skills:** youtrack (official MCP), youtrack-rest (boards/sprints/reports)
+**Key features:** guided setup with the token stored in the macOS Keychain, token never in files or transcripts, confirm-before-mutate
+
+See the [full plugin documentation](./plugins/pwdev-youtrack/README.md).
+
 ### pwdev-statusline
 
 Rich terminal **status line** for Claude Code. Displays model, git branch, context usage, rate limits, and token counts in a colorful single-line bar — every segment toggleable.
@@ -319,6 +337,9 @@ claude plugin install pwdev-social-media@pwdev-claude-marketplace
 
 # Platform, operations & incident response (safe-execution posture)
 claude plugin install pwdev-devops@pwdev-claude-marketplace
+
+# YouTrack management (official MCP + REST fallback)
+claude plugin install pwdev-youtrack@pwdev-claude-marketplace
 
 # Rich terminal status line
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
@@ -440,6 +461,7 @@ claude plugin install pwdev-prd@pwdev-claude-marketplace
 claude plugin install pwdev-copy@pwdev-claude-marketplace
 claude plugin install pwdev-social-media@pwdev-claude-marketplace
 claude plugin install pwdev-devops@pwdev-claude-marketplace
+claude plugin install pwdev-youtrack@pwdev-claude-marketplace
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
 ```
 

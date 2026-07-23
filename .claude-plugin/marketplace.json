@@ -76,6 +76,15 @@
       "category": "workflow",
       "tags": ["devops", "sre", "aws", "kubernetes", "postgresql", "observability", "finops", "agents", "pt-br"],
       "strict": true
+    },
+    {
+      "name": "pwdev-youtrack",
+      "displayName": "PWDEV YouTrack — Issues, Sprints e Time Tracking",
+      "source": "./plugins/pwdev-youtrack",
+      "description": "Integração com YouTrack Cloud v1.0 — MCP oficial embutido (2025.3+) para issues, busca com query language, comentários, artigos e log de trabalho; fallback REST para agile boards, sprints, relatórios de tempo e anexos; 2 skills, 4 comandos, setup guiado com token no Keychain",
+      "category": "workflow",
+      "tags": ["youtrack", "issues", "agile", "time-tracking", "mcp", "pt-br"],
+      "strict": true
     }
   ]
 }
