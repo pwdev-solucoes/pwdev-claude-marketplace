@@ -1,7 +1,7 @@
 {
   "name": "pwdev-code",
   "displayName": "PWDEV Code — Spec-Driven Development",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "Spec-driven development framework — hybrid orchestration with 8 real subagents (executor, advisor, simplifier, code-reviewer, QA, adversarial verifier, researcher, roadmap), per-task model routing by complexity, curated project memory graph feeding every spawn, opt-in parallel waves with worktree isolation, external CLI delegation (codex, opencode, kimi, gemini, kiro + smart /delegate), optional external reviewer CLI, strict dual-verifier mode, 6 phases with correction loops, deterministic SQLite audit via hooks, and extensible skills that turn requirements into verified, traceable code.",
   "author": {
     "name": "Paulo Soares",

@@ -127,7 +127,7 @@ case "$AGENT" in
     ;;
   kimi)
     # Older kimi versions take the prompt positionally instead of --prompt
-    if kimi --help 2>/dev/null | grep -q -- '--prompt'; then
+    if kimi --help </dev/null 2>/dev/null | grep -q -- '--prompt'; then
       CMD=(kimi --quiet --prompt "$PROMPT")
     else
       CMD=(kimi --quiet "$PROMPT")
@@ -157,18 +157,21 @@ if [ -d .planning ]; then
 fi
 
 echo "▶ delegating to $AGENT (mode: $MODE, timeout: ${TIMEOUT_S}s)"
+# stdin is /dev/null so an unauthenticated CLI fails fast on its interactive
+# login prompt instead of hanging forever (there is no timeout fallback when
+# coreutils' timeout/gtimeout is absent, e.g. stock macOS).
 set +e
 if [ -n "$TIMEOUT_BIN" ]; then
   if [ -n "$OUT" ]; then
-    "$TIMEOUT_BIN" "$TIMEOUT_S" "${CMD[@]}" 2>&1 | tee "$OUT"; RC=${PIPESTATUS[0]}
+    "$TIMEOUT_BIN" "$TIMEOUT_S" "${CMD[@]}" </dev/null 2>&1 | tee "$OUT"; RC=${PIPESTATUS[0]}
   else
-    "$TIMEOUT_BIN" "$TIMEOUT_S" "${CMD[@]}"; RC=$?
+    "$TIMEOUT_BIN" "$TIMEOUT_S" "${CMD[@]}" </dev/null; RC=$?
   fi
 else
   if [ -n "$OUT" ]; then
-    "${CMD[@]}" 2>&1 | tee "$OUT"; RC=${PIPESTATUS[0]}
+    "${CMD[@]}" </dev/null 2>&1 | tee "$OUT"; RC=${PIPESTATUS[0]}
   else
-    "${CMD[@]}"; RC=$?
+    "${CMD[@]}" </dev/null; RC=$?
   fi
 fi
 set -e

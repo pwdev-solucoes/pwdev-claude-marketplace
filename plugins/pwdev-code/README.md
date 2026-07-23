@@ -1,4 +1,4 @@
-# PWDEV-CODE v2.3.0
+# PWDEV-CODE v2.3.1
 
 *Read this in [Português Brasileiro](./README.pt-BR.md)*
 
@@ -41,6 +41,10 @@ traceable, and verified.
   `references/delegation.md`.
 - **Reviewer allowlist extended**: the `/pwdev-code:review` external second
   opinion now also accepts `kimi` and `kiro-cli`.
+- **Fix (v2.3.1):** `run-agent.sh` now runs the external CLI with stdin from
+  `/dev/null`, so an unauthenticated CLI fails fast instead of hanging on its
+  interactive login prompt (relevant on stock macOS, where coreutils'
+  `timeout`/`gtimeout` is absent and no time limit applies).
 
 ## What's New in v2.2.0
 
@@ -492,5 +496,5 @@ detects your stack, interviews you (max 3 rounds), and generates a skill in
 
 Apache-2.0 — See [LICENSE](./LICENSE)
 
-*PWDEV-CODE v2.3.0 — Complexity lives in the system, not in your workflow.*
+*PWDEV-CODE v2.3.1 — Complexity lives in the system, not in your workflow.*
 *Maintained by [Paulo Soares](https://github.com/soarescbm)*
