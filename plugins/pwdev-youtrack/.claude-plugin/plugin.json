@@ -1,0 +1,12 @@
+{
+  "name": "pwdev-youtrack",
+  "displayName": "PWDEV YouTrack — Issues, Sprints e Time Tracking",
+  "version": "1.0.0",
+  "description": "Integração com YouTrack Cloud via MCP oficial embutido (2025.3+) — issues CRUD, busca com query language, comentários, tags, artigos da knowledge base e log de trabalho. Fallback REST autenticado para o que o MCP não cobre: agile boards, sprints, relatórios de tempo, anexos e operações em lote. Setup guiado com token fora do repositório.",
+  "author": { "name": "Paulo Soares", "url": "https://github.com/soarescbm" },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": ["claude-code","claude-plugin","youtrack","issue-tracking","agile","sprints","time-tracking","knowledge-base","mcp","pt-br"],
+  "mcpServers": "./.mcp.json"
+}
