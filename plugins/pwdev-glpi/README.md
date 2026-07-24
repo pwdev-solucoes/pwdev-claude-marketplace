@@ -11,7 +11,7 @@ MCP server (stdio, spawned via `npx`) exposing 16 tools, 2 prompts and
 
 | Piece | Purpose |
 |---|---|
-| MCP `glpi` | `npx -y @soarescbm/mcp-glpi@0.1.2` — tickets CRUD + followups + solution/close, read-only users, groups, assets (Computer/Monitor/Phone/NetworkEquipment), projects and knowledge base |
+| MCP `glpi` | `npx -y @soarescbm/mcp-glpi@0.2.0` — tickets CRUD + followups + solution/close, read-only users, groups, assets (Computer/Monitor/Phone/NetworkEquipment), projects and knowledge base |
 | Skill `glpi` | Day-to-day ITSM in natural conversation — intent→tool map, ITIL rules (never set priority, close only with an approved solution text, confirm before mutate) |
 | `/pwdev-glpi:init` | Guided setup: API URL, PAT stored in the macOS Keychain, connection test, project context |
 | `/pwdev-glpi:status` | Diagnosis: env vars, REST handshake, npm package, live MCP probe |
@@ -41,7 +41,7 @@ Claude Code session** after setting them. Note: the server boots even without
 configuration (placeholder mode — tools list but fail on invoke), so
 `/mcp` showing *connected* does not prove the setup; `/pwdev-glpi:status` does.
 
-The npm version is **pinned** (`@0.1.2`) for reproducibility and npx cache
+The npm version is **pinned** (`@0.2.0`) for reproducibility and npx cache
 hits; server releases arrive as plugin patch bumps.
 
 ## Token security

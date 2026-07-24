@@ -1,7 +1,7 @@
 {
   "glpi": {
     "command": "npx",
-    "args": ["-y", "@soarescbm/mcp-glpi@0.1.2"],
+    "args": ["-y", "@soarescbm/mcp-glpi@0.2.0"],
     "env": {
       "GLPI_BASE_URL": "${GLPI_BASE_URL:-}",
       "GLPI_PAT": "${GLPI_PAT:-}",

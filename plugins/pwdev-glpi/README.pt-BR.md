@@ -11,7 +11,7 @@ MCP próprio (stdio, iniciado via `npx`) que expõe 16 tools, 2 prompts e
 
 | Peça | Função |
 |---|---|
-| MCP `glpi` | `npx -y @soarescbm/mcp-glpi@0.1.2` — CRUD de tickets + followups + solução/fechamento, leitura de usuários, grupos, ativos (Computer/Monitor/Phone/NetworkEquipment), projetos e base de conhecimento |
+| MCP `glpi` | `npx -y @soarescbm/mcp-glpi@0.2.0` — CRUD de tickets + followups + solução/fechamento, leitura de usuários, grupos, ativos (Computer/Monitor/Phone/NetworkEquipment), projetos e base de conhecimento |
 | Skill `glpi` | ITSM do dia a dia em conversa natural — mapa intenção→tool, regras ITIL (nunca setar priority, fechar só com solução aprovada, confirmar antes de mutação) |
 | `/pwdev-glpi:init` | Setup guiado: URL da API, PAT no Keychain do macOS, teste de conexão, contexto do projeto |
 | `/pwdev-glpi:status` | Diagnóstico: env vars, handshake REST, pacote npm, prova viva do MCP |
@@ -43,7 +43,7 @@ sem configuração (modo placeholder — tools listam mas falham ao invocar),
 então `/mcp` mostrando *connected* não prova o setup; `/pwdev-glpi:status`
 prova.
 
-A versão do npm é **pinada** (`@0.1.2`) por reprodutibilidade e cache do npx;
+A versão do npm é **pinada** (`@0.2.0`) por reprodutibilidade e cache do npx;
 releases do servidor chegam como patch do plugin.
 
 ## Segurança do token
