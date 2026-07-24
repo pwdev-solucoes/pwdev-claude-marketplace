@@ -1,0 +1,11 @@
+{
+  "postgres": {
+    "command": "npx",
+    "args": ["-y", "@soarescbm/postgres-mcp@1.0.0"],
+    "env": {
+      "DATABASE_URL": "${PG_MCP_DATABASE_URL:-}",
+      "STATEMENT_TIMEOUT_MS": "${PG_MCP_STATEMENT_TIMEOUT_MS:-}",
+      "POOL_MAX": "${PG_MCP_POOL_MAX:-}"
+    }
+  }
+}

@@ -160,6 +160,7 @@ The five original plugins were rebuilt on the modern Claude Code plugin system.
 | [**pwdev-devops**](./plugins/pwdev-devops/) | Platform, operations & incident response — safe-execution posture with guard script, 19 skills, 4 subagents | 1.0.0 | Apache-2.0 |
 | [**pwdev-youtrack**](./plugins/pwdev-youtrack/) | YouTrack management — official built-in MCP server (2025.3+) for issues, articles & work log; REST fallback for boards, sprints, time reports | 1.0.0 | Apache-2.0 |
 | [**pwdev-glpi**](./plugins/pwdev-glpi/) | GLPI 10.x ITSM — own MCP server via npx (@soarescbm/mcp-glpi): tickets CRUD, triage with MCP prompts, queue reports, assets & KB | 1.0.0 | Apache-2.0 |
+| [**pwdev-postgres**](./plugins/pwdev-postgres/) | PostgreSQL — own MCP server via npx (@soarescbm/postgres-mcp): AST-validated read-only SELECT, schema inspection, DML/DDL with mandatory dry-run | 1.0.0 | Apache-2.0 |
 | [**pwdev-statusline**](./plugins/pwdev-statusline/) | Rich terminal status line — dynamic colors, formatted tokens, fully configurable | 1.1.0 | Apache-2.0 |
 
 ### pwdev-code
@@ -303,6 +304,23 @@ init (PAT → Keychain) ─▶ natural conversation via MCP ─▶ triagem / rel
 
 See the [full plugin documentation](./plugins/pwdev-glpi/README.md).
 
+### pwdev-postgres
+
+**PostgreSQL operations** (docs in PT-BR) through a purpose-built MCP server
+published on npm ([@soarescbm/postgres-mcp](https://github.com/soarescbm/postgres-mcp),
+spawned via `npx`): AST-validated read-only SELECT, schema inspection
+(tables, indexes, constraints) and DML/DDL where every mutation is a
+mandatory dry-run — preview first, execute only with `confirm: true`.
+
+```
+init (connection string → Keychain) ─▶ natural conversation via MCP ─▶ esquema / safe mutations
+```
+
+**Skills:** postgres (intent→tool map, two-phase mutation rules)
+**Key features:** guided setup with the connection string in the macOS Keychain, dedicated `PG_MCP_DATABASE_URL` env var (no collision with project `DATABASE_URL`), mandatory dry-run on every mutation, pinned npm version
+
+See the [full plugin documentation](./plugins/pwdev-postgres/README.md).
+
 ### pwdev-statusline
 
 Rich terminal **status line** for Claude Code. Displays model, git branch, context usage, rate limits, and token counts in a colorful single-line bar — every segment toggleable.
@@ -361,6 +379,9 @@ claude plugin install pwdev-youtrack@pwdev-claude-marketplace
 
 # GLPI ITSM management (own MCP server via npx)
 claude plugin install pwdev-glpi@pwdev-claude-marketplace
+
+# PostgreSQL operations (own MCP server via npx, mandatory dry-run)
+claude plugin install pwdev-postgres@pwdev-claude-marketplace
 
 # Rich terminal status line
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
@@ -484,6 +505,7 @@ claude plugin install pwdev-social-media@pwdev-claude-marketplace
 claude plugin install pwdev-devops@pwdev-claude-marketplace
 claude plugin install pwdev-youtrack@pwdev-claude-marketplace
 claude plugin install pwdev-glpi@pwdev-claude-marketplace
+claude plugin install pwdev-postgres@pwdev-claude-marketplace
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
 ```
 
