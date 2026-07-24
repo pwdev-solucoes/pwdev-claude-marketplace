@@ -94,6 +94,15 @@
       "category": "workflow",
       "tags": ["glpi", "itsm", "helpdesk", "tickets", "mcp", "pt-br"],
       "strict": true
+    },
+    {
+      "name": "pwdev-postgres",
+      "displayName": "PWDEV Postgres — Consultas, Schema e Mutações Seguras",
+      "source": "./plugins/pwdev-postgres",
+      "description": "Integração com PostgreSQL v1.0 — servidor MCP próprio via npx (@soarescbm/postgres-mcp): SELECT somente-leitura validado por AST, inspeção de schema (tabelas, índices, constraints) e mutações DML/DDL com dry-run obrigatório (preview + confirm); 1 skill, 3 comandos, setup guiado com connection string no Keychain",
+      "category": "workflow",
+      "tags": ["postgres", "postgresql", "database", "sql", "mcp", "pt-br"],
+      "strict": true
     }
   ]
 }

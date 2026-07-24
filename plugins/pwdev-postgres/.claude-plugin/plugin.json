@@ -1,0 +1,12 @@
+{
+  "name": "pwdev-postgres",
+  "displayName": "PWDEV Postgres — Consultas, Schema e Mutações Seguras",
+  "version": "1.0.0",
+  "description": "Integração com PostgreSQL via servidor MCP próprio (@soarescbm/postgres-mcp, npx) — SELECT somente-leitura validado por AST, inspeção de schema (tabelas, índices, constraints) e mutações DML/DDL com dry-run obrigatório (preview antes de executar). Setup guiado com a connection string fora do repositório.",
+  "author": { "name": "Paulo Soares", "url": "https://github.com/soarescbm" },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": ["claude-code", "claude-plugin", "postgres", "postgresql", "database", "sql", "schema", "mcp", "pt-br"],
+  "mcpServers": "./.mcp.json"
+}
