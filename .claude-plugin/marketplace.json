@@ -85,6 +85,15 @@
       "category": "workflow",
       "tags": ["youtrack", "issues", "agile", "time-tracking", "mcp", "pt-br"],
       "strict": true
+    },
+    {
+      "name": "pwdev-glpi",
+      "displayName": "PWDEV GLPI — Tickets, Triagem e Fila ITSM",
+      "source": "./plugins/pwdev-glpi",
+      "description": "Integração com GLPI 10.x v1.0 — servidor MCP próprio via npx (@soarescbm/mcp-glpi): tickets CRUD, followups, solução, usuários, grupos, ativos, projetos e KB; triagem assistida por prompt MCP e relatório de fila; 1 skill, 4 comandos, setup guiado com PAT no Keychain",
+      "category": "workflow",
+      "tags": ["glpi", "itsm", "helpdesk", "tickets", "mcp", "pt-br"],
+      "strict": true
     }
   ]
 }

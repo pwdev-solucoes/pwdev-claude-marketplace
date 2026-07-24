@@ -162,6 +162,7 @@ foram reestruturados.
 | [**pwdev-social-media**](./plugins/pwdev-social-media/) | Geração de criativos por IA — orquestração de APIs (Ideogram, Leonardo, Flux, Runway, Freepik) com trava de gasto, 19 skills, 4 subagentes | 2.0.1 | Apache-2.0 |
 | [**pwdev-devops**](./plugins/pwdev-devops/) | Plataforma, operação e incidente — postura de execução segura com guard script, 19 skills, 4 subagentes | 1.0.0 | Apache-2.0 |
 | [**pwdev-youtrack**](./plugins/pwdev-youtrack/) | Gestão do YouTrack — MCP oficial embutido (2025.3+) para issues, artigos e log de trabalho; fallback REST para boards, sprints e relatórios de tempo | 1.0.0 | Apache-2.0 |
+| [**pwdev-glpi**](./plugins/pwdev-glpi/) | GLPI 10.x ITSM — servidor MCP próprio via npx (@soarescbm/mcp-glpi): CRUD de tickets, triagem com prompts MCP, relatórios de fila, ativos e KB | 1.0.0 | Apache-2.0 |
 | [**pwdev-statusline**](./plugins/pwdev-statusline/) | Barra de status rica — cores dinâmicas, tokens formatados, totalmente configurável | 1.1.0 | Apache-2.0 |
 
 ### pwdev-code
@@ -287,6 +288,23 @@ init (token → Keychain) ─▶ conversa natural via MCP ─▶ sprint / report
 
 Veja a [documentação completa do plugin](./plugins/pwdev-youtrack/README.pt-BR.md).
 
+### pwdev-glpi
+
+**Gestão ITSM do GLPI 10.x** por um servidor MCP próprio publicado no npm
+([@soarescbm/mcp-glpi](https://github.com/soarescbm/mcp-glpi), iniciado via
+`npx`): CRUD de tickets, followups, solução/fechamento, mais leitura de
+usuários, grupos, ativos, projetos e base de conhecimento. A triagem da fila
+é guiada pelos prompts MCP do próprio servidor.
+
+```
+init (PAT → Keychain) ─▶ conversa natural via MCP ─▶ triagem / relatorio
+```
+
+**Skills:** glpi (mapa intenção→tool, regras ITIL)
+**Principais funcionalidades:** setup guiado com PAT no Keychain do macOS, triagem via prompt MCP `triage_ticket`, mutação só com confirmação, versão npm pinada
+
+Veja a [documentação completa do plugin](./plugins/pwdev-glpi/README.pt-BR.md).
+
 ### pwdev-statusline
 
 **Barra de status** rica para o terminal do Claude Code. Exibe modelo, branch git, uso de contexto, rate limits e contagem de tokens em uma linha colorida — cada segmento pode ser ligado/desligado.
@@ -342,6 +360,9 @@ claude plugin install pwdev-devops@pwdev-claude-marketplace
 
 # Gestão do YouTrack (MCP oficial + fallback REST)
 claude plugin install pwdev-youtrack@pwdev-claude-marketplace
+
+# Gestão ITSM do GLPI (servidor MCP próprio via npx)
+claude plugin install pwdev-glpi@pwdev-claude-marketplace
 
 # Barra de status rica para o terminal
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
@@ -466,6 +487,7 @@ claude plugin install pwdev-copy@pwdev-claude-marketplace
 claude plugin install pwdev-social-media@pwdev-claude-marketplace
 claude plugin install pwdev-devops@pwdev-claude-marketplace
 claude plugin install pwdev-youtrack@pwdev-claude-marketplace
+claude plugin install pwdev-glpi@pwdev-claude-marketplace
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
 ```
 

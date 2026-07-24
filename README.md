@@ -159,6 +159,7 @@ The five original plugins were rebuilt on the modern Claude Code plugin system.
 | [**pwdev-social-media**](./plugins/pwdev-social-media/) | AI creative generation for social — API orchestration (Ideogram, Leonardo, Flux, Runway, Freepik) with spend guard, 19 skills, 4 subagents | 2.0.1 | Apache-2.0 |
 | [**pwdev-devops**](./plugins/pwdev-devops/) | Platform, operations & incident response — safe-execution posture with guard script, 19 skills, 4 subagents | 1.0.0 | Apache-2.0 |
 | [**pwdev-youtrack**](./plugins/pwdev-youtrack/) | YouTrack management — official built-in MCP server (2025.3+) for issues, articles & work log; REST fallback for boards, sprints, time reports | 1.0.0 | Apache-2.0 |
+| [**pwdev-glpi**](./plugins/pwdev-glpi/) | GLPI 10.x ITSM — own MCP server via npx (@soarescbm/mcp-glpi): tickets CRUD, triage with MCP prompts, queue reports, assets & KB | 1.0.0 | Apache-2.0 |
 | [**pwdev-statusline**](./plugins/pwdev-statusline/) | Rich terminal status line — dynamic colors, formatted tokens, fully configurable | 1.1.0 | Apache-2.0 |
 
 ### pwdev-code
@@ -285,6 +286,23 @@ init (token → Keychain) ─▶ natural conversation via MCP ─▶ sprint / re
 
 See the [full plugin documentation](./plugins/pwdev-youtrack/README.md).
 
+### pwdev-glpi
+
+**GLPI 10.x ITSM management** (docs in PT-BR) through a purpose-built MCP
+server published on npm ([@soarescbm/mcp-glpi](https://github.com/soarescbm/mcp-glpi),
+spawned via `npx`): tickets CRUD, followups, solution/close, plus read-only
+users, groups, assets, projects and knowledge base. Queue triage is driven by
+the server's own MCP prompts.
+
+```
+init (PAT → Keychain) ─▶ natural conversation via MCP ─▶ triagem / relatorio
+```
+
+**Skills:** glpi (intent→tool map, ITIL rules)
+**Key features:** guided setup with the PAT in the macOS Keychain, triage via `triage_ticket` MCP prompt, confirm-before-mutate, pinned npm version
+
+See the [full plugin documentation](./plugins/pwdev-glpi/README.md).
+
 ### pwdev-statusline
 
 Rich terminal **status line** for Claude Code. Displays model, git branch, context usage, rate limits, and token counts in a colorful single-line bar — every segment toggleable.
@@ -340,6 +358,9 @@ claude plugin install pwdev-devops@pwdev-claude-marketplace
 
 # YouTrack management (official MCP + REST fallback)
 claude plugin install pwdev-youtrack@pwdev-claude-marketplace
+
+# GLPI ITSM management (own MCP server via npx)
+claude plugin install pwdev-glpi@pwdev-claude-marketplace
 
 # Rich terminal status line
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
@@ -462,6 +483,7 @@ claude plugin install pwdev-copy@pwdev-claude-marketplace
 claude plugin install pwdev-social-media@pwdev-claude-marketplace
 claude plugin install pwdev-devops@pwdev-claude-marketplace
 claude plugin install pwdev-youtrack@pwdev-claude-marketplace
+claude plugin install pwdev-glpi@pwdev-claude-marketplace
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
 ```
 
