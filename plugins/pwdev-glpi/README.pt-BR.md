@@ -55,9 +55,9 @@ releases do servidor chegam como patch do plugin.
 
 ## Limites
 
-Sem Problems/Changes, SLA/OLA, upload de anexos ou administração da
-instância; escrita só em tickets (usuários, grupos, ativos, projetos e KB são
-somente leitura).
+Sem Problems/Changes, SLA/OLA ou administração da instância; escrita só em
+tickets (documentos anexados a chamado/followup/task, além de validações —
+usuários, grupos, ativos, projetos e KB são somente leitura).
 
 ## Troubleshooting
 

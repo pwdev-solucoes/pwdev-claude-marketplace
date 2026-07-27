@@ -53,8 +53,9 @@ hits; server releases arrive as plugin patch bumps.
 
 ## Limits
 
-No Problems/Changes, SLA/OLA, attachment upload or instance administration;
-writes only on tickets (users, groups, assets, projects and KB are read-only).
+No Problems/Changes, SLA/OLA or instance administration; writes only on
+tickets (documents attached to a ticket/followup/task, plus validations —
+users, groups, assets, projects and KB are read-only).
 
 ## Troubleshooting
 
