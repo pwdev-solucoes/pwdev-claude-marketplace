@@ -1,10 +1,10 @@
 # @soarescbm/mcp-glpi — mapa de tools, prompts e resources
 
-Servidor MCP próprio (stdio via npx), 16 tools + 2 prompts + 3 resources.
+Servidor MCP próprio (stdio via npx), 20 tools + 2 prompts + 3 resources.
 Nomes conforme o código do servidor — **confira a lista real via `/mcp` na
 primeira conexão** e ajuste este arquivo se divergir.
 
-## Tickets (única área com escrita)
+## Tickets (área principal de escrita)
 
 | Tool | O que faz | Pegadinhas |
 |---|---|---|
@@ -13,7 +13,19 @@ primeira conexão** e ajuste este arquivo se divergir.
 | `create_ticket` | Abre chamado | `content` em Markdown (servidor converte p/ HTML); `urgency`/`impact` default 3; confirmar antes |
 | `update_ticket` | Atualiza campos | Exige ≥1 campo além do id; **NÃO aceita `status: "closed"`** — fechar é `close_ticket` |
 | `add_ticket_followup` | Comentário/acompanhamento | `content` Markdown; `is_private` default false |
-| `close_ticket` | Anexa solução (ITILSolution) | **Exige texto de solução**; GLPI transiciona para SOLVED — redigir e aprovar com o usuário antes |
+| `close_ticket` | Anexa solução (ITILSolution) | **Exige texto de solução**; GLPI transiciona para SOLVED — redigir e aprovar com o usuário antes. `force_close` (opt-in, default false) pula a aprovação do solicitante e transiciona direto para CLOSED, verificando a transição; se a verificação falhar a solução ainda é persistida e o status degrada para `warning` (nunca erro duro) |
+| `request_ticket_validation` | Abre solicitação de validação | Atribui `users_id_validate`; `status` nunca é enviado — GLPI assume waiting automaticamente |
+| `answer_ticket_validation` | Aprova/recusa validação pendente | `decision: 'approve'\|'refuse'` mapeado para os códigos do GLPI (3=aceito, 4=recusado); resposta do `PUT` vem como array `[{"<id>": true}]`, não é parseada — só a chamada resolvida conta como sucesso |
+
+## Anexos (upload + vínculo)
+
+| Tool | O que faz | Pegadinhas |
+|---|---|---|
+| `upload_document` | Envia arquivo local como `Document` (multipart `POST /Document`) | O manifest enviado ao GLPI só aceita `name` + `_filename` — incluir `items_id`/`itemtype` quebra o create silenciosamente (`HTTP 200` vazio, nada criado); `entities_id` opcional move o Document criado para a entidade do alvo antes de vincular |
+| `link_document` | Vincula Document a `Ticket`, `ITILFollowup` ou `TicketTask` via `POST /Document_Item/` | Erro de permissão ao vincular costuma ser Document e alvo em entidades diferentes — reenviar com `entities_id` correto e vincular de novo |
+
+Junto com `add_ticket_followup` (já existente), completa o fluxo de 3 passos
+"anexar arquivo a um chamado".
 
 ## Pessoas e grupos (leitura)
 
@@ -54,6 +66,6 @@ leitura de contexto sem invocar tool.
 
 ## O que o servidor NÃO cobre
 
-Problems e Changes · SLA/OLA · upload de anexos (documentos só listados) ·
+Problems e Changes · SLA/OLA ·
 escrita em usuários/grupos/ativos/projetos/KB · administração da instância ·
 inventário além dos 4 itemtypes.

@@ -34,7 +34,10 @@ Env var nova só vale após reiniciar a sessão. Não há fallback REST operacio
 | Abrir chamado | `create_ticket` (content em Markdown) |
 | Atualizar campos | `update_ticket` — **não aceita `status: "closed"`** |
 | Acompanhar/comentar | `add_ticket_followup` |
-| Solucionar/fechar | `close_ticket` — **exige texto de solução** |
+| Solucionar/fechar | `close_ticket` — **exige texto de solução**; `force_close` opt-in pula aprovação do solicitante e vai direto para CLOSED |
+| Anexar arquivo | `upload_document` (envia o arquivo) + `link_document` (vincula ao ticket/followup/task) |
+| Pedir validação | `request_ticket_validation` |
+| Aprovar/recusar validação | `answer_ticket_validation` |
 | Pessoas | `search_users` · `get_user` |
 | Grupos | `search_groups` · `get_group` |
 | Ativos | `search_assets` · `get_asset` — só `Computer`, `Monitor`, `Phone`, `NetworkEquipment` |
@@ -54,8 +57,8 @@ Filtros exatos e pegadinhas: `${CLAUDE_PLUGIN_ROOT}/references/mcp-tools.md`.
 
 ## Regras ITSM
 
-- **Mutação só com confirmação** — create, update, followup, close: mostre o
-  que vai fazer antes de fazer.
+- **Mutação só com confirmação** — create, update, followup, close, anexar
+  arquivo, pedir/responder validação: mostre o que vai fazer antes de fazer.
 - **Nunca defina `priority`** — o GLPI calcula pela matriz urgency×impact.
   Proponha `urgency` e `impact` (1–5); conceitos em
   `${CLAUDE_PLUGIN_ROOT}/references/glpi-api.md`.
@@ -76,7 +79,7 @@ Filtros exatos e pegadinhas: `${CLAUDE_PLUGIN_ROOT}/references/mcp-tools.md`.
 
 ## Limites
 
-- Sem Problems/Changes, SLA/OLA, upload de anexos, administração da instância
-- Escrita apenas em tickets — usuários, grupos, ativos, projetos e KB são
-  somente leitura
+- Sem Problems/Changes, SLA/OLA, administração da instância
+- Escrita apenas em tickets (CRUD, followups, documentos anexados,
+  validações) — usuários, grupos, ativos, projetos e KB são somente leitura
 - Relatórios agregados e persistidos → `/pwdev-glpi:relatorio`
