@@ -1,7 +1,7 @@
 {
   "name": "pwdev-glpi",
   "displayName": "PWDEV GLPI — Tickets, Triagem e Fila ITSM",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Integração com GLPI 10.x via servidor MCP próprio (@soarescbm/mcp-glpi, npx) — tickets CRUD, followups, solução/fechamento, usuários, grupos, ativos, projetos e base de conhecimento. Triagem assistida com prompt MCP e relatório de fila. Setup guiado com PAT fora do repositório.",
   "author": { "name": "Paulo Soares", "url": "https://github.com/soarescbm" },
   "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
