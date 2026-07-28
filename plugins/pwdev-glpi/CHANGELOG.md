@@ -4,6 +4,16 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 Versionamento: `major.minor.patch` do plugin (`.claude-plugin/plugin.json`),
 independente do versionamento do servidor MCP `@soarescbm/mcp-glpi`.
 
+## [1.0.5] — 2026-07-27
+
+### Corrigido
+- Pin `@soarescbm/mcp-glpi@0.3.2` — corrige `upload_document`, que falhava em
+  **toda** chamada com `"JSON payload seems not valid"`. O `uploadManifest`
+  era anexado ao `FormData` multipart sem nome de arquivo e virava um `File`
+  em vez de campo de texto puro; o GLPI rejeitava com um erro genérico que
+  não apontava para o manifest. Nenhuma mudança de interface — mesmas tools,
+  mesmos parâmetros.
+
 ## [1.0.4] — 2026-07-27
 
 ### Corrigido
