@@ -313,6 +313,24 @@ Interactive personas absorbed into commands (main context): interviewer
 
 `review` also accepts `--code-only`, `--tests-only`, `--diff HEAD~N`.
 
+### Fleet (multiple phases in parallel)
+
+| Command | What it does |
+|---------|-------------|
+| `/pwdev-code:fleet <slug> [slug...]` | Launch up to `fleet.max_concurrent` (default 3) phases, each running `plan → execute → review → verify` unattended in its own git worktree + docker-compose stack (unique ports) + tmux window |
+| `/pwdev-code:fleet --status` | Print the current fleet table once, no tmux attach needed |
+| `/pwdev-code:fleet --teardown <slug> [--merge]` | Stop a slug's docker+tmux; `--merge` also merges its branch into your current branch, but only if its pipeline reached `DONE` |
+
+Each phase-slug must already have `spec.md` + `decisions.md` (i.e.
+`/pwdev-code:design` was run and approved by a human) — `discover`/`design`
+are intentionally **not** part of the fleet, and neither is `simplify` (its
+APPLY step needs per-ID human approval, unavailable headless). Every place
+the underlying commands would normally pause for a human, the headless
+`claude -p` session is instructed to proceed with the best-judgment default
+instead — review the diff before you `--merge`. See
+`templates/docker-compose.fleet.yml` for the generic, parametrizable
+per-worktree environment (adapt the `app` service to your real stack).
+
 ### External Delegation
 
 Delegate work to other coding CLIs working in the same repository — Claude

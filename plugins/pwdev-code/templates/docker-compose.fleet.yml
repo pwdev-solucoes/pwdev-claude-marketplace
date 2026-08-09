@@ -1,0 +1,46 @@
+# Generic per-worktree environment for /pwdev-code:fleet.
+#
+# scripts/fleet-up.sh copies this file into each worktree and generates a
+# matching .env.fleet with the ports/names it allocated for that slug — this
+# template is never edited in place, it's a starting point per project.
+#
+# If the worktree has no Dockerfile, fleet-up.sh starts only the `db`
+# service (`docker compose ... up -d db`) and skips `app` — adapt the `app`
+# service (build context, internal port, extra services) to your real stack
+# before relying on it for anything beyond a scratch/dev database.
+name: ${FLEET_PROJECT_NAME:-fleet-default}
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: ${FLEET_APP_DOCKERFILE:-Dockerfile}
+    env_file:
+      - .env.fleet
+    ports:
+      - "${FLEET_APP_PORT:-3000}:${FLEET_APP_INTERNAL_PORT:-3000}"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    working_dir: /app
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${FLEET_DB_NAME:-app}
+      POSTGRES_USER: ${FLEET_DB_USER:-app}
+      POSTGRES_PASSWORD: ${FLEET_DB_PASSWORD:-app}
+    ports:
+      - "${FLEET_DB_PORT:-5432}:5432"
+    volumes:
+      - fleet_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${FLEET_DB_USER:-app}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  fleet_db_data:

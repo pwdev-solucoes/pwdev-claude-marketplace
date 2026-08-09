@@ -317,6 +317,24 @@ manager (`product prd`), quick engineer (`quick`).
 
 `review` também aceita `--code-only`, `--tests-only`, `--diff HEAD~N`.
 
+### Fleet (múltiplas phases em paralelo)
+
+| Comando | O que faz |
+|---------|-----------|
+| `/pwdev-code:fleet <slug> [slug...]` | Lança até `fleet.max_concurrent` (padrão 3) phases, cada uma rodando `plan → execute → review → verify` sem intervenção humana, em seu próprio git worktree + stack docker-compose (portas exclusivas) + janela tmux |
+| `/pwdev-code:fleet --status` | Imprime a tabela do fleet uma vez, sem precisar dar attach no tmux |
+| `/pwdev-code:fleet --teardown <slug> [--merge]` | Para o docker+tmux de um slug; `--merge` também faz merge do branch no seu branch atual, mas só se o pipeline chegou a `DONE` |
+
+Cada phase-slug já precisa ter `spec.md` + `decisions.md` (ou seja,
+`/pwdev-code:design` já rodou e foi aprovado por um humano) — discover/design
+ficam de fora do fleet de propósito, assim como `simplify` (a etapa APPLY
+exige aprovação humana por ID, indisponível sem interação). Em todo ponto em
+que os comandos originais pausariam para um humano, a sessão headless
+`claude -p` é instruída a seguir com o padrão de melhor julgamento — revise o
+diff antes de rodar `--merge`. Veja `templates/docker-compose.fleet.yml` para
+o ambiente genérico e parametrizável por worktree (adapte o serviço `app`
+para sua stack real).
+
 ### Delegação Externa
 
 Delegue trabalho para outras CLIs de código atuando no mesmo repositório — o
