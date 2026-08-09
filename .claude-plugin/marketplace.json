@@ -103,6 +103,15 @@
       "category": "workflow",
       "tags": ["postgres", "postgresql", "database", "sql", "mcp", "pt-br"],
       "strict": true
+    },
+    {
+      "name": "pwdev-obsidian",
+      "displayName": "PWDEV Obsidian — Notas, Busca e Vault",
+      "source": "./plugins/pwdev-obsidian",
+      "description": "Integração com Obsidian via MCP embutido no plugin comunitário Local REST API — leitura/escrita/edição estruturada de notas (heading/block/frontmatter), busca por JsonLogic e por texto, tags, comandos da paleta; 1 skill, 3 comandos, setup guiado com API Key no Keychain",
+      "category": "workflow",
+      "tags": ["obsidian", "notes", "knowledge-base", "vault", "markdown", "mcp", "pt-br"],
+      "strict": true
     }
   ]
 }

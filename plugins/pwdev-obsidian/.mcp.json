@@ -1,0 +1,9 @@
+{
+  "obsidian": {
+    "type": "http",
+    "url": "${OBSIDIAN_MCP_URL:-https://127.0.0.1:27124/mcp/}",
+    "headers": {
+      "Authorization": "Bearer ${OBSIDIAN_API_KEY:-}"
+    }
+  }
+}
