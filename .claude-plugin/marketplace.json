@@ -112,6 +112,15 @@
       "category": "workflow",
       "tags": ["obsidian", "notes", "knowledge-base", "vault", "markdown", "mcp", "pt-br"],
       "strict": true
+    },
+    {
+      "name": "pwdev-brain",
+      "displayName": "PWDEV Brain — Segundo Cérebro em LLM Wiki",
+      "source": "./plugins/pwdev-brain",
+      "description": "Segundo cérebro persistente em Markdown v1.1 — LLM Wiki (padrão Karpathy) mantida como bundle Open Knowledge Format v0.2: ingest com discussão e citação por afirmação, query com síntese citada e incorporação de respostas duráveis, lint de conformidade com fixes aprovados; 2 subagentes, 1 skill, 5 comandos, MCP embutido somente-leitura (6 tools, Node puro, zero dependências)",
+      "category": "workflow",
+      "tags": ["second-brain", "knowledge-base", "okf", "llm-wiki", "markdown", "agents", "mcp", "pt-br"],
+      "strict": true
     }
   ]
 }

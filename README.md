@@ -161,6 +161,7 @@ The five original plugins were rebuilt on the modern Claude Code plugin system.
 | [**pwdev-youtrack**](./plugins/pwdev-youtrack/) | YouTrack management — official built-in MCP server (2025.3+) for issues, articles & work log; REST fallback for boards, sprints, time reports | 1.0.0 | Apache-2.0 |
 | [**pwdev-glpi**](./plugins/pwdev-glpi/) | GLPI 10.x ITSM — own MCP server via npx (@soarescbm/mcp-glpi): tickets CRUD, triage with MCP prompts, queue reports, assets & KB | 1.0.0 | Apache-2.0 |
 | [**pwdev-postgres**](./plugins/pwdev-postgres/) | PostgreSQL — own MCP server via npx (@soarescbm/postgres-mcp): AST-validated read-only SELECT, schema inspection, DML/DDL with mandatory dry-run | 1.0.0 | Apache-2.0 |
+| [**pwdev-brain**](./plugins/pwdev-brain/) | Second brain as an LLM Wiki (Karpathy pattern) in Open Knowledge Format v0.2 — discussed ingest with per-claim citations, cited query, compliance lint; 2 subagents, embedded read-only MCP (6 tools) | 1.1.0 | Apache-2.0 |
 | [**pwdev-statusline**](./plugins/pwdev-statusline/) | Rich terminal status line — dynamic colors, formatted tokens, fully configurable | 1.1.0 | Apache-2.0 |
 
 ### pwdev-code
@@ -321,6 +322,29 @@ init (connection string → Keychain) ─▶ natural conversation via MCP ─▶
 
 See the [full plugin documentation](./plugins/pwdev-postgres/README.md).
 
+### pwdev-brain
+
+**Second brain as a persistent LLM Wiki** (docs in PT-BR) — Markdown wiki in
+the [Karpathy pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
+kept as an [Open Knowledge Format v0.2](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
+bundle. Sources are read once, discussed with you, and integrated into
+concept documents with per-claim citations; queries answer from the wiki and
+feed durable syntheses back into it. Ships an embedded **read-only MCP
+server** (zero-dependency Node stdio, 6 tools: info, index, list, ranked
+search, get, log) usable from Claude Code and any MCP client — writes stay
+exclusive to the discussed ingest flow. No API keys.
+
+```
+raw/ (immutable) ─▶ ingest (discussed) ─▶ wiki/ OKF v0.2 ─▶ query (cited) ─▶ output/ artifacts
+                                          ├─▶ lint (report → approved fixes)
+                                          └─▶ MCP brain (read-only, 6 tools)
+```
+
+**Skills:** brain (intent routing: "add this to my brain" / "what does my wiki say about X", intent→MCP-tool map)
+**Key features:** guided setup (global or per-project brain), immutable `raw/`, nothing written without discussion, footnote citations resolving to `sources[].id`, append-only `wiki/log.md`, BR-nnn lint rule catalog with approved-only fixes, `brain-ingestor` + `brain-linter` subagents, embedded read-only MCP with path-traversal guards and graceful filesystem fallback
+
+See the [full plugin documentation](./plugins/pwdev-brain/README.md).
+
 ### pwdev-statusline
 
 Rich terminal **status line** for Claude Code. Displays model, git branch, context usage, rate limits, and token counts in a colorful single-line bar — every segment toggleable.
@@ -382,6 +406,9 @@ claude plugin install pwdev-glpi@pwdev-claude-marketplace
 
 # PostgreSQL operations (own MCP server via npx, mandatory dry-run)
 claude plugin install pwdev-postgres@pwdev-claude-marketplace
+
+# Second brain — LLM Wiki in Open Knowledge Format (embedded read-only MCP)
+claude plugin install pwdev-brain@pwdev-claude-marketplace
 
 # Rich terminal status line
 claude plugin install pwdev-statusline@pwdev-claude-marketplace

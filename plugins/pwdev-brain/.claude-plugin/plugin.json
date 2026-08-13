@@ -1,0 +1,12 @@
+{
+  "name": "pwdev-brain",
+  "displayName": "PWDEV Brain — Segundo Cérebro em LLM Wiki (OKF)",
+  "version": "1.1.0",
+  "description": "Segundo cérebro persistente em Markdown — LLM Wiki no padrão Karpathy + Open Knowledge Format v0.2: ingestão com discussão e citação por afirmação, consulta com síntese citada e incorporação de respostas duráveis, lint de conformidade com fixes aprovados. Servidor MCP embutido somente-leitura (6 tools, Node puro, zero dependências).",
+  "author": { "name": "Paulo Soares", "url": "https://github.com/soarescbm" },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": ["claude-code", "claude-plugin", "second-brain", "knowledge-base", "okf", "llm-wiki", "markdown", "agents", "mcp", "pt-br"],
+  "mcpServers": "./.mcp.json"
+}
