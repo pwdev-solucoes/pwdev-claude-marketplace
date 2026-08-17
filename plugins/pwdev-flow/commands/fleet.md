@@ -1,6 +1,7 @@
 ---
 description: Launch, inspect, or tear down an isolated native autonomous phase fleet
 argument-hint: "<slug...>|--status|--teardown <slug> [--merge]"
+disable-model-invocation: true
 ---
 
 # /pwdev-flow:fleet

@@ -20,7 +20,7 @@ Read [workflow](../../references/workflow.md), [artifacts](../../references/arti
    - if legacy config exists and Flow config does not, report a migration candidate instead of initializing over it;
    - use `migrate` only when the user asks to adopt the legacy workspace.
 4. For `migrate`:
-   - resolve [migrate_legacy.py](../../scripts/migrate_legacy.py) from this installed plugin and run `plan` with the active repository root;
+   - resolve [migrate_legacy.py](../../scripts/migrate_legacy.py) from this installed plugin and run `plan` with the active repository root and `--runtime <your adapter>`;
    - present mappings, excluded field names, and conflicts without exposing excluded values;
    - stop for explicit approval before `apply`;
    - after approval, run `apply`, create missing Flow state/directories without overwriting existing paths, and inventory legacy artifacts in `.planning/flow/migration.md`;
@@ -31,6 +31,7 @@ Read [workflow](../../references/workflow.md), [artifacts](../../references/arti
    - create `.planning/flow/quick/` and `.planning/flow/reports/`;
    - create configuration and state using the exact schemas in [artifacts](../../references/artifacts.md);
    - set the artifact language from the user's current language unless explicitly configured otherwise;
+   - record `runtime` as the adapter you are running as, `claude` or `codex`; it is metadata about who initialized the workspace and never makes the artifacts unreadable from the other runtime;
    - set `auto_commit` to `false`.
 6. Report created, migrated, or discovered paths and recommend one next action.
 

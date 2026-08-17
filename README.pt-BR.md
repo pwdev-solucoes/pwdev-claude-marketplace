@@ -171,6 +171,7 @@ foram reestruturados.
 
 | Plugin | Descrição | Versão | Licença |
 |--------|-----------|:------:|:------:|
+| [**pwdev-flow**](./plugins/pwdev-flow/) | Desenvolvimento orientado a especificação portátil para Claude Code **e** Codex — um único contrato `.planning/flow`, 17 comandos, auditoria semântica opt-in, delegação guardada a CLIs externas, frotas nativas isoladas (`claude -p` / `codex exec`) | 0.6.0 | Apache-2.0 |
 | [**pwdev-code**](./plugins/pwdev-code/) | Desenvolvimento orientado a especificação — 8 subagentes reais (incl. advisor), roteamento por task, grafo de memória, waves paralelas opt-in, delegação a CLIs externas (Codex/OpenCode/Kimi/Gemini/Kiro), 22 comandos | 2.3.0 | Apache-2.0 |
 | [**pwdev-uiux**](./plugins/pwdev-uiux/) | Engenharia UI/UX — 6 subagentes reais, fluxo de 5 fases com gates, Figma, WCAG 2.1 AA | 2.0.1 | Apache-2.0 |
 | [**pwdev-feat**](./plugins/pwdev-feat/) | Desenvolvimento simplificado de features — planos PWDEVIA inline + subagentes executor e advisor | 2.1.0 | Apache-2.0 |
@@ -183,6 +184,31 @@ foram reestruturados.
 | [**pwdev-postgres**](./plugins/pwdev-postgres/) | PostgreSQL — servidor MCP próprio via npx (@soarescbm/postgres-mcp): SELECT somente-leitura validado por AST, inspeção de schema, DML/DDL com dry-run obrigatório | 1.0.0 | Apache-2.0 |
 | [**pwdev-brain**](./plugins/pwdev-brain/) | Segundo cérebro em LLM Wiki (padrão Karpathy) no Open Knowledge Format v0.2 — ingest discutido com citação por afirmação, query citada, lint de conformidade; 2 subagentes, MCP embutido somente-leitura (6 tools) | 1.1.0 | Apache-2.0 |
 | [**pwdev-statusline**](./plugins/pwdev-statusline/) | Barra de status rica — cores dinâmicas, tokens formatados, totalmente configurável | 1.1.0 | Apache-2.0 |
+
+### pwdev-flow
+
+Desenvolvimento portátil com aprovação em portões, rodando nativamente **tanto
+no Claude Code quanto no Codex** a partir de um único pacote. Os contratos do
+fluxo ficam em skills e references neutras de runtime; cada host recebe um
+adaptador fino.
+
+```
+DISCOVER ─▶ DESIGN ─▶ PLAN ─▶ EXECUTE ─▶ [SIMPLIFY] ─▶ REVIEW ─▶ VERIFY
+```
+
+Um fluxo iniciado em um runtime pode continuar no outro: os dois leem e escrevem
+os mesmos artefatos `.planning/flow`. As frotas autônomas rodam fases aprovadas
+em worktrees Git isolados, com stack Docker e painel tmux próprios, conduzidas
+pela CLI headless do próprio runtime — `claude -p` ou `codex exec`. Os dois
+vetores privilegiados são construídos em adaptadores separados e nunca podem se
+transformar um no outro.
+
+**Sem subagentes, sem hooks, sem servidores MCP**, por decisão de projeto: a
+trilha de auditoria é um log JSONL semântico e opt-in, gravado só depois que a
+ação realmente aconteceu, para continuar significativo nos dois hosts em vez de
+virar telemetria específica de um deles.
+
+Veja a [documentação completa do plugin](./plugins/pwdev-flow/README.pt-BR.md).
 
 ### pwdev-code
 
@@ -396,6 +422,9 @@ claude plugin marketplace add https://github.com/pwdev-solucoes/pwdev-claude-mar
 ### Instalar plugins
 
 ```bash
+# Desenvolvimento orientado a especificação portátil para Claude Code e Codex (17 comandos, frotas nativas)
+claude plugin install pwdev-flow@pwdev-claude-marketplace
+
 # Desenvolvimento orientado a especificação (8 subagentes, 6 fases, grafo de memória)
 claude plugin install pwdev-code@pwdev-claude-marketplace
 
@@ -544,6 +573,7 @@ Isso executa `git pull` na cópia local em `~/.claude/plugins/marketplaces/pwdev
 Reinstale cada plugin que você usa para obter a versão mais recente:
 
 ```bash
+claude plugin install pwdev-flow@pwdev-claude-marketplace
 claude plugin install pwdev-code@pwdev-claude-marketplace
 claude plugin install pwdev-uiux@pwdev-claude-marketplace
 claude plugin install pwdev-feat@pwdev-claude-marketplace

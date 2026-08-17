@@ -56,7 +56,6 @@ SCRIPTS = (
 )
 TEMPLATES = (
     "docker-compose.flow-fleet.yml",
-    "fleet-env.example",
     "fleet-result.schema.json",
 )
 FORBIDDEN_RUNTIME_TERMS = (

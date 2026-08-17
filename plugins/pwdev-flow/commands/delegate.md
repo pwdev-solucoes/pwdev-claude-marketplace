@@ -1,6 +1,7 @@
 ---
 description: Delegate a bounded repository task to a guarded external coding CLI
 argument-hint: "<provider> <read|write> <task>"
+disable-model-invocation: true
 ---
 
 # /pwdev-flow:delegate

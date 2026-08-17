@@ -7,7 +7,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-flow_fleet}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-development-only}
     ports:
-      - "${DB_PORT:-5432}:5432"
+      # Loopback only: these are throwaway development credentials and must not
+      # be reachable from the LAN. fleet-up.sh also probes 127.0.0.1 for conflicts.
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     volumes:
       - flow-fleet-db:/var/lib/postgresql/data
   app:
@@ -16,7 +18,7 @@ services:
       NODE_ENV: ${FLOW_ENV:-development}
       PORT: ${APP_PORT:-3000}
     ports:
-      - "${APP_PORT:-3000}:${APP_PORT:-3000}"
+      - "127.0.0.1:${APP_PORT:-3000}:${APP_PORT:-3000}"
     depends_on:
       - db
 volumes:

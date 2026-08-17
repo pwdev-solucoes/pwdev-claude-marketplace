@@ -157,6 +157,8 @@ Teardown validates the exact derived central pane as a regular, non-symlinked ex
 
 Pass `--merge` only after explicit user authorization. Require the strict terminal status above, a clean tracked worktree, no non-fleet untracked files, and the initiating repository still on the member's bound base branch. Merge with `--no-ff`; on conflict, abort and preserve branch, worktree, central pane, and recoverable state. Remove the worktree, central pane, and member bookkeeping only after a successful merge. Use `DRY_RUN=1` only to preview exact commands; its rendered state, contract binding, guards, and atomic publications must match live behavior.
 
+Teardown stops the Compose project without `--volumes`: it never destroys data on its own. The member's named database volume therefore survives, and teardown reports its exact name so it can be reclaimed deliberately.
+
 On partial launch, persist `NEEDS_HUMAN` with known resources and report the exact teardown route. Preserve bookkeeping after any cleanup verification failure. Never delete unknown files, recursively clean unresolved paths, or repair malformed state automatically.
 
 ## Audit and prohibitions

@@ -64,10 +64,22 @@ class ClaudeCompatibilityTests(unittest.TestCase):
         for path in (PLUGIN / "commands").glob("*.md"):
             with self.subTest(command=path.name):
                 text = path.read_text(encoding="utf-8")
-                self.assertRegex(text, r"^---\ndescription: .+\n(?:argument-hint: .+\n)?---\n")
+                self.assertRegex(
+                    text,
+                    r"^---\ndescription: .+\n(?:argument-hint: .+\n)?"
+                    r"(?:disable-model-invocation: true\n)?---\n",
+                )
                 for target in re.findall(r"\$\{CLAUDE_PLUGIN_ROOT\}([^\s)`]+)", text):
                     self.assertFalse(".." in Path(target).parts)
                     self.assertTrue((PLUGIN / target.lstrip("/")).is_file())
+
+    def test_privileged_commands_are_user_invoked_only(self):
+        """Fleet and delegation spawn privileged processes; the model must not
+        reach for them on its own. The user can still type the slash command."""
+        for name in ("fleet", "delegate"):
+            with self.subTest(command=name):
+                text = (PLUGIN / "commands" / f"{name}.md").read_text(encoding="utf-8")
+                self.assertIn("disable-model-invocation: true", text)
 
     def test_claude_marketplace_registers_strict_local_plugin(self):
         marketplace = json.loads(CLAUDE_MARKETPLACE.read_text(encoding="utf-8"))

@@ -1,4 +1,4 @@
 interface:
   display_name: "PWDEV Flow Fleet"
-  short_description: "Run isolated autonomous Codex phase fleets"
+  short_description: "Run isolated autonomous phase fleets"
   default_prompt: "Use $flow-fleet to launch approved phases in isolated worktrees."

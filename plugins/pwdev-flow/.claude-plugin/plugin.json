@@ -12,6 +12,7 @@
   "license": "Apache-2.0",
   "keywords": [
     "claude-code",
+    "claude-plugin",
     "codex",
     "workflow",
     "spec-driven",

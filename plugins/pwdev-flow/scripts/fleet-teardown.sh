@@ -5,12 +5,13 @@ set -Eeuo pipefail
 usage() { printf 'Usage: %s <lowercase-slug> [--merge]\n' "${0##*/}" >&2; exit 2; }
 fail() { printf 'fleet-teardown: %s\n' "$*" >&2; exit 2; }
 SLUG=${1:-}; [[ $# -eq 1 || $# -eq 2 ]] || usage
-[[ $SLUG =~ ^[a-z0-9][a-z0-9-]*$ ]] || fail "invalid slug: $SLUG"
+[[ $SLUG =~ ^[a-z0-9][a-z0-9-]*$ && $SLUG == *[a-z]* && $SLUG != dashboard ]] || fail "invalid slug: $SLUG"
 MERGE=false; if [[ $# -eq 2 ]]; then [[ $2 == --merge ]] || usage; MERGE=true; fi
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || fail 'run inside a Git repository'
 cd "$REPO_ROOT"
 REPO_PARENT=$(cd "$REPO_ROOT/.." && pwd -P); REPO_NAME=$(basename "$REPO_ROOT")
 FLEET_DIR=$REPO_ROOT/.planning/flow/fleet; MEMBER_FILE=$FLEET_DIR/$SLUG.json; PANE_FILE=$FLEET_DIR/$SLUG.pane.sh
+RUNNER_LOCK=$FLEET_DIR/.${SLUG}.runner.lock
 CONFIG=$REPO_ROOT/.planning/flow/config.json; BRANCH=flow-fleet/$SLUG; PROJECT_NAME=flow-fleet-$SLUG
 WORKTREE_PATH=$REPO_PARENT/$REPO_NAME-fleet-$SLUG; TMUX_WINDOW=pwdev-flow-fleet:$SLUG; COMPOSE_FILE=docker-compose.flow-fleet.yml
 SCRIPT_DIR=$(cd -- "${BASH_SOURCE[0]%/*}" && pwd -P)
@@ -41,7 +42,8 @@ if [[ -e $PANE_FILE || -L $PANE_FILE ]]; then
 else
   jq -e '.status == "NEEDS_HUMAN" and .tmux_attempted == false' "$MEMBER_FILE" >/dev/null 2>&1 || fail 'fleet pane is missing or invalid'
 fi
-for binary in git jq docker tmux; do command -v "$binary" >/dev/null 2>&1 || fail "required binary unavailable: $binary"; done
+# python3 belongs here too: best_effort_audit shells out to flow_audit.py below.
+for binary in git jq docker tmux python3; do command -v "$binary" >/dev/null 2>&1 || fail "required binary unavailable: $binary"; done
 PORT_BASE_APP=$(jq -er '.fleet.port_base_app | select(type == "number" and . > 0 and floor == .)' "$CONFIG") || fail 'invalid fleet.port_base_app'
 PORT_BASE_DB=$(jq -er '.fleet.port_base_db | select(type == "number" and . > 0 and floor == .)' "$CONFIG") || fail 'invalid fleet.port_base_db'
 PORT_STEP=$(jq -er '.fleet.port_step | select(type == "number" and . > 0 and floor == .)' "$CONFIG") || fail 'invalid fleet.port_step'
@@ -217,6 +219,7 @@ if [[ ${DRY_RUN:-} == 1 ]]; then
   fi
   printf '(cd %q && docker compose -p %q --env-file .env.fleet -f %q down)\n' "$WORKTREE_PATH" "$PROJECT_NAME" "$COMPOSE_FILE"
   render_tmux_shutdown
+  printf 'if [[ -d %q && ! -L %q ]]; then rmdir %q; fi\n' "$RUNNER_LOCK" "$RUNNER_LOCK" "$RUNNER_LOCK"
   if [[ $MERGE == true ]]; then
     render_merge_and_removal
     exit 0
@@ -227,7 +230,17 @@ if [[ ${DRY_RUN:-} == 1 ]]; then
 fi
 [[ $MERGE == false ]] || check_merge_authorization
 (cd "$WORKTREE_PATH" && docker compose -p "$PROJECT_NAME" --env-file .env.fleet -f "$COMPOSE_FILE" down)
+# Deliberately no --volumes: teardown never destroys data on its own. The named
+# volume outlives the member, so report it instead of leaking it silently.
+printf 'fleet-teardown: database volume %s_flow-fleet-db was kept; remove it with `docker volume rm %s_flow-fleet-db` when its data is no longer needed\n' "$PROJECT_NAME" "$PROJECT_NAME"
 shutdown_tmux
+# The pane is proven gone above, so this teardown is the explicit human action
+# that clears a runner lock left behind by a killed pane. Without it the slug
+# stays blocked with no tooling, and the runner deliberately keeps its lock.
+if [[ -d $RUNNER_LOCK && ! -L $RUNNER_LOCK ]]; then
+  rmdir "$RUNNER_LOCK" 2>/dev/null \
+    || printf 'fleet-teardown: could not release runner lock at %s\n' "$RUNNER_LOCK" >&2
+fi
 if [[ $MERGE == false ]]; then rm -f "$PANE_FILE"; rm "$MEMBER_FILE"; best_effort_audit STOPPED; printf 'fleet-teardown: stopped %s; preserved branch and worktree\n' "$SLUG"; exit 0; fi
 if ! git merge --no-ff "$BRANCH"; then
   if git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1; then

@@ -168,6 +168,7 @@ The five original plugins were rebuilt on the modern Claude Code plugin system.
 
 | Plugin | Description | Version | License |
 |--------|-------------|:-------:|:-------:|
+| [**pwdev-flow**](./plugins/pwdev-flow/) | Portable spec-driven development for Claude Code **and** Codex — one `.planning/flow` contract, 17 commands, semantic opt-in audit, guarded external CLI delegation, isolated native fleets (`claude -p` / `codex exec`) | 0.6.0 | Apache-2.0 |
 | [**pwdev-code**](./plugins/pwdev-code/) | Spec-driven development — 8 real subagents (incl. advisor), per-task model routing, memory graph, opt-in parallel waves, external CLI delegation (Codex/OpenCode/Kimi/Gemini/Kiro), 22 commands | 2.3.0 | Apache-2.0 |
 | [**pwdev-uiux**](./plugins/pwdev-uiux/) | UI/UX engineering — 6 real subagents, 5-phase workflow with gates, Figma, WCAG 2.1 AA | 2.0.1 | Apache-2.0 |
 | [**pwdev-feat**](./plugins/pwdev-feat/) | Simplified feature development — PWDEVIA 7-question plans inline + executor and advisor subagents | 2.1.0 | Apache-2.0 |
@@ -180,6 +181,28 @@ The five original plugins were rebuilt on the modern Claude Code plugin system.
 | [**pwdev-postgres**](./plugins/pwdev-postgres/) | PostgreSQL — own MCP server via npx (@soarescbm/postgres-mcp): AST-validated read-only SELECT, schema inspection, DML/DDL with mandatory dry-run | 1.0.0 | Apache-2.0 |
 | [**pwdev-brain**](./plugins/pwdev-brain/) | Second brain as an LLM Wiki (Karpathy pattern) in Open Knowledge Format v0.2 — discussed ingest with per-claim citations, cited query, compliance lint; 2 subagents, embedded read-only MCP (6 tools) | 1.1.0 | Apache-2.0 |
 | [**pwdev-statusline**](./plugins/pwdev-statusline/) | Rich terminal status line — dynamic colors, formatted tokens, fully configurable | 1.1.0 | Apache-2.0 |
+
+### pwdev-flow
+
+Portable, approval-gated development that runs natively in **both Claude Code
+and Codex** from one source package. The workflow contracts live in
+runtime-neutral skills and references; each host gets a thin adapter.
+
+```
+DISCOVER ─▶ DESIGN ─▶ PLAN ─▶ EXECUTE ─▶ [SIMPLIFY] ─▶ REVIEW ─▶ VERIFY
+```
+
+A workflow started in one runtime can be continued in the other: both read and
+write the same `.planning/flow` artifacts. Autonomous fleets run approved phases
+in isolated Git worktrees with their own Docker stack and tmux pane, driven by
+the runtime's own headless CLI — `claude -p` or `codex exec`. The two privileged
+vectors are built in separate adapters and can never turn into one another.
+
+**No subagents, no hooks, no MCP servers**, by design: the audit trail is a
+semantic, opt-in JSONL log written only after an action actually happened, so it
+stays meaningful in both hosts instead of being host-specific telemetry.
+
+See the [full plugin documentation](./plugins/pwdev-flow/README.md).
 
 ### pwdev-code
 
@@ -394,6 +417,9 @@ claude plugin marketplace add https://github.com/pwdev-solucoes/pwdev-claude-mar
 ### Install plugins
 
 ```bash
+# Portable spec-driven development for Claude Code and Codex (17 commands, native fleets)
+claude plugin install pwdev-flow@pwdev-claude-marketplace
+
 # Spec-driven development (8 subagents, 6 phases, memory graph)
 claude plugin install pwdev-code@pwdev-claude-marketplace
 
@@ -540,6 +566,7 @@ This runs `git pull` on the local copy at `~/.claude/plugins/marketplaces/pwdev-
 Reinstall each plugin you use to pick up the latest version:
 
 ```bash
+claude plugin install pwdev-flow@pwdev-claude-marketplace
 claude plugin install pwdev-code@pwdev-claude-marketplace
 claude plugin install pwdev-uiux@pwdev-claude-marketplace
 claude plugin install pwdev-feat@pwdev-claude-marketplace

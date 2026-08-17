@@ -621,6 +621,44 @@ class FleetLifecycleContractTest(unittest.TestCase):
             self.assertFalse((root / "tmux-arguments.txt").exists())
             self.assert_no_forbidden_commands(environment)
 
+    def test_generated_gitignore_keeps_runtime_files_out_of_the_merged_branch(self) -> None:
+        """fleet-run.sh stages each stage with `git add -A` and teardown --merge
+        lands that history on the user's base branch, so raw provider logs,
+        structured results and the generated Compose file must be ignored."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repository = init_repository(root / "repo")
+            create_approved_phase(repository, "demo", tracked=True)
+            write_fleet_config(repository)
+            environment = self.fake_environment(root)
+
+            result = self.launch(repository, "demo", environment)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            worktree = Path(str(self.active_member(repository, "demo")["worktree_path"]))
+            ignored = (worktree / ".gitignore").read_text(encoding="utf-8")
+            for entry in (
+                ".env.fleet",
+                "docker-compose.flow-fleet.yml",
+                ".planning/flow/fleet-status.json",
+                ".planning/flow/fleet-logs/",
+                ".planning/flow/fleet-results/",
+            ):
+                with self.subTest(entry=entry):
+                    self.assertIn(entry, ignored)
+
+            # Prove it: a staged log and result must not become tracked content.
+            for relative in ("fleet-logs/plan.log", "fleet-results/plan.json"):
+                path = worktree / ".planning" / "flow" / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("provider transcript\n", encoding="utf-8")
+            (worktree / "docker-compose.flow-fleet.yml").write_text("services: {}\n", encoding="utf-8")
+            self.assertEqual(git(worktree, "add", "-A").returncode, 0)
+            staged = git(worktree, "diff", "--cached", "--name-only").stdout
+            for entry in ("fleet-logs", "fleet-results", "docker-compose.flow-fleet.yml"):
+                with self.subTest(staged=entry):
+                    self.assertNotIn(entry, staged)
+
     def test_launch_allocates_first_free_slot_and_writes_bookkeeping(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -1130,6 +1168,32 @@ class FleetLifecycleContractTest(unittest.TestCase):
             self.assertIn("kill-window", (Path(environment["FLOW_FAKE_TMUX_LOG"])).read_text(encoding="utf-8"))
             self.assert_no_forbidden_commands(environment)
 
+    def test_teardown_releases_a_runner_lock_left_by_a_killed_pane(self) -> None:
+        """The runner keeps its lock on purpose; teardown is the explicit human
+        action that clears it, otherwise the slug stays blocked with no tooling."""
+        with tempfile.TemporaryDirectory() as directory:
+            repository, environment, _ = self.create_active_member(Path(directory))
+            lock = repository / ".planning" / "flow" / "fleet" / ".demo.runner.lock"
+            lock.mkdir()
+
+            result = run_shell(FLEET_TEARDOWN, repository, "demo", env=environment)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse(lock.exists())
+
+    def test_teardown_reports_the_database_volume_it_deliberately_keeps(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository, environment, _ = self.create_active_member(Path(directory))
+
+            result = run_shell(FLEET_TEARDOWN, repository, "demo", env=environment)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("flow-fleet-demo_flow-fleet-db", result.stdout + result.stderr)
+            # Teardown never destroys data on its own.
+            self.assertNotIn(
+                "--volumes", Path(environment["FLOW_FAKE_DOCKER_LOG"]).read_text(encoding="utf-8")
+            )
+
     def test_teardown_refuses_merge_when_status_is_not_done(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repository, environment, member = self.create_active_member(Path(directory))
@@ -1429,7 +1493,9 @@ class FleetLifecycleContractTest(unittest.TestCase):
                 for fragment in (
                     f"NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ); mkdir -p {quoted_fleet_directory}; "
                     f"temporary=$(mktemp {quoted_fleet_directory}/.demo.json.XXXXXX) || exit 1; ",
-                    "if ! jq -n --arg slug demo --arg branch flow-fleet/demo",
+                    # The rendered plan must bind the runtime exactly like the live
+                    # writer, or executing the plan yields a member the runner rejects.
+                    "if ! jq -n --arg slug demo --arg runtime codex --arg branch flow-fleet/demo",
                     f"--arg worktree {quoted_worktree}",
                     "--arg project flow-fleet-demo --arg window pwdev-flow-fleet:demo",
                     "--arg compose docker-compose.flow-fleet.yml",

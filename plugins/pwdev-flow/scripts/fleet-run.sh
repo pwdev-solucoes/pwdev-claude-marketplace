@@ -8,7 +8,7 @@ fail() { printf 'fleet-run: %s\n' "$*" >&2; exit 2; }
 SLUG=$1; WORKTREE_INPUT=$2
 EXPECTED_RUNTIME=${FLOW_FLEET_RUNTIME:-codex}
 case "$EXPECTED_RUNTIME" in codex|claude) ;; *) fail "unsupported fleet runtime: $EXPECTED_RUNTIME";; esac
-[[ $SLUG =~ ^[a-z0-9][a-z0-9-]*$ ]] || fail "invalid slug: $SLUG"
+[[ $SLUG =~ ^[a-z0-9][a-z0-9-]*$ && $SLUG == *[a-z]* && $SLUG != dashboard ]] || fail "invalid slug: $SLUG"
 if [[ $# -eq 3 ]]; then [[ $3 == danger-full-access ]] || fail 'permission mode must be danger-full-access'; fi
 # $EXPECTED_RUNTIME is constrained to codex|claude above, so it names the provider binary.
 for binary in git jq "$EXPECTED_RUNTIME" shasum awk python3 sleep; do command -v "$binary" >/dev/null 2>&1 || fail "required binary unavailable: $binary"; done
