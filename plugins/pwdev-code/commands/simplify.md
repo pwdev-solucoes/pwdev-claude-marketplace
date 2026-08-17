@@ -41,6 +41,7 @@ Via the Task tool:
 - `model`: resolve per `${CLAUDE_PLUGIN_ROOT}/references/model-profiles.md`
 - prompt: **ANALYZE** template in
   `${CLAUDE_PLUGIN_ROOT}/references/spawn-contracts.md`.
+- Log the resolved model right after spawning: `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" spawn simplify SIMPLIFY pwdev-code:simplifier <model>`
 
 Log: `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" event simplify SIMPLIFY simplify_proposed simplify-proposals.md '{"count":N}'`
 

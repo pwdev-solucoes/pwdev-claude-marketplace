@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Flow Plan"
+  short_description: "Plan atomic tasks in dependency-aware waves"
+  default_prompt: "Use $flow-plan to create executable tasks from this approved specification."

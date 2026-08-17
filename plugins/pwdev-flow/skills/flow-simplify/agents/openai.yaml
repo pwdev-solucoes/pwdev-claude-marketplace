@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Flow Simplify"
+  short_description: "Simplify code through approved safe proposals"
+  default_prompt: "Use $flow-simplify to propose behavior-preserving simplifications for this diff."

@@ -47,6 +47,7 @@ first). Project verification commands come from CLAUDE.md sections 12 and 14.
   `${CLAUDE_PLUGIN_ROOT}/references/spawn-contracts.md` — full spec sections,
   summary paths (to be distrusted), review report paths, `LANGUAGE: {lang}`,
   and the goal: refute completion.
+- Log the resolved model right after spawning: `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" spawn verify VERIFY pwdev-code:verifier <model>`
 
 It writes `verify/verify.md` (+ `verify/fix-{NN}.md` if rejected) and replies
 with ≤10 lines.

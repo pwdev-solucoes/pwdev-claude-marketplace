@@ -75,6 +75,10 @@ Resolve each `model` per `${CLAUDE_PLUGIN_ROOT}/references/model-profiles.md`.
    (spec §2/5/8, summary paths, skills, `LANGUAGE: {lang}`).
    Writes: `review/qa-report.md`.
 
+Log each resolved model right after spawning:
+`"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" spawn review REVIEW pwdev-code:code-reviewer <model>`
+`"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" spawn review REVIEW pwdev-code:qa <model>`
+
 ### STEP 3.5 — External Second Opinion (opt-in)
 
 Read `.planning/config.json` → `external_models.reviewer`. If absent or

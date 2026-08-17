@@ -1,0 +1,23 @@
+{
+  "name": "pwdev-flow",
+  "displayName": "PWDEV Flow — Portable Spec-Driven Development",
+  "version": "0.6.0",
+  "description": "Portable, approval-gated software development for Claude Code and Codex, with shared artifacts, semantic audit, guarded delegation, and isolated native fleets.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "claude-code",
+    "codex",
+    "workflow",
+    "spec-driven",
+    "audit",
+    "fleet",
+    "delegation",
+    "portable"
+  ]
+}

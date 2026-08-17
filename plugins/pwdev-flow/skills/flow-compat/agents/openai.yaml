@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Flow Compatibility"
+  short_description: "Route supported PWDEV Code commands to Flow"
+  default_prompt: "Use $flow-compat to translate this legacy PWDEV Code command to PWDEV Flow."

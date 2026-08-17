@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Flow Product"
+  short_description: "Create traceable PRDs and product roadmaps"
+  default_prompt: "Use $flow-product to create an approval-gated PRD and roadmap."

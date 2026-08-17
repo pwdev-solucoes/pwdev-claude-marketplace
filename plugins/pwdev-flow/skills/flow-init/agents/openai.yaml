@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Flow Init"
+  short_description: "Initialize portable PWDEV Flow project state"
+  default_prompt: "Use $flow-init to initialize PWDEV Flow in this repository."

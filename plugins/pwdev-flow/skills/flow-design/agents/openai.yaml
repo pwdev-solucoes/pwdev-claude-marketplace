@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Flow Design"
+  short_description: "Design an approval-gated feature contract"
+  default_prompt: "Use $flow-design to design this feature from approved requirements."

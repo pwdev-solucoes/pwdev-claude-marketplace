@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Flow Discover"
+  short_description: "Discover requirements and repository context"
+  default_prompt: "Use $flow-discover to discover and approve requirements for this feature."

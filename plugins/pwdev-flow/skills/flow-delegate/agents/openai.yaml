@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Flow Delegate"
+  short_description: "Delegate safely to external coding CLIs"
+  default_prompt: "Use $flow-delegate to select and run an external coding CLI."

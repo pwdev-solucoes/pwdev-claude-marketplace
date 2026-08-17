@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Flow Maintenance"
+  short_description: "Archive artifacts and generate changelogs safely"
+  default_prompt: "Use $flow-maintenance to inventory safe project maintenance actions."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Flow Review"
+  short_description: "Review code and test coverage independently"
+  default_prompt: "Use $flow-review to review this diff and its test evidence."

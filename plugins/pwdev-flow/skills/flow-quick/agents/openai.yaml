@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Flow Quick"
+  short_description: "Deliver a bounded change with verification"
+  default_prompt: "Use $flow-quick to implement and verify this bounded change."

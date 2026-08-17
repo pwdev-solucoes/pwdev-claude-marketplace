@@ -70,6 +70,7 @@ For each task of the current wave, in order:
 - `model`: resolve per `${CLAUDE_PLUGIN_ROOT}/references/model-profiles.md`
   using the plan's `Complexity:` header (per-task matrix; absent → medium;
   fix plans are implicitly high; `model_overrides` still wins)
+- Log the resolved model right after spawning: `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" spawn execute EXECUTE pwdev-code:executor <model> '{"complexity":"<level>"}'`
 
 **2.3 Collect the status reply** (≤10 lines). Read ONLY the status — do not
 open the summary file unless the status demands it.
@@ -84,6 +85,7 @@ open the summary file unless the status demands it.
      RELEVANT MEMORY block (decisions first).
   2. Log `advice_requested` (agent=executor, target=advice-request path) and
      `advice_given` (agent=advisor, detail: confidence) via audit-log.sh.
+     Also log the resolved model: `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" spawn execute EXECUTE pwdev-code:advisor <model>`
   3. Re-spawn the executor with the original prompt + the ADVICE block
      (see spawn-contracts). If the re-spawned executor replies
      `NEEDS_ADVICE` again → treat as `STOPPED` and escalate to the human.

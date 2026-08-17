@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Flow Verify"
+  short_description: "Adversarially verify completion with evidence"
+  default_prompt: "Use $flow-verify to verify this implementation against its contract."

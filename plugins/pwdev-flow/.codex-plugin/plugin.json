@@ -1,0 +1,42 @@
+{
+  "name": "pwdev-flow",
+  "version": "0.6.0+codex.20260817000000",
+  "description": "Runtime-independent, spec-driven development with operational health, audit, maintenance, PWDEV Code migration, isolated autonomous fleets, and guarded external CLI delegation.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "codex",
+    "spec-driven-development",
+    "workflow",
+    "review",
+    "verification",
+    "audit",
+    "fleet",
+    "delegation",
+    "migration"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "PWDEV Flow",
+    "shortDescription": "Portable spec-driven development workflows",
+    "longDescription": "Discover, design, plan, execute, review, simplify, and verify through approval-gated workflows, with portable health checks, semantic audit, safe maintenance, legacy PWDEV Code migration, isolated autonomous Codex phase fleets, and guarded external coding CLI delegation.",
+    "developerName": "PWDEV Solucoes",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Discover and design this feature with PWDEV Flow.",
+      "Plan and execute this approved PWDEV Flow specification.",
+      "Review and verify this implementation independently.",
+      "Diagnose, audit, maintain, or migrate this PWDEV Flow workspace safely.",
+      "Launch an isolated autonomous Codex phase fleet or delegate safely to an external coding CLI."
+    ]
+  }
+}

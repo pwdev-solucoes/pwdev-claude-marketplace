@@ -1,0 +1,23 @@
+# Development-only fleet services. The provisioner supplies .env.fleet locally.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-flow_fleet}
+      POSTGRES_USER: ${POSTGRES_USER:-flow_fleet}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-development-only}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - flow-fleet-db:/var/lib/postgresql/data
+  app:
+    build: .
+    environment:
+      NODE_ENV: ${FLOW_ENV:-development}
+      PORT: ${APP_PORT:-3000}
+    ports:
+      - "${APP_PORT:-3000}:${APP_PORT:-3000}"
+    depends_on:
+      - db
+volumes:
+  flow-fleet-db:

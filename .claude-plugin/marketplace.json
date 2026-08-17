@@ -6,6 +6,15 @@
   },
   "plugins": [
     {
+      "name": "pwdev-flow",
+      "displayName": "PWDEV Flow — Portable Spec-Driven Development",
+      "source": "./plugins/pwdev-flow",
+      "description": "Approval-gated PWDEV Flow compatible with Claude Code and Codex, including native isolated fleet runtimes.",
+      "category": "workflow",
+      "tags": ["workflow", "codex", "claude", "spec-driven-development", "fleet"],
+      "strict": true
+    },
+    {
       "name": "pwdev-code",
       "displayName": "PWDEV Code — Spec-Driven Development",
       "source": "./plugins/pwdev-code",

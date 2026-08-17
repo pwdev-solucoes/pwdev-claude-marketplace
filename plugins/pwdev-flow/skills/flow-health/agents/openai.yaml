@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Flow Health"
+  short_description: "Diagnose repository and Flow workspace health"
+  default_prompt: "Use $flow-health to diagnose this repository without changing it."

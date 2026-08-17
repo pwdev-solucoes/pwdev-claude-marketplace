@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Flow Execute"
+  short_description: "Execute approved tasks with fresh evidence"
+  default_prompt: "Use $flow-execute to implement the approved PWDEV Flow plans."

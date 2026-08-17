@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Flow Memory"
+  short_description: "Curate durable project knowledge safely"
+  default_prompt: "Use $flow-memory to capture or inspect durable project knowledge."

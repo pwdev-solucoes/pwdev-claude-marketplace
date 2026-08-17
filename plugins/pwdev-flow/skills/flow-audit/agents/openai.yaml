@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Flow Audit"
+  short_description: "Record and inspect portable semantic audit events"
+  default_prompt: "Use $flow-audit to verify and summarize the PWDEV Flow audit trail."

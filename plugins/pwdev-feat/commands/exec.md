@@ -80,6 +80,7 @@ Task tool call:
 - `subagent_type`: `pwdev-feat:executor`
 - `model`: resolve per `${CLAUDE_PLUGIN_ROOT}/references/model-profiles.md`
   (override key `feat-executor`)
+- Log the resolved model right after spawning: `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" spawn exec "" pwdev-feat:executor <model>`
 
 ### STEP 4 — Collect status and react
 Read ONLY the ≤10-line status reply — do not open plan.done.md unless the
@@ -91,7 +92,8 @@ status demands it.
      model-profiles, override key `feat-advisor`) with the advice-request
      content and plan §1/§2/§7.
   2. Log `advice_requested` / `advice_given` via the audit script (when
-     audit is enabled).
+     audit is enabled). Also log the resolved model:
+     `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" spawn exec "" pwdev-feat:advisor <model>`
   3. Re-spawn the executor with the original prompt + the ADVICE block
      (spawn-contracts). If it replies `NEEDS_ADVICE` again → present to the
      human and stop.

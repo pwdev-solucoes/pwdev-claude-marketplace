@@ -153,6 +153,7 @@ Via the Task tool:
 - prompt: follow the **roadmap** template in
   `${CLAUDE_PLUGIN_ROOT}/references/spawn-contracts.md` — full PRD content,
   `.planning/context/project.md` path, `LANGUAGE: {lang}`.
+- Log the resolved model right after spawning: `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" spawn product ROADMAP pwdev-code:roadmap <model>`
 
 It writes the whole `.planning/product/roadmap/` tree and replies with ≤10
 lines (counts + key prioritization decisions).

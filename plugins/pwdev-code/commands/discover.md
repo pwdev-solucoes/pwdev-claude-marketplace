@@ -70,6 +70,7 @@ so it works while you continue Rounds 2-3:
   `${CLAUDE_PLUGIN_ROOT}/references/spawn-contracts.md` — include the feature
   description (Round 1), the detected stack (STEP 1), paths/topics to
   investigate, and `LANGUAGE: {lang}`.
+- Log the resolved model right after spawning: `"${CLAUDE_PLUGIN_ROOT}/scripts/audit-log.sh" spawn discover DISCOVER pwdev-code:researcher <model>`
 
 It writes `.planning/context/{domain,stack,pitfalls}.md` and replies with
 3 lines. If background spawning is not available in this session, spawn it

@@ -16,6 +16,23 @@ Core philosophy across all plugins:
 
 > **Never execute without a plan. Never ship without verification.**
 
+### PWDEV Flow — dual runtime
+
+`pwdev-flow` is the portable PWDEV workflow for Claude Code and Codex. The
+same approval-gated skills and `.planning/flow` artifacts work in both
+runtimes; isolated fleets select an explicit native engine (`claude` or
+`codex`) and keep privileged execution vectors separate.
+
+Claude fleet members execute through `claude -p`; Codex members execute
+through `codex exec`, with no cross-runtime fallback.
+
+Commands: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
+`/pwdev-flow:plan`, `/pwdev-flow:execute`, `/pwdev-flow:review`,
+`/pwdev-flow:verify`, `/pwdev-flow:simplify`, `/pwdev-flow:quick`,
+`/pwdev-flow:product`, `/pwdev-flow:memory`, `/pwdev-flow:health`,
+`/pwdev-flow:audit`, `/pwdev-flow:maintenance`, `/pwdev-flow:compat`,
+`/pwdev-flow:delegate`, `/pwdev-flow:fleet`.
+
 ---
 
 ## What's New
