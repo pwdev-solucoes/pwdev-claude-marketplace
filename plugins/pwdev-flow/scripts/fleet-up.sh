@@ -60,8 +60,9 @@ contract_is_approved() {
 }
 port_in_use() { (: >/dev/tcp/127.0.0.1/"$1") >/dev/null 2>&1; }
 
-for binary in git jq docker tmux shasum python3; do command -v "$binary" >/dev/null 2>&1 || fail_preflight "required binary unavailable: $binary"; done
-[[ "$RUNTIME" == codex ]] || command -v claude >/dev/null 2>&1 || fail_preflight 'required binary unavailable: claude'
+# $RUNTIME is already constrained to codex|claude above, so the selected runtime binary
+# joins the entry gate: fail before provisioning instead of inside the tmux pane.
+for binary in git jq docker tmux shasum python3 "$RUNTIME"; do command -v "$binary" >/dev/null 2>&1 || fail_preflight "required binary unavailable: $binary"; done
 BASE_BRANCH=$(git symbolic-ref --quiet --short HEAD 2>/dev/null) || fail_preflight 'fleet launch requires a named current branch'
 [[ -n $BASE_BRANCH ]] || fail_preflight 'fleet launch requires a named current branch'
 BASE_COMMIT=$(git rev-parse --verify HEAD 2>/dev/null) || fail_preflight 'unable to resolve base commit'

@@ -1,11 +1,17 @@
 import json
+import os
 import re
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
+
+from tests.flow_m5_fixtures import write_executable
 
 
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "plugins" / "pwdev-flow"
+SCRIPTS = PLUGIN / "scripts"
 CLAUDE_MANIFEST = PLUGIN / ".claude-plugin" / "plugin.json"
 CLAUDE_MARKETPLACE = ROOT / ".claude-plugin" / "marketplace.json"
 
@@ -116,6 +122,153 @@ class ClaudeCompatibilityTests(unittest.TestCase):
     def test_claude_runner_exports_runtime_identity(self):
         runner = (PLUGIN / "scripts/claude-fleet-run.sh").read_text(encoding="utf-8")
         self.assertRegex(runner, r"FLOW_FLEET_RUNTIME=claude")
+
+
+class NativeRuntimeAdapterBehaviourTest(unittest.TestCase):
+    """Execute the runtime adapters instead of grepping them.
+
+    The string assertions above pass even when a dispatcher defines a function it
+    never calls, which is exactly how a silently no-op Claude fleet path shipped.
+    These tests run the scripts with stubbed provider binaries and assert on the
+    observable effect: the process that gets executed and the arguments it receives.
+    """
+
+    def run_script(self, script, *args, path_prefix=None, cwd=None):
+        environment = os.environ.copy()
+        if path_prefix is not None:
+            environment["PATH"] = f"{path_prefix}{os.pathsep}{environment['PATH']}"
+        environment["LC_ALL"] = "C"
+        return subprocess.run(
+            ["/bin/bash", str(SCRIPTS / script), *args],
+            cwd=str(cwd) if cwd is not None else None,
+            env=environment,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+    def stub_provider(self, directory, name):
+        """Install a stub that records its argument vector, one argument per line."""
+        fake_bin = Path(directory) / "bin"
+        fake_bin.mkdir(exist_ok=True)
+        record = Path(directory) / f"{name}-args.txt"
+        write_executable(
+            fake_bin / name,
+            f'for argument in "$@"; do printf "%s\\n" "$argument"; done > {record}',
+        )
+        return fake_bin, record
+
+    def test_launch_core_executes_its_command_and_exports_the_runtime(self):
+        for runtime in ("codex", "claude"):
+            with self.subTest(runtime=runtime):
+                result = self.run_script(
+                    "fleet-launch-core.sh",
+                    runtime,
+                    "/bin/sh",
+                    "-c",
+                    'printf "%s" "$FLOW_FLEET_RUNTIME"',
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout, runtime)
+
+    def test_run_core_invokes_the_matching_engine_with_the_native_vector(self):
+        expected = {
+            "claude": [
+                "-p",
+                "--dangerously-skip-permissions",
+                "--no-session-persistence",
+                "--output-format",
+                "json",
+                "stage prompt",
+            ],
+            "codex": [
+                "exec",
+                "--sandbox",
+                "danger-full-access",
+                "-c",
+                "approval_policy=never",
+                "--add-dir",
+            ],
+        }
+        for runtime, binary in (("claude", "claude"), ("codex", "codex")):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as directory:
+                fake_bin, record = self.stub_provider(directory, binary)
+
+                result = self.run_script(
+                    "fleet-run-core.sh", runtime, "stage prompt", path_prefix=fake_bin
+                )
+
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertTrue(record.exists(), f"{binary} stub was never executed")
+                arguments = record.read_text(encoding="utf-8").splitlines()
+                if runtime == "claude":
+                    self.assertEqual(arguments, expected["claude"])
+                else:
+                    self.assertEqual(arguments[: len(expected["codex"])], expected["codex"])
+                    self.assertEqual(arguments[-1], "stage prompt")
+
+    def test_engines_never_cross_contaminate_privileged_flags(self):
+        for runtime, binary, forbidden in (
+            ("claude", "claude", "--dangerously-bypass-approvals-and-sandbox"),
+            ("claude", "claude", "danger-full-access"),
+            ("codex", "codex", "--dangerously-skip-permissions"),
+        ):
+            with self.subTest(runtime=runtime, forbidden=forbidden), tempfile.TemporaryDirectory() as directory:
+                fake_bin, record = self.stub_provider(directory, binary)
+
+                self.run_script("fleet-run-core.sh", runtime, "stage prompt", path_prefix=fake_bin)
+
+                self.assertNotIn(forbidden, record.read_text(encoding="utf-8").splitlines())
+
+    def test_unsupported_runtime_fails_closed_before_any_effect(self):
+        for script, extra in (
+            ("fleet-launch-core.sh", ("/bin/echo", "must-not-run")),
+            ("fleet-run-core.sh", ("stage prompt",)),
+        ):
+            with self.subTest(script=script):
+                result = self.run_script(script, "gemini", *extra)
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("unsupported fleet runtime", result.stderr)
+                self.assertNotIn("must-not-run", result.stdout)
+
+    def test_core_dispatchers_reject_a_missing_payload(self):
+        for script in ("fleet-launch-core.sh", "fleet-run-core.sh"):
+            with self.subTest(script=script):
+                result = self.run_script(script, "claude")
+                self.assertEqual(result.returncode, 2)
+                self.assertNotEqual(result.stderr.strip(), "")
+
+    def test_claude_runner_validates_slug_and_permission_mode(self):
+        with tempfile.TemporaryDirectory() as directory:
+            worktree = Path(directory)
+            for arguments, expected in (
+                (("Bad-Slug", str(worktree)), "invalid slug"),
+                (("demo", str(worktree), "full-access"), "permission mode"),
+            ):
+                with self.subTest(arguments=arguments):
+                    result = self.run_script("claude-fleet-run.sh", *arguments)
+                    self.assertEqual(result.returncode, 2)
+                    self.assertIn(expected, result.stderr)
+
+    def test_claude_runner_accepts_the_pane_permission_mode_argument(self):
+        """fleet-up.sh writes a three-argument pane vector; the runner must accept it."""
+        with tempfile.TemporaryDirectory() as directory:
+            fake_bin, record = self.stub_provider(directory, "claude")
+            worktree = Path(directory) / "worktree"
+            worktree.mkdir()
+
+            result = self.run_script(
+                "claude-fleet-run.sh",
+                "demo",
+                str(worktree),
+                "danger-full-access",
+                path_prefix=fake_bin,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            arguments = record.read_text(encoding="utf-8").splitlines()
+            self.assertIn("demo", arguments[-1])
+            self.assertNotIn("danger-full-access", arguments)
 
 
 if __name__ == "__main__":

@@ -19,6 +19,15 @@ from tests.flow_m5_fixtures import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+# fleet-up.sh preflights the allocated ports with a real /dev/tcp probe against the
+# loopback interface, so these fixtures must not use the product defaults (3000/5432):
+# any developer machine or CI runner with a local Postgres would fail the whole suite.
+# Kept below the ephemeral range (49152+) so they cannot collide with transient sockets.
+PORT_BASE_APP = 39000
+PORT_BASE_DB = 39500
+PORT_STEP = 10
+
 FLEET_UP = ROOT / "plugins" / "pwdev-flow" / "scripts" / "fleet-up.sh"
 FLEET_RUNNER = ROOT / "plugins" / "pwdev-flow" / "scripts" / "fleet-run.sh"
 FLEET_TEARDOWN = ROOT / "plugins" / "pwdev-flow" / "scripts" / "fleet-teardown.sh"
@@ -103,9 +112,9 @@ def write_fleet_config(
                 "audit": audit,
                 "fleet": {
                     "max_concurrent": max_concurrent,
-                    "port_base_app": 3000,
-                    "port_base_db": 5432,
-                    "port_step": 10,
+                    "port_base_app": PORT_BASE_APP,
+                    "port_base_db": PORT_BASE_DB,
+                    "port_step": PORT_STEP,
                     "permission_mode": permission_mode,
                     "auto_simplify": False,
                     "compose_file": "docker-compose.flow-fleet.yml",
@@ -125,8 +134,8 @@ def write_member(repository: Path, slug: str, index: int) -> Path:
                 "slug": slug,
                 "branch": f"flow-fleet/{slug}",
                 "worktree_path": str(repository.parent / f"repo-fleet-{slug}"),
-                "app_port": 3000 + 10 * index,
-                "db_port": 5432 + 10 * index,
+                "app_port": PORT_BASE_APP + PORT_STEP * index,
+                "db_port": PORT_BASE_DB + PORT_STEP * index,
                 "port_index": index,
                 "project_name": f"flow-fleet-{slug}",
                 "tmux_window": f"pwdev-flow-fleet:{slug}",
@@ -597,7 +606,7 @@ class FleetLifecycleContractTest(unittest.TestCase):
             root_entries_before = sorted(path.name for path in root.iterdir())
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
-                    listener.bind(("127.0.0.1", 3000))
+                    listener.bind(("127.0.0.1", PORT_BASE_APP))
                     listener.listen()
                     result = self.launch(repository, "demo", environment)
             except PermissionError as error:
@@ -626,8 +635,8 @@ class FleetLifecycleContractTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             member = self.active_member(repository, "demo")
             self.assertEqual(member["port_index"], 1)
-            self.assertEqual(member["app_port"], 3010)
-            self.assertEqual(member["db_port"], 5442)
+            self.assertEqual(member["app_port"], PORT_BASE_APP + PORT_STEP)
+            self.assertEqual(member["db_port"], PORT_BASE_DB + PORT_STEP)
             self.assertEqual(member["branch"], "flow-fleet/demo")
             self.assertTrue(Path(str(member["worktree_path"])).is_dir())
             environment_file = Path(str(member["worktree_path"])) / ".env.fleet"
@@ -1267,8 +1276,8 @@ class FleetLifecycleContractTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             for fragment in (
                 "port_index=0",
-                "app_port=3000",
-                "db_port=5432",
+                f"app_port={PORT_BASE_APP}",
+                f"db_port={PORT_BASE_DB}",
                 "docker compose version",
                 "up -d db",
                 "mkdir -p",
@@ -1431,7 +1440,7 @@ class FleetLifecycleContractTest(unittest.TestCase):
                     "--arg base_commit",
                     "--arg status ACTIVE",
                     '--arg created_at "$STATE_CREATED_AT" --arg updated_at "$NOW"',
-                    "--argjson app_port 3000 --argjson db_port 5432 --argjson index 0",
+                    f"--argjson app_port {PORT_BASE_APP} --argjson db_port {PORT_BASE_DB} --argjson index 0",
                     "--argjson worktree_created true --argjson docker_attempted true --argjson tmux_attempted true",
                     f'> "$temporary"; then rm -f "$temporary"; exit 1; fi; mv "$temporary" {quoted_member}',
                 ):
@@ -1520,8 +1529,8 @@ class FleetLifecycleContractTest(unittest.TestCase):
             self.assertEqual(
                 member["worktree_path"], str(canonical_repository.parent / "repo-fleet-demo")
             )
-            self.assertEqual(member["app_port"], 3000)
-            self.assertEqual(member["db_port"], 5432)
+            self.assertEqual(member["app_port"], PORT_BASE_APP)
+            self.assertEqual(member["db_port"], PORT_BASE_DB)
             self.assertEqual(member["port_index"], 0)
             self.assertEqual(member["project_name"], "flow-fleet-demo")
             self.assertEqual(member["tmux_window"], "pwdev-flow-fleet:demo")
@@ -1716,9 +1725,10 @@ class FleetLifecycleContractTest(unittest.TestCase):
 
     def test_malformed_or_overlapping_member_reservations_fail_closed(self) -> None:
         for member_data in (
-            {"port_index": "bad", "app_port": 3000, "db_port": 5432},
-            {"port_index": 1, "app_port": 3000, "db_port": 5442},
-            {"port_index": 0, "app_port": 3000, "db_port": 3000},
+            # non-integer index; index inconsistent with its ports; app and db collide
+            {"port_index": "bad", "app_port": PORT_BASE_APP, "db_port": PORT_BASE_DB},
+            {"port_index": 1, "app_port": PORT_BASE_APP, "db_port": PORT_BASE_DB + PORT_STEP},
+            {"port_index": 0, "app_port": PORT_BASE_APP, "db_port": PORT_BASE_APP},
         ):
             with self.subTest(member_data=member_data), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)

@@ -100,6 +100,7 @@ def write_registered_fleet_member(
     worktree: Path,
     *,
     status: str = "ACTIVE",
+    runtime: str = "codex",
 ) -> Path:
     canonical_worktree = worktree.resolve()
     member = repository.resolve() / ".planning" / "flow" / "fleet" / f"{slug}.json"
@@ -108,6 +109,7 @@ def write_registered_fleet_member(
         json.dumps(
             {
                 "slug": slug,
+                "runtime": runtime,
                 "branch": f"flow-fleet/{slug}",
                 "worktree_path": str(canonical_worktree),
                 "app_port": 3000,
