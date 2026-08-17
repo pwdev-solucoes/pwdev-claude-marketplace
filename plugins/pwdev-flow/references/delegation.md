@@ -1,6 +1,6 @@
 # External delegation contract
 
-Use this contract for standalone external coding CLI delegation. The primary Codex instance owns provider choice, exact-command disclosure, first-run confirmation, host timeout, and independent review. The packaged `run-agent.sh` owns argument construction, locking, mutation detection, capture, and audit metadata.
+Use this contract for standalone external coding CLI delegation, from either runtime. The primary agent owns provider choice, exact-command disclosure, first-run confirmation, host timeout, and independent review. The packaged `run-agent.sh` owns argument construction, locking, mutation detection, capture, and audit metadata.
 
 ## Provider matrix and binaries
 
@@ -56,7 +56,7 @@ gemini [--model <model>] [extra_args...] --prompt <safe-prompt>
 kiro-cli chat --no-interactive [--trust-all-tools in write mode only] [extra_args...] <safe-prompt>
 ```
 
-Standalone Codex never receives `--dangerously-bypass-approvals-and-sandbox`. Kiro never receives `--trust-all-tools` in read mode.
+Standalone delegation never receives a fleet bypass vector: neither `--dangerously-bypass-approvals-and-sandbox` (Codex) nor `--dangerously-skip-permissions` (Claude). Kiro never receives `--trust-all-tools` in read mode.
 
 Before every run, invoke the packaged runner in preview mode:
 
@@ -64,7 +64,7 @@ Before every run, invoke the packaged runner in preview mode:
 bash <packaged-run-agent.sh> --preview <provider> <read|write> <task>
 ```
 
-The preview prints the complete shell-escaped provider argument vector, including the standardized prompt as its final argument, and a confirmation token bound to those exact bytes. Require explicit confirmation of that exact expanded provider vector. Then execute the identical packaged runner invocation without `--preview` and with `FLOW_DELEGATION_CONFIRM_TOKEN` set to the displayed token. A missing or stale token fails before locks, output capture, or provider execution. Confirmation authorizes only that exact vector; any change to provider, task, mode, model, arguments, repository, or prompt requires a new preview and token. Set the host timeout to at least the configured script timeout plus 60 seconds.
+The preview prints the complete shell-escaped provider argument vector, including the standardized prompt as its final argument, and a confirmation token bound to those exact bytes as a SHA-256 digest, so task text cannot be crafted to make a stale token authorize a different vector. Require explicit confirmation of that exact expanded provider vector. Then execute the identical packaged runner invocation without `--preview` and with `FLOW_DELEGATION_CONFIRM_TOKEN` set to the displayed token. A missing or stale token fails before locks, output capture, or provider execution. Confirmation authorizes only that exact vector; any change to provider, task, mode, model, arguments, repository, or prompt requires a new preview and token. Set the host timeout to at least the configured script timeout plus 60 seconds.
 
 ## Read and write behavior
 
@@ -89,7 +89,7 @@ Otherwise propagate the provider exit code. Always report the code, timeout, pro
 
 ## Mandatory independent review
 
-After every delegation, including non-zero exits, the primary Codex instance must:
+After every delegation, including non-zero exits, the primary agent must:
 
 1. inspect current Git status;
 2. inspect the full unstaged and staged diff plus relevant untracked files;

@@ -100,6 +100,7 @@ def write_registered_fleet_member(
     worktree: Path,
     *,
     status: str = "ACTIVE",
+    runtime: str = "codex",
 ) -> Path:
     canonical_worktree = worktree.resolve()
     member = repository.resolve() / ".planning" / "flow" / "fleet" / f"{slug}.json"
@@ -108,6 +109,7 @@ def write_registered_fleet_member(
         json.dumps(
             {
                 "slug": slug,
+                "runtime": runtime,
                 "branch": f"flow-fleet/{slug}",
                 "worktree_path": str(canonical_worktree),
                 "app_port": 3000,
@@ -260,6 +262,83 @@ if branch_change_call == str(call_number):
     )
 
 print(json.dumps({"event": "fake-codex", "stage": stage}))
+""",
+        encoding="utf-8",
+    )
+    path.chmod(0o755)
+
+
+def write_fake_claude(path: Path) -> None:
+    """Stub of `claude -p --output-format json`.
+
+    Unlike Codex it has no --output-last-message: the structured stage result
+    travels inside the envelope it prints on stdout, and its working directory
+    is the worktree rather than a --cd argument.
+    """
+    path.write_text(
+        """#!/usr/bin/python3
+import json
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+arguments = sys.argv[1:]
+log_directory = Path(os.environ["FLOW_FAKE_CLAUDE_ARGS"])
+log_directory.mkdir(parents=True, exist_ok=True)
+counter_path = Path(os.environ["FLOW_FAKE_CLAUDE_COUNTER"])
+call_number = int(counter_path.read_text(encoding="utf-8") or "0") + 1 if counter_path.exists() else 1
+counter_path.write_text(str(call_number), encoding="utf-8")
+(log_directory / f"{call_number:02d}.txt").write_text(
+    "".join(f"{argument}\\n" for argument in arguments),
+    encoding="utf-8",
+)
+(log_directory / f"{call_number:02d}.cwd").write_text(os.getcwd(), encoding="utf-8")
+
+exit_call = os.environ.get("FLOW_FAKE_CLAUDE_EXIT_CALL", "")
+if exit_call == str(call_number):
+    raise SystemExit(int(os.environ.get("FLOW_FAKE_CLAUDE_EXIT_CODE", "19")))
+
+sequence = Path(os.environ["FLOW_FAKE_CLAUDE_SEQUENCE"]).read_text(encoding="utf-8").splitlines()
+if call_number > len(sequence):
+    raise SystemExit(91)
+
+prompt = arguments[-1]
+match = re.search(r"FLOW_FLEET_STAGE=([a-z-]+)", prompt)
+if not match:
+    raise SystemExit(92)
+stage = match.group(1)
+
+skip_stage = os.environ.get("FLOW_FAKE_SKIP_ARTIFACT_STAGE", "")
+skip_calls = {value for value in os.environ.get("FLOW_FAKE_SKIP_ARTIFACT_CALLS", "").split(",") if value}
+if stage != skip_stage and str(call_number) not in skip_calls:
+    slug_match = re.search(r"FLOW_FLEET_SLUG=([a-z0-9-]+)", prompt)
+    if not slug_match:
+        raise SystemExit(93)
+    worktree = Path(os.getcwd())
+    phase = worktree / ".planning" / "flow" / "phases" / slug_match.group(1)
+    artifacts = {
+        "plan": phase / "plans" / "01-fleet-plan.md",
+        "execute": phase / "execution" / "01-summary.md",
+        "review": phase / "review" / "code-review.md",
+        "verify": phase / "verify" / f"verify-{call_number:02d}.md",
+        "execute-fix": phase / "execution" / f"fix-{call_number:02d}-summary.md",
+        "review-fix": phase / "review" / f"fix-{call_number:02d}.md",
+    }
+    artifact = artifacts[stage]
+    artifact.parent.mkdir(parents=True, exist_ok=True)
+    artifact.write_text(f"# Fixture {stage} {call_number}\\n", encoding="utf-8")
+
+# Provider chatter belongs on stderr; stdout carries only the envelope.
+print(f"fake-claude running {stage}", file=sys.stderr)
+envelope = {
+    "type": "result",
+    "subtype": "success",
+    "is_error": os.environ.get("FLOW_FAKE_CLAUDE_IS_ERROR_CALL", "") == str(call_number),
+    "result": sequence[call_number - 1],
+}
+print(json.dumps(envelope))
 """,
         encoding="utf-8",
     )

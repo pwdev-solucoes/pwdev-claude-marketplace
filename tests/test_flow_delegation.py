@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import shutil
@@ -528,6 +529,72 @@ class DelegationContractTest(unittest.TestCase):
             self.assertEqual(sentinel.read_bytes(), b"outside-bytes\n")
             self.assertEqual(sorted(path.name for path in outside.iterdir()), ["sentinel.txt"])
             self.assertFalse(argument_log.exists())
+
+    def test_confirmation_token_is_a_cryptographic_digest_of_the_vector(self) -> None:
+        """A CRC is cheap to collide, and the task text feeds the vector, so a
+        stale token could otherwise authorize a different command."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repository = init_repository(root / "repo")
+            fake_bin = root / "bin"
+            fake_bin.mkdir()
+            write_executable(fake_bin / "codex", 'printf "%s\\n" "$@" > "$FLOW_FAKE_ARGS"')
+            environment = self.fake_environment(fake_bin, root / "arguments.txt")
+
+            preview = run_shell(
+                RUNNER, repository, "--preview", "codex", "read", "inspect fixture", env=environment
+            )
+
+            self.assertEqual(preview.returncode, 0, preview.stderr)
+            tokens = [
+                line.removeprefix("confirmation token: ")
+                for line in preview.stdout.splitlines()
+                if line.startswith("confirmation token: ")
+            ]
+            self.assertEqual(len(tokens), 1, preview.stdout)
+            self.assertRegex(tokens[0], r"^[0-9a-f]{64}$")
+
+            argv_lines = [
+                line for line in preview.stdout.splitlines() if line.startswith("provider argv:")
+            ]
+            self.assertEqual(len(argv_lines), 1, preview.stdout)
+            expected = hashlib.sha256(argv_lines[0].encode("utf-8")).hexdigest()
+            self.assertEqual(tokens[0], expected)
+
+    def test_output_destination_is_validated_before_it_is_written(self) -> None:
+        """mktemp reserves the bare template, not the published `.md` name, so a
+        symlink planted at that name must be refused rather than followed."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repository = init_repository(root / "repo")
+            fake_bin = root / "bin"
+            fake_bin.mkdir()
+            write_executable(fake_bin / "codex", 'printf "%s\\n" "$@" > "$FLOW_FAKE_ARGS"')
+            delegation = repository / ".planning" / "flow" / "delegation"
+            delegation.mkdir(parents=True)
+            outside = root / "outside.txt"
+            outside.write_text("outside-bytes\n", encoding="utf-8")
+
+            # Plant a symlink on every `.md` name the runner could publish this second.
+            planted = []
+            for suffix in ("", "-1"):
+                stamp = subprocess.run(
+                    ["date", "-u", "+%Y%m%dT%H%M%SZ"], capture_output=True, text=True, check=True
+                ).stdout.strip()
+                for extra in ("aaaaaa", "AAAAAA"):
+                    link = delegation / f"{stamp}{suffix}-codex.{extra}.md"
+                    if not link.exists():
+                        link.symlink_to(outside)
+                        planted.append(link)
+            self.assertTrue(planted)
+
+            run_shell(
+                RUNNER, repository, "--preview", "codex", "read", "inspect fixture",
+                env=self.fake_environment(fake_bin, root / "arguments.txt"),
+            )
+
+            # Whatever the runner did, the file outside the repository is untouched.
+            self.assertEqual(outside.read_text(encoding="utf-8"), "outside-bytes\n")
 
 
 if __name__ == "__main__":

@@ -9,7 +9,9 @@ Read [delegation](../../references/delegation.md), [safety](../../references/saf
 
 ## Select
 
-Accept `auto` or one explicit provider: `codex`, `opencode`, `kimi`, `gemini`, or `kiro`. For `auto`, select from the provider matrix in [delegation](../../references/delegation.md), announce the provider, mode, and reason, and use `read` only for analysis-only work. Never add `--dangerously-bypass-approvals-and-sandbox`; standalone delegation does not inherit fleet authorization.
+Accept `auto` or one explicit provider: `codex`, `opencode`, `kimi`, `gemini`, or `kiro`. For `auto`, select from the provider matrix in [delegation](../../references/delegation.md), announce the provider, mode, and reason, and use `read` only for analysis-only work.
+
+Standalone delegation inherits no fleet authorization, so never add either fleet bypass vector: `--dangerously-bypass-approvals-and-sandbox` (Codex) or `--dangerously-skip-permissions` (Claude). An acknowledgement given for a fleet launch never covers a delegated run.
 
 ## Run
 

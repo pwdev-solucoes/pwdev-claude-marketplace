@@ -232,8 +232,19 @@ render_provider_argv() {
   printf '\n'
 }
 PROVIDER_ARGV=$(render_provider_argv)
-read -r PROVIDER_ARGV_CHECKSUM PROVIDER_ARGV_BYTES _ < <(printf '%s' "$PROVIDER_ARGV" | cksum)
-CONFIRMATION_TOKEN=${PROVIDER_ARGV_CHECKSUM}-${PROVIDER_ARGV_BYTES}
+# The token authorizes one exact argument vector, and the task text that feeds
+# that vector is attacker-influenceable, so the binding must be a cryptographic
+# digest: a CRC is cheap to collide, which would let a stale token authorize a
+# different command.
+command -v shasum >/dev/null 2>&1 || {
+  echo "run-agent.sh: shasum is required to bind the confirmation token" >&2
+  exit 2
+}
+CONFIRMATION_TOKEN=$(printf '%s' "$PROVIDER_ARGV" | shasum -a 256 | awk '{print $1}')
+[[ $CONFIRMATION_TOKEN =~ ^[0-9a-f]{64}$ ]] || {
+  echo "run-agent.sh: could not derive the confirmation token" >&2
+  exit 2
+}
 printf '%s\nconfirmation token: %s\n' "$PROVIDER_ARGV" "$CONFIRMATION_TOKEN"
 if [[ $PREVIEW == true ]]; then exit 0; fi
 if [[ ${FLOW_DELEGATION_CONFIRM_TOKEN:-} != "$CONFIRMATION_TOKEN" ]]; then
@@ -271,7 +282,19 @@ if [[ "$FLOW_STATE" == true ]]; then
   }
   out_reservation="$(mktemp ".planning/flow/delegation/$(date -u +%Y%m%dT%H%M%SZ)-$AGENT.XXXXXX")"
   OUT="${out_reservation}.md"
+  # mktemp only reserves the bare template; the published `.md` destination is a
+  # separate name, so validate it before the rename. Without this, `mv` and the
+  # later `tee -a` would follow a symlink planted at that path.
+  if [[ -e $OUT || -L $OUT ]]; then
+    rm -f "$out_reservation"
+    echo "run-agent.sh: delegation output destination already exists" >&2
+    exit 2
+  fi
   mv "$out_reservation" "$OUT"
+  require_repo_regular "$OUT" || {
+    echo "run-agent.sh: delegation output destination is unsafe" >&2
+    exit 2
+  }
   # Keep the standardized prompt with the provider output as an execution
   # record; audit logging deliberately never receives either value.
   printf '%s\n\n' "$PROMPT" >"$OUT"

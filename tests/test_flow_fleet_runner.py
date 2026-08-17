@@ -14,6 +14,7 @@ from tests.flow_m5_fixtures import (
     create_fleet_worktree,
     init_repository,
     run_shell,
+    write_fake_claude,
     write_fake_codex,
     write_executable,
     write_registered_fleet_member,
@@ -609,7 +610,7 @@ class FleetRunnerContractTest(unittest.TestCase):
             result = self.run_fleet(repository, worktree, environment)
 
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("fleet worktree changed after Codex", result.stderr)
+            self.assertIn("fleet worktree changed after the provider", result.stderr)
             self.assertEqual(self.commit_count(worktree), baseline)
             self.assertEqual(self.read_status(worktree)["status"], "NEEDS_HUMAN")
 
@@ -718,7 +719,7 @@ class FleetRunnerContractTest(unittest.TestCase):
             result = self.run_fleet(repository, worktree, environment)
 
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("Codex exited non-zero for plan: 23", result.stderr)
+            self.assertIn("provider exited non-zero for plan: 23", result.stderr)
             self.assertEqual(self.commit_count(worktree), baseline)
             self.assertEqual(self.read_status(worktree)["status"], "NEEDS_HUMAN")
 
@@ -1302,6 +1303,236 @@ class FleetRunnerContractTest(unittest.TestCase):
                 process.send_signal(requested_signal)
                 _, stderr = process.communicate(timeout=5)
                 self.assertEqual(process.returncode, 0, stderr)
+
+
+class ClaudeRuntimeRunnerTest(unittest.TestCase):
+    """The shared runner must give the Claude runtime the same lifecycle as Codex.
+
+    Same stage sequence, same schema validation, same correction cap, same
+    per-stage commits — only the privileged vector differs, and it comes from
+    the adapter rather than from the runner.
+    """
+
+    def runner_fixture(
+        self,
+        root: Path,
+        sequence: list[Union[dict[str, str], str]],
+        *,
+        skip_artifact_stage: str = "",
+    ) -> tuple[Path, Path, dict[str, str]]:
+        repository = init_repository(root / "repo")
+        worktree = create_fleet_worktree(repository, "demo", root / "repo-fleet-demo")
+        write_registered_fleet_member(repository, "demo", worktree, runtime="claude")
+        fake_bin = create_closed_command_path(root, SAFE_COMMANDS)
+        write_fake_claude(fake_bin / "claude")
+        sequence_path = root / "claude-results.jsonl"
+        sequence_path.write_text(
+            "\n".join(item if isinstance(item, str) else json.dumps(item) for item in sequence)
+            + "\n",
+            encoding="utf-8",
+        )
+        environment = {
+            "FLOW_CLEAN_ENV": "1",
+            "PATH": str(fake_bin),
+            "FLOW_FLEET_RUNTIME": "claude",
+            "FLOW_FAKE_CLAUDE_ARGS": str(root / "claude-arguments"),
+            "FLOW_FAKE_CLAUDE_COUNTER": str(root / "claude-counter"),
+            "FLOW_FAKE_CLAUDE_SEQUENCE": str(sequence_path),
+            "FLOW_FAKE_SKIP_ARTIFACT_STAGE": skip_artifact_stage,
+            "FLOW_FAKE_SKIP_ARTIFACT_CALLS": "",
+        }
+        return repository, worktree, environment
+
+    def run_fleet(self, repository, worktree, environment):
+        return run_shell(RUNNER, repository, "demo", str(worktree), env=environment)
+
+    def argument_calls(self, root: Path) -> list[list[str]]:
+        return [
+            path.read_text(encoding="utf-8").splitlines()
+            for path in sorted((root / "claude-arguments").glob("*.txt"))
+        ]
+
+    def read_status(self, worktree: Path) -> dict[str, str]:
+        return json.loads(
+            (worktree / ".planning" / "flow" / "fleet-status.json").read_text(encoding="utf-8")
+        )
+
+    def approved_sequence(self) -> list[dict[str, str]]:
+        return [
+            stage_result("plan"),
+            stage_result("execute"),
+            stage_result("review"),
+            stage_result("verify", message="verification approved", verdict="APPROVED"),
+        ]
+
+    def test_claude_runtime_completes_the_full_stage_lifecycle(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repository, worktree, environment = self.runner_fixture(root, self.approved_sequence())
+
+            result = self.run_fleet(repository, worktree, environment)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            status = self.read_status(worktree)
+            self.assertEqual(status["stage"], "verify")
+            self.assertEqual(status["status"], "DONE")
+            self.assertEqual(status["verdict"], "APPROVED")
+            self.assertEqual(status["correction_cycles"], 0)
+            calls = self.argument_calls(root)
+            self.assertEqual(len(calls), 4)
+            self.assertEqual(
+                [
+                    next(stage for stage in ("plan", "execute", "review", "verify")
+                         if f"FLOW_FLEET_STAGE={stage} " in call[-1])
+                    for call in calls
+                ],
+                ["plan", "execute", "review", "verify"],
+            )
+            subjects = subprocess.run(
+                ["git", "-C", str(worktree), "log", "-4", "--format=%s"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.splitlines()
+            self.assertEqual(
+                subjects,
+                [
+                    "chore(flow-fleet): demo verify",
+                    "chore(flow-fleet): demo review",
+                    "chore(flow-fleet): demo execute",
+                    "chore(flow-fleet): demo plan",
+                ],
+            )
+
+    def test_claude_runtime_uses_the_native_vector_inside_the_worktree(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repository, worktree, environment = self.runner_fixture(root, self.approved_sequence())
+
+            self.run_fleet(repository, worktree, environment)
+
+            arguments = self.argument_calls(root)[0]
+            self.assertEqual(
+                arguments[:5],
+                ["-p", "--dangerously-skip-permissions", "--no-session-persistence",
+                 "--output-format", "json"],
+            )
+            self.assertEqual(len(arguments), 6)
+            # Claude has no --cd: the runner must place it inside the worktree.
+            recorded_cwd = (root / "claude-arguments" / "01.cwd").read_text(encoding="utf-8")
+            self.assertEqual(Path(recorded_cwd).resolve(), worktree.resolve())
+            # The Codex privileged vector must never reach the Claude runtime.
+            for forbidden in (
+                "--dangerously-bypass-approvals-and-sandbox",
+                "--ephemeral",
+                "--output-schema",
+                "--output-last-message",
+                "--cd",
+            ):
+                self.assertNotIn(forbidden, arguments)
+
+    def test_claude_prompt_carries_the_native_invocation_and_result_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repository, worktree, environment = self.runner_fixture(root, self.approved_sequence())
+
+            self.run_fleet(repository, worktree, environment)
+
+            prompts = [call[-1] for call in self.argument_calls(root)]
+            self.assertIn("/pwdev-flow:plan", prompts[0])
+            self.assertIn("/pwdev-flow:verify", prompts[3])
+            for prompt in prompts:
+                self.assertNotIn("$flow-", prompt)
+                # Without --output-schema the contract has to be in the prompt.
+                self.assertIn("exactly one JSON object", prompt)
+            self.assertIn('"APPROVED", "CAVEATS" or "REJECTED"', prompts[3])
+            self.assertIn('verdict ("NONE")', prompts[0])
+
+    def test_claude_rejected_verification_runs_bounded_correction_cycles(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            rejected = stage_result("verify", message="rejected", verdict="REJECTED")
+            sequence = [
+                stage_result("plan"), stage_result("execute"), stage_result("review"), rejected,
+                stage_result("execute-fix"), stage_result("review-fix"), rejected,
+                stage_result("execute-fix"), stage_result("review-fix"), rejected,
+            ]
+            repository, worktree, environment = self.runner_fixture(root, sequence)
+
+            result = self.run_fleet(repository, worktree, environment)
+
+            self.assertEqual(result.returncode, 1)
+            status = self.read_status(worktree)
+            self.assertEqual(status["status"], "NEEDS_HUMAN")
+            self.assertEqual(status["correction_cycles"], 2)
+            self.assertEqual(len(self.argument_calls(root)), 10)
+
+    def test_claude_non_json_final_message_becomes_needs_human(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            sequence = [
+                stage_result("plan"),
+                "I finished the execution stage successfully.",
+            ]
+            repository, worktree, environment = self.runner_fixture(root, sequence)
+
+            result = self.run_fleet(repository, worktree, environment)
+
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("invalid structured result for execute", result.stderr)
+            self.assertEqual(self.read_status(worktree)["status"], "NEEDS_HUMAN")
+            invalid = list((worktree / ".planning" / "flow" / "fleet-results").glob("*.invalid.json"))
+            self.assertEqual(len(invalid), 1)
+
+    def test_claude_provider_error_envelope_becomes_needs_human(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repository, worktree, environment = self.runner_fixture(root, self.approved_sequence())
+            environment["FLOW_FAKE_CLAUDE_IS_ERROR_CALL"] = "2"
+
+            result = self.run_fleet(repository, worktree, environment)
+
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("invalid structured result for execute", result.stderr)
+            self.assertEqual(self.read_status(worktree)["status"], "NEEDS_HUMAN")
+
+    def test_claude_non_zero_exit_becomes_needs_human(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repository, worktree, environment = self.runner_fixture(root, self.approved_sequence())
+            environment["FLOW_FAKE_CLAUDE_EXIT_CALL"] = "1"
+
+            result = self.run_fleet(repository, worktree, environment)
+
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("provider exited non-zero for plan: 19", result.stderr)
+            self.assertEqual(self.read_status(worktree)["status"], "NEEDS_HUMAN")
+
+    def test_runtime_mismatch_with_the_bound_member_fails_before_execution(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repository, worktree, environment = self.runner_fixture(root, self.approved_sequence())
+            member = repository / ".planning" / "flow" / "fleet" / "demo.json"
+            bound = json.loads(member.read_text(encoding="utf-8"))
+            bound["runtime"] = "codex"
+            member.write_text(json.dumps(bound), encoding="utf-8")
+
+            result = self.run_fleet(repository, worktree, environment)
+
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("does not match canonical Git worktree registration", result.stderr)
+            self.assertFalse((root / "claude-arguments").exists())
+
+    def test_claude_runtime_never_requires_the_codex_binary(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repository, worktree, environment = self.runner_fixture(root, self.approved_sequence())
+            self.assertFalse((Path(environment["PATH"]) / "codex").exists())
+
+            result = self.run_fleet(repository, worktree, environment)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn("required binary unavailable", result.stderr)
 
 
 if __name__ == "__main__":

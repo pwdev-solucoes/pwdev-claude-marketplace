@@ -150,9 +150,10 @@ def validate_event(event: Any, line_number: int) -> list[str]:
         errors.append(f"{prefix}: unknown action")
     if not isinstance(event.get("skill"), str) or SKILL_RE.fullmatch(event["skill"]) is None:
         errors.append(f"{prefix}: invalid skill")
-    if not isinstance(event.get("detail", {}), dict):
+    detail = event.get("detail", {})
+    if not isinstance(detail, dict):
         errors.append(f"{prefix}: detail must be an object")
-    elif contains_secret_key(event["detail"]):
+    elif contains_secret_key(detail):
         errors.append(f"{prefix}: detail contains a prohibited secret-like key")
     target = event.get("target")
     if target is not None and (

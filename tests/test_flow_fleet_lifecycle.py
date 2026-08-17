@@ -19,6 +19,15 @@ from tests.flow_m5_fixtures import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+# fleet-up.sh preflights the allocated ports with a real /dev/tcp probe against the
+# loopback interface, so these fixtures must not use the product defaults (3000/5432):
+# any developer machine or CI runner with a local Postgres would fail the whole suite.
+# Kept below the ephemeral range (49152+) so they cannot collide with transient sockets.
+PORT_BASE_APP = 39000
+PORT_BASE_DB = 39500
+PORT_STEP = 10
+
 FLEET_UP = ROOT / "plugins" / "pwdev-flow" / "scripts" / "fleet-up.sh"
 FLEET_RUNNER = ROOT / "plugins" / "pwdev-flow" / "scripts" / "fleet-run.sh"
 FLEET_TEARDOWN = ROOT / "plugins" / "pwdev-flow" / "scripts" / "fleet-teardown.sh"
@@ -103,9 +112,9 @@ def write_fleet_config(
                 "audit": audit,
                 "fleet": {
                     "max_concurrent": max_concurrent,
-                    "port_base_app": 3000,
-                    "port_base_db": 5432,
-                    "port_step": 10,
+                    "port_base_app": PORT_BASE_APP,
+                    "port_base_db": PORT_BASE_DB,
+                    "port_step": PORT_STEP,
                     "permission_mode": permission_mode,
                     "auto_simplify": False,
                     "compose_file": "docker-compose.flow-fleet.yml",
@@ -125,8 +134,8 @@ def write_member(repository: Path, slug: str, index: int) -> Path:
                 "slug": slug,
                 "branch": f"flow-fleet/{slug}",
                 "worktree_path": str(repository.parent / f"repo-fleet-{slug}"),
-                "app_port": 3000 + 10 * index,
-                "db_port": 5432 + 10 * index,
+                "app_port": PORT_BASE_APP + PORT_STEP * index,
+                "db_port": PORT_BASE_DB + PORT_STEP * index,
                 "port_index": index,
                 "project_name": f"flow-fleet-{slug}",
                 "tmux_window": f"pwdev-flow-fleet:{slug}",
@@ -597,7 +606,7 @@ class FleetLifecycleContractTest(unittest.TestCase):
             root_entries_before = sorted(path.name for path in root.iterdir())
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
-                    listener.bind(("127.0.0.1", 3000))
+                    listener.bind(("127.0.0.1", PORT_BASE_APP))
                     listener.listen()
                     result = self.launch(repository, "demo", environment)
             except PermissionError as error:
@@ -611,6 +620,44 @@ class FleetLifecycleContractTest(unittest.TestCase):
             self.assertFalse((root / "docker-arguments.txt").exists())
             self.assertFalse((root / "tmux-arguments.txt").exists())
             self.assert_no_forbidden_commands(environment)
+
+    def test_generated_gitignore_keeps_runtime_files_out_of_the_merged_branch(self) -> None:
+        """fleet-run.sh stages each stage with `git add -A` and teardown --merge
+        lands that history on the user's base branch, so raw provider logs,
+        structured results and the generated Compose file must be ignored."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repository = init_repository(root / "repo")
+            create_approved_phase(repository, "demo", tracked=True)
+            write_fleet_config(repository)
+            environment = self.fake_environment(root)
+
+            result = self.launch(repository, "demo", environment)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            worktree = Path(str(self.active_member(repository, "demo")["worktree_path"]))
+            ignored = (worktree / ".gitignore").read_text(encoding="utf-8")
+            for entry in (
+                ".env.fleet",
+                "docker-compose.flow-fleet.yml",
+                ".planning/flow/fleet-status.json",
+                ".planning/flow/fleet-logs/",
+                ".planning/flow/fleet-results/",
+            ):
+                with self.subTest(entry=entry):
+                    self.assertIn(entry, ignored)
+
+            # Prove it: a staged log and result must not become tracked content.
+            for relative in ("fleet-logs/plan.log", "fleet-results/plan.json"):
+                path = worktree / ".planning" / "flow" / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("provider transcript\n", encoding="utf-8")
+            (worktree / "docker-compose.flow-fleet.yml").write_text("services: {}\n", encoding="utf-8")
+            self.assertEqual(git(worktree, "add", "-A").returncode, 0)
+            staged = git(worktree, "diff", "--cached", "--name-only").stdout
+            for entry in ("fleet-logs", "fleet-results", "docker-compose.flow-fleet.yml"):
+                with self.subTest(staged=entry):
+                    self.assertNotIn(entry, staged)
 
     def test_launch_allocates_first_free_slot_and_writes_bookkeeping(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -626,8 +673,8 @@ class FleetLifecycleContractTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             member = self.active_member(repository, "demo")
             self.assertEqual(member["port_index"], 1)
-            self.assertEqual(member["app_port"], 3010)
-            self.assertEqual(member["db_port"], 5442)
+            self.assertEqual(member["app_port"], PORT_BASE_APP + PORT_STEP)
+            self.assertEqual(member["db_port"], PORT_BASE_DB + PORT_STEP)
             self.assertEqual(member["branch"], "flow-fleet/demo")
             self.assertTrue(Path(str(member["worktree_path"])).is_dir())
             environment_file = Path(str(member["worktree_path"])) / ".env.fleet"
@@ -1121,6 +1168,32 @@ class FleetLifecycleContractTest(unittest.TestCase):
             self.assertIn("kill-window", (Path(environment["FLOW_FAKE_TMUX_LOG"])).read_text(encoding="utf-8"))
             self.assert_no_forbidden_commands(environment)
 
+    def test_teardown_releases_a_runner_lock_left_by_a_killed_pane(self) -> None:
+        """The runner keeps its lock on purpose; teardown is the explicit human
+        action that clears it, otherwise the slug stays blocked with no tooling."""
+        with tempfile.TemporaryDirectory() as directory:
+            repository, environment, _ = self.create_active_member(Path(directory))
+            lock = repository / ".planning" / "flow" / "fleet" / ".demo.runner.lock"
+            lock.mkdir()
+
+            result = run_shell(FLEET_TEARDOWN, repository, "demo", env=environment)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse(lock.exists())
+
+    def test_teardown_reports_the_database_volume_it_deliberately_keeps(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository, environment, _ = self.create_active_member(Path(directory))
+
+            result = run_shell(FLEET_TEARDOWN, repository, "demo", env=environment)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("flow-fleet-demo_flow-fleet-db", result.stdout + result.stderr)
+            # Teardown never destroys data on its own.
+            self.assertNotIn(
+                "--volumes", Path(environment["FLOW_FAKE_DOCKER_LOG"]).read_text(encoding="utf-8")
+            )
+
     def test_teardown_refuses_merge_when_status_is_not_done(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repository, environment, member = self.create_active_member(Path(directory))
@@ -1267,8 +1340,8 @@ class FleetLifecycleContractTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             for fragment in (
                 "port_index=0",
-                "app_port=3000",
-                "db_port=5432",
+                f"app_port={PORT_BASE_APP}",
+                f"db_port={PORT_BASE_DB}",
                 "docker compose version",
                 "up -d db",
                 "mkdir -p",
@@ -1420,7 +1493,9 @@ class FleetLifecycleContractTest(unittest.TestCase):
                 for fragment in (
                     f"NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ); mkdir -p {quoted_fleet_directory}; "
                     f"temporary=$(mktemp {quoted_fleet_directory}/.demo.json.XXXXXX) || exit 1; ",
-                    "if ! jq -n --arg slug demo --arg branch flow-fleet/demo",
+                    # The rendered plan must bind the runtime exactly like the live
+                    # writer, or executing the plan yields a member the runner rejects.
+                    "if ! jq -n --arg slug demo --arg runtime codex --arg branch flow-fleet/demo",
                     f"--arg worktree {quoted_worktree}",
                     "--arg project flow-fleet-demo --arg window pwdev-flow-fleet:demo",
                     "--arg compose docker-compose.flow-fleet.yml",
@@ -1431,7 +1506,7 @@ class FleetLifecycleContractTest(unittest.TestCase):
                     "--arg base_commit",
                     "--arg status ACTIVE",
                     '--arg created_at "$STATE_CREATED_AT" --arg updated_at "$NOW"',
-                    "--argjson app_port 3000 --argjson db_port 5432 --argjson index 0",
+                    f"--argjson app_port {PORT_BASE_APP} --argjson db_port {PORT_BASE_DB} --argjson index 0",
                     "--argjson worktree_created true --argjson docker_attempted true --argjson tmux_attempted true",
                     f'> "$temporary"; then rm -f "$temporary"; exit 1; fi; mv "$temporary" {quoted_member}',
                 ):
@@ -1520,8 +1595,8 @@ class FleetLifecycleContractTest(unittest.TestCase):
             self.assertEqual(
                 member["worktree_path"], str(canonical_repository.parent / "repo-fleet-demo")
             )
-            self.assertEqual(member["app_port"], 3000)
-            self.assertEqual(member["db_port"], 5432)
+            self.assertEqual(member["app_port"], PORT_BASE_APP)
+            self.assertEqual(member["db_port"], PORT_BASE_DB)
             self.assertEqual(member["port_index"], 0)
             self.assertEqual(member["project_name"], "flow-fleet-demo")
             self.assertEqual(member["tmux_window"], "pwdev-flow-fleet:demo")
@@ -1716,9 +1791,10 @@ class FleetLifecycleContractTest(unittest.TestCase):
 
     def test_malformed_or_overlapping_member_reservations_fail_closed(self) -> None:
         for member_data in (
-            {"port_index": "bad", "app_port": 3000, "db_port": 5432},
-            {"port_index": 1, "app_port": 3000, "db_port": 5442},
-            {"port_index": 0, "app_port": 3000, "db_port": 3000},
+            # non-integer index; index inconsistent with its ports; app and db collide
+            {"port_index": "bad", "app_port": PORT_BASE_APP, "db_port": PORT_BASE_DB},
+            {"port_index": 1, "app_port": PORT_BASE_APP, "db_port": PORT_BASE_DB + PORT_STEP},
+            {"port_index": 0, "app_port": PORT_BASE_APP, "db_port": PORT_BASE_APP},
         ):
             with self.subTest(member_data=member_data), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)

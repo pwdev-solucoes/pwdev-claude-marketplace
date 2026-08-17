@@ -56,7 +56,6 @@ SCRIPTS = (
 )
 TEMPLATES = (
     "docker-compose.flow-fleet.yml",
-    "fleet-env.example",
     "fleet-result.schema.json",
 )
 FORBIDDEN_RUNTIME_TERMS = (
@@ -93,7 +92,7 @@ class PwdevFlowContractTest(unittest.TestCase):
         self.assertEqual(manifest["skills"], "./skills/")
         self.assertRegex(
             manifest["version"],
-            r"^0\.5\.0(?:\+codex\.\d{14})?$",
+            r"^0\.6\.0(?:\+codex\.\d{14})?$",
         )
         self.assertEqual(manifest["interface"]["displayName"], "PWDEV Flow")
         self.assertNotIn("hooks", manifest)
@@ -198,8 +197,17 @@ class PwdevFlowContractTest(unittest.TestCase):
         self.assertEqual(broken, [], "broken Markdown links found")
 
     def test_claude_runtime_dependencies_are_absent(self) -> None:
-        files = list(PLUGIN.rglob("*.md")) + list(PLUGIN.rglob("*.json"))
-        self.assertTrue(files, "plugin files must exist")
+        # The portable layer is skills/ + references/: it is what Codex reads and
+        # what must stay runtime-neutral. commands/ is the native Claude adapter
+        # layer by construction and Codex never loads it.
+        portable = (PLUGIN / "skills", PLUGIN / "references")
+        files = [
+            path
+            for directory in portable
+            for pattern in ("*.md", "*.json")
+            for path in directory.rglob(pattern)
+        ]
+        self.assertTrue(files, "portable plugin files must exist")
         violations: list[str] = []
         for path in files:
             text = path.read_text(encoding="utf-8")

@@ -252,6 +252,29 @@ class MigrationCliTest(unittest.TestCase):
             self.assertNotIn("api_token", migrated.get("legacy", {}))
             self.assertEqual(json.loads(result.stdout)["target"], ".planning/flow/config.json")
 
+    def test_migration_records_the_adapter_that_performed_it(self) -> None:
+        """A Claude-initiated migration must not stamp the config as codex."""
+        for runtime in ("codex", "claude"):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as directory:
+                repository, _, _ = self.create_legacy_repository(directory)
+
+                result = run_cli(MIGRATION_SCRIPT, repository, "--runtime", runtime, "apply")
+
+                self.assertEqual(result.returncode, 0, result.stderr)
+                migrated = json.loads(
+                    (repository / ".planning" / "flow" / "config.json").read_text(encoding="utf-8")
+                )
+                self.assertEqual(migrated["runtime"], runtime)
+
+    def test_migration_rejects_an_unknown_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository, _, _ = self.create_legacy_repository(directory)
+
+            result = run_cli(MIGRATION_SCRIPT, repository, "--runtime", "gemini", "apply")
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertFalse((repository / ".planning" / "flow" / "config.json").exists())
+
     def test_apply_refuses_to_overwrite_existing_flow_config(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repository, _, _ = self.create_legacy_repository(directory)

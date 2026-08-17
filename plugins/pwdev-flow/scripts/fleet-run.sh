@@ -8,9 +8,10 @@ fail() { printf 'fleet-run: %s\n' "$*" >&2; exit 2; }
 SLUG=$1; WORKTREE_INPUT=$2
 EXPECTED_RUNTIME=${FLOW_FLEET_RUNTIME:-codex}
 case "$EXPECTED_RUNTIME" in codex|claude) ;; *) fail "unsupported fleet runtime: $EXPECTED_RUNTIME";; esac
-[[ $SLUG =~ ^[a-z0-9][a-z0-9-]*$ ]] || fail "invalid slug: $SLUG"
+[[ $SLUG =~ ^[a-z0-9][a-z0-9-]*$ && $SLUG == *[a-z]* && $SLUG != dashboard ]] || fail "invalid slug: $SLUG"
 if [[ $# -eq 3 ]]; then [[ $3 == danger-full-access ]] || fail 'permission mode must be danger-full-access'; fi
-for binary in git jq codex shasum awk python3 sleep; do command -v "$binary" >/dev/null 2>&1 || fail "required binary unavailable: $binary"; done
+# $EXPECTED_RUNTIME is constrained to codex|claude above, so it names the provider binary.
+for binary in git jq "$EXPECTED_RUNTIME" shasum awk python3 sleep; do command -v "$binary" >/dev/null 2>&1 || fail "required binary unavailable: $binary"; done
 PYTHON3_BIN=$(command -v python3)
 
 WORKTREE=$(cd -- "$WORKTREE_INPUT" 2>/dev/null && pwd -P) || fail 'worktree path is unavailable'
@@ -101,6 +102,13 @@ worktree_identity_matches || fail 'registered fleet member does not match canoni
 SCRIPT_DIR=$(cd -- "${BASH_SOURCE[0]%/*}" && pwd -P)
 SCHEMA=$(cd -- "$SCRIPT_DIR/../templates" && pwd -P)/fleet-result.schema.json
 require_regular_nosymlink "$SCHEMA" || fail "missing result schema: $SCHEMA"
+# The privileged vector lives in exactly one adapter, selected here from the
+# runtime already bound into the central member. Nothing below builds a
+# provider command or a permission flag of its own.
+ENGINE_ADAPTER=$SCRIPT_DIR/fleet-engine-$EXPECTED_RUNTIME.sh
+require_regular_nosymlink "$ENGINE_ADAPTER" || fail "missing runtime adapter: $ENGINE_ADAPTER"
+# shellcheck source=/dev/null
+source "$ENGINE_ADAPTER"
 PHASE_DIR=$WORKTREE/.planning/flow/phases/$SLUG
 safe_worktree_dir ".planning/flow/phases/$SLUG" false || fail "unsafe phase contract path for $SLUG"
 require_regular_nosymlink "$PHASE_DIR/spec.md" && require_regular_nosymlink "$PHASE_DIR/decisions.md" || fail "missing approved phase contracts for $SLUG"
@@ -112,7 +120,16 @@ safe_worktree_dir .planning/flow/fleet-results true || fail 'unsafe fleet result
 RUNNER_LOCK=$FLEET_DIR/.${SLUG}.runner.lock
 safe_main_dir .planning/flow/fleet false || fail 'unsafe central fleet state path'
 mkdir "$RUNNER_LOCK" 2>/dev/null || fail "fleet member is already running: $SLUG"
-LOCK_HELD=true; CURRENT_RESULT_TEMP=; CURRENT_STATUS_TEMP=; CURRENT_LOG_TEMP=; CODEX_PID=; CODEX_PGID=; ACTIVE_STAGE=
+LOCK_HELD=true; CURRENT_RESULT_TEMP=; CURRENT_STATUS_TEMP=; CURRENT_LOG_TEMP=; CURRENT_RAW_TEMP=
+PROVIDER_PID=; PROVIDER_PGID=; ACTIVE_STAGE=
+# argv: <cwd-or-empty> <provider> [provider-args...]. The provider always leads its
+# own process group so the runner can prove the whole descendant group is gone.
+PROVIDER_LAUNCHER='import os,sys
+directory = sys.argv[1]
+if directory:
+    os.chdir(directory)
+os.setsid()
+os.execvp(sys.argv[2], sys.argv[2:])'
 STATUS_FINAL=false; RECOVERING=false; OWNERSHIP_UNRESOLVED=false; CORRECTION_CYCLES=0; INVOCATION=0
 RESULT_MESSAGE=; RESULT_VERDICT=NONE
 AUDIT_ENABLED=false
@@ -135,26 +152,26 @@ best_effort_stage_audit() {
 }
 
 provider_group_alive() {
-  [[ -n $CODEX_PGID ]] && kill -0 -- "-$CODEX_PGID" 2>/dev/null
+  [[ -n $PROVIDER_PGID ]] && kill -0 -- "-$PROVIDER_PGID" 2>/dev/null
 }
 
 terminate_owned_provider() {
   local attempt
-  [[ -n $CODEX_PGID ]] || return 0
-  kill -TERM -- "-$CODEX_PGID" 2>/dev/null || true
+  [[ -n $PROVIDER_PGID ]] || return 0
+  kill -TERM -- "-$PROVIDER_PGID" 2>/dev/null || true
   attempt=0
   while provider_group_alive && (( attempt < 20 )); do sleep 0.1; attempt=$((attempt + 1)); done
   if provider_group_alive; then
-    kill -KILL -- "-$CODEX_PGID" 2>/dev/null || true
+    kill -KILL -- "-$PROVIDER_PGID" 2>/dev/null || true
   fi
-  [[ -z $CODEX_PID ]] || wait "$CODEX_PID" 2>/dev/null || true
+  [[ -z $PROVIDER_PID ]] || wait "$PROVIDER_PID" 2>/dev/null || true
   attempt=0
   while provider_group_alive && (( attempt < 20 )); do sleep 0.05; attempt=$((attempt + 1)); done
   if provider_group_alive; then
     printf 'fleet-run: owned provider process group did not terminate\n' >&2
     return 1
   fi
-  CODEX_PID=; CODEX_PGID=
+  PROVIDER_PID=; PROVIDER_PGID=
 }
 
 ensure_provider_absent() {
@@ -171,6 +188,7 @@ cleanup_owned() {
   if [[ -n $CURRENT_RESULT_TEMP ]]; then rm -f "$CURRENT_RESULT_TEMP"; CURRENT_RESULT_TEMP=; fi
   if [[ -n $CURRENT_STATUS_TEMP ]]; then rm -f "$CURRENT_STATUS_TEMP"; CURRENT_STATUS_TEMP=; fi
   if [[ -n $CURRENT_LOG_TEMP ]]; then rm -f "$CURRENT_LOG_TEMP"; CURRENT_LOG_TEMP=; fi
+  if [[ -n $CURRENT_RAW_TEMP ]]; then rm -f "$CURRENT_RAW_TEMP"; CURRENT_RAW_TEMP=; fi
   if [[ $LOCK_HELD == true ]]; then
     if rmdir "$RUNNER_LOCK" 2>/dev/null; then LOCK_HELD=false
     else printf 'fleet-run: failed to release runner lock\n' >&2; return 1; fi
@@ -329,26 +347,29 @@ artifact_has_fresh_entry() {
 }
 
 build_prompt() {
-  local stage=$1 skill instruction
+  local stage=$1 capability arguments instruction skill suffix
   case $stage in
-    plan) skill='$flow-plan'; instruction='create the approved atomic plan artifact' ;;
-    execute) skill='$flow-execute'; instruction='execute the approved plan and write its execution summary' ;;
-    review) skill='$flow-review'; instruction='perform scoped review and write the review artifact' ;;
-    verify) skill='$flow-verify'; instruction='independently verify the phase and write the verification artifact' ;;
-    execute-fix) skill='$flow-execute --fix'; instruction='execute only the bounded correction tasks from the rejected verification' ;;
-    review-fix) skill='$flow-review'; instruction='review only the current correction cycle and write its fix review artifact' ;;
+    plan) capability=plan; arguments=; instruction='create the approved atomic plan artifact' ;;
+    execute) capability=execute; arguments=; instruction='execute the approved plan and write its execution summary' ;;
+    review) capability=review; arguments=; instruction='perform scoped review and write the review artifact' ;;
+    verify) capability=verify; arguments=; instruction='independently verify the phase and write the verification artifact' ;;
+    execute-fix) capability=execute; arguments=' --fix'; instruction='execute only the bounded correction tasks from the rejected verification' ;;
+    review-fix) capability=review; arguments=; instruction='review only the current correction cycle and write its fix review artifact' ;;
     *) return 1 ;;
   esac
+  # The invocation syntax and the result contract are runtime-specific.
+  skill=$("flow_engine_${EXPECTED_RUNTIME}_skill_ref" "$capability")$arguments
+  suffix=$("flow_engine_${EXPECTED_RUNTIME}_prompt_suffix" "$stage")
   printf -v STAGE_PROMPT '%s ' "FLOW_FLEET_SLUG=$SLUG" "FLOW_FLEET_STAGE=$stage" \
     "Invoke $skill for phase $SLUG and $instruction." \
     'This is an already-authorized autonomous fleet stage in an isolated worktree.' \
     'Use best judgment at ordinary interactive approval gates, but obey destructive-action prohibitions, prerequisites, secret restrictions, and explicit stop conditions.' \
-    "Your final message must match the provided schema with stage set to $stage."
+    "${suffix%% }"
   STAGE_PROMPT=${STAGE_PROMPT% }
 }
 
 run_stage() {
-  local stage=$1 timestamp result_file invalid_file log_file codex_status message verdict before_snapshot after_snapshot
+  local stage=$1 timestamp result_file invalid_file log_file provider_status message verdict before_snapshot after_snapshot
   ACTIVE_STAGE=$stage; INVOCATION=$((INVOCATION + 1))
   timestamp=$(date -u +%Y%m%dT%H%M%SZ)-$(printf '%02d' "$INVOCATION")
   result_file=$RESULT_DIR/$stage-$timestamp.json; invalid_file=$RESULT_DIR/$stage-$timestamp.invalid.json
@@ -361,29 +382,43 @@ run_stage() {
   write_status "$stage" RUNNING "running $stage" NONE
   CURRENT_RESULT_TEMP=$(mktemp "$RESULT_DIR/.${stage}-${timestamp}.json.XXXXXX")
   CURRENT_LOG_TEMP=$(mktemp "$LOG_DIR/.${stage}-${timestamp}.log.XXXXXX")
-  local -a command=(codex exec --dangerously-bypass-approvals-and-sandbox --ephemeral \
-    --cd "$WORKTREE" --output-schema "$SCHEMA" --output-last-message "$CURRENT_RESULT_TEMP" "$STAGE_PROMPT")
-  "$PYTHON3_BIN" -c 'import os,sys; os.setsid(); os.execvp(sys.argv[1], sys.argv[1:])' \
-    "${command[@]}" >"$CURRENT_LOG_TEMP" 2>&1 & CODEX_PID=$!; CODEX_PGID=$CODEX_PID
-  if wait "$CODEX_PID"; then codex_status=0; else codex_status=$?; fi
+  # Only the adapter builds the privileged vector; the runner never names a provider.
+  FLOW_ENGINE_COMMAND=(); FLOW_ENGINE_CWD=; FLOW_ENGINE_RESULT_FROM_STDOUT=false
+  "flow_engine_${EXPECTED_RUNTIME}_stage_command" \
+    "$WORKTREE" "$SCHEMA" "$CURRENT_RESULT_TEMP" "$STAGE_PROMPT"
+  if [[ $FLOW_ENGINE_RESULT_FROM_STDOUT == true ]]; then
+    # The provider reports its final message on stdout, so stdout is captured
+    # apart from the log and converted by the adapter after ownership is proved.
+    CURRENT_RAW_TEMP=$(mktemp "$RESULT_DIR/.${stage}-${timestamp}.raw.XXXXXX")
+    "$PYTHON3_BIN" -c "$PROVIDER_LAUNCHER" "$FLOW_ENGINE_CWD" "${FLOW_ENGINE_COMMAND[@]}" \
+      >"$CURRENT_RAW_TEMP" 2>"$CURRENT_LOG_TEMP" & PROVIDER_PID=$!; PROVIDER_PGID=$PROVIDER_PID
+  else
+    "$PYTHON3_BIN" -c "$PROVIDER_LAUNCHER" "$FLOW_ENGINE_CWD" "${FLOW_ENGINE_COMMAND[@]}" \
+      >"$CURRENT_LOG_TEMP" 2>&1 & PROVIDER_PID=$!; PROVIDER_PGID=$PROVIDER_PID
+  fi
+  if wait "$PROVIDER_PID"; then provider_status=0; else provider_status=$?; fi
   if ! ensure_provider_absent; then
     RECOVERING=true; trap - ERR HUP INT TERM
     printf 'fleet-run: refusing to continue %s while provider ownership is unresolved\n' "$stage" >&2
     exit 1
   fi
-  safe_worktree_dir .planning/flow/fleet-logs false || needs_human "$stage" 'fleet log path changed after Codex'
+  safe_worktree_dir .planning/flow/fleet-logs false || needs_human "$stage" 'fleet log path changed after the provider'
   [[ ! -e $log_file && ! -L $log_file ]] || needs_human "$stage" 'fleet log publication collision'
   mv "$CURRENT_LOG_TEMP" "$log_file"; CURRENT_LOG_TEMP=
-  if ! worktree_identity_matches; then needs_human "$stage" 'fleet worktree changed after Codex; refusing stage commit'; fi
-  contracts_match_bound_member || needs_human "$stage" 'approved fleet contracts changed during Codex execution'
-  if [[ $codex_status -ne 0 ]]; then needs_human "$stage" "Codex exited non-zero for $stage: $codex_status"; fi
+  if ! worktree_identity_matches; then needs_human "$stage" 'fleet worktree changed after the provider; refusing stage commit'; fi
+  contracts_match_bound_member || needs_human "$stage" 'approved fleet contracts changed during provider execution'
+  if [[ $provider_status -ne 0 ]]; then needs_human "$stage" "provider exited non-zero for $stage: $provider_status"; fi
+  if [[ -n $CURRENT_RAW_TEMP ]]; then
+    "flow_engine_${EXPECTED_RUNTIME}_publish_result" "$CURRENT_RAW_TEMP" "$CURRENT_RESULT_TEMP" || true
+    rm -f "$CURRENT_RAW_TEMP"; CURRENT_RAW_TEMP=
+  fi
   if [[ ! -s $CURRENT_RESULT_TEMP ]] || ! validate_result "$stage" "$CURRENT_RESULT_TEMP"; then
     mv "$CURRENT_RESULT_TEMP" "$invalid_file"; CURRENT_RESULT_TEMP=; needs_human "$stage" "invalid structured result for $stage"
   fi
   mv "$CURRENT_RESULT_TEMP" "$result_file"; CURRENT_RESULT_TEMP=
   message=$(jq -r '.message' "$result_file"); verdict=$(jq -r '.verdict' "$result_file")
   if [[ $(jq -r '.status' "$result_file") != OK ]]; then needs_human "$stage" "$message" "$verdict"; fi
-  artifact_path_is_safe "$stage" || needs_human "$stage" 'unsafe stage artifact path after Codex'
+  artifact_path_is_safe "$stage" || needs_human "$stage" 'unsafe stage artifact path after the provider'
   after_snapshot=$(artifact_snapshot "$stage")
   if ! artifact_has_fresh_entry "$before_snapshot" "$after_snapshot"; then needs_human "$stage" "missing fresh $stage artifact"; fi
   worktree_identity_matches || needs_human "$stage" 'fleet worktree changed before commit; refusing stage commit'

@@ -6,7 +6,16 @@ usage() { printf 'Usage: %s [--once]\n' "${0##*/}" >&2; exit 2; }
 [[ $# -eq 0 || ( $# -eq 1 && $1 == --once ) ]] || usage
 ONCE=false; [[ $# -eq 1 ]] && ONCE=true
 command -v jq >/dev/null 2>&1 || { printf 'fleet-dashboard: required binary unavailable: jq\n' >&2; exit 2; }
-REPO_ROOT=$(pwd -P); FLEET_DIR=$REPO_ROOT/.planning/flow/fleet
+# Resolve the repository rather than trusting the ambient directory: the tmux
+# session name is a global constant, so a session created earlier from another
+# repository would otherwise keep reporting that repository's fleet, and running
+# from a subdirectory would silently render an empty table.
+if command -v git >/dev/null 2>&1 && REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) && [[ -n $REPO_ROOT ]]; then
+  REPO_ROOT=$(cd -- "$REPO_ROOT" && pwd -P)
+else
+  REPO_ROOT=$(pwd -P)
+fi
+FLEET_DIR=$REPO_ROOT/.planning/flow/fleet
 
 print_row() {
   local slug=$1 ports=$2 stage=$3 status=$4 branch=$5 updated=$6 message=$7
