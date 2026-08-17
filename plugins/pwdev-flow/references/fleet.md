@@ -44,18 +44,23 @@ Remove the owned temporary file after any failure. Do not alter the source file 
 Before launch, require:
 
 - a Git repository on a named current branch;
-- local `git`, `jq`, `docker`, `tmux`, `codex`, `python3`, and `shasum`, plus Docker Compose v2;
+- local `git`, `jq`, `docker`, `tmux`, `python3`, `shasum` and the binary of the selected runtime (`codex` or `claude`), plus Docker Compose v2;
 - one to `fleet.max_concurrent` valid lowercase slugs;
 - exactly one `Status: APPROVED` field in both `.planning/flow/phases/<slug>/spec.md` and `decisions.md`;
 - no central member, `flow-fleet/<slug>` branch, sibling worktree, allocation-lock, or port collision;
 - free deterministic application and database ports;
-- explicit acknowledgement of `--dangerously-bypass-approvals-and-sandbox`.
+- explicit acknowledgement of the dangerous flag of the selected runtime.
 
-Show the exact command shape before acknowledgement:
+Show the exact command shape of that runtime before acknowledgement, and never the other one:
 
 ```text
 codex exec --dangerously-bypass-approvals-and-sandbox --ephemeral --cd <worktree> --output-schema <fleet-result-schema> --output-last-message <result-file> <autonomous-prompt>
+claude -p --dangerously-skip-permissions --no-session-persistence --output-format json <autonomous-prompt>
 ```
+
+Each vector is built in exactly one place, `fleet-engine-<runtime>.sh`, and nothing else may construct a provider command or add a permission flag. No configuration value, environment variable, argument, or portable state field may turn one vector into the other: the runtime is fixed by the launcher chosen before any mutation, is bound into the central member, and a runner whose adapter disagrees with that member refuses to start.
+
+Codex enforces the result shape natively through `--output-schema`. Claude Code has no equivalent, so its adapter carries the same contract inside the prompt and converts the `--output-format json` envelope into the structured result, failing closed when the final message is not exactly one matching JSON object.
 
 This acknowledgement authorizes only the requested fleet launch and its isolated stage commands. It does not authorize unrelated subagents, standalone delegation, merges, or other dangerous commands.
 
@@ -66,13 +71,15 @@ For multiple slugs, compare `spec.md` and `decisions.md` text for repeated repos
 Resolve these files relative to the installed skill and invoke them without copying or reimplementing their lifecycle commands:
 
 ```text
-fleet-up.sh <lowercase-slug>
+fleet-up.sh <lowercase-slug>                                        # Codex launcher
+claude-fleet-up.sh <lowercase-slug>                                 # Claude launcher
 fleet-dashboard.sh [--once]
 fleet-teardown.sh <lowercase-slug> [--merge]
-fleet-run.sh <lowercase-slug> <worktree-path> [danger-full-access]
+fleet-run.sh <lowercase-slug> <worktree-path> [danger-full-access]  # shared runner
+claude-fleet-run.sh <lowercase-slug> <worktree-path> [danger-full-access]
 ```
 
-`fleet-run.sh` is started by `fleet-up.sh` inside tmux. Do not invoke it as a substitute for launch preflight.
+Both launchers reach the same `fleet-up.sh` provisioning and both panes reach the same `fleet-run.sh` lifecycle; the `claude-*` entry points only pin the runtime identity. `fleet-run.sh` is started by the launcher inside tmux. Do not invoke either runner as a substitute for launch preflight.
 
 ## Worktree, ports, Docker, and tmux
 
@@ -82,7 +89,7 @@ Create `flow-fleet/<slug>` and sibling `<repository>-fleet-<slug>`. Hash the exa
 
 Publish `.gitignore`, the packaged `docker-compose.flow-fleet.yml`, and a newly generated mode-0600 `.env.fleet` through same-directory temporary files and atomic renames. Refuse pre-existing Compose or environment destinations and reject symlinks or non-regular destination chains. Never read, display, audit, reuse, or adopt a project `.env.fleet`. Start the full Compose project when a Dockerfile exists; otherwise start only `db`. Use project `flow-fleet-<slug>`.
 
-Use shared tmux session `pwdev-flow-fleet`, window `dashboard`, and one `<slug>` window. Atomically write mode-0700 `.planning/flow/fleet/<slug>.pane.sh` with a shell-quoted `exec fleet-run.sh <slug> <worktree> danger-full-access` vector. Persist the bound central member with `ACTIVE` status before asking tmux to consume that central pane wrapper. Never create or execute a worktree-local pane wrapper.
+Use shared tmux session `pwdev-flow-fleet`, window `dashboard`, and one `<slug>` window. Atomically write mode-0700 `.planning/flow/fleet/<slug>.pane.sh` with a shell-quoted `exec <runtime-runner> <slug> <worktree> danger-full-access` vector, where the runner is `fleet-run.sh` for Codex and `claude-fleet-run.sh` for Claude. Persist the bound central member with `ACTIVE` status before asking tmux to consume that central pane wrapper. Never create or execute a worktree-local pane wrapper.
 
 ## State schemas
 
@@ -91,6 +98,7 @@ Store central bookkeeping at `.planning/flow/fleet/<slug>.json` and the bound pa
 ```json
 {
   "slug": "example",
+  "runtime": "codex",
   "branch": "flow-fleet/example",
   "worktree_path": "/absolute/sibling/example",
   "app_port": 3000,
@@ -133,9 +141,9 @@ Keep stage logs under `.planning/flow/fleet-logs/` and structured results under 
 
 ## Autonomous stages
 
-Run `PLAN → EXECUTE → REVIEW → VERIFY` sequentially by invoking the canonical Flow skills. Before and after every dangerous Codex call, revalidate the registered worktree, central member, exact contract identities, and bound SHA-256 values. Require structured `stage`, `status`, `message`, and `verdict` results and a fresh stage artifact. Invalid output, non-zero Codex exit, missing artifact, changed contracts or worktree identity, or explicit stop becomes `NEEDS_HUMAN`.
+Run `PLAN → EXECUTE → REVIEW → VERIFY` sequentially by invoking the canonical Flow skills. Before and after every dangerous provider call, revalidate the registered worktree, central member, exact contract identities, and bound SHA-256 values. Require structured `stage`, `status`, `message`, and `verdict` results and a fresh stage artifact. Invalid output, non-zero provider exit, missing artifact, changed contracts or worktree identity, or explicit stop becomes `NEEDS_HUMAN`.
 
-Run each Codex stage in its own process group. Reaping a successful provider leader does not release ownership: prove the complete group absent before result validation, commit, status publication, audit, or the next stage. On `HUP`, `INT`, or `TERM`, stop the complete descendant group with a bounded `TERM` grace period followed by `KILL` if necessary; only after group absence may the runner remove owned temporaries, publish `NEEDS_HUMAN`, emit its audit event, and release the runner lock. If absence cannot be proven, fail closed without terminal publication and retain the runner lock as an explicit recovery marker.
+Run each provider stage in its own process group. Reaping a successful provider leader does not release ownership: prove the complete group absent before result validation, commit, status publication, audit, or the next stage. On `HUP`, `INT`, or `TERM`, stop the complete descendant group with a bounded `TERM` grace period followed by `KILL` if necessary; only after group absence may the runner remove owned temporaries, publish `NEEDS_HUMAN`, emit its audit event, and release the runner lock. If absence cannot be proven, fail closed without terminal publication and retain the runner lock as an explicit recovery marker.
 
 Commit scoped changes only inside the fleet branch after each successful stage. If verification is `REJECTED`, run `execute-fix → review-fix → verify`. Stop after at most two rejected correction cycles. Mark `DONE` only for final `APPROVED` or `CAVEATS`.
 

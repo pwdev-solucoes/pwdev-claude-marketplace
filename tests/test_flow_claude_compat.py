@@ -31,7 +31,6 @@ EXPECTED_SCRIPTS = {
     "fleet-engine-claude.sh",
     "fleet-engine-codex.sh",
     "fleet-launch-core.sh",
-    "fleet-run-core.sh",
     "fleet-run.sh",
     "fleet-teardown.sh",
     "fleet-up.sh",
@@ -108,16 +107,33 @@ class ClaudeCompatibilityTests(unittest.TestCase):
         codex = (PLUGIN / "scripts/fleet-engine-codex.sh").read_text(encoding="utf-8")
         claude = (PLUGIN / "scripts/fleet-engine-claude.sh").read_text(encoding="utf-8")
         self.assertIn("codex exec", codex)
-        self.assertIn("--sandbox danger-full-access", codex)
+        self.assertIn("--dangerously-bypass-approvals-and-sandbox", codex)
         self.assertIn("claude -p", claude)
         self.assertNotIn("codex exec", claude)
         self.assertNotIn("--sandbox", claude)
+        self.assertNotIn("--dangerously-skip-permissions", codex)
 
-    def test_claude_launcher_selects_claude_runner(self):
+    def test_only_the_adapters_construct_a_provider_command(self):
+        """The shared runner must never name a provider or a permission flag."""
+        runner = (PLUGIN / "scripts/fleet-run.sh").read_text(encoding="utf-8")
+        for forbidden in (
+            "codex exec",
+            "claude -p",
+            "--dangerously-bypass-approvals-and-sandbox",
+            "--dangerously-skip-permissions",
+            "--output-last-message",
+            "--output-format",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, runner)
+
+    def test_claude_launcher_and_runner_reach_the_shared_lifecycle(self):
         launcher = (PLUGIN / "scripts/claude-fleet-up.sh").read_text(encoding="utf-8")
         runner = (PLUGIN / "scripts/claude-fleet-run.sh").read_text(encoding="utf-8")
         self.assertIn('fleet-launch-core.sh" claude', launcher)
-        self.assertIn('fleet-run-core.sh" claude', runner)
+        self.assertIn("fleet-up.sh", launcher)
+        # The Claude pane runs the same autonomous runner as Codex.
+        self.assertIn('fleet-run.sh" "$@"', runner)
 
     def test_claude_runner_exports_runtime_identity(self):
         runner = (PLUGIN / "scripts/claude-fleet-run.sh").read_text(encoding="utf-8")
@@ -171,72 +187,95 @@ class NativeRuntimeAdapterBehaviourTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(result.stdout, runtime)
 
-    def test_run_core_invokes_the_matching_engine_with_the_native_vector(self):
-        expected = {
-            "claude": [
-                "-p",
-                "--dangerously-skip-permissions",
-                "--no-session-persistence",
-                "--output-format",
-                "json",
-                "stage prompt",
-            ],
-            "codex": [
-                "exec",
-                "--sandbox",
-                "danger-full-access",
-                "-c",
-                "approval_policy=never",
-                "--add-dir",
-            ],
-        }
-        for runtime, binary in (("claude", "claude"), ("codex", "codex")):
-            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as directory:
-                fake_bin, record = self.stub_provider(directory, binary)
+    def adapter_stage_command(self, runtime, worktree="/wt", schema="/schema.json",
+                              result="/result.json", prompt="stage prompt"):
+        """Source an adapter and print the vector it builds, one argument per line."""
+        script = (
+            f'source "{SCRIPTS}/fleet-engine-{runtime}.sh"\n'
+            f'flow_engine_{runtime}_stage_command "{worktree}" "{schema}" "{result}" "{prompt}"\n'
+            'printf "cwd=%s\\n" "$FLOW_ENGINE_CWD"\n'
+            'printf "stdout_result=%s\\n" "$FLOW_ENGINE_RESULT_FROM_STDOUT"\n'
+            'for argument in "${FLOW_ENGINE_COMMAND[@]}"; do printf "%s\\n" "$argument"; done\n'
+        )
+        completed = subprocess.run(
+            ["/bin/bash", "-c", script], check=True, capture_output=True, text=True
+        )
+        lines = completed.stdout.splitlines()
+        return lines[0].split("=", 1)[1], lines[1].split("=", 1)[1], lines[2:]
 
-                result = self.run_script(
-                    "fleet-run-core.sh", runtime, "stage prompt", path_prefix=fake_bin
-                )
+    def test_codex_adapter_builds_the_exact_approved_vector(self):
+        cwd, from_stdout, command = self.adapter_stage_command("codex")
+        self.assertEqual(
+            command,
+            ["codex", "exec", "--dangerously-bypass-approvals-and-sandbox", "--ephemeral",
+             "--cd", "/wt", "--output-schema", "/schema.json",
+             "--output-last-message", "/result.json", "stage prompt"],
+        )
+        # Codex takes --cd and writes the result itself.
+        self.assertEqual(cwd, "")
+        self.assertEqual(from_stdout, "false")
 
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertTrue(record.exists(), f"{binary} stub was never executed")
-                arguments = record.read_text(encoding="utf-8").splitlines()
-                if runtime == "claude":
-                    self.assertEqual(arguments, expected["claude"])
-                else:
-                    self.assertEqual(arguments[: len(expected["codex"])], expected["codex"])
-                    self.assertEqual(arguments[-1], "stage prompt")
+    def test_claude_adapter_builds_the_exact_native_vector(self):
+        cwd, from_stdout, command = self.adapter_stage_command("claude")
+        self.assertEqual(
+            command,
+            ["claude", "-p", "--dangerously-skip-permissions", "--no-session-persistence",
+             "--output-format", "json", "stage prompt"],
+        )
+        # Claude has no --cd and reports its final message on stdout.
+        self.assertEqual(cwd, "/wt")
+        self.assertEqual(from_stdout, "true")
 
-    def test_engines_never_cross_contaminate_privileged_flags(self):
-        for runtime, binary, forbidden in (
-            ("claude", "claude", "--dangerously-bypass-approvals-and-sandbox"),
-            ("claude", "claude", "danger-full-access"),
-            ("codex", "codex", "--dangerously-skip-permissions"),
+    def test_adapters_never_cross_contaminate_privileged_flags(self):
+        for runtime, forbidden in (
+            ("claude", "--dangerously-bypass-approvals-and-sandbox"),
+            ("claude", "--ephemeral"),
+            ("claude", "--output-schema"),
+            ("codex", "--dangerously-skip-permissions"),
+            ("codex", "--output-format"),
         ):
-            with self.subTest(runtime=runtime, forbidden=forbidden), tempfile.TemporaryDirectory() as directory:
-                fake_bin, record = self.stub_provider(directory, binary)
+            with self.subTest(runtime=runtime, forbidden=forbidden):
+                _, _, command = self.adapter_stage_command(runtime)
+                self.assertNotIn(forbidden, command)
 
-                self.run_script("fleet-run-core.sh", runtime, "stage prompt", path_prefix=fake_bin)
-
-                self.assertNotIn(forbidden, record.read_text(encoding="utf-8").splitlines())
+    def test_claude_adapter_publishes_only_a_well_formed_result(self):
+        good = json.dumps({"stage": "plan", "status": "OK", "message": "done", "verdict": "NONE"})
+        cases = (
+            ("plain envelope", {"is_error": False, "result": good}, True),
+            ("fenced result", {"is_error": False, "result": f"```json\n{good}\n```"}, True),
+            ("provider error", {"is_error": True, "result": good}, False),
+            ("prose instead of json", {"is_error": False, "result": "I finished the plan."}, False),
+            ("envelope without result", {"is_error": False, "type": "result"}, False),
+        )
+        for label, envelope, expected in cases:
+            with self.subTest(case=label), tempfile.TemporaryDirectory() as directory:
+                raw = Path(directory) / "raw.json"
+                out = Path(directory) / "out.json"
+                raw.write_text(json.dumps(envelope), encoding="utf-8")
+                completed = subprocess.run(
+                    ["/bin/bash", "-c",
+                     f'source "{SCRIPTS}/fleet-engine-claude.sh"\n'
+                     f'flow_engine_claude_publish_result "{raw}" "{out}"'],
+                    check=False, capture_output=True, text=True,
+                )
+                if expected:
+                    self.assertEqual(completed.returncode, 0, completed.stderr)
+                    self.assertEqual(json.loads(out.read_text(encoding="utf-8")), json.loads(good))
+                else:
+                    self.assertNotEqual(completed.returncode, 0)
+                    # Fails closed: the runner rejects an empty result file.
+                    self.assertEqual(out.read_text(encoding="utf-8"), "")
 
     def test_unsupported_runtime_fails_closed_before_any_effect(self):
-        for script, extra in (
-            ("fleet-launch-core.sh", ("/bin/echo", "must-not-run")),
-            ("fleet-run-core.sh", ("stage prompt",)),
-        ):
-            with self.subTest(script=script):
-                result = self.run_script(script, "gemini", *extra)
-                self.assertEqual(result.returncode, 2)
-                self.assertIn("unsupported fleet runtime", result.stderr)
-                self.assertNotIn("must-not-run", result.stdout)
+        result = self.run_script("fleet-launch-core.sh", "gemini", "/bin/echo", "must-not-run")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("unsupported fleet runtime", result.stderr)
+        self.assertNotIn("must-not-run", result.stdout)
 
-    def test_core_dispatchers_reject_a_missing_payload(self):
-        for script in ("fleet-launch-core.sh", "fleet-run-core.sh"):
-            with self.subTest(script=script):
-                result = self.run_script(script, "claude")
-                self.assertEqual(result.returncode, 2)
-                self.assertNotEqual(result.stderr.strip(), "")
+    def test_launch_core_rejects_a_missing_payload(self):
+        result = self.run_script("fleet-launch-core.sh", "claude")
+        self.assertEqual(result.returncode, 2)
+        self.assertNotEqual(result.stderr.strip(), "")
 
     def test_claude_runner_validates_slug_and_permission_mode(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -249,26 +288,6 @@ class NativeRuntimeAdapterBehaviourTest(unittest.TestCase):
                     result = self.run_script("claude-fleet-run.sh", *arguments)
                     self.assertEqual(result.returncode, 2)
                     self.assertIn(expected, result.stderr)
-
-    def test_claude_runner_accepts_the_pane_permission_mode_argument(self):
-        """fleet-up.sh writes a three-argument pane vector; the runner must accept it."""
-        with tempfile.TemporaryDirectory() as directory:
-            fake_bin, record = self.stub_provider(directory, "claude")
-            worktree = Path(directory) / "worktree"
-            worktree.mkdir()
-
-            result = self.run_script(
-                "claude-fleet-run.sh",
-                "demo",
-                str(worktree),
-                "danger-full-access",
-                path_prefix=fake_bin,
-            )
-
-            self.assertEqual(result.returncode, 0, result.stderr)
-            arguments = record.read_text(encoding="utf-8").splitlines()
-            self.assertIn("demo", arguments[-1])
-            self.assertNotIn("danger-full-access", arguments)
 
 
 if __name__ == "__main__":
