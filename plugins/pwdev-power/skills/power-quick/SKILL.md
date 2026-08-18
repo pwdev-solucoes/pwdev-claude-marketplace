@@ -1,6 +1,6 @@
 ---
 name: power-quick
-description: Use for a small bounded change of at most three files - a typo, a config value, a rename, a one-line bugfix - where a plan file would cost more than the change
+description: Use when a change is small and already understood - at most three files, such as a typo, a config value, a rename, or a one-line bugfix - and a plan file would cost more than the change
 ---
 
 # Deliver a Bounded Change
