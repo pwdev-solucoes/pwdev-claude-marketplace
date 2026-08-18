@@ -60,6 +60,24 @@ Comandos: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 
 ## Novidades
 
+### Três runtimes e frotas no cmux — pwdev-power v0.1.0
+
+Um plugin de workflow novo, que roda as mesmas skills com aprovação em **Claude
+Code, Codex e Hermes Agent**, e troca a camada de frota em tmux pelo **cmux** —
+estado, progresso e notificações aparecem na barra lateral em vez de num painel
+que alguém precisa ficar olhando.
+
+Ele traz as disciplinas de engenharia que os outros plugins de workflow deixam
+implícitas: um portão de brainstorming que classifica o pedido em voz alta antes
+da primeira pergunta, planos cujos valores exatos chegam literais a quem
+implementa, execução com registro durável e ciclo de correção limitado, e
+verificação que tenta refutar a conclusão. O `init` também mapeia o codebase em
+quatro documentos de contexto, para que um design parta do que já se sabe.
+
+Onde o Hermes está instalado, fases aprovadas podem ser despachadas pelo Kanban
+dele em vez do runner embutido — a ponte reaplica o portão de aprovação por
+conta própria, já que o board não tem opinião sobre aprovação.
+
 ### Delegação a CLIs externas — pwdev-code v2.3.0
 
 Claude Code como **orquestrador de outros agentes de código**: 6 novos
@@ -195,18 +213,51 @@ foram reestruturados.
 | Plugin | Descrição | Versão | Licença |
 |--------|-----------|:------:|:------:|
 | [**pwdev-flow**](./plugins/pwdev-flow/) | Desenvolvimento orientado a especificação portátil para Claude Code **e** Codex — um único contrato `.planning/flow`, 17 comandos, auditoria semântica opt-in, delegação guardada a CLIs externas, frotas nativas isoladas (`claude -p` / `codex exec`) | 0.6.0 | Apache-2.0 |
-| [**pwdev-code**](./plugins/pwdev-code/) | Desenvolvimento orientado a especificação — 8 subagentes reais (incl. advisor), roteamento por task, grafo de memória, waves paralelas opt-in, delegação a CLIs externas (Codex/OpenCode/Kimi/Gemini/Kiro), 22 comandos | 2.3.0 | Apache-2.0 |
+| [**pwdev-power**](./plugins/pwdev-power/) | Desenvolvimento orientado a especificação com disciplina, para Claude Code, Codex **e** Hermes Agent — portão de brainstorm, planos com restrições literais, execução dirigida por subagentes com registro e ciclo de correção limitado, verificação adversarial, mapa do codebase, frotas isoladas no cmux | 0.1.0 | Apache-2.0 |
+| [**pwdev-code**](./plugins/pwdev-code/) | Desenvolvimento orientado a especificação — 8 subagentes reais (incl. advisor), roteamento por task, grafo de memória, waves paralelas opt-in, delegação a CLIs externas (Codex/OpenCode/Kimi/Gemini/Kiro), 22 comandos | 2.4.0 | Apache-2.0 |
 | [**pwdev-uiux**](./plugins/pwdev-uiux/) | Engenharia UI/UX — 6 subagentes reais, fluxo de 5 fases com gates, Figma, WCAG 2.1 AA | 2.0.1 | Apache-2.0 |
-| [**pwdev-feat**](./plugins/pwdev-feat/) | Desenvolvimento simplificado de features — planos PWDEVIA inline + subagentes executor e advisor | 2.1.0 | Apache-2.0 |
+| [**pwdev-feat**](./plugins/pwdev-feat/) | Desenvolvimento simplificado de features — planos PWDEVIA inline + subagentes executor e advisor | 2.1.1 | Apache-2.0 |
 | [**pwdev-prd**](./plugins/pwdev-prd/) | Criação de PRD guiada por entrevista — 12 etapas inline, Markdown + JSON canônico | 2.0.1 | Apache-2.0 |
 | [**pwdev-copy**](./plugins/pwdev-copy/) | Framework de copywriting treinável — 20 skills no ciclo completo (VOC → copy → revisão → análise), 5 subagentes reais | 1.1.0 | Apache-2.0 |
 | [**pwdev-social-media**](./plugins/pwdev-social-media/) | Geração de criativos por IA — orquestração de APIs (Ideogram, Leonardo, Flux, Runway, Freepik) com trava de gasto, 19 skills, 4 subagentes | 2.0.1 | Apache-2.0 |
 | [**pwdev-devops**](./plugins/pwdev-devops/) | Plataforma, operação e incidente — postura de execução segura com guard script, 19 skills, 4 subagentes | 1.0.0 | Apache-2.0 |
 | [**pwdev-youtrack**](./plugins/pwdev-youtrack/) | Gestão do YouTrack — MCP oficial embutido (2025.3+) para issues, artigos e log de trabalho; fallback REST para boards, sprints e relatórios de tempo | 1.0.0 | Apache-2.0 |
-| [**pwdev-glpi**](./plugins/pwdev-glpi/) | GLPI 10.x ITSM — servidor MCP próprio via npx (@soarescbm/mcp-glpi): CRUD de tickets, triagem com prompts MCP, relatórios de fila, ativos e KB | 1.0.0 | Apache-2.0 |
+| [**pwdev-glpi**](./plugins/pwdev-glpi/) | GLPI 10.x ITSM — servidor MCP próprio via npx (@soarescbm/mcp-glpi): CRUD de tickets, triagem com prompts MCP, relatórios de fila, ativos e KB | 1.0.5 | Apache-2.0 |
 | [**pwdev-postgres**](./plugins/pwdev-postgres/) | PostgreSQL — servidor MCP próprio via npx (@soarescbm/postgres-mcp): SELECT somente-leitura validado por AST, inspeção de schema, DML/DDL com dry-run obrigatório | 1.0.0 | Apache-2.0 |
+| [**pwdev-obsidian**](./plugins/pwdev-obsidian/) | Vault do Obsidian — servidor MCP embutido no plugin comunitário Local REST API: leitura, escrita e edição estrutural de notas (heading/bloco/frontmatter), busca JsonLogic e texto livre, tags, arquivo ativo, paleta de comandos | 1.0.0 | Apache-2.0 |
 | [**pwdev-brain**](./plugins/pwdev-brain/) | Segundo cérebro em LLM Wiki (padrão Karpathy) no Open Knowledge Format v0.2 — ingest discutido com citação por afirmação, query citada, lint de conformidade; 2 subagentes, MCP embutido somente-leitura (6 tools) | 1.1.0 | Apache-2.0 |
 | [**pwdev-statusline**](./plugins/pwdev-statusline/) | Barra de status rica — cores dinâmicas, tokens formatados, totalmente configurável | 1.1.0 | Apache-2.0 |
+
+### pwdev-power
+
+Desenvolvimento com disciplina rodando em **três runtimes** — Claude Code, Codex
+e Hermes Agent — a partir de um só conjunto de skills, com frotas autônomas
+isoladas no **cmux**.
+
+```
+[MAPA] ─▶ PRD ─▶ ROADMAP ─▶ BRAINSTORM ─▶ PLANO ─▶ EXECUÇÃO ─▶ VERIFICAÇÃO ─▶ FECHO
+```
+
+Ele junta uma camada de produto — um requisito e, depois, um roadmap
+`Fase → Épico → Feature → Task` com rastreabilidade obrigatória — com execução
+dirigida por subagentes: registro durável, um brief por task, um revisor novo
+entre tasks, e ciclo de correção limitado a cinco rodadas, com cada decisão de
+arbitragem gravada como ruling.
+
+Três regras valem o tempo todo, cada uma escrita contra a racionalização que a
+derruba: **nenhum código de produção sem um teste visto falhando**, **nenhuma
+correção sem causa raiz antes** e **nenhuma afirmação de sucesso sem rodar o
+comando e ler a saída**. A verificação é adversarial — o verificador é instruído
+a *refutar* a conclusão, não a confirmá-la.
+
+O `init` mapeia o codebase em quatro documentos de contexto, para que um design
+não redescubra a arquitetura a cada fase. O comando privilegiado do provider
+existe em exatamente um adaptador por runtime; o runtime é fixado pelo launcher
+escolhido antes de qualquer mutação, e um runner cujo adaptador discorda recusa
+iniciar. Com o Hermes disponível, fases aprovadas também podem ser despachadas
+pelo Kanban dele.
+
+Veja a [documentação completa do plugin](./plugins/pwdev-power/README.pt-BR.md).
 
 ### pwdev-flow
 
@@ -390,6 +441,17 @@ init (connection string → Keychain) ─▶ conversa natural via MCP ─▶ esq
 
 Veja a [documentação completa do plugin](./plugins/pwdev-postgres/README.pt-BR.md).
 
+### pwdev-obsidian
+
+Gerencia um vault do [Obsidian](https://obsidian.md) pelo **servidor MCP embutido
+no plugin comunitário "Local REST API"** — sem servidor separado para instalar.
+
+Lê, escreve e edita notas estruturalmente por heading, bloco ou frontmatter, em
+vez de reescrever o arquivo inteiro, e busca no vault com JsonLogic e texto
+livre. Também alcança tags, o arquivo ativo e a paleta de comandos.
+
+Veja a [documentação completa do plugin](./plugins/pwdev-obsidian/README.pt-BR.md).
+
 ### pwdev-brain
 
 **Segundo cérebro como LLM Wiki persistente** — wiki em Markdown no
@@ -445,6 +507,9 @@ claude plugin marketplace add https://github.com/pwdev-solucoes/pwdev-claude-mar
 ### Instalar plugins
 
 ```bash
+# Desenvolvimento com disciplina em Claude Code, Codex e Hermes (frotas no cmux)
+claude plugin install pwdev-power@pwdev-claude-marketplace
+
 # Desenvolvimento orientado a especificação portátil para Claude Code e Codex (17 comandos, frotas nativas)
 claude plugin install pwdev-flow@pwdev-claude-marketplace
 
@@ -478,7 +543,10 @@ claude plugin install pwdev-glpi@pwdev-claude-marketplace
 # Operação de PostgreSQL (servidor MCP próprio via npx, dry-run obrigatório)
 claude plugin install pwdev-postgres@pwdev-claude-marketplace
 
-# Segundo cérebro — LLM Wiki em Open Knowledge Format (MCP embutido só-leitura)
+# Vault do Obsidian — notas, edição estrutural e busca (MCP via Local REST API)
+claude plugin install pwdev-obsidian@pwdev-claude-marketplace
+
+# Segundo cérebro — LLM Wiki em Open Knowledge Format (MCP embutido somente-leitura)
 claude plugin install pwdev-brain@pwdev-claude-marketplace
 
 # Barra de status rica para o terminal
