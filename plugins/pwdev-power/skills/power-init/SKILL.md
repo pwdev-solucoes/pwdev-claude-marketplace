@@ -1,6 +1,6 @@
 ---
 name: power-init
-description: Use when a repository has no PWDEV Power workspace yet, when resuming work in one, when the codebase map needs refreshing, or when the human asks to initialize, configure, or check the Power setup
+description: Use when a repository has no PWDEV Power workspace yet, when resuming one, when the codebase map needs refreshing, or when the setup should be checked
 ---
 
 # Initialize a Power Workspace
@@ -91,9 +91,14 @@ stale.
 
 ## Step 6 — Governance file, only if asked
 
-Offer to generate `CLAUDE.md` (and `AGENTS.md` for Codex and Hermes) from
-`templates/CLAUDE.template.md`, filled with what the map found. If one already exists, show what
-you would change and ask before touching it. Never silently overwrite a governance file.
+Offer to generate the governance file your runtime reads — the instructions file named in your
+runtime's tool mapping — from `templates/CLAUDE.template.md`, filled with what the map found. If
+one already exists, show what you would change and ask before touching it. Never silently
+overwrite a governance file.
+
+The file is named indirectly here on purpose: Hermes drops any skill whose body contains those
+two filenames literally, silently and without an error, so naming them would make this whole
+skill invisible on that runtime. See the note in [runtime](../../references/runtime.md).
 
 ## Report
 

@@ -733,5 +733,41 @@ class TestCodebaseContext(unittest.TestCase):
             self.assertIn("the code is right", text, f"{source.name} must state staleness precedence")
 
 
+class TestHermesSkillCatalogue(unittest.TestCase):
+    """Hermes drops skills whose body names the instructions files, without saying so."""
+
+    # Verified by bisecting a real Hermes install: a skill body containing either literal
+    # filename vanishes from the catalogue — omitted by `skills list`, "no skill named …" from
+    # `skills inspect` — while `skills trust` still counts it, so the numbers do not disagree.
+    # SOUL.md, CLAUDE.template.md, "Claude Code" and "AGENTS file" all pass.
+    FORBIDDEN_IN_SKILL_BODIES = ("CLAUDE" ".md", "AGENTS" ".md")
+
+    def test_no_skill_body_names_an_instructions_file(self):
+        for skill in sorted(SKILLS.glob("*/SKILL.md")):
+            body = skill.read_text(encoding="utf-8")
+            for token in self.FORBIDDEN_IN_SKILL_BODIES:
+                # Skip this file's own explanation of the rule.
+                occurrences = [
+                    line for line in body.splitlines()
+                    if token in line and "Hermes drops" not in line
+                ]
+                self.assertEqual(
+                    occurrences,
+                    [],
+                    f"{skill.parent.name} names {token}; Hermes would drop the whole skill. "
+                    "Refer to it indirectly, or say it in references/ instead.",
+                )
+
+    def test_references_may_name_them_because_they_are_not_catalogued(self):
+        # The rule is about skill bodies only; reference files are read on demand, so the
+        # per-runtime tool mappings can and should name the file each runtime reads.
+        mapping = (PLUGIN / "references" / "claude-tools.md").read_text(encoding="utf-8")
+        self.assertIn("CLAUDE" ".md", mapping, "the Claude tool mapping must name its instructions file")
+
+    def test_the_constraint_is_documented_where_skill_authors_look(self):
+        runtime = (PLUGIN / "references" / "runtime.md").read_text(encoding="utf-8")
+        self.assertIn("silently drops any skill", runtime)
+
+
 if __name__ == "__main__":
     unittest.main()

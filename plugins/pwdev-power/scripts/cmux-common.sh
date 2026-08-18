@@ -49,8 +49,21 @@ power_cmux_require() {
     printf 'cmux: no socket at %s. Start cmux and retry.\n' "$socket" >&2
     return 2
   fi
-  if ! CMUX_SOCKET_PATH=$socket "$bin" ping >/dev/null 2>&1; then
-    printf 'cmux: socket at %s did not answer ping. Start cmux and retry.\n' "$socket" >&2
+  local ping_error
+  if ! ping_error=$(CMUX_SOCKET_PATH=$socket "$bin" ping 2>&1); then
+    # Distinguish "not running" from "running but refusing you". By default cmux only accepts
+    # connections from processes it started, so an agent launched from an ordinary terminal
+    # gets a live socket and a closed door — and "did not answer" would send someone looking
+    # for a crashed app that is in fact running fine.
+    case $ping_error in
+      *"Access denied"*|*"only processes started inside cmux"*)
+        printf 'cmux: the socket refused this process. cmux only accepts connections from processes it started.\n' >&2
+        printf 'cmux: run this session from a terminal inside cmux, or allow local processes in cmux settings.\n' >&2
+        ;;
+      *)
+        printf 'cmux: socket at %s did not answer ping. Start cmux and retry.\n' "$socket" >&2
+        ;;
+    esac
     return 2
   fi
   POWER_CMUX_BIN=$bin
