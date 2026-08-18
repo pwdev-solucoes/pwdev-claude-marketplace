@@ -1,0 +1,37 @@
+name: ${COMPOSE_PROJECT_NAME:-power-fleet}
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-power_fleet}
+      POSTGRES_USER: ${POSTGRES_USER:-power_fleet}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-development-only}
+    ports:
+      # Loopback only. These are throwaway development credentials and must not be reachable
+      # from the LAN; fleet-up.sh also probes 127.0.0.1 for conflicts before allocating.
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    volumes:
+      - power-fleet-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-power_fleet}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POWER_ENV: ${POWER_ENV:-development}
+      PORT: ${APP_PORT:-3000}
+      DATABASE_URL: postgres://${POSTGRES_USER:-power_fleet}:${POSTGRES_PASSWORD:-development-only}@db:5432/${POSTGRES_DB:-power_fleet}
+    ports:
+      - "127.0.0.1:${APP_PORT:-3000}:${APP_PORT:-3000}"
+
+volumes:
+  power-fleet-db:

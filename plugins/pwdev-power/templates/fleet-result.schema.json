@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PWDEV Power fleet stage result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["stage", "status", "message", "verdict"],
+  "properties": {
+    "stage": {
+      "enum": ["plan", "execute", "review", "verify", "execute-fix", "review-fix"]
+    },
+    "status": {
+      "enum": ["OK", "FAILED", "NEEDS_HUMAN"]
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "verdict": {
+      "enum": ["NONE", "APPROVED", "CAVEATS", "REJECTED"]
+    }
+  }
+}

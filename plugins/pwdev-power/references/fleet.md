@@ -72,8 +72,13 @@ Written with `jq -n` to a temporary file and published by atomic rename. Carries
 
 `{ slug, stage, status, message, verdict, correction_cycles, updated_at }` where `stage` is one
 of `plan`, `execute`, `review`, `verify`, `execute-fix`, `review-fix`; `status` is `OK`,
-`FAILED` or `NEEDS_HUMAN`; `verdict` is `NONE`, `APPROVED`, `CAVEATS` or `REJECTED`; and
-`correction_cycles` is an integer 0–2.
+`DONE`, `FAILED` or `NEEDS_HUMAN`; `verdict` is `NONE`, `APPROVED`, `CAVEATS` or `REJECTED`;
+and `correction_cycles` is an integer 0–2.
+
+`DONE` appears only on the terminal `verify`, and only for `APPROVED` or `CAVEATS`. A
+`REJECTED` that exhausts the cap becomes `NEEDS_HUMAN` — it never becomes an approval by
+attrition. The provider's own result vocabulary is narrower (`OK`, `FAILED`, `NEEDS_HUMAN`):
+`DONE` is the runner's word, not the provider's.
 
 ## Ownership
 
