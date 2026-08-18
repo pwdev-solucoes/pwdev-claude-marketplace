@@ -29,6 +29,7 @@ tool allowlist and turn cap:
 | `pwdev-power:task-reviewer` | one review package |
 | `pwdev-power:verifier` | adversarial verification of a feature |
 | `pwdev-power:roadmap` | decomposing an approved requirement |
+| `pwdev-power:mapper` | mapping an existing repository into the context documents |
 
 Dispatching several subagents in one message runs them concurrently. Do that only for work
 that shares no state — never for implementers, which must run one at a time.

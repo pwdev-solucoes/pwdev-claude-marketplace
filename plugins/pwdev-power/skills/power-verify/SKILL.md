@@ -18,7 +18,9 @@ Read [collaboration](../../references/collaboration.md) and
 
 Before any claim that something works, fixed, passes, or is done:
 
-1. **Identify** the command that would prove it.
+1. **Identify** the command that would prove it. `.planning/power/context/project.md` records
+   this repository's real test, lint and build commands; use those rather than the ones that are
+   conventional for the ecosystem.
 2. **Run** it, fresh and complete. Not a cached result, not a subset.
 3. **Read** the whole output: the exit code, the failure count, the warnings.
 4. **Verify** the output actually says what you are about to claim.

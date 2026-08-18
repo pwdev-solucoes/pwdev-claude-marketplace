@@ -13,6 +13,15 @@ A fix applied to a symptom you have not explained is a guess. Guesses that happe
 worse than guesses that fail, because they hide the real defect until it returns somewhere
 more expensive.
 
+## Phase 0 — Has this already been documented?
+
+If `.planning/power/context/pitfalls.md` exists, read it before anything else. It is where
+previously observed failure modes were recorded with evidence, and the cheapest possible
+investigation is discovering that someone already did it.
+
+A match there is a lead, not a verdict: confirm it against the current failure before acting on
+it.
+
 ## Phase 1 — Root cause
 
 1. **Read the entire error.** All of it — the message, the type, every frame of the stack, the

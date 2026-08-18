@@ -1,5 +1,6 @@
 ---
-description: Initialize or resume the PWDEV Power workspace and check its runtime surface
+description: Initialize or resume the PWDEV Power workspace, map the codebase, and check its runtime surface
+argument-hint: "[--map | --check]"
 ---
 
 # /pwdev-power:init

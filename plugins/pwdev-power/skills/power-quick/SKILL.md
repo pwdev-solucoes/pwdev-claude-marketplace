@@ -26,7 +26,8 @@ anyway, is.
 ## Steps
 
 1. **Read before proposing.** Read the actual files. A quick change proposed from memory of a
-   codebase is a guess.
+   codebase is a guess. `.planning/power/context/project.md`, if it exists, gives you the
+   conventions without exploring — which is the whole point on a change this small.
 2. **Present a mini-plan**: what changes, in which files, and how you will verify it. Three or
    four lines.
 3. **Gate.** Wait for a yes.

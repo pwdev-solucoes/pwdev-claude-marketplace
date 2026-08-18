@@ -1,35 +1,38 @@
 ---
 name: power-init
-description: Use when a repository has no PWDEV Power workspace yet, when resuming work in one, or when the human asks to initialize, configure, or check the Power setup
+description: Use when a repository has no PWDEV Power workspace yet, when resuming work in one, when the codebase map needs refreshing, or when the human asks to initialize, configure, or check the Power setup
 ---
 
 # Initialize a Power Workspace
 
-Read [artifacts](../../references/artifacts.md), [runtime](../../references/runtime.md), and
-[safety](../../references/safety.md) before acting.
+Read [artifacts](../../references/artifacts.md), [context](../../references/context.md),
+[runtime](../../references/runtime.md), and [safety](../../references/safety.md) before acting.
 
-## Route
+## Routes
 
-- no argument: initialize, or report and resume if already initialized
-- `--check`: report the runtime surface only, change nothing
+| Route | Meaning |
+|---|---|
+| no argument | initialize, or report and resume if already initialized |
+| `--map` | re-map the codebase; do not touch configuration |
+| `--check` | report the runtime surface and map staleness only; write nothing |
 
 ## Step 1 — Detect before you ask
 
 Never ask the human something the repository already answers.
 
-1. Is `.planning/power/config.json` present? If yes, this is a resume: read it, read
-   `state.md`, report the active feature and the exact next valid action, and stop. Do not
-   re-initialize, and do not overwrite an existing config.
-2. Is this a Git repository with a named branch? If not, say so and stop — every later phase
-   binds to a branch.
+1. Is `.planning/power/config.json` present? If yes, this is a resume: read it, read `state.md`,
+   report the active feature and the exact next valid action. Do not re-initialize and do not
+   overwrite an existing config. Offer `--map` if the map is stale (Step 5).
+2. Is this a Git repository with a named branch? If not, say so and stop — every later phase binds
+   to a branch.
 3. Greenfield or brownfield? Brownfield is anything with source files already committed.
 4. Detect the stack from manifests, not from folder names: `package.json`, `pyproject.toml`,
-   `go.mod`, `Cargo.toml`, `composer.json`, `pom.xml`, `Gemfile`. Read the actual test and
-   lint commands out of them.
+   `go.mod`, `Cargo.toml`, `composer.json`, `pom.xml`, `Gemfile`. Read the actual test and lint
+   commands out of them.
 
 ## Step 2 — Runtime surface
 
-Report what is available, in one line each. Do not install anything, and do not edit any
+Report what is available, one line each. Do not install anything, and do not edit any
 configuration outside the repository.
 
 | Check | Command | If missing |
@@ -50,25 +53,50 @@ At most one round, at most three questions, one at a time:
 2. Model profile: `economy`, `balanced`, `performance` (default: `balanced`).
 3. Audit trail on? (default: off).
 
-## Step 4 — Write
+## Step 4 — Write the workspace
 
 Create `.planning/power/` with `config.json` and `state.md` exactly as
-[artifacts](../../references/artifacts.md) specifies. If audit was enabled, create the
-database file — the audit scripts refuse to write into a database that does not exist, so
-creating it is the act that turns auditing on.
+[artifacts](../../references/artifacts.md) specifies. If audit was enabled, create the database
+file — the audit scripts refuse to write into a database that does not exist, so creating it is
+the act that turns auditing on.
 
-Add `.planning/power/audit/` and `.planning/power/fleet-logs/` to the repository's
-`.gitignore` if one exists. Everything else under `.planning/power/` is a contract and belongs
-in version control.
+Add `.planning/power/audit/` and `.planning/power/fleet-logs/` to the repository's `.gitignore` if
+one exists. Everything else under `.planning/power/` is a contract and belongs in version control.
 
-## Step 5 — Governance file, only if asked
+## Step 5 — Map the codebase
+
+**Greenfield repositories skip this.** There is nothing to observe yet, and a map of an empty
+directory is noise that later phases will read as fact. Say you skipped it and why.
+
+For brownfield, dispatch the packaged `mapper` subagent — see [runtime](../../references/runtime.md)
+for how, in your runtime. Give it the repository root, the language, and the output contract. It
+writes four files and returns at most ten lines; do not paste its files into your context.
+
+Where no subagent mechanism exists, map inline, and keep it to exactly what the four documents
+need rather than exploring for its own sake.
+
+**Produces:** `.planning/power/context/{project,stack,domain,pitfalls}.md`
+
+### Staleness
+
+`project.md` records the commit it was mapped at. On resume, compare it to `HEAD`:
+
+- same commit, or only `.planning/` changed since: the map is current.
+- the stack, a manifest, or a top-level directory changed since: say the map is stale and offer
+  `--map`.
+
+Never remap silently on every command. A map rewritten constantly is a map nobody reads. And never
+treat the map as authoritative over the code — when they disagree, the code is right and the map is
+stale.
+
+## Step 6 — Governance file, only if asked
 
 Offer to generate `CLAUDE.md` (and `AGENTS.md` for Codex and Hermes) from
-`templates/CLAUDE.template.md`, filled with what you detected. If one already exists, show
-what you would change and ask before touching it. Never silently overwrite a governance file.
+`templates/CLAUDE.template.md`, filled with what the map found. If one already exists, show what
+you would change and ask before touching it. Never silently overwrite a governance file.
 
 ## Report
 
 State the workspace path, the detected stack with its real test and lint commands, the runtime
-surface with anything missing, and the next action: `product` for a new product, `plan` for a
-feature, `quick` for a small change.
+surface with anything missing, whether the map was written, skipped or refreshed, and the next
+action: `product` for a new product, `plan` for a feature, `quick` for a small change.

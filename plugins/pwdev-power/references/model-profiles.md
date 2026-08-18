@@ -14,8 +14,12 @@ deliberately; never omit the model and inherit the session's.
 | task-reviewer | mid | mid | top |
 | verifier | mid | top | top |
 | roadmap | mid | mid | top |
+| mapper | cheap | mid | mid |
 
-Read "mid" and "top" as tiers of whatever family the runtime offers, not as fixed names.
+Read "cheap", "mid" and "top" as tiers of whatever family the runtime offers, not as fixed
+names. The mapper is the one role that reads widely and writes little, so it does not need the top
+tier — but never give it the smallest one either, since deciding what is worth recording is a
+judgement.
 
 ## Complexity overrides the profile row
 

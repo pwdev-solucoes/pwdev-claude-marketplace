@@ -115,7 +115,7 @@ export PWDEV_POWER_CMUX_BIN=/Applications/cmux.app/Contents/Resources/bin/cmux
 
 | Comando | Argumentos | O que faz |
 |---|---|---|
-| `/pwdev-power:init` | — | Cria `.planning/power/`, detecta a stack, relata o ambiente disponível |
+| `/pwdev-power:init` | `[--map \| --check]` | Cria `.planning/power/`, mapeia o codebase, relata o ambiente disponível |
 | `/pwdev-power:product` | `prd [descrição] \| roadmap [caminho]` | Entrevista para um requisito, ou decompõe um já aprovado |
 | `/pwdev-power:plan` | `<descrição da feature>` | Faz brainstorm, projeta e decompõe em tasks |
 | `/pwdev-power:exec` | `<slug-da-feature>` | Executa um plano aprovado, task a task |
@@ -152,7 +152,13 @@ teste e lint) e quais de cmux, Hermes, `jq` e `sqlite3` estão disponíveis.
 Depois, no máximo três perguntas: idioma, perfil de modelo (`economy` / `balanced` /
 `performance`) e se a trilha de auditoria fica ligada.
 
-**Produz:** `.planning/power/config.json` e `.planning/power/state.md`.
+Num repositório que já tem código, ele também despacha o subagente `mapper` para escrever o mapa
+do codebase — veja [O mapa do codebase](#o-mapa-do-codebase) adiante. Num repositório greenfield
+ele pula essa etapa e avisa: um mapa de diretório vazio é ruído que as fases seguintes leriam como
+fato.
+
+**Produz:** `.planning/power/config.json`, `.planning/power/state.md` e — em brownfield —
+`.planning/power/context/`.
 
 ### A2. Escrever o requisito
 
@@ -315,9 +321,12 @@ push com pull request, ou deixar como está. Descartar exige que você digite a 
 Pule a camada de produto inteira.
 
 ```
-/pwdev-power:init                              # uma vez por repositório
+/pwdev-power:init                              # uma vez por repositório — também mapeia o codebase
 /pwdev-power:plan "adicionar exportação CSV na lista de pacientes"
 ```
+
+É aqui que o mapa se paga: o brainstorm parte da arquitetura e do vocabulário já registrados em
+vez de redescobri-los, e o plano nomeia caminhos que existem.
 
 Aqui o brainstorm provavelmente vai classificar como **delimitado**: uma mudança bem escopada em
 um fluxo que já existe e pode ser lido. Delimitado significa um design curto *na conversa*, sem
@@ -597,12 +606,61 @@ alterar o resultado do ciclo que ele estava descrevendo.
 
 ---
 
+## O mapa do codebase
+
+Escrito pelo `/pwdev-power:init` num repositório que já tem código, e atualizado com
+`/pwdev-power:init --map`. Quatro documentos curtos em `.planning/power/context/`:
+
+| Arquivo | Contém |
+|---|---|
+| `project.md` | propósito, arquitetura, estrutura, convenções, os comandos **reais**, fronteiras |
+| `stack.md` | linguagens, frameworks, bancos e as versões observadas, lidas dos lockfiles |
+| `domain.md` | o vocabulário que o código usa e os invariantes que ele assume |
+| `pitfalls.md` | riscos e modos de falha, **cada um com evidência** — arquivo, commit, comando |
+
+Quatro arquivos em vez de um para que cada leitor carregue só o que precisa: um implementador quer
+convenções e versões, quem depura quer as armadilhas.
+
+É **observação, nunca decisão.** Nada ali escolhe uma abordagem ou propõe refatoração — isso
+pertence a uma spec, atrás de um portão. Os comandos são lidos dos manifestos em vez de presumidos,
+então um passo do plano nunca roda `npm test` contra um projeto `pytest`.
+
+Quem lê o quê:
+
+- `power-brainstorm` — `project.md` e `domain.md`, para o design usar as palavras que o código já
+  usa. Propor `Patient` onde o código diz `Beneficiary` produz um design que ninguém consegue
+  mapear no repositório.
+- `power-plan` — `project.md` e `stack.md`, para o `File Structure` nomear caminhos reais.
+- `power-execute` — passa os **caminhos** para cada implementador, nunca o conteúdo. Colar o mapa
+  em cada brief custa exatamente o contexto que o mapa foi escrito para economizar.
+- `power-debug` — lê `pitfalls.md` *primeiro*. A investigação mais barata é descobrir que alguém já
+  fez.
+- `power-verify` — os comandos reais de teste e lint.
+- `power-quick` — as convenções, numa mudança pequena demais para justificar exploração.
+
+**Mapa é um retrato e envelhece.** O `project.md` registra o commit em que foi tirado, então a
+defasagem é mensurável e não uma sensação. Quando o mapa e o código discordam, **o código está
+certo** — o agente diz isso e oferece remapear, em vez de raciocinar a partir de um documento que
+acabou de ver contradito.
+
+```bash
+/pwdev-power:init --map      # a stack mudou, ou uma refatoração moveu fronteiras
+/pwdev-power:init --check    # relata defasagem e ambiente; não escreve nada
+```
+
+---
+
 ## O que fica em disco
 
 ```text
 .planning/power/
 ├── config.json                     idioma, perfil de modelo, auditoria, frota, kanban
 ├── state.md                        status, último portão, ciclos de correção, próxima ação válida
+├── context/                        o mapa do codebase — só em brownfield
+│   ├── project.md                  arquitetura, convenções, comandos reais, fronteiras
+│   ├── stack.md                    tecnologias e versões observadas
+│   ├── domain.md                   vocabulário e invariantes
+│   └── pitfalls.md                 riscos e modos de falha, com evidência
 ├── product/
 │   ├── prd.md
 │   └── roadmap/                    ROADMAP, TRACEABILITY, RISKS, METRICS, ROLLOUT + fases
@@ -715,7 +773,7 @@ Um membro que falhou mantém branch e worktree. Investigue ali; não relance por
 ## Contribuindo
 
 ```bash
-python3 -m unittest tests.test_pwdev_power tests.test_power_hermes    # 59 testes
+python3 -m unittest tests.test_pwdev_power tests.test_power_hermes    # 67 testes
 claude plugin validate plugins/pwdev-power
 hermes plugins doctor --ci plugins/pwdev-power
 ```

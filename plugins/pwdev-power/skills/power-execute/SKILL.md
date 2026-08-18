@@ -46,9 +46,12 @@ The dispatch prompt has exactly five parts:
 
 1. One line placing the task in the project.
 2. The brief path — "read this first; these are your requirements, with exact values".
-3. Interfaces and decisions from earlier tasks that this one consumes.
-4. Your resolution of any ambiguity you found in the scan.
-5. The report path to write.
+3. The context paths, when they exist: `.planning/power/context/project.md` for conventions and
+   `stack.md` for versions. **Paths, not contents** — pasting a map into every brief costs the
+   same context the map was written to save.
+4. Interfaces and decisions from earlier tasks that this one consumes.
+5. Your resolution of any ambiguity you found in the scan.
+6. The report path to write.
 
 Exact values live in the brief, not in the prompt. **Never** make the child read the whole
 plan. **Never** paste accumulated conversation history — a dispatch that is 99% history is a

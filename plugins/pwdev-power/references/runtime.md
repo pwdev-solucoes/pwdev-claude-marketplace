@@ -22,7 +22,8 @@ now. Then use only that runtime's launcher and tool names.
 
 ## Subagent dispatch, in one line each
 
-- **Claude**: the `Task`/`Agent` tool with a declared `subagent_type` from `agents/`.
+- **Claude**: the `Task`/`Agent` tool with a declared `subagent_type` from `agents/` —
+  `implementer`, `task-reviewer`, `verifier`, `roadmap`, `mapper`.
 - **Codex**: `spawn_agent` with `fork_turns: "none"`. The default `"all"` copies the entire
   transcript into the child, which defeats the whole point of a fresh context.
 - **Hermes**: `delegate_task(goal=..., context=..., toolsets=[...], role="leaf")`. Context is

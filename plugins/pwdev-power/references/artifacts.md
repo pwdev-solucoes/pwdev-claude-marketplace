@@ -52,6 +52,10 @@ correction cycle count, and the exact next valid action.
 .planning/power/
 ├── config.json
 ├── state.md
+├── context/project.md
+├── context/stack.md
+├── context/domain.md
+├── context/pitfalls.md
 ├── product/prd.md
 ├── product/roadmap/{ROADMAP,TRACEABILITY,RISKS,METRICS}.md
 ├── product/roadmap/<phase>/<epic>/<feature>.md
@@ -72,6 +76,12 @@ correction cycle count, and the exact next valid action.
 ├── audit/pwdev-audit.db
 └── memory/MEMORY.md
 ```
+
+## Context
+
+`.planning/power/context/` is the codebase map — what the repository is, before anyone changes it.
+It is observation, never decision, and it is a snapshot: when it disagrees with the code, the code
+is right. See [context](context.md).
 
 ## Conventions
 

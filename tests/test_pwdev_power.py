@@ -58,7 +58,7 @@ SKILL_NAMES = {
     "power-finish",
 }
 
-AGENT_NAMES = {"implementer", "task-reviewer", "verifier", "roadmap"}
+AGENT_NAMES = {"implementer", "task-reviewer", "verifier", "roadmap", "mapper"}
 
 RUNTIMES = ("claude", "codex", "hermes")
 
@@ -668,6 +668,69 @@ class TestDocumentation(unittest.TestCase):
             counts.append(len(re.findall(r"^## (?:Scenario|Cen\u00e1rio) [A-Z] ", text, re.M)))
         self.assertEqual(counts[0], counts[1], "the two READMEs describe a different number of scenarios")
         self.assertGreaterEqual(counts[0], 10, "the scenario walkthrough is incomplete")
+
+
+class TestCodebaseContext(unittest.TestCase):
+    """The codebase map: four documents, one producer, six consumers."""
+
+    CONTEXT_FILES = ("project.md", "stack.md", "domain.md", "pitfalls.md")
+
+    def test_the_contract_names_all_four_documents(self):
+        contract = (PLUGIN / "references" / "context.md").read_text(encoding="utf-8")
+        for name in self.CONTEXT_FILES:
+            self.assertIn(name, contract, f"context.md does not define {name}")
+
+    def test_the_artifact_tree_lists_the_context_directory(self):
+        tree = (PLUGIN / "references" / "artifacts.md").read_text(encoding="utf-8")
+        for name in self.CONTEXT_FILES:
+            self.assertIn(f"context/{name}", tree, f"artifacts.md is missing context/{name}")
+
+    def test_init_owns_mapping_rather_than_a_new_command(self):
+        # The map is reachable from init; adding an eighth command was rejected deliberately.
+        self.assertNotIn("map", {p.stem for p in COMMANDS.glob("*.md")})
+        hint = frontmatter(COMMANDS / "init.md").get("argument-hint", "")
+        self.assertIn("--map", hint)
+        self.assertIn("--check", hint)
+
+    def test_init_dispatches_the_mapper_and_skips_greenfield(self):
+        skill = (SKILLS / "power-init" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("mapper", skill, "init must dispatch the mapper subagent")
+        # A map of an empty directory is noise that later phases would read as fact.
+        self.assertIn("Greenfield", skill)
+        self.assertIn("context.md", skill, "init must link the context contract")
+
+    def test_the_mapper_is_read_mostly_and_childless(self):
+        text = (PLUGIN / "agents" / "mapper.md").read_text(encoding="utf-8")
+        fields = frontmatter(PLUGIN / "agents" / "mapper.md")
+        self.assertNotIn("Edit", fields["tools"], "the mapper observes; it does not edit code")
+        self.assertIn("do not dispatch subagents", text.lower())
+        self.assertIn("Observation, not decision", text)
+
+    def test_every_consumer_reads_the_part_of_the_map_it_needs(self):
+        expected = {
+            "power-brainstorm": ("project.md", "domain.md"),
+            "power-plan": ("project.md", "stack.md"),
+            "power-execute": ("project.md",),
+            "power-quick": ("project.md",),
+            "power-debug": ("pitfalls.md",),
+            "power-verify": ("project.md",),
+        }
+        for skill, wanted in expected.items():
+            text = (SKILLS / skill / "SKILL.md").read_text(encoding="utf-8")
+            for document in wanted:
+                self.assertIn(
+                    f"context/{document}", text, f"{skill} should read context/{document}"
+                )
+
+    def test_execute_passes_paths_rather_than_contents(self):
+        # Pasting the map into every brief costs the context the map was written to save.
+        text = (SKILLS / "power-execute" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("Paths, not contents", text)
+
+    def test_the_map_is_never_authoritative_over_the_code(self):
+        for source in (PLUGIN / "references" / "context.md", SKILLS / "power-init" / "SKILL.md"):
+            text = source.read_text(encoding="utf-8")
+            self.assertIn("the code is right", text, f"{source.name} must state staleness precedence")
 
 
 if __name__ == "__main__":

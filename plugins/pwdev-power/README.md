@@ -115,7 +115,7 @@ export PWDEV_POWER_CMUX_BIN=/Applications/cmux.app/Contents/Resources/bin/cmux
 
 | Command | Arguments | What it does |
 |---|---|---|
-| `/pwdev-power:init` | — | Sets up `.planning/power/`, detects the stack, reports the runtime surface |
+| `/pwdev-power:init` | `[--map \| --check]` | Sets up `.planning/power/`, maps the codebase, reports the runtime surface |
 | `/pwdev-power:product` | `prd [description] \| roadmap [path]` | Interviews for a requirement, or decomposes an approved one |
 | `/pwdev-power:plan` | `<feature description>` | Brainstorms, designs, and decomposes into tasks |
 | `/pwdev-power:exec` | `<feature-slug>` | Executes an approved plan task by task |
@@ -152,7 +152,12 @@ commands), and which of cmux, Hermes, `jq` and `sqlite3` are available.
 Then at most three questions: language, model profile (`economy` / `balanced` / `performance`),
 and whether to enable the audit trail.
 
-**Produces:** `.planning/power/config.json` and `.planning/power/state.md`.
+On a repository that already has code, it also dispatches the `mapper` subagent to write the
+codebase map — see [The codebase map](#the-codebase-map) below. On a greenfield repository it
+skips that and says so: a map of an empty directory is noise that later phases would read as fact.
+
+**Produces:** `.planning/power/config.json`, `.planning/power/state.md`, and — on brownfield —
+`.planning/power/context/`.
 
 ### A2. Write the requirement
 
@@ -313,9 +318,12 @@ push and open a pull request, or leave it. Discarding requires you to type the w
 Skip the product layer entirely.
 
 ```
-/pwdev-power:init                              # once per repository
+/pwdev-power:init                              # once per repository — also maps the codebase
 /pwdev-power:plan "add CSV export to the patient list"
 ```
+
+This is where the map earns its place: the brainstorm starts from the architecture and vocabulary
+already recorded instead of rediscovering them, and the plan names paths that exist.
 
 Here the brainstorm will likely classify **bounded**: a well-scoped change to a flow that already
 exists and can be read. Bounded means a short design *in the conversation*, no spec file, no plan
@@ -593,12 +601,61 @@ describing.
 
 ---
 
+## The codebase map
+
+Written by `/pwdev-power:init` on a repository that already has code, and refreshed with
+`/pwdev-power:init --map`. Four short documents under `.planning/power/context/`:
+
+| File | Holds |
+|---|---|
+| `project.md` | purpose, architecture, structure, conventions, the **real** commands, boundaries |
+| `stack.md` | languages, frameworks, databases and their observed versions, from lockfiles |
+| `domain.md` | the vocabulary the code uses, and the invariants it assumes |
+| `pitfalls.md` | risks and failure modes, **each with evidence** — a file, a commit, a command |
+
+Four files rather than one so a reader loads what it needs: an implementer wants conventions and
+versions, a debugger wants pitfalls.
+
+It is **observation, never decision.** Nothing in it chooses an approach or proposes a refactor —
+those belong in a spec, behind a gate. Commands are read from manifests rather than assumed, so a
+plan step never runs `npm test` against a `pytest` project.
+
+Who reads it:
+
+- `power-brainstorm` — `project.md` and `domain.md`, so a design uses the words the code already
+  uses. Proposing `Patient` where the code says `Beneficiary` produces a design nobody can map
+  onto the repository.
+- `power-plan` — `project.md` and `stack.md`, so `File Structure` names real paths.
+- `power-execute` — passes the **paths** to each implementer, never the contents. Pasting a map
+  into every brief costs exactly the context the map was written to save.
+- `power-debug` — reads `pitfalls.md` *first*. The cheapest investigation is discovering someone
+  already did it.
+- `power-verify` — the real test and lint commands.
+- `power-quick` — conventions, on a change too small to justify exploring.
+
+**A map is a snapshot and goes stale.** `project.md` records the commit it was taken at, so
+staleness is measurable rather than a feeling. When the map and the code disagree, **the code is
+right** — the agent says so and offers to remap, instead of reasoning from a document it has just
+seen contradicted.
+
+```bash
+/pwdev-power:init --map      # the stack changed, or a refactor moved boundaries
+/pwdev-power:init --check    # report staleness and the runtime surface; write nothing
+```
+
+---
+
 ## What lands on disk
 
 ```text
 .planning/power/
 ├── config.json                     language, model profile, audit, fleet, kanban
 ├── state.md                        status, last gate, correction cycles, next valid action
+├── context/                        the codebase map — brownfield only
+│   ├── project.md                  architecture, conventions, real commands, boundaries
+│   ├── stack.md                    technologies and observed versions
+│   ├── domain.md                   vocabulary and invariants
+│   └── pitfalls.md                 risks and failure modes, with evidence
 ├── product/
 │   ├── prd.md
 │   └── roadmap/                    ROADMAP, TRACEABILITY, RISKS, METRICS, ROLLOUT + phases
@@ -709,7 +766,7 @@ A member that failed keeps its branch and worktree. Investigate there; do not re
 ## Contributing
 
 ```bash
-python3 -m unittest tests.test_pwdev_power tests.test_power_hermes    # 59 tests
+python3 -m unittest tests.test_pwdev_power tests.test_power_hermes    # 67 tests
 claude plugin validate plugins/pwdev-power
 hermes plugins doctor --ci plugins/pwdev-power
 ```
