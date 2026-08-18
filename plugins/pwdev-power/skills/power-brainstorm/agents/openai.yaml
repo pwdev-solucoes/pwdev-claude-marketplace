@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Power Brainstorm"
+  short_description: "Explore intent before any code"
+  default_prompt: "Use $power-brainstorm before creating or changing behavior."

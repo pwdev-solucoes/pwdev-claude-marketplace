@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Power"
+  short_description: "Use PWDEV Power skills correctly"
+  default_prompt: "Use $power to learn how to find and apply PWDEV Power skills."

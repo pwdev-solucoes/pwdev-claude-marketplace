@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Power Verify"
+  short_description: "Refute completion before claiming it"
+  default_prompt: "Use $power-verify to verify an implementation adversarially."

@@ -1,0 +1,6 @@
+name: pwdev-power
+version: 0.1.0
+description: PWDEV Power skills and workflow bootstrap for Hermes Agent
+author: Paulo Soares
+provides_hooks:
+  - pre_llm_call

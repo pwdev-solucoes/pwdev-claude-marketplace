@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Power Fleet"
+  short_description: "Run isolated autonomous fleets"
+  default_prompt: "Use $power-fleet to launch approved phases in isolated worktrees."

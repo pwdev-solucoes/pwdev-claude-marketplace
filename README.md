@@ -16,6 +16,29 @@ Core philosophy across all plugins:
 
 > **Never execute without a plan. Never ship without verification.**
 
+### PWDEV Power — triple runtime
+
+`pwdev-power` runs the same approval-gated skills on Claude Code, Codex **and
+Hermes Agent**, with isolated autonomous fleets on **cmux** instead of tmux.
+
+It pairs a product layer — requirement, then a Phase→Epic→Feature→Task roadmap
+with traceability — with subagent-driven execution: a durable ledger, one brief
+per task, review between tasks, and a bounded fix loop. Three disciplines hold
+throughout: no production code without a failing test observed failing, no fix
+without root cause first, and no success claim without running the command and
+reading its output.
+
+The privileged provider command exists in exactly one adapter per runtime. The
+runtime is fixed by the launcher chosen before any mutation and a runner whose
+adapter disagrees refuses to start. With Hermes present, approved phases can
+also be dispatched through its Kanban board.
+
+Commands: `/pwdev-power:init`, `/pwdev-power:product`, `/pwdev-power:plan`,
+`/pwdev-power:exec`, `/pwdev-power:fleet`, `/pwdev-power:verify`,
+`/pwdev-power:quick`.
+
+---
+
 ### PWDEV Flow — dual runtime
 
 `pwdev-flow` is the portable PWDEV workflow for Claude Code and Codex. The

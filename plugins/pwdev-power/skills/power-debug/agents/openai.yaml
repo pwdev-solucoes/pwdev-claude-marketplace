@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Power Debug"
+  short_description: "Find root cause before fixing"
+  default_prompt: "Use $power-debug when something fails or behaves unexpectedly."

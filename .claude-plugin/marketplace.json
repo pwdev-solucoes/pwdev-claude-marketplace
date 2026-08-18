@@ -15,6 +15,15 @@
       "strict": true
     },
     {
+      "name": "pwdev-power",
+      "displayName": "PWDEV Power — Disciplined Spec-Driven Development",
+      "source": "./plugins/pwdev-power",
+      "description": "Disciplined spec-driven development v0.1 — PRD and executable roadmap, brainstorm-gated plans with global constraints and per-task interfaces, subagent-driven execution with a durable ledger and bounded fix loop, adversarial verification, and isolated autonomous fleets on cmux; runs on Claude Code, Codex and Hermes Agent",
+      "category": "workflow",
+      "tags": ["workflow", "spec-driven-development", "tdd", "claude", "codex", "hermes", "cmux", "fleet"],
+      "strict": true
+    },
+    {
       "name": "pwdev-code",
       "displayName": "PWDEV Code — Spec-Driven Development",
       "source": "./plugins/pwdev-code",

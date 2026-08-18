@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Power TDD"
+  short_description: "Write the failing test first"
+  default_prompt: "Use $power-tdd before writing any implementation code."
