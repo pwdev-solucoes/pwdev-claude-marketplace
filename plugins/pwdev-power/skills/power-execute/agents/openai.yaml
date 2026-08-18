@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Power Execute"
+  short_description: "Execute a plan task by task"
+  default_prompt: "Use $power-execute to run an approved plan with review between tasks."

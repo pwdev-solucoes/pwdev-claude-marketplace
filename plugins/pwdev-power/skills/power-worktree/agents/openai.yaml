@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Power Worktree"
+  short_description: "Work in an isolated workspace"
+  default_prompt: "Use $power-worktree before starting isolated feature work."

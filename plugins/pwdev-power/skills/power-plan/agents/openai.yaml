@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Power Plan"
+  short_description: "Decompose a design into tasks"
+  default_prompt: "Use $power-plan to turn an approved design into an executable plan."

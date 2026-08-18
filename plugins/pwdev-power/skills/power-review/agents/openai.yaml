@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Power Review"
+  short_description: "Request and receive code review"
+  default_prompt: "Use $power-review to review work or to act on review feedback."

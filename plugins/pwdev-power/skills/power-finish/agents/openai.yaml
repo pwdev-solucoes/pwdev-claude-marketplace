@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Power Finish"
+  short_description: "Integrate a finished branch"
+  default_prompt: "Use $power-finish when implementation is complete and green."

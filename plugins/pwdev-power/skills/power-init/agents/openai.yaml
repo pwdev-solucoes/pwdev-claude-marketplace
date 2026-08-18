@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Power Init"
+  short_description: "Initialize the Power workspace"
+  default_prompt: "Use $power-init to initialize or resume the workspace."

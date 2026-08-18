@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Power Product"
+  short_description: "Write a PRD or an executable roadmap"
+  default_prompt: "Use $power-product to write a requirement or decompose it into a roadmap."

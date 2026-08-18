@@ -1,0 +1,41 @@
+{
+  "name": "pwdev-power",
+  "version": "0.1.0+codex.20260818000000",
+  "description": "Disciplined, approval-gated development: product requirements, executable roadmap, brainstorm-gated plans, subagent-driven execution with a ledger and bounded fix loop, adversarial verification, and isolated cmux fleets.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "codex",
+    "spec-driven-development",
+    "tdd",
+    "workflow",
+    "verification",
+    "fleet",
+    "cmux",
+    "hermes"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "PWDEV Power",
+    "shortDescription": "Disciplined spec-driven development workflows",
+    "longDescription": "Write a product requirement, decompose it into an executable roadmap, brainstorm and plan a feature behind an approval gate, execute it task by task with a durable ledger and a bounded fix loop, verify it adversarially, and run approved phases as isolated autonomous fleets.",
+    "developerName": "PWDEV Solucoes",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Write a product requirement and decompose it into an executable roadmap.",
+      "Brainstorm and plan this feature before touching any code.",
+      "Execute this approved plan task by task with review between tasks.",
+      "Verify this implementation adversarially before claiming it is done.",
+      "Launch approved phases as an isolated autonomous fleet."
+    ]
+  }
+}

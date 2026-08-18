@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Power Quick"
+  short_description: "Deliver a small bounded change"
+  default_prompt: "Use $power-quick for a bounded change of at most three files."
