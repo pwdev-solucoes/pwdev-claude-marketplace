@@ -44,12 +44,29 @@ the member record alongside the task id, and re-check them before accepting a re
 what stops a spec edited mid-flight from passing as approved, and the board has no opinion
 about it.
 
+## The bridge script
+
+```text
+kanban-bridge.sh preview <slug...>   print the exact cards that would be created; creates nothing
+kanban-bridge.sh create  <slug...>   create one card per approved phase, record the task id
+kanban-bridge.sh status              list the power-fleet cards and their board states
+kanban-bridge.sh mirror              reflect board state into cmux
+```
+
+Always `preview` first, and show the human the rendered commands before creating anything.
+`create` enforces the same entry gate as a native launch — exactly one `Status: APPROVED` in the
+spec — because the board has no opinion about approval, and without that check the gate would
+simply not exist on this route.
+
+Creating cards runs nothing. Dispatch is a separate, deliberate step:
+`hermes kanban dispatch --dry-run --json` to see what would spawn, then a real dispatch or
+`kanban daemon`.
+
 ## State mirroring
 
-`scripts/kanban-bridge.sh` translates one way and mirrors the other. It reads `kanban list
---json` and reflects each card into cmux: `set-status` for the current step, `set-progress`
-across the phase's cards, `workspace-action --action set-color` for terminal states, and
-`notify` when a card enters `review` or `blocked`.
+`mirror` reads the board and reflects each card into cmux: `set-status` for the current step,
+`workspace-action --action set-color` for terminal states, and `notify` when a card enters
+`review` or `blocked`.
 
 Board states are `triage`, `todo`, `ready`, `running`, `review`, `blocked`, `done`,
 `scheduled`, `archived`. Map them to member status as: `running` → `RUNNING`, `done` → `DONE`,
