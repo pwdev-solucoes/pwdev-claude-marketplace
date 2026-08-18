@@ -3,120 +3,735 @@
 Desenvolvimento orientado a especificação com disciplina, rodando em **Claude Code, Codex e
 Hermes Agent**, com frotas autônomas isoladas no **cmux**.
 
-Rápido como um planejador leve de features, com a camada de produto de um pesado, e com as
-disciplinas de engenharia que normalmente nenhum dos dois carrega: um portão de brainstorming
-antes de qualquer código, planos cujas restrições viajam literais até quem implementa, execução
-com registro durável e ciclo de correção limitado, e verificação que tenta **refutar** a
-conclusão em vez de confirmá-la.
+---
+
+## Por que este plugin existe
+
+Agentes de código falham de maneiras previsíveis. Começam a escrever antes de alguém combinar o
+que construir. Escrevem o teste depois do código, então o teste valida o que foi feito e não o que
+era necessário. Corrigem o sintoma que enxergam em vez da causa que não enxergam. Dizem "pronto"
+sem rodar nada. E, quando trabalham em paralelo, sobrescrevem uns aos outros em silêncio.
+
+Cada uma dessas falhas tem uma contramedida conhecida, e nenhuma é complicada. O difícil é aplicar
+a contramedida sob pressão, no meio da tarefa, quando pular uma parece produtivo.
+
+O `pwdev-power` codifica essas contramedidas como skills que o agente é obrigado a invocar, e
+coloca um humano em cada portão que importa. Ele junta três coisas que costumam viver separadas:
+
+- **Velocidade.** O planejamento acontece na conversa, não atrás de um subagente que não pode
+  falar com você. Uma mudança pequena custa um comando.
+- **Camada de produto.** Um requisito e, em seguida, um roadmap `Fase → Épico → Feature → Task`
+  com rastreabilidade real, para que um esforço grande tenha espinha dorsal.
+- **Disciplina de engenharia.** Um portão de brainstorming antes de qualquer código, planos cujos
+  valores exatos chegam a quem implementa, execução com registro durável e ciclo de correção
+  limitado, e verificação que tenta *refutar* a conclusão em vez de confirmá-la.
+
+### Três regras que sobrevivem a qualquer racionalização
+
+1. **Nenhum código de produção sem um teste falhando antes** — e o vermelho precisa ser
+   *observado*, não presumido. Um teste que nunca falhou não prova nada quando passa.
+2. **Nenhuma correção sem investigação de causa raiz antes.** Três correções falhas significam que
+   a arquitetura virou suspeita, não a linha que você continua editando.
+3. **Nenhuma afirmação de sucesso sem rodar o comando e ler a saída.** Evidência e depois
+   afirmação — nunca o contrário.
+
+---
+
+## O modelo mental
+
+**As skills são a única fonte de verdade.** Quatorze skills descrevem o trabalho. Cada runtime
+recebe só um adaptador fino sobre elas: comandos de barra no Claude Code, `$power-*` no Codex, um
+plugin nativo no Hermes. Não existe uma segunda implementação para divergir.
+
+**Os portões pertencem a humanos.** Portão é o ponto em que o agente para, mostra algo e espera. A
+aprovação é *registrada* — nunca inferida do silêncio, e nunca concedida pelo agente ao próprio
+trabalho. Nada está aprovado só porque o arquivo existe.
+
+**Contratos de status são curtos.** Um subagente escreve o relatório em arquivo e devolve no
+máximo dez linhas. O orquestrador lê o status e o caminho — nunca o conteúdo do relatório. Essa
+regra sozinha é o que mantém uma feature longa viável, em vez de afogar o contexto principal.
+
+**O registro fica em disco.** O progresso da execução e cada decisão de arbitragem vivem no
+`ledger.md`, cuja primeira linha o amarra ao seu plano. Um controlador que perde o lugar lê o
+registro em vez de redespachar tasks já concluídas.
+
+---
 
 ## Instalação
 
+### Claude Code
+
 ```bash
-# Claude Code
 /plugin marketplace add pwdev-solucoes/pwdev-claude-marketplace
 /plugin install pwdev-power
-
-# Hermes Agent
-hermes plugins install pwdev-solucoes/pwdev-claude-marketplace --enable
-# ou, para skills locais do repositório:
-hermes skills trust .
 ```
 
-O Codex descobre as skills pelo `.codex-plugin/plugin.json`; invoque com `$power-<nome>`.
+Confira: `/pwdev-power:init` deve oferecer a criação do workspace.
 
-## O ciclo
+### Codex
+
+O plugin declara `"skills": "./skills/"`, então o Codex descobre as skills sozinho. Invoque com
+`$power-<nome>`, por exemplo `$power-plan`.
+
+Subagentes exigem isto em `~/.codex/config.toml`:
+
+```toml
+[features]
+multi_agent = true
+```
+
+### Hermes Agent
+
+```bash
+# instalação global
+hermes plugins install pwdev-solucoes/pwdev-claude-marketplace --enable
+
+# ou, trabalhando dentro de um checkout, carregue as skills locais do repositório
+hermes skills trust .
+hermes skills list | grep power-
+```
+
+Confira: `hermes plugins doctor plugins/pwdev-power` deve reportar registro OK, e uma sessão nova
+já deve conhecer a skill `power` sem que você a mencione.
+
+### Para a frota (opcional)
+
+A frota precisa do **cmux em execução** e de `jq`, `git`, `python3` e `docker` no `PATH`. Todo o
+resto do plugin funciona sem cmux.
+
+```bash
+cmux ping                    # precisa responder antes de qualquer comando de frota
+```
+
+Se a CLI não estiver no `PATH` (comum no macOS, onde ela fica dentro do bundle do app):
+
+```bash
+export PWDEV_POWER_CMUX_BIN=/Applications/cmux.app/Contents/Resources/bin/cmux
+```
+
+---
+
+## Referência de comandos
+
+| Comando | Argumentos | O que faz |
+|---|---|---|
+| `/pwdev-power:init` | — | Cria `.planning/power/`, detecta a stack, relata o ambiente disponível |
+| `/pwdev-power:product` | `prd [descrição] \| roadmap [caminho]` | Entrevista para um requisito, ou decompõe um já aprovado |
+| `/pwdev-power:plan` | `<descrição da feature>` | Faz brainstorm, projeta e decompõe em tasks |
+| `/pwdev-power:exec` | `<slug-da-feature>` | Executa um plano aprovado, task a task |
+| `/pwdev-power:verify` | `<slug-da-feature> [--strict]` | Verificação adversarial e integração |
+| `/pwdev-power:quick` | `<tarefa delimitada>` | Mudança pequena e compreendida, sem arquivo de plano |
+| `/pwdev-power:fleet` | `<slug...> [--via-kanban] \| --status \| --teardown <slug> [--merge]` | Fases aprovadas em paralelo, sem supervisão |
+
+As skills também disparam sozinhas — você não precisa citar `power-tdd` para que ela valha quando
+código está sendo escrito.
+
+---
+
+# Cenários
+
+Cada cenário abaixo é um caminho completo: o que você digita, o que acontece e onde você para.
+
+---
+
+## Cenário A — Um produto novo, do zero
+
+O caminho completo. Use quando estiver começando algo substancial e ninguém escreveu o requisito
+ainda.
+
+### A1. Preparar
+
+```
+/pwdev-power:init
+```
+
+Ele detecta antes de perguntar: se é repositório git, se é greenfield ou brownfield, qual a stack
+(lida de `package.json`, `pyproject.toml`, `go.mod` e afins — inclusive os comandos *reais* de
+teste e lint) e quais de cmux, Hermes, `jq` e `sqlite3` estão disponíveis.
+
+Depois, no máximo três perguntas: idioma, perfil de modelo (`economy` / `balanced` /
+`performance`) e se a trilha de auditoria fica ligada.
+
+**Produz:** `.planning/power/config.json` e `.planning/power/state.md`.
+
+### A2. Escrever o requisito
+
+```
+/pwdev-power:product prd "sistema de agendamento para clínicas municipais de saúde"
+```
+
+Três rodadas, no máximo quatro perguntas por rodada, **feitas uma de cada vez** — uma lista
+numerada de seis perguntas é respondida como formulário, e formulário se responde por cima.
+
+1. Visão e problema — quem tem, o que faz hoje, quanto isso custa.
+2. Escopo e capacidade — o que precisa existir, o que seria bom, o que fica de fora.
+3. Restrições e sucesso — prazos, conformidade, integrações, números-alvo.
+
+Depois ele escreve um requisito de dez seções e revisa o próprio trabalho antes de mostrar: todo
+requisito não-funcional é *mensurável* (um número, não "rápido")? Todo item obrigatório tem
+critério de aceite? Algo em "requisitos funcionais" é na verdade decisão de design, que pertence a
+uma spec?
+
+🚦 **PORTÃO.** Ele mostra o requisito e espera. Na aprovação, marca `Status: APPROVED`.
+
+**Produz:** `.planning/power/product/prd.md`
+
+### A3. Decompor em roadmap
+
+```
+/pwdev-power:product roadmap
+```
+
+Primeiro ele valida o requisito. Se faltam objetivos, requisitos funcionais, critérios de aceite
+ou fronteiras de escopo, ele te manda de volta — três ou mais faltando significa que o roadmap
+seria ficção.
+
+Então despacha o subagente `roadmap`, que escreve arquivos e devolve dez linhas. A ordenação é por
+dependência técnica primeiro, depois valor de negócio, depois risco — trabalho arriscado cedo,
+enquanto errar ainda é barato.
+
+🚦 **PORTÃO.** Você vê as contagens e o caminho raiz. Peça ajustes e ele redespacha; não remenda a
+saída na mão.
+
+**Produz:**
 
 ```text
-/pwdev-power:init                  prepara o workspace e relata o ambiente disponível
-/pwdev-power:product prd           entrevista e produz um requisito aprovado
-/pwdev-power:product roadmap       Fase → Épico → Feature → Task, com rastreabilidade
-/pwdev-power:plan <feature>        brainstorm → spec → plano executável
-/pwdev-power:exec <slug>           task a task, com revisão entre elas
-/pwdev-power:verify <slug>         verificação adversarial e integração
-/pwdev-power:quick <tarefa>        mudança pequena, sem arquivo de plano
-/pwdev-power:fleet <slugs>         fases aprovadas em paralelo, sem supervisão
+.planning/power/product/roadmap/
+├── ROADMAP.md          índice
+├── TRACEABILITY.md     requisito ↔ roadmap, nos dois sentidos — obrigatório
+├── RISKS.md · METRICS.md · ROLLOUT.md
+└── F01-<slug>/
+    ├── PHASE.md · CHECKLIST-F01.md
+    └── F01-E01-<slug>/
+        ├── EPIC.md
+        └── F01-E01-FT01-<slug>.md
 ```
 
-Nenhum portão é cruzado sem um humano. Aprovação é **registrada**, nunca inferida.
+Um roadmap sem `TRACEABILITY.md` é recusado. É o arquivo que prova que todo requisito foi parar em
+algum lugar e que toda fase remete a um requisito.
 
-## Do que é feito
+### A4. Planejar a primeira fase
 
-Quatorze skills, quatro subagentes e doze contratos de referência. As skills são a única fonte
-de verdade; cada runtime recebe apenas um adaptador fino.
+```
+/pwdev-power:plan "F01-E01 — cadastro de clínicas e salas"
+```
 
-| Skill | Dispara quando |
+**Ele classifica em voz alta antes de perguntar qualquer coisa** — spike, delimitado ou
+arquitetural — porque a classificação decide quanto processo vem depois, e esconder isso esconde a
+decisão.
+
+Para um subsistema novo, é *arquitetural*: ele explora o código, pergunta uma coisa de cada vez,
+oferece duas ou três abordagens com trade-offs reais **e uma recomendação**, e depois percorre o
+design seção por seção, para que uma discordância custe uma seção em vez do documento inteiro.
+
+🚦 **PORTÃO 1.** A spec. Na aprovação, exatamente um campo `Status: APPROVED`.
+
+Aí ele decompõe. O plano é escrito para um engenheiro que chega em uma task, não tem nada do seu
+contexto e nunca verá as outras tasks:
+
+```markdown
+## Global Constraints
+- Timeout de requisição: 2500ms
+- Tamanho de página: no máximo 50 itens
+
+## File Structure
+...
+
+## Task 01 — modelo de clínica e migração
+Complexity: low
+Files: src/models/clinic.ts, migrations/001_clinics.sql
+Interfaces:
+  Produces: `findClinic(id: string): Promise<Clinic | null>`
+Steps:
+- [ ] Escrever um teste falhando para buscar clínica por id
+- [ ] Rodar e ver falhar pela função ausente
+- [ ] Implementar findClinic
+- [ ] Rodar e ver passar
+- [ ] Commit
+```
+
+O `Global Constraints` é copiado **literalmente** da spec, nunca resumido — o revisor confere
+contra esse bloco, então uma paráfrase aqui vira um veredito errado lá. O bloco `Interfaces:` é
+como um implementador que vê uma task descobre o que os vizinhos esperam.
+
+🚦 **PORTÃO 2.** O mapa de tasks — id, nome, complexidade, arquivos.
+
+**Produz:** `spec.md` e `plan.md` em `.planning/power/features/<slug>/`
+
+### A5. Executar
+
+```
+/pwdev-power:exec cadastro-clinicas
+```
+
+O que acontece, por task:
+
+1. **Varredura preliminar** (uma vez, antes da Task 01) — uma tabela com uma linha por par de
+   tasks que compartilha arquivo ou interface, e uma linha por task confirmando que o texto dela
+   concorda consigo mesmo.
+2. **Despacho** — um implementador novo recebe o caminho do brief, as interfaces que consome e o
+   caminho do relatório. Nunca o plano inteiro, nunca a conversa acumulada.
+3. **Relatório** — `DONE`, `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT` ou `BLOCKED`.
+4. **Revisão** — um revisor novo recebe o brief, o relatório, o diff e as restrições literais, e
+   devolve dois vereditos independentes: conformidade com a spec *e* qualidade da task.
+5. **Ciclo de correção, se preciso** — no máximo **cinco rodadas**. As rodadas 1–3 retomam o
+   implementador original, que ainda tem o contexto; as 4–5 usam um novo, um tier de modelo acima.
+   Achados menores vão para o registro e nunca entram no ciclo.
+6. **Conclusão** — `Task NN: complete (commits abc1234..def5678, review clean)`.
+
+No fim você recebe cada linha `Ruling:` do registro, em ordem, com o custo caso a decisão esteja
+errada. Uma decisão que morre junto com o workspace foi uma decisão tomada em segredo.
+
+### A6. Verificar e integrar
+
+```
+/pwdev-power:verify cadastro-clinicas
+```
+
+A instrução do verificador não é "conferir se está completo" — é **"tentar refutar que está
+completo"**. Para cada verdade declarada, ele desenha um comando que *falharia* se a verdade não
+valesse, roda e registra a saída real.
+
+Ele presta atenção especial nas proibições (as menos testadas e as mais violadas, porque nada
+falha quando você quebra uma) e em testes que não conseguem falhar (reverta a implementação; o
+teste tem que ficar vermelho).
+
+Use `--strict` para duas lentes em paralelo — funcional e conformidade — em que o veredito é o
+pior dos dois. Algo que funciona mas viola uma proibição declarada não está aprovado.
+
+| Veredito | Próximo passo |
 |---|---|
-| `power` | início da sessão — como encontrar e aplicar as demais |
-| `power-brainstorm` | qualquer comportamento novo, antes do design |
-| `power-plan` | um design que precisa ser decomposto |
-| `power-execute` | um plano aprovado que precisa rodar |
-| `power-tdd` | escrever qualquer código de implementação |
-| `power-debug` | um bug, uma falha ou uma surpresa |
-| `power-verify` | qualquer afirmação de que algo funciona |
-| `power-review` | pedir ou receber revisão |
-| `power-product` | um requisito ou um roadmap |
-| `power-quick` | mudança pequena e já compreendida |
-| `power-worktree` | começar trabalho isolado |
-| `power-finish` | implementação completa e verde |
-| `power-fleet` | fases paralelas sem supervisão |
-| `power-init` | repositório ainda sem workspace |
+| `APPROVED` | integrar |
+| `CAVEATS` | integrar, com os achados expostos |
+| `REJECTED` | plano de correção delimitado e nova verificação — no máximo duas vezes |
 
-## Três regras que sobrevivem a qualquer racionalização
+Depois o `power-finish` roda a suíte completa e, só com ela verde, mostra o menu: merge local,
+push com pull request, ou deixar como está. Descartar exige que você digite a palavra `discard`.
 
-1. **Nenhum código de produção sem um teste falhando antes**, e o vermelho precisa ser observado.
-2. **Nenhuma correção sem investigação de causa raiz antes**; três correções falhas significam
-   que a arquitetura passou a ser a suspeita.
-3. **Nenhuma afirmação de sucesso sem rodar o comando e ler a saída.**
+---
 
-## A frota
+## Cenário B — Uma feature em código que já existe
 
-Uma fase aprovada, um worktree, um stack Docker, um workspace cmux. As portas vêm do primeiro
-slot livre, são publicadas só em loopback, e o arquivo de ambiente gerado é escrito sob
-`umask 077` e mantido fora do branch.
+Pule a camada de produto inteira.
 
-O comando privilegiado do provider existe em exatamente um adaptador por runtime, e nada mais
-pode construir um. O runtime é fixado pelo launcher escolhido antes de qualquer mutação, gravado
-no registro do membro, e um runner cujo adaptador discorda recusa iniciar. A flag perigosa de
-cada runtime — `--dangerously-skip-permissions`, `--dangerously-bypass-approvals-and-sandbox`,
-`--yolo` — é exibida e precisa ser reconhecida antes do primeiro lançamento.
+```
+/pwdev-power:init                              # uma vez por repositório
+/pwdev-power:plan "adicionar exportação CSV na lista de pacientes"
+```
 
-O ciclo é `plan → execute → review → verify`, com no máximo **dois** ciclos de correção. Uma
-terceira rejeição vai para o humano; nunca vira aprovação por cansaço.
+Aqui o brainstorm provavelmente vai classificar como **delimitado**: uma mudança bem escopada em
+um fluxo que já existe e pode ser lido. Delimitado significa um design curto *na conversa*, sem
+arquivo de spec e sem plano — e então ele para e espera um sim explícito antes de implementar.
 
-O estado aparece na barra lateral do cmux, em vez de um painel que alguém precisa ficar olhando.
-A frota nunca rouba o foco, e só fecha workspaces cujo identificador ela mesma registrou.
+Se ficar claro que a mudança precisa de uma interface nova, a classificação **sobe** para
+arquitetural no meio da conversa, e ele diz isso. A catraca só gira num sentido: complexidade
+escondida eleva o caminho, nada nunca o rebaixa.
 
-Exige o cmux em execução. Se o socket não responder, a frota diz isso e para.
+Para arquitetural, siga exatamente de A4 a A6.
 
-## A rota Kanban
+---
 
-Com o Hermes disponível, `--via-kanban` transforma fases aprovadas em cards do Kanban do Hermes e
-deixa o dispatcher dele executar, espelhando o estado no cmux. A ponte reaplica o portão de
-aprovação por conta própria, porque o board não tem opinião sobre aprovação. A chave de
-idempotência carrega o hash da spec: relançar devolve o mesmo card, uma spec editada gera um novo.
+## Cenário C — Uma mudança de um a três arquivos
 
-O que muda de dono nessa rota está documentado em `references/kanban.md`. Leia antes de usar.
+```
+/pwdev-power:quick "o teto de retentativas deve ser 5, não 3"
+```
+
+Ele lê os arquivos de verdade (mudança pequena proposta de memória do código é chute), mostra um
+mini-plano de três linhas, espera um sim, implementa, verifica e commita.
+
+**Ele escala em vez de derivar** assim que qualquer destas for verdade: mais de três arquivos;
+você não sabe nomear o modo de falha; adiciona interface ou migração; toca em autenticação,
+pagamento, permissão ou remoção de dados; ou você está prestes a escrever "já que estou aqui".
+
+Mesmo aqui vale TDD. "É só uma linha" é a forma mais comum de um teste que faltava nunca ser
+escrito.
+
+**Produz:** `.planning/power/quick/<data>-<slug>/{contract,report}.md` — dois arquivos curtos, para
+que um padrão de mudanças rápidas na mesma área vire evidência visível de que aquela área precisa
+de um plano de verdade.
+
+---
+
+## Cenário D — Alguma coisa quebrou
+
+Você não precisa de comando. Descrever um bug dispara o `power-debug`, que se recusa a propor
+correção antes de ter uma causa.
+
+```
+O endpoint de agendamento retorna 500 para clínicas criadas hoje.
+```
+
+1. **Causa raiz** — ler o erro *inteiro*; reproduzir de forma consistente; ver o que mudou
+   recentemente. Em sistema com vários componentes, **instrumentar cada fronteira antes de propor
+   qualquer coisa** e rodar uma vez para descobrir *onde* quebra. Rastrear o dado de trás para
+   frente, do errado até o certo.
+2. **Análise de padrão** — achar algo neste mesmo código que funciona da mesma forma, ler por
+   inteiro e listar todas as diferenças. A que parece irrelevante costuma ser a resposta.
+3. **Uma hipótese por vez**, escrita, com o menor teste que a derrubaria. Se estava errada,
+   formule uma *nova* — não empilhe outra correção sobre a tentativa anterior.
+4. **Correção** — teste falhando primeiro, causa raiz uma vez, sem "já que estou aqui", e depois
+   verificar.
+
+**Depois de três correções falhas ele para** e traz a arquitetura para você. Continuar custa mais
+do que perguntar.
+
+---
+
+## Cenário E — Chegou uma revisão
+
+```
+Segue a revisão do PR: <cole aqui>
+```
+
+O `power-review` roda LER → ENTENDER → VERIFICAR → AVALIAR → RESPONDER → IMPLEMENTAR.
+
+Ele confere cada achado contra o código antes de agir — revisores às vezes erram sobre o que o
+código faz, principalmente os externos — e, se **qualquer** achado estiver obscuro, ele para e
+pergunta antes de implementar **qualquer um**, porque achados interagem entre si.
+
+Não há concordância performática. Nada de "Você está certíssimo!", nada de agradecimento.
+Discordar com razão técnica é um desfecho normal e esperado.
+
+Para pedir revisão do seu próprio trabalho, ele monta o contexto do revisor de propósito —
+requisitos, diff, restrições — em vez de entregar o histórico da sessão, e nunca diz ao revisor o
+que deixar de apontar.
+
+---
+
+## Cenário F — Várias fases ao mesmo tempo, sem supervisão
+
+Para fases aprovadas que não se sobrepõem. Cada membro ganha worktree, stack Docker e workspace
+cmux próprios.
+
+### F1. Pré-condições
+
+- cmux rodando (`cmux ping` responde)
+- Cada slug tem `spec.md` com **exatamente um** campo `Status: APPROVED`, mais `plan.md`
+- Um branch atual nomeado — nada de HEAD destacado
+
+### F2. Lançar
+
+```
+/pwdev-power:fleet cadastro-clinicas regras-agendamento
+```
+
+Ele mostra o formato exato do comando do seu runtime e **exige que você reconheça a flag
+perigosa** antes de lançar qualquer coisa:
+
+| Runtime | Vetor |
+|---|---|
+| Claude Code | `claude -p --dangerously-skip-permissions --no-session-persistence --output-format json` |
+| Codex | `codex exec --dangerously-bypass-approvals-and-sandbox --ephemeral --cd <worktree> --output-schema <schema> --output-last-message <arquivo>` |
+| Hermes | `hermes -z <prompt> --in <worktree> --yolo --accept-hooks` |
+
+Se dois slugs mencionam os mesmos caminhos do repositório, você recebe um aviso consultivo
+nomeando-os. Ele não bloqueia — sobreposição plausível é comum e só você sabe se importa ali.
+
+Cada membro então roda `plan → execute → review → verify` por conta própria, commitando por
+estágio.
+
+### F3. Acompanhar
+
+O estado vive na **barra lateral do cmux** — âmbar rodando, verde concluído, vermelho quando um
+membro precisa de você, mais uma notificação. Não há painel para ficar olhando.
+
+```
+/pwdev-power:fleet --status
+```
+
+dá uma tabela única: slug, runtime, estágio, status, portas e uma mensagem curta. Nunca imprime
+caminhos de worktree, logs ou prompts.
+
+As portas vêm do primeiro slot livre — o membro 0 pega `3000`/`5432`, o membro 1 pega
+`3010`/`5442` — e são publicadas só em loopback.
+
+### F4. Quando um membro é rejeitado
+
+Um `verify` com `REJECTED` inicia um ciclo de correção: `execute-fix → review-fix → verify`. No
+máximo **dois** ciclos, ou seja, dez invocações de provider no pior caso. Uma terceira rejeição
+vira `NEEDS_HUMAN` — nunca vira aprovação por cansaço.
+
+### F5. Encerrar
+
+```
+/pwdev-power:fleet --teardown cadastro-clinicas
+```
+
+Para o stack, fecha o workspace cmux que ele criou, remove o registro do membro e **preserva o
+branch e o worktree** — um membro que falhou é evidência. O volume do banco é mantido e reportado
+junto com o comando para removê-lo.
+
+```
+/pwdev-power:fleet --teardown cadastro-clinicas --merge
+```
+
+Faz o merge no branch base. Recusado para qualquer membro que não esteja `DONE`, e o status
+terminal é revalidado antes.
+
+---
+
+## Cenário G — Deixar o Hermes orquestrar a frota
+
+Requer a CLI `hermes`. Fases aprovadas viram cards no Kanban do Hermes e o dispatcher dele executa.
+
+```
+/pwdev-power:fleet cadastro-clinicas regras-agendamento --via-kanban
+```
+
+Por baixo, e sempre com preview antes:
+
+```bash
+scripts/kanban-bridge.sh preview cadastro-clinicas   # imprime os comandos exatos; não cria nada
+scripts/kanban-bridge.sh create  cadastro-clinicas   # cria os cards e grava os ids
+hermes kanban dispatch --dry-run --json              # mostra o que seria disparado
+hermes kanban daemon --interval 60                   # ou dispare de verdade
+scripts/kanban-bridge.sh mirror                      # estado do board → barra lateral do cmux
+```
+
+O mapeamento:
+
+| pwdev-power | `hermes kanban` |
+|---|---|
+| Fase aprovada | `create --workspace worktree:<caminho>` |
+| Limite de correção | `--max-retries 2` |
+| Tempo máximo do membro | `--max-runtime 2h` (SIGTERM → SIGKILL → refila) |
+| Dependências | `--parent <id>`, `kanban link` |
+| Portão humano | `request-review` / `request-changes` |
+
+**A chave de idempotência carrega o hash da spec.** Relançar a mesma fase aprovada devolve o
+*mesmo* card em vez de duplicar; uma spec editada gera uma chave diferente e, portanto, um card
+genuinamente novo.
+
+**Leia `references/kanban.md` antes de usar esta rota.** Nela, o limite de correção passa a ser o
+`--max-retries` do dispatcher, e o portão humano passa a ser o `request-review` no card. O que
+*não* muda de dono são os hashes de contrato — o board não sabe distinguir uma spec editada de uma
+aprovada, então este plugin continua conferindo.
+
+---
+
+## Cenário H — Trabalhando no Codex
+
+As mesmas skills, outra forma de invocar.
+
+```
+$power-plan adicionar exportação CSV na lista de pacientes
+$power-execute cadastro-clinicas
+```
+
+Comportamentos do Codex que as skills já levam em conta:
+
+- Subagentes nascem com `fork_turns: "none"`. O padrão `"all"` copia o transcript inteiro para o
+  filho, o que destrói o sentido de um contexto novo.
+- Todo spawn define **tanto** `model` quanto `reasoning_effort` — definir só `model` reseta o
+  esforço para o padrão daquele modelo, em silêncio.
+- Rodadas de correção 1–3 usam `followup_task` para falar com o implementador que já tem o
+  contexto, em vez de criar um novo.
+- `wait_agent` é assinatura de evento, não poll: uma espera com timeout de 5–10 minutos, não oito
+  esperas curtas.
+
+Para rodar uma frota do Codex, use `codex-fleet-up.sh`. Seu runtime é fixado no lançamento e um
+runner com adaptador diferente se recusa a iniciar.
+
+---
+
+## Cenário I — Trabalhando no Hermes
+
+O bootstrap carrega no primeiro turno da sessão, então o agente já sabe que as skills existem.
+
+```
+skill_view("pwdev-power:power-plan")
+skill_view("pwdev-power:power-tdd")
+```
+
+Se uma busca com namespace devolver "not found", o bootstrap imprime o diretório absoluto das
+skills para uso com `read_file`.
+
+Sem interface, para scripts e CI:
+
+```bash
+hermes -z "carregue pwdev-power:power-quick e suba o teto de retentativas para 5" --in .
+```
+
+Duas particularidades do Hermes que vale conhecer:
+
+- **O contexto do subagente é explícito** em `delegate_task(goal=…, context=…, toolsets=[…])`. Não
+  há transcript para suprimir, o que combina com a regra deste plugin de entregar ao filho o brief
+  dele e não o histórico acumulado.
+- **Não existe hook de pós-compactação.** Veja *Limites conhecidos*.
+
+---
+
+## Cenário J — Ligar a trilha de auditoria
+
+Desligada por padrão. Exige três coisas, e criar o banco é o que efetivamente a liga:
+
+```bash
+# 1. optar por ligar
+jq '.audit = true' .planning/power/config.json > tmp && mv tmp .planning/power/config.json
+
+# 2. sqlite3 precisa estar instalado
+command -v sqlite3
+
+# 3. criar o banco — nada é registrado até ele existir
+mkdir -p .planning/power/audit
+sqlite3 .planning/power/audit/pwdev-audit.db "SELECT 1;"
+```
+
+Consulte direto:
+
+```bash
+sqlite3 -header -column .planning/power/audit/pwdev-audit.db \
+  "SELECT timestamp, phase, action, target FROM events ORDER BY id DESC LIMIT 20;"
+
+# todos os resultados de portão
+sqlite3 .planning/power/audit/pwdev-audit.db \
+  "SELECT timestamp, phase, action FROM events WHERE action LIKE 'gate_%';"
+```
+
+**Nomes de modelo e prompts nunca entram na trilha.** Qualquer chave contendo `model` ou `prompt` é
+rejeitada antes da escrita, então um despacho registra um *tier* (`tier=mid`), não o nome do
+modelo. Os alvos são gravados relativos à raiz do repositório; caminhos absolutos são rejeitados.
+A auditoria é best-effort por construção e sempre sai com 0 — um registro que falha jamais pode
+alterar o resultado do ciclo que ele estava descrevendo.
+
+---
+
+## O que fica em disco
+
+```text
+.planning/power/
+├── config.json                     idioma, perfil de modelo, auditoria, frota, kanban
+├── state.md                        status, último portão, ciclos de correção, próxima ação válida
+├── product/
+│   ├── prd.md
+│   └── roadmap/                    ROADMAP, TRACEABILITY, RISKS, METRICS, ROLLOUT + fases
+├── features/<slug>/
+│   ├── spec.md                     o design aprovado
+│   ├── plan.md                     restrições globais + interfaces por task
+│   ├── ledger.md                   progresso + cada Ruling:
+│   ├── task-01-brief.md            o que o implementador realmente lê
+│   ├── task-01-report.md           o que ele fez, com saída real dos comandos
+│   ├── task-01-review.md           dois vereditos e os achados
+│   ├── verdict.md                  evidências da verificação
+│   └── fix-01.md                   tasks de correção delimitadas, em caso de rejeição
+├── quick/<data>-<slug>/            contrato + relatório
+├── fleet/<slug>.json               runtime, worktree, portas, hashes de contrato, id do workspace
+├── fleet-status.json               por worktree: estágio, status, veredito, ciclos de correção
+└── audit/pwdev-audit.db            opcional
+```
+
+Markdown é contrato legível por humanos; JSON é configuração e controle operacional. IDs de task
+têm dois dígitos e permanecem estáveis do plano à execução e à correção — uma correção da task 03
+é sempre sobre a task 03.
+
+---
+
+## Todos os portões, em uma tabela
+
+| Portão | Quem decide | Registrado em |
+|---|---|---|
+| Requisito aprovado | você | `state.md` + `Status:` no `prd.md` |
+| Roadmap aceito | você | `state.md` |
+| Design aprovado | você | `state.md` + exatamente um `Status: APPROVED` no `spec.md` |
+| Plano aprovado | você | `state.md` |
+| Revisão de task | o subagente revisor | `task-NN-review.md` |
+| Veredito de verificação | o verificador e, em `REJECTED`, você | `verdict.md` |
+| Lançamento de frota | você, ao reconhecer o vetor | o registro do membro |
+| Integração do branch | você, num menu de três opções | — |
+
+"Exatamente um `Status: APPROVED`" é proposital. Um documento com um segundo campo dentro de um
+bloco de exemplo é ambíguo, e ambiguidade aqui significa lançar trabalho não aprovado.
+
+---
+
+## Como a frota se mantém segura
+
+- **O comando privilegiado existe em exatamente um adaptador por runtime.** Nada mais no plugin
+  pode montar um comando de provider ou acrescentar flag de permissão. Os testes executam os três
+  adaptadores e comparam o argv real: `claude` nunca leva `--yolo`, `hermes` nunca leva flag
+  `--dangerously`.
+- **O runtime é fixado antes de qualquer mutação.** Ele é escolhido pelo launcher, gravado no
+  registro do membro, e um runner cujo adaptador discorda se recusa a iniciar. Nenhum valor de
+  configuração, variável de ambiente ou argumento transforma um vetor em outro.
+- **Os contratos são hasheados no lançamento** — os bytes exatos aprovados na working tree, não os
+  bytes do `HEAD`, porque uma spec aprovada frequentemente ainda não foi commitada. Os hashes são
+  reconferidos antes e depois de cada estágio, então editar uma spec no meio do caminho para o
+  membro em vez de mudar silenciosamente o que está sendo construído.
+- **O provider lidera o próprio grupo de processos.** Colher um provider bem-sucedido não libera a
+  posse: o grupo inteiro de descendentes precisa ser comprovadamente encerrado antes de validar
+  resultado, commitar ou avançar — ele pode ter deixado servidores de desenvolvimento ou
+  contêineres filhos vivos.
+- **Um estágio precisa produzir trabalho.** JSON bem formado descrevendo trabalho que ninguém fez é
+  pego perguntando ao git se o HEAD andou ou se o diretório da feature está sujo.
+- **Arquivos gerados nunca chegam ao branch.** O arquivo de ambiente é escrito sob `umask 077`
+  *antes* do conteúdo existir, e um `.gitignore` gerado mantém ele e a saída bruta do provider fora
+  do que o `git add -A` levaria para o seu branch base no merge.
+- **A frota nunca rouba o foco** e só fecha workspaces do cmux cujo identificador ela registrou.
+
+---
+
+## Solução de problemas
+
+| O que aparece | O que significa | O que fazer |
+|---|---|---|
+| `cmux: no socket at …` | cmux não está rodando | Abra o cmux. Só a frota precisa dele. |
+| `cmux: CLI not found` | Não está no `PATH` | `export PWDEV_POWER_CMUX_BIN=/Applications/cmux.app/Contents/Resources/bin/cmux` |
+| `spec must carry exactly one 'Status: APPROVED' field (found 2)` | Uma segunda linha de aprovação, muitas vezes num bloco de exemplo | Deixe apenas um campo de aprovação real |
+| `no .planning/power/config.json; run init first` | Sem workspace | `/pwdev-power:init` |
+| `detached HEAD; check out a named branch first` | Toda fase se amarra a um branch | Faça checkout de um branch |
+| `registered fleet member does not match canonical Git worktree registration` | Você é o runtime errado para esse membro, ou o worktree mudou de lugar | Use o launcher correspondente ao campo `runtime` do membro |
+| `approved fleet contracts do not match the bound member` | Alguém editou a spec ou o plano depois do lançamento | Restaure os bytes aprovados, ou encerre e relance |
+| `invalid structured result for <estágio>` | O provider respondeu em prosa | A resposta bruta fica como `<estágio>-<hora>.invalid.json` em `fleet-results/` |
+| `fleet member is already running` | Há um lock de runner ativo | Verifique se existe runner vivo antes de remover qualquer coisa |
+| `provider ownership is unresolved; retaining runner lock` | Não foi possível provar que o grupo de processos encerrou | **Proposital.** Procure processos órfãos antes de relançar |
+| `verification rejected after two correction cycles` | O limite funcionou | Leia o `verdict.md`; o ciclo não vai tentar uma terceira vez |
+| `fleet allocation is already locked` | Lançamento concorrente | Espere terminar, ou remova `.planning/power/fleet/.lock` se nenhum lançamento estiver rodando |
+| Skills param de disparar no Hermes | A sessão compactou por cima do primeiro turno | Comece uma sessão nova — veja *Limites conhecidos* |
+
+Um membro que falhou mantém branch e worktree. Investigue ali; não relance por cima.
+
+---
 
 ## Limites conhecidos
 
-- **O Hermes não tem hook de pós-compactação.** Uma sessão longa que compacta sobre o primeiro
-  turno perde o bootstrap. Se as skills pararem de disparar, comece uma sessão nova — isso não
-  tem conserto dentro do plugin. O Claude Code reinjeta no `compact`; o Codex descobre as skills
-  nativamente.
-- **Seleção de modelo por dispatch no Hermes ainda não está estabelecida.** Até estar, use
-  `--model`/`--provider` do card do Kanban, ou execute inline. Veja `references/hermes-tools.md`.
-- **A frota precisa do cmux.** Todo o resto funciona sem ele.
-- **A auditoria é opt-in e precisa de `sqlite3`.** Criar o banco é o que a liga.
+- **O Hermes não tem hook de pós-compactação.** Uma sessão longa que compacta por cima do primeiro
+  turno perde o bootstrap. Comece uma sessão nova se as skills pararem de disparar — isso não tem
+  conserto de dentro do plugin. O Claude Code reinjeta em `startup|clear|compact`; o Codex
+  descobre as skills nativamente e não precisa de injeção.
+- **Seleção de modelo por dispatch no Hermes ainda não está estabelecida.** O `delegate_task` não
+  está documentado como recebendo modelo. Até estar, use `--model`/`--provider` do card do Kanban,
+  ou execute inline — nunca invente um parâmetro para satisfazer a regra de modelos explícitos.
+  Veja `references/hermes-tools.md`.
+- **A frota exige o cmux.** Não há fallback para tmux, por decisão de projeto.
+- **A auditoria exige `sqlite3`** e permanece desligada até o arquivo de banco existir.
+- **O template de compose assume Postgres.** Sem um `Dockerfile`, só o banco sobe, o que é
+  intencional — o serviço `app` não teria como ser construído.
+- **`unittest discover` não funciona nesta árvore.** Uma forma levanta `ImportError` e a outra roda
+  zero testes em silêncio. Nomeie os módulos.
 
-## Testes
+---
+
+## Contribuindo
 
 ```bash
-python3 -m unittest tests.test_pwdev_power tests.test_power_hermes
+python3 -m unittest tests.test_pwdev_power tests.test_power_hermes    # 59 testes
+claude plugin validate plugins/pwdev-power
+hermes plugins doctor --ci plugins/pwdev-power
 ```
 
-`unittest discover` não funciona nesta árvore: uma forma levanta `ImportError` e a outra roda
-zero testes em silêncio. Nomeie os módulos.
+Os contratos em `references/` são a especificação; as skills os leem em vez de repeti-los. Se você
+mudar comportamento, mude a referência e o teste junto.
+
+Duas convenções que vale conhecer antes de editar uma skill:
+
+- **A `description` de uma skill diz apenas quando disparar, nunca o que a skill faz.** Uma
+  descrição que resume o fluxo passa a ser seguida *no lugar* da leitura da skill.
+- **Nada de links `@` entre skills.** Eles forçam carregamento imediato e queimam contexto que
+  ninguém escolheu gastar. Use o nome com namespace e links markdown relativos.
+
+---
 
 ## Licença
 
-Apache-2.0.
+Apache-2.0. Veja [LICENSE](./LICENSE).

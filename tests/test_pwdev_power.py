@@ -614,5 +614,61 @@ class TestSessionBootstrap(unittest.TestCase):
         self.assertNotIn("---\nname: power\n", context.split("<EXTREMELY_IMPORTANT>")[0])
 
 
+class TestDocumentation(unittest.TestCase):
+    """The README is long enough to rot quietly. Pin the claims that can be checked."""
+
+    READMES = ("README.md", "README.pt-BR.md")
+
+    # Error strings the troubleshooting table tells the reader to expect.
+    DOCUMENTED_ERRORS = (
+        "cmux: no socket at",
+        "cmux: CLI not found",
+        "spec must carry exactly one 'Status: APPROVED' field",
+        "no .planning/power/config.json; run init first",
+        "detached HEAD; check out a named branch first",
+        "registered fleet member does not match canonical Git worktree registration",
+        "approved fleet contracts do not match the bound member",
+        "invalid structured result for",
+        "fleet member is already running",
+        "provider ownership is unresolved; retaining runner lock",
+        "verification rejected after two correction cycles",
+        "fleet allocation is already locked",
+    )
+
+    def script_text(self):
+        return "\n".join(p.read_text(encoding="utf-8") for p in SCRIPTS.glob("*.sh"))
+
+    def test_documented_errors_are_strings_the_scripts_actually_emit(self):
+        scripts = self.script_text()
+        for message in self.DOCUMENTED_ERRORS:
+            self.assertIn(message, scripts, f"README documents an error nothing emits: {message}")
+
+    def test_documented_environment_override_exists(self):
+        self.assertIn("PWDEV_POWER_CMUX_BIN", (SCRIPTS / "cmux-common.sh").read_text(encoding="utf-8"))
+        for name in self.READMES:
+            self.assertIn("PWDEV_POWER_CMUX_BIN", (PLUGIN / name).read_text(encoding="utf-8"))
+
+    def test_every_command_is_documented_in_both_readmes(self):
+        for name in self.READMES:
+            text = (PLUGIN / name).read_text(encoding="utf-8")
+            for command in COMMAND_NAMES:
+                self.assertIn(f"/pwdev-power:{command}", text, f"{name} does not mention {command}")
+
+    def test_readmes_only_link_files_that_exist(self):
+        pattern = re.compile(r"\]\((\./[^)#]+|references/[^)#]+|scripts/[^)#]+)\)")
+        for name in self.READMES:
+            for target in pattern.findall((PLUGIN / name).read_text(encoding="utf-8")):
+                self.assertTrue((PLUGIN / target).exists(), f"{name} links a missing path: {target}")
+
+    def test_both_readmes_document_the_same_scenarios(self):
+        # A translation that drifts is worse than no translation.
+        counts = []
+        for name in self.READMES:
+            text = (PLUGIN / name).read_text(encoding="utf-8")
+            counts.append(len(re.findall(r"^## (?:Scenario|Cen\u00e1rio) [A-Z] ", text, re.M)))
+        self.assertEqual(counts[0], counts[1], "the two READMEs describe a different number of scenarios")
+        self.assertGreaterEqual(counts[0], 10, "the scenario walkthrough is incomplete")
+
+
 if __name__ == "__main__":
     unittest.main()
