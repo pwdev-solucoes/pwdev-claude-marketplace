@@ -110,6 +110,7 @@ per slug. Never hand it a glob.
 | `registered fleet member does not match…` | you are the wrong runtime for this member, or the worktree moved. |
 | `approved fleet contracts changed…` | someone edited the spec or plan mid-flight. The member is stopped on purpose. |
 | A retained runner lock | a provider process group could not be proven gone. A human must look before relaunching. |
-| `invalid structured result` | the provider answered with prose. The raw result is preserved next to the member's results for inspection. |
+| `invalid structured result` | the provider answered with something that is not the contract. Both the parsed file and the provider's raw bytes are preserved next to the member's results — give the human the path, never the contents. |
+| A member stopped mid-flight | relaunch the runner with `--resume` once a human has looked. It re-runs the recorded stage and keeps the correction count; without it, a re-run fails on the first finished stage. |
 
 None of these are retried by re-running the launcher. Resolve the cause first.

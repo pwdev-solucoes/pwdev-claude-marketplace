@@ -17,12 +17,18 @@ source "$SCRIPT_DIR/cmux-common.sh"
 
 fail() { printf 'fleet-run: %s\n' "$*" >&2; exit 1; }
 
-[[ $# -eq 2 || $# -eq 3 ]] || fail 'usage: <runtime>-fleet-run.sh <slug> <worktree> [permission-mode]'
+[[ $# -ge 2 && $# -le 4 ]] \
+  || fail 'usage: <runtime>-fleet-run.sh <slug> <worktree> [permission-mode] [--resume]'
 SLUG=$1
 WORKTREE=$2
-if [[ $# -eq 3 ]]; then
-  [[ $3 == danger-full-access ]] || fail 'permission mode must be danger-full-access'
-fi
+RESUME=false
+for arg in "${@:3}"; do
+  case $arg in
+    danger-full-access) ;;
+    --resume) RESUME=true ;;
+    *) fail "unexpected argument: $arg" ;;
+  esac
+done
 
 EXPECTED_RUNTIME=${POWER_FLEET_RUNTIME:-}
 [[ -n $EXPECTED_RUNTIME ]] || fail 'no runtime pinned; start through <runtime>-fleet-run.sh'
@@ -81,13 +87,15 @@ registered_worktree_matches() {
 member_binding_matches() {
   require_regular_nosymlink "$MEMBER_FILE" || return 1
   jq -e --arg slug "$SLUG" --arg branch "$EXPECTED_BRANCH" --arg worktree "$WORKTREE" \
-        --arg runtime "$EXPECTED_RUNTIME" '
+        --arg runtime "$EXPECTED_RUNTIME" --argjson resume "$RESUME" '
     type == "object"
       and .slug == $slug
       and .branch == $branch
       and .worktree_path == $worktree
       and .runtime == $runtime
-      and (.status == "ACTIVE" or .status == "RUNNING")
+      # A stopped member is NEEDS_HUMAN on purpose, so only an explicit --resume may pick it up:
+      # the flag is the human saying they looked, which is exactly what that status asks for.
+      and (.status == "ACTIVE" or .status == "RUNNING" or ($resume and .status == "NEEDS_HUMAN"))
       and (.spec_sha256 | type == "string" and test("^[0-9a-f]{64}$"))
       and (.plan_sha256 | type == "string" and test("^[0-9a-f]{64}$"))
   ' "$MEMBER_FILE" >/dev/null 2>&1
@@ -175,6 +183,58 @@ RECOVERING=false
 STATUS_FINAL=false
 CORRECTION_CYCLES=0
 RESULT_VERDICT=NONE
+
+# ---- resume ---------------------------------------------------------------------------------
+#
+# The lifecycle is single-shot: it always starts at plan, and a stage with nothing left to do
+# produces no fresh artifact and is refused as work nobody did. So a member stopped mid-flight —
+# an interrupted stage, a provider that answered with nothing — could only start over, discarding
+# every stage that had already succeeded.
+#
+# Resuming re-runs the stage recorded as current and skips only the ones before it, restoring the
+# correction-cycle count so the fix loop picks up where it stopped instead of at zero. It is never
+# automatic: NEEDS_HUMAN means a human must look, and --resume is how they say they have.
+RESUME_STAGE=
+RESUME_IN_LOOP=false
+
+if [[ $RESUME == true ]]; then
+  require_regular_nosymlink "$STATUS_FILE" || fail 'cannot resume: this member has no runner status'
+  jq -e --arg slug "$SLUG" 'type == "object" and .slug == $slug' "$STATUS_FILE" >/dev/null 2>&1 \
+    || fail 'cannot resume: the runner status does not belong to this member'
+  RESUME_STAGE=$(jq -er '.stage' "$STATUS_FILE" 2>/dev/null) \
+    || fail 'cannot resume: the runner status has no stage'
+  case $RESUME_STAGE in
+    plan|execute|review|verify|execute-fix|review-fix) ;;
+    *) fail "cannot resume: unknown stage $RESUME_STAGE" ;;
+  esac
+  CORRECTION_CYCLES=$(jq -er '.correction_cycles | select(type == "number" and . >= 0 and . <= 2)' \
+    "$STATUS_FILE" 2>/dev/null) || fail 'cannot resume: correction cycle count is out of range'
+
+  # A member sitting on execute-fix, review-fix, or a verify past the first one is inside the
+  # correction loop. The recorded verdict cannot say so — write_status stamps NONE when a stage
+  # starts — so the position is what proves it, and the loop is re-entered from that.
+  case $RESUME_STAGE in
+    execute-fix|review-fix) RESUME_IN_LOOP=true ;;
+    verify) if [[ $CORRECTION_CYCLES -ge 1 ]]; then RESUME_IN_LOOP=true; fi ;;
+  esac
+  if [[ $RESUME_IN_LOOP == true ]]; then RESULT_VERDICT=REJECTED; fi
+
+  # The recorded count already includes the cycle whose execute-fix is about to run again, and the
+  # loop increments before running it. Without this, resuming would burn a cycle it already paid
+  # for and reach the cap one correction early.
+  if [[ $RESUME_STAGE == execute-fix ]]; then CORRECTION_CYCLES=$((CORRECTION_CYCLES - 1)); fi
+
+  printf 'fleet-run: resuming %s at stage %s (cycles %s)\n' "$SLUG" "$RESUME_STAGE" "$CORRECTION_CYCLES" >&2
+fi
+
+# Consume the resume point once: the named stage runs, everything before it is skipped, and from
+# then on every stage runs normally.
+should_run() {
+  local stage=$1
+  if [[ -z $RESUME_STAGE ]]; then return 0; fi
+  if [[ $stage == "$RESUME_STAGE" ]]; then RESUME_STAGE=; return 0; fi
+  return 1
+}
 RESULT_MESSAGE=
 CURRENT_RAW_TEMP=
 CURRENT_LOG_TEMP=
@@ -387,7 +447,7 @@ build_prompt() {
 run_stage() {
   local stage=$1
   CURRENT_STAGE=$stage
-  local timestamp before_head provider_status result_file invalid_file
+  local timestamp before_head provider_status result_file invalid_file raw_file
 
   worktree_identity_matches || needs_human "$stage" 'fleet member identity changed before the stage'
   contracts_match_bound_member || needs_human "$stage" 'approved fleet contracts changed before the stage'
@@ -398,6 +458,7 @@ run_stage() {
   timestamp=$(date -u +%Y%m%dT%H%M%SZ)
   result_file=$RESULT_DIR/$stage-$timestamp.json
   invalid_file=$RESULT_DIR/$stage-$timestamp.invalid.json
+  raw_file=$RESULT_DIR/$stage-$timestamp.raw
   CURRENT_RAW_TEMP=$(mktemp "$RESULT_DIR/.$stage-raw.XXXXXX")
   CURRENT_LOG_TEMP=$(mktemp "$LOG_DIR/.$stage-log.XXXXXX")
   CURRENT_RESULT_TEMP=$(mktemp "$RESULT_DIR/.$stage-result.XXXXXX")
@@ -442,6 +503,16 @@ run_stage() {
   if [[ ! -s $CURRENT_RESULT_TEMP ]] || ! validate_result "$stage" "$CURRENT_RESULT_TEMP"; then
     mv "$CURRENT_RESULT_TEMP" "$invalid_file" 2>/dev/null || true
     CURRENT_RESULT_TEMP=
+    # Keep the provider's own bytes, not only the parsed file.
+    #
+    # The parsed file is empty in exactly the case that most needs explaining — an answer nothing
+    # could parse — so preserving it alone preserves nothing. A real execute-fix stage exited 0
+    # with empty stdout and left a zero-byte artifact and no way to tell why.
+    #
+    # fleet-results/ is in the worktree gitignore, so this never rides along on a --merge, and the
+    # reporting rules still forbid printing it: hand over the path, never the contents.
+    mv "$CURRENT_RAW_TEMP" "$raw_file" 2>/dev/null || true
+    CURRENT_RAW_TEMP=
     needs_human "$stage" "invalid structured result for $stage"
   fi
 
@@ -477,19 +548,27 @@ run_stage() {
 
 # ---- lifecycle ----------------------------------------------------------------------------------
 
-run_stage plan
-run_stage execute
-run_stage review
-run_stage verify
+# A member resumed inside the correction loop skips the opening sequence entirely: its verify has
+# already run and rejected, and re-running plan here would fail on the fresh-artifact check for a
+# plan that is long finished.
+if [[ $RESUME_IN_LOOP != true ]]; then
+  if should_run plan;    then run_stage plan;    fi
+  if should_run execute; then run_stage execute; fi
+  if should_run review;  then run_stage review;  fi
+  if should_run verify;  then run_stage verify;  fi
+fi
 
 while [[ $RESULT_VERDICT == REJECTED ]]; do
-  if (( CORRECTION_CYCLES >= 2 )); then
-    needs_human verify "verification rejected after two correction cycles: $RESULT_MESSAGE" REJECTED
+  # The cap is charged with the cycle, so a resume that lands mid-cycle does not pay for it twice.
+  if should_run execute-fix; then
+    if (( CORRECTION_CYCLES >= 2 )); then
+      needs_human verify "verification rejected after two correction cycles: $RESULT_MESSAGE" REJECTED
+    fi
+    CORRECTION_CYCLES=$((CORRECTION_CYCLES + 1))
+    run_stage execute-fix
   fi
-  CORRECTION_CYCLES=$((CORRECTION_CYCLES + 1))
-  run_stage execute-fix
-  run_stage review-fix
-  run_stage verify
+  if should_run review-fix; then run_stage review-fix; fi
+  if should_run verify;     then run_stage verify;     fi
 done
 
 write_status verify DONE "$RESULT_MESSAGE" "$RESULT_VERDICT" || true

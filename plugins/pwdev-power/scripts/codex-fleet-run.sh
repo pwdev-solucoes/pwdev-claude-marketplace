@@ -9,12 +9,16 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 
 fail() { printf 'codex-fleet-run: %s\n' "$*" >&2; exit 2; }
 
-[[ $# -eq 2 || $# -eq 3 ]] || fail 'usage: codex-fleet-run.sh <slug> <worktree> [permission-mode]'
+[[ $# -ge 2 && $# -le 4 ]] \
+  || fail 'usage: codex-fleet-run.sh <slug> <worktree> [permission-mode] [--resume]'
 SLUG=$1
 [[ $SLUG =~ ^[a-z0-9][a-z0-9-]*$ && $SLUG == *[a-z]* && $SLUG != dashboard ]] || fail "invalid slug: $SLUG"
-if [[ $# -eq 3 ]]; then
-  [[ $3 == danger-full-access ]] || fail 'permission mode must be danger-full-access'
-fi
+for arg in "${@:3}"; do
+  case $arg in
+    danger-full-access|--resume) ;;
+    *) fail "unexpected argument: $arg" ;;
+  esac
+done
 
 POWER_FLEET_RUNTIME=codex
 export POWER_FLEET_RUNTIME

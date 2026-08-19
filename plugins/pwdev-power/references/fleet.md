@@ -127,6 +127,18 @@ not release ownership, because it may have left dev servers, watchers or child c
 alive. When ownership cannot be proven, retain the runner lock: an orphaned lock is a
 deliberate signal that a human must look, not a bug.
 
+## Resuming a stopped member
+
+A member that stopped mid-flight — an interrupted stage, a provider that answered with nothing —
+is `NEEDS_HUMAN` on purpose. Once the human has looked, `<runtime>-fleet-run.sh <slug> <worktree>
+[permission-mode] --resume` picks it up from the stage its runner status records: that stage runs
+again, the ones before it are skipped, and the correction-cycle count is restored so the fix loop
+continues instead of restarting at zero.
+
+`--resume` is the only thing that may start a `NEEDS_HUMAN` member, and it is never automatic.
+Without it the lifecycle is single-shot, and a re-run fails on the first finished stage, which has
+no fresh artifact left to produce.
+
 ## Correction cap — autonomous mode only
 
 `plan → execute → review → verify`. On `REJECTED`, up to **two** cycles of

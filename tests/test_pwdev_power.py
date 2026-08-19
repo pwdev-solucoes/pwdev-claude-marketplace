@@ -1292,5 +1292,88 @@ class TestPlanContractRebinding(unittest.TestCase):
         self.assertIn("cannot re-bind the plan contract", self.runner())
 
 
+class TestRawResultPreservation(unittest.TestCase):
+    """The answer nobody could parse is the answer you most need to read."""
+
+    def runner(self):
+        return (SCRIPTS / "fleet-run.sh").read_text(encoding="utf-8")
+
+    def test_the_raw_answer_survives_an_invalid_result(self):
+        # An execute-fix stage exited 0 with empty stdout: the preserved file was zero bytes and
+        # the provider's own output had already been deleted.
+        text = self.runner()
+        invalid = text.index('mv "$CURRENT_RESULT_TEMP" "$invalid_file"')
+        raw = text.index('mv "$CURRENT_RAW_TEMP" "$raw_file"')
+        needs_human = text.index('needs_human "$stage" "invalid structured result for $stage"')
+        self.assertLess(invalid, raw, "both artifacts are preserved on the invalid path")
+        self.assertLess(raw, needs_human, "the raw must be kept before the runner exits")
+
+    def test_the_preserved_raw_cannot_ride_along_on_a_merge(self):
+        # fleet-run.sh stages with `git add -A`, so a raw provider answer that is not ignored
+        # would reach the human's branch on teardown --merge.
+        up = (SCRIPTS / "fleet-up.sh").read_text(encoding="utf-8")
+        self.assertIn(".planning/power/fleet-results/", up, "fleet-results must be gitignored")
+
+
+class TestRunnerResume(unittest.TestCase):
+    """A member stopped mid-flight restarts where it stopped, not from zero."""
+
+    def runner(self):
+        return (SCRIPTS / "fleet-run.sh").read_text(encoding="utf-8")
+
+    def test_every_runtime_wrapper_accepts_the_flag(self):
+        # A flag only one runtime understands is a flag that fails on the other two.
+        for runtime in ("claude", "codex", "hermes"):
+            text = (SCRIPTS / f"{runtime}-fleet-run.sh").read_text(encoding="utf-8")
+            self.assertIn("--resume", text, f"{runtime} wrapper must accept --resume")
+
+    def test_the_wrappers_still_reject_an_unknown_argument(self):
+        for runtime in ("claude", "codex", "hermes"):
+            result = subprocess.run(
+                [str(SCRIPTS / f"{runtime}-fleet-run.sh"), "slug", "/tmp", "--wat"],
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("unexpected argument", result.stderr)
+
+    def test_only_a_resume_may_pick_up_a_stopped_member(self):
+        # NEEDS_HUMAN asks for a human. The flag is the human answering, so nothing else may
+        # start that member.
+        body = self.runner().split("member_binding_matches() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn('$resume and .status == "NEEDS_HUMAN"', body)
+
+    def test_a_resume_inside_the_loop_skips_the_opening_sequence(self):
+        # Re-running plan for a member whose plan finished long ago fails the fresh-artifact
+        # check, which is how the single-shot lifecycle showed itself in the first place.
+        text = self.runner()
+        self.assertIn("if [[ $RESUME_IN_LOOP != true ]]; then", text)
+        self.assertIn("if should_run plan;    then run_stage plan;    fi", text)
+
+    def test_a_resumed_cycle_is_not_charged_twice(self):
+        # The recorded count already includes the cycle being re-run, and the loop increments
+        # before running it; without the decrement the cap arrives one correction early.
+        text = self.runner()
+        self.assertIn(
+            "if [[ $RESUME_STAGE == execute-fix ]]; then CORRECTION_CYCLES=$((CORRECTION_CYCLES - 1)); fi",
+            text,
+        )
+
+    def test_the_correction_count_is_read_back_within_range(self):
+        text = self.runner()
+        self.assertIn("select(type == \"number\" and . >= 0 and . <= 2)", text)
+
+    def test_an_unknown_recorded_stage_refuses_to_resume(self):
+        self.assertIn("cannot resume: unknown stage", self.runner())
+
+    def test_a_status_from_another_member_refuses_to_resume(self):
+        self.assertIn("cannot resume: the runner status does not belong to this member", self.runner())
+
+    def test_the_resume_point_is_consumed_once(self):
+        # Consuming it is what makes every stage after the resume point run normally.
+        body = self.runner().split("should_run() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn("RESUME_STAGE=; return 0", body)
+
+
 if __name__ == "__main__":
     unittest.main()
