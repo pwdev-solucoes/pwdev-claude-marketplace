@@ -29,6 +29,11 @@ interactive provider session in its own worktree, seeded with that phase's brief
 all of them at once and steers any of them. `--auto` selects the previous behaviour: unattended
 members, one workspace each, structured results and correction cycles.
 
+Tell the human, before launching a panel, that every pane opens on a folder-trust prompt and waits
+there: each worktree is a path the provider has never seen, and the permission flag gates tools,
+not folders. One answer per pane, given by them. A panel that looks stuck on arrival is usually
+this.
+
 A panel holds **1 to 4 members**. Four panes is where a grid stops being readable, and an unreadable
 panel defeats the point of having one. Only one panel may be active at a time: a second one cannot
 reuse the first's workspace without splitting into it and typing a privileged command into a live
