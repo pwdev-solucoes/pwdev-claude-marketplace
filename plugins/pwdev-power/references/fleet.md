@@ -46,6 +46,12 @@ A slug may launch only when all of these hold:
 Hash the **exact approved working-tree bytes** of `spec.md` and `plan.md`, not stale `HEAD`
 bytes — approved contracts are frequently not committed yet. Those hashes bind the member.
 
+`spec.md` stays frozen for the whole run. `plan.md` does not, and cannot: the `plan` stage writes
+`features/<slug>/plan.md`, so holding it to the launch hash would stop every member on its own
+first stage — on the artifact it was told to produce, not on a tampered contract. The plan stage is
+therefore guarded by `spec.md` alone, and `plan.md` is re-bound from the bytes that stage
+committed. From `execute` onwards both contracts are strict again.
+
 ## Configuration defaults
 
 Merged defaults-first into `config.json` so every existing known or unknown field wins:
@@ -136,6 +142,16 @@ mode this catches.
 Report per slug: stage, status, branch, ports, and a message truncated to 60 characters. Never
 print absolute worktree paths, full logs, prompts, or result payloads. The dashboard is a
 status line, not a transcript.
+
+The runner repairs the two result deviations that carry no information rather than failing a stage
+over them: a `message` past the schema's cap is trimmed, and a `verdict` missing outside `verify`
+is set to `NONE`, the only value allowed there. On `verify` the verdict stays required — there it
+*is* the result. Everything else stays strict: wrong stage, unknown key, unknown status, or
+anything that is not one JSON object is still a failed stage.
+
+Only Codex is held to the schema natively; Claude and Hermes read it as prose, and prose is not
+reliably honoured. What protects the work is the contract hashes and the fresh-artifact check, not
+the shape of its summary.
 
 ## Teardown
 

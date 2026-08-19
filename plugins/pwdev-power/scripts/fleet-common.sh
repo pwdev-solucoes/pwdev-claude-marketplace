@@ -16,7 +16,9 @@ power_require_runtime() {
 # and the drift is silent until a stage fails to parse.
 #
 # Keep this in sync with templates/fleet-result.schema.json and with validate_result in
-# fleet-run.sh.
+# fleet-run.sh — every constraint they enforce, including the message length. A limit the
+# validator applies but the prompt never states rejects well-formed work for a rule the model was
+# never told, and only on the runtimes that read this prose: Codex learns it from the schema.
 power_result_contract_prose() {
   local stage=$1 verdict
   if [[ $stage == verify ]]; then
@@ -29,7 +31,7 @@ power_result_contract_prose() {
     'It must have exactly these four keys:' \
     "stage (exactly \"$stage\")," \
     'status ("OK", "FAILED" or "NEEDS_HUMAN"),' \
-    'message (a non-empty single-line summary),' \
+    'message (a non-empty single-line summary of at most 500 characters; a longer message is rejected),' \
     "and verdict ($verdict)."
 }
 

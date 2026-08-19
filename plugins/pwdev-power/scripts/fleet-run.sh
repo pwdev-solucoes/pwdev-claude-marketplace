@@ -54,6 +54,12 @@ SCHEMA=$(cd -- "$SCRIPT_DIR/../templates" && pwd -P)/fleet-result.schema.json
 require_regular_nosymlink() { [[ -f $1 && ! -L $1 ]]; }
 require_regular_nosymlink "$SCHEMA" || fail "missing result schema: $SCHEMA"
 
+# Read the cap from the schema rather than restating it: Codex is held to the schema natively and
+# the prose contract quotes the same number, so a third hand-maintained copy here is one more
+# place for the drift the schema exists to prevent.
+MESSAGE_MAX=$(jq -er '.properties.message.maxLength | select(type == "number" and . > 0)' "$SCHEMA" 2>/dev/null) \
+  || fail 'result schema does not declare a message length limit'
+
 mkdir -p "$LOG_DIR" "$RESULT_DIR" "$(dirname "$STATUS_FILE")"
 
 # ---- identity ------------------------------------------------------------------------------
@@ -95,15 +101,51 @@ sha256_of() {
   else openssl dgst -sha256 "$1" | awk '{print $NF}'; fi
 }
 
-contracts_match_bound_member() {
-  local spec=$WORKTREE/$FEATURE_REL/spec.md plan=$WORKTREE/$FEATURE_REL/plan.md
-  [[ -f $spec && -f $plan ]] || return 1
-  local bound_spec bound_plan
+spec_matches_bound_member() {
+  local spec=$WORKTREE/$FEATURE_REL/spec.md bound_spec
+  [[ -f $spec ]] || return 1
   bound_spec=$(jq -er '.spec_sha256' "$MEMBER_FILE" 2>/dev/null) || return 1
-  bound_plan=$(jq -er '.plan_sha256' "$MEMBER_FILE" 2>/dev/null) || return 1
   [[ $(sha256_of "$spec") == "$bound_spec" ]] || return 1
+  return 0
+}
+
+contracts_match_bound_member() {
+  local plan=$WORKTREE/$FEATURE_REL/plan.md bound_plan
+  spec_matches_bound_member || return 1
+  [[ -f $plan ]] || return 1
+  bound_plan=$(jq -er '.plan_sha256' "$MEMBER_FILE" 2>/dev/null) || return 1
   [[ $(sha256_of "$plan") == "$bound_plan" ]] || return 1
   return 0
+}
+
+# The plan stage writes one of the bound contracts, so it cannot be held to both of them.
+#
+# references/artifacts.md places the executable plan at features/<slug>/plan.md, and fleet-up.sh
+# hashes those exact bytes at launch. The plan stage is asked to decompose the spec into that same
+# file, so any faithful run invalidates the binding that guards it and the member stops on its own
+# first stage — not on a tampered contract, but on the artifact it was told to produce.
+#
+# So the plan stage is guarded by spec.md alone, and plan.md is re-bound from the bytes it
+# committed. spec.md is what a human approved and stays frozen for the whole run; plan.md is
+# frozen again the moment the stage that owns it is done.
+contract_guard_after_provider() {
+  local stage=$1
+  if [[ $stage == plan ]]; then spec_matches_bound_member; else contracts_match_bound_member; fi
+}
+
+rebind_plan_contract() {
+  local plan=$WORKTREE/$FEATURE_REL/plan.md new temp
+  [[ -f $plan ]] || return 1
+  new=$(sha256_of "$plan") || return 1
+  [[ $new =~ ^[0-9a-f]{64}$ ]] || return 1
+  temp=$(mktemp "$FLEET_DIR/.$SLUG.json.XXXXXX") || return 1
+  if jq --arg plan "$new" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+       '.plan_sha256 = $plan | .updated_at = $now' "$MEMBER_FILE" >"$temp" 2>/dev/null \
+     && [[ -s $temp ]] && jq -e 'type == "object"' "$temp" >/dev/null 2>&1; then
+    mv "$temp" "$MEMBER_FILE" && return 0
+  fi
+  rm -f "$temp"
+  return 1
 }
 
 worktree_identity_matches || fail 'registered fleet member does not match canonical Git worktree registration'
@@ -248,14 +290,47 @@ needs_human() {
 
 validate_result() {
   local stage=$1 file=$2
-  jq -e --arg stage "$stage" '
+  jq -e --arg stage "$stage" --argjson cap "$MESSAGE_MAX" '
     type == "object"
       and (keys_unsorted | sort) == ["message","stage","status","verdict"]
       and .stage == $stage
       and (.status | . == "OK" or . == "FAILED" or . == "NEEDS_HUMAN")
-      and (.message | type == "string" and length > 0 and length <= 500)
+      and (.message | type == "string" and length > 0 and length <= $cap)
       and (.verdict | . == "NONE" or . == "APPROVED" or . == "CAVEATS" or . == "REJECTED")
   ' "$file" >/dev/null 2>&1
+}
+
+# Repair what carries no information; reject everything else.
+#
+# Only Codex is held to templates/fleet-result.schema.json natively. Claude and Hermes get the
+# contract as prose, and real runs show prose is not reliably honoured: three stages were failed
+# for a 507-, a 520-character message and for a `verdict` the model simply left out. Each miss
+# costs a whole provider invocation and discards work that was already written and committed.
+#
+# Two deviations carry no information and are repaired here:
+#
+#   - a `message` past the schema's cap is trimmed. It is display text — the dashboard cuts it to
+#     60 characters and nothing downstream parses it.
+#   - a missing `verdict` outside the verify stage is set to "NONE", the only value the contract
+#     allows there. On verify it stays required, because there the verdict *is* the result.
+#
+# Everything else stays strict. A result that is not one JSON object, names the wrong stage,
+# invents a key, or carries an unknown status is still a failed stage.
+normalize_result() {
+  local stage=$1 file=$2 temp
+  temp=$(mktemp "$RESULT_DIR/.normalize.XXXXXX") || return 1
+  if jq --argjson cap "$MESSAGE_MAX" --arg stage "$stage" '
+       (if (.message | type) == "string" and (.message | length) > $cap
+        then .message = (.message[0:($cap - 1)] + "…")
+        else . end)
+       | (if $stage != "verify" and (has("verdict") | not)
+          then .verdict = "NONE"
+          else . end)
+     ' "$file" >"$temp" 2>/dev/null && [[ -s $temp ]]; then
+    mv "$temp" "$file" && return 0
+  fi
+  rm -f "$temp"
+  return 1
 }
 
 # Did this stage actually do anything? Ask git, not the filesystem.
@@ -360,7 +435,9 @@ run_stage() {
   fi
 
   worktree_identity_matches || needs_human "$stage" 'fleet member identity changed during provider execution'
-  contracts_match_bound_member || needs_human "$stage" 'approved fleet contracts changed during provider execution'
+  contract_guard_after_provider "$stage" || needs_human "$stage" 'approved fleet contracts changed during provider execution'
+
+  [[ ! -s $CURRENT_RESULT_TEMP ]] || normalize_result "$stage" "$CURRENT_RESULT_TEMP" || true
 
   if [[ ! -s $CURRENT_RESULT_TEMP ]] || ! validate_result "$stage" "$CURRENT_RESULT_TEMP"; then
     mv "$CURRENT_RESULT_TEMP" "$invalid_file" 2>/dev/null || true
@@ -386,6 +463,12 @@ run_stage() {
     # An empty commit is not a failure: a review stage may legitimately change nothing.
     git -C "$WORKTREE" diff --cached --quiet 2>/dev/null \
       || needs_human "$stage" "failed to commit $stage changes"
+  fi
+
+  # Re-bind after the commit, never before: the bytes that bind the member must be the bytes that
+  # landed on the branch, not whatever was in the worktree mid-stage.
+  if [[ $stage == plan ]]; then
+    rebind_plan_contract || needs_human "$stage" 'cannot re-bind the plan contract after the plan stage'
   fi
 
   write_status "$stage" OK "$RESULT_MESSAGE" "$RESULT_VERDICT" || needs_human "$stage" "cannot publish $stage status"

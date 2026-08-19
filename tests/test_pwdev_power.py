@@ -1143,5 +1143,154 @@ class TestCmuxStart(unittest.TestCase):
         self.assertIn("could not start cmux within", self.common_text())
 
 
+class TestResultContractProse(unittest.TestCase):
+    """Whatever the validator rejects, the prompt must have said out loud."""
+
+    SCHEMA = PLUGIN / "templates" / "fleet-result.schema.json"
+
+    def prose(self, stage="plan"):
+        script = f'source "{SCRIPTS}/fleet-common.sh"; power_result_contract_prose {stage}'
+        out = subprocess.run(["bash", "-c", script], capture_output=True, text=True, check=True)
+        return out.stdout
+
+    def test_the_prose_states_the_message_cap_the_validator_enforces(self):
+        # A real plan stage returned a 507-character message and was rejected for a limit the
+        # prompt never mentioned. Codex reads the cap from --output-schema; claude and hermes
+        # only ever see this prose, so the number has to be in it.
+        cap = json.loads(self.SCHEMA.read_text(encoding="utf-8"))["properties"]["message"]["maxLength"]
+        self.assertIn(str(cap), self.prose(), "the prose must name the message length limit")
+
+    def test_the_cap_in_the_prose_is_the_only_number_claimed(self):
+        # Guards the drift the file's own comment warns about: a prose cap that no longer matches
+        # the schema is worse than none, because it is confidently wrong.
+        cap = json.loads(self.SCHEMA.read_text(encoding="utf-8"))["properties"]["message"]["maxLength"]
+        numbers = {int(n) for n in re.findall(r"\b\d{2,}\b", self.prose())}
+        self.assertEqual(numbers, {cap}, f"prose numbers {numbers} disagree with the schema cap")
+
+    def test_the_runner_reads_the_cap_from_the_schema(self):
+        # Three hand-maintained copies of one number is two too many. The schema is the source;
+        # the prose quotes it and the runner reads it.
+        body = (SCRIPTS / "fleet-run.sh").read_text(encoding="utf-8")
+        self.assertIn(".properties.message.maxLength", body)
+        self.assertIn("length <= $cap", body, "validate_result must use the schema-derived cap")
+
+    def test_an_over_long_message_is_trimmed_not_failed(self):
+        # Real runs came back at 507 and 520 characters with the cap stated in the prompt. The
+        # summary is display text; the work is guarded by the contract hashes, not by its length.
+        with tempfile.TemporaryDirectory() as tmp:
+            result = Path(tmp) / "r.json"
+            result.write_text(
+                json.dumps({"stage": "plan", "status": "OK", "message": "x" * 640, "verdict": "NONE"}),
+                encoding="utf-8",
+            )
+            script = (
+                f'MESSAGE_MAX=500; RESULT_DIR="{tmp}"; '
+                + self.normalize_source()
+                + f'; normalize_result plan "{result}"'
+            )
+            run = subprocess.run(["bash", "-c", script], capture_output=True, text=True)
+            self.assertEqual(run.returncode, 0, run.stderr)
+            clamped = json.loads(result.read_text(encoding="utf-8"))
+            self.assertEqual(len(clamped["message"]), 500)
+            self.assertTrue(clamped["message"].endswith("\u2026"))
+            self.assertEqual(clamped["stage"], "plan", "clamping must not touch the other keys")
+
+    def test_a_short_message_is_left_alone(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = Path(tmp) / "r.json"
+            original = {"stage": "plan", "status": "OK", "message": "short", "verdict": "NONE"}
+            result.write_text(json.dumps(original), encoding="utf-8")
+            script = (
+                f'MESSAGE_MAX=500; RESULT_DIR="{tmp}"; '
+                + self.normalize_source()
+                + f'; normalize_result plan "{result}"'
+            )
+            subprocess.run(["bash", "-c", script], capture_output=True, text=True, check=True)
+            self.assertEqual(json.loads(result.read_text(encoding="utf-8")), original)
+
+    def test_a_missing_verdict_outside_verify_is_defaulted(self):
+        # A review stage came back with stage/status/message and no verdict. Outside verify the
+        # only legal value is "NONE", so the omission carries nothing and costs a whole stage.
+        with tempfile.TemporaryDirectory() as tmp:
+            result = Path(tmp) / "r.json"
+            result.write_text(
+                json.dumps({"stage": "review", "status": "OK", "message": "ok"}), encoding="utf-8"
+            )
+            script = (
+                f'MESSAGE_MAX=500; RESULT_DIR="{tmp}"; '
+                + self.normalize_source()
+                + f'; normalize_result review "{result}"'
+            )
+            subprocess.run(["bash", "-c", script], capture_output=True, text=True, check=True)
+            self.assertEqual(json.loads(result.read_text(encoding="utf-8"))["verdict"], "NONE")
+
+    def test_verify_still_requires_its_own_verdict(self):
+        # On verify the verdict is the result. Defaulting it would turn a silent provider into an
+        # approval by omission.
+        with tempfile.TemporaryDirectory() as tmp:
+            result = Path(tmp) / "r.json"
+            result.write_text(
+                json.dumps({"stage": "verify", "status": "OK", "message": "ok"}), encoding="utf-8"
+            )
+            script = (
+                f'MESSAGE_MAX=500; RESULT_DIR="{tmp}"; '
+                + self.normalize_source()
+                + f'; normalize_result verify "{result}"'
+            )
+            subprocess.run(["bash", "-c", script], capture_output=True, text=True, check=True)
+            self.assertNotIn("verdict", json.loads(result.read_text(encoding="utf-8")))
+
+    def normalize_source(self):
+        text = (SCRIPTS / "fleet-run.sh").read_text(encoding="utf-8")
+        return "normalize_result() {" + text.split("normalize_result() {", 1)[1].split("\n}", 1)[0] + "\n}"
+
+
+class TestPlanContractRebinding(unittest.TestCase):
+    """The stage that writes a contract cannot be held to that contract's launch hash."""
+
+    def runner(self):
+        return (SCRIPTS / "fleet-run.sh").read_text(encoding="utf-8")
+
+    def function_body(self, name):
+        return self.runner().split(f"{name}() {{", 1)[1].split("\n}", 1)[0]
+
+    def test_the_plan_stage_is_guarded_by_the_spec_alone(self):
+        # plan.md is the plan stage's own artifact (references/artifacts.md), so a strict check
+        # after the provider stops every member on its first stage.
+        body = self.function_body("contract_guard_after_provider")
+        self.assertIn("spec_matches_bound_member", body)
+        self.assertIn("contracts_match_bound_member", body)
+        self.assertIn("plan", body, "the exemption must be scoped to the plan stage")
+
+    def test_every_later_stage_keeps_both_contracts_strict(self):
+        # The exemption is one stage wide. Anything else may not touch either contract.
+        body = self.function_body("contract_guard_after_provider")
+        self.assertIn("else contracts_match_bound_member", body)
+
+    def test_the_spec_stays_frozen_even_during_plan(self):
+        body = self.function_body("spec_matches_bound_member")
+        self.assertIn("spec_sha256", body)
+        self.assertNotIn("plan_sha256", body, "the spec guard must not depend on the plan hash")
+
+    def test_the_plan_is_rebound_atomically(self):
+        # A member record published by a partial write is a member nothing can validate.
+        body = self.function_body("rebind_plan_contract")
+        self.assertIn("mktemp", body)
+        self.assertIn("mv ", body)
+        self.assertIn(".plan_sha256 = $plan", body)
+        self.assertIn("[0-9a-f]{64}", body, "a malformed hash must not be published")
+
+    def test_the_rebind_happens_after_the_stage_commit(self):
+        # Re-binding to worktree bytes that were never committed would bind the member to a
+        # document that does not exist on its branch.
+        text = self.runner()
+        commit = text.index('commit -m "chore(power-fleet): $SLUG $stage"')
+        rebind = text.index("rebind_plan_contract ||")
+        self.assertLess(commit, rebind, "the rebind must follow the commit")
+
+    def test_a_failed_rebind_stops_the_member(self):
+        self.assertIn("cannot re-bind the plan contract", self.runner())
+
+
 if __name__ == "__main__":
     unittest.main()
