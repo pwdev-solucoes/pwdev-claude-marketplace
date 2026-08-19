@@ -104,6 +104,7 @@ per slug. Never hand it a glob.
 | Symptom | Meaning |
 |---|---|
 | `cmux: no socket` | cmux is not running. Say so; do not proceed without it. |
+| Every panel pane sits on a folder-trust prompt | expected, not a fault. A worktree is a path the provider has never seen, and the permission flag does not answer a trust dialog — it gates tools, not folders. The human answers it once per pane. Never answer it for them. |
 | `a visual fleet panel is already active` | one panel at a time. Tear the current one down first. |
 | `a panel holds at most 4 members` | split the work across two panels, run some with `--auto`, or drop a slug. |
 | `visual mode is not implemented for the … runtime` | that runtime has no interactive vector here. Use `--auto`. |
