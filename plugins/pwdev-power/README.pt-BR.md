@@ -1,7 +1,8 @@
 # PWDEV Power
 
 Desenvolvimento orientado a especificação com disciplina, rodando em **Claude Code, Codex e
-Hermes Agent**, com frotas autônomas isoladas no **cmux**.
+Hermes Agent**, com frotas paralelas isoladas no **cmux** — acompanhadas lado a lado num painel, ou
+deixadas rodando sem supervisão.
 
 ---
 
@@ -96,12 +97,17 @@ já deve conhecer a skill `power` sem que você a mencione.
 
 ### Para a frota (opcional)
 
-A frota precisa do **cmux em execução** e de `jq`, `git`, `python3` e `docker` no `PATH`. Todo o
-resto do plugin funciona sem cmux.
+A frota precisa do **cmux** e de `jq`, `git`, `python3` e `docker` no `PATH`. Todo o resto do
+plugin funciona sem cmux.
 
 ```bash
-cmux ping                    # precisa responder antes de qualquer comando de frota
+cmux ping                    # responde quando o cmux está rodando
 ```
+
+O cmux não precisa já estar aberto: o lançamento da frota inicia ele e espera o socket, avisando
+enquanto faz isso. `POWER_CMUX_NO_AUTOSTART=1` desliga esse comportamento, e
+`POWER_CMUX_START_TIMEOUT` (padrão 90 segundos) cobre uma partida fria lenta. O encerramento e o
+`--status` nunca iniciam nada — abrir um aplicativo para fechar uma workspace seria absurdo.
 
 Se a CLI não estiver no `PATH` (comum no macOS, onde ela fica dentro do bundle do app):
 
@@ -408,14 +414,15 @@ que deixar de apontar.
 
 ---
 
-## Cenário F — Várias fases ao mesmo tempo, sem supervisão
+## Cenário F — Várias fases ao mesmo tempo
 
-Para fases aprovadas que não se sobrepõem. Cada membro ganha worktree, stack Docker e workspace
-cmux próprios.
+Para fases aprovadas que não se sobrepõem. Cada membro ganha worktree e stack Docker próprios. Como
+você acompanha é a escolha: um **painel visual**, com as sessões lado a lado e você conduzindo
+qualquer uma, ou uma **frota sem supervisão**, que roda a máquina de estágios sozinha.
 
 ### F1. Pré-condições
 
-- cmux rodando (`cmux ping` responde)
+- cmux instalado (o lançamento inicia ele se não estiver rodando)
 - Cada slug tem `spec.md` com **exatamente um** campo `Status: APPROVED`, mais `plan.md`
 - Um branch atual nomeado — nada de HEAD destacado
 
@@ -433,37 +440,46 @@ roda por vez.
 Use `--auto` para a frota sem supervisão: uma workspace por membro, resultado estruturado, ciclos
 de correção, ninguém olhando.
 
-Ele mostra o formato exato do comando do seu runtime e **exige que você reconheça a flag
-perigosa** antes de lançar qualquer coisa:
+Ele mostra o formato exato do comando do seu runtime e do modo, e **exige que você reconheça a
+flag perigosa** antes de lançar qualquer coisa:
 
-| Runtime | Vetor |
-|---|---|
-| Claude Code | `claude -p --dangerously-skip-permissions --no-session-persistence --output-format json` |
-| Codex | `codex exec --dangerously-bypass-approvals-and-sandbox --ephemeral --cd <worktree> --output-schema <schema> --output-last-message <arquivo>` |
-| Hermes | `hermes -z <prompt> --in <worktree> --yolo --accept-hooks` |
+| Runtime | Vetor visual | Vetor sem supervisão |
+|---|---|---|
+| Claude Code | `claude --dangerously-skip-permissions <brief>` | `claude -p --dangerously-skip-permissions --no-session-persistence --output-format json` |
+| Codex | não implementado | `codex exec --dangerously-bypass-approvals-and-sandbox --ephemeral --cd <worktree> --output-schema <schema> --output-last-message <arquivo>` |
+| Hermes | não implementado | `hermes -z <prompt> --in <worktree> --yolo --accept-hooks` |
+
+**Olhar não é aprovar.** A sessão visual continua rodando com as permissões contornadas e continua
+agindo entre uma olhada e outra, então o reconhecimento é exigido ali igual ao `--auto`.
 
 Se dois slugs mencionam os mesmos caminhos do repositório, você recebe um aviso consultivo
 nomeando-os. Ele não bloqueia — sobreposição plausível é comum e só você sabe se importa ali.
 
-Cada membro então roda `plan → execute → review → verify` por conta própria, commitando por
-estágio.
+Com `--auto`, cada membro então roda `plan → execute → review → verify` por conta própria,
+commitando por estágio. No painel não há máquina de estágios: o laço é você.
 
 ### F3. Acompanhar
 
-O estado vive na **barra lateral do cmux** — âmbar rodando, verde concluído, vermelho quando um
-membro precisa de você, mais uma notificação. Não há painel para ficar olhando.
+No **painel**, você acompanha as panes. Cada aba se renomeia com o nome da própria sessão, então o
+grid se lê de relance, sem nenhuma instrumentação.
+
+Com **`--auto`** não há pane para olhar, e o estado vive na **barra lateral do cmux** — âmbar
+rodando, verde concluído, vermelho quando um membro precisa de você, mais uma notificação.
 
 ```
 /pwdev-power:fleet --status
 ```
 
-dá uma tabela única: slug, runtime, estágio, status, portas e uma mensagem curta. Nunca imprime
-caminhos de worktree, logs ou prompts.
+dá uma tabela única para os dois modos: slug, runtime, modo, estágio, status, portas e uma mensagem
+curta. Membro de painel aparece como `visual` e *driven by a human in a panel pane* — esse é o
+estado normal dele, não um runner faltando. Nunca imprime caminhos de worktree, logs ou prompts.
 
-As portas vêm do primeiro slot livre — o membro 0 pega `3000`/`5432`, o membro 1 pega
-`3010`/`5442` — e são publicadas só em loopback.
+As portas vêm do primeiro slot livre, e um slot só conta como livre quando nada mais o segura: o
+índice está desocupado, as portas não colidem com as de outro membro, e nenhuma das duas responde a
+uma sonda ao vivo. Ou seja, o seu próprio Postgres na `5432` não trava o lançamento — a frota pega
+o próximo slot e segue. Publicadas só em loopback.
 
-### F4. Quando um membro é rejeitado
+### F4. Quando um membro é rejeitado — só no `--auto`
 
 Um `verify` com `REJECTED` inicia um ciclo de correção: `execute-fix → review-fix → verify`. No
 máximo **dois** ciclos, ou seja, dez invocações de provider no pior caso. Uma terceira rejeição
@@ -475,9 +491,11 @@ vira `NEEDS_HUMAN` — nunca vira aprovação por cansaço.
 /pwdev-power:fleet --teardown cadastro-clinicas
 ```
 
-Para o stack, fecha o workspace cmux que ele criou, remove o registro do membro e **preserva o
-branch e o worktree** — um membro que falhou é evidência. O volume do banco é mantido e reportado
-junto com o comando para removê-lo.
+Para o stack, remove o registro do membro e **preserva o branch e o worktree** — um membro que
+falhou é evidência. O volume do banco é mantido e reportado junto com o comando para removê-lo.
+
+No painel ele fecha **a pane daquele membro** e deixa as irmãs rodando; a workspace vai embora com
+o último membro. Com `--auto` ele fecha a workspace própria do membro.
 
 ```
 /pwdev-power:fleet --teardown cadastro-clinicas --merge
@@ -548,7 +566,8 @@ Comportamentos do Codex que as skills já levam em conta:
   esperas curtas.
 
 Para rodar uma frota do Codex, use `codex-fleet-up.sh`. Seu runtime é fixado no lançamento e um
-runner com adaptador diferente se recusa a iniciar.
+runner com adaptador diferente se recusa a iniciar. O painel visual é só do Claude por enquanto; no
+Codex a frota roda sem supervisão.
 
 ---
 
@@ -682,7 +701,9 @@ acabou de ver contradito.
 │   ├── verdict.md                  evidências da verificação
 │   └── fix-01.md                   tasks de correção delimitadas, em caso de rejeição
 ├── quick/<data>-<slug>/            contrato + relatório
-├── fleet/<slug>.json               runtime, worktree, portas, hashes de contrato, id do workspace
+├── fleet/<slug>.json               runtime, modo, worktree, portas, hashes de contrato, ids cmux
+├── fleet/<slug>.pane.sh            o que a pane do membro executa
+├── fleet/<slug>.surface            o relato da própria pane sobre qual surface do cmux ela é
 ├── fleet-status.json               por worktree: estágio, status, veredito, ciclos de correção
 └── audit/pwdev-audit.db            opcional
 ```
@@ -733,7 +754,17 @@ bloco de exemplo é ambíguo, e ambiguidade aqui significa lançar trabalho não
 - **Arquivos gerados nunca chegam ao branch.** O arquivo de ambiente é escrito sob `umask 077`
   *antes* do conteúdo existir, e um `.gitignore` gerado mantém ele e a saída bruta do provider fora
   do que o `git add -A` levaria para o seu branch base no merge.
-- **A frota nunca rouba o foco** e só fecha workspaces do cmux cujo identificador ela registrou.
+- **Comando privilegiado nunca é digitado em shell vivo.** A sessão de todo membro — autônoma ou
+  interativa — é alcançada por arquivo shell-quotado. O painel é montado numa única chamada
+  `new-workspace --layout` por isso, já que cada surface do layout carrega o próprio comando;
+  crescer um painel vivo dividindo dentro dele e mandando teclas abriria mão disso, e é por isso
+  que um segundo painel é recusado.
+- **As panes se identificam sozinhas.** Cada uma registra o próprio id de surface do cmux antes de
+  iniciar o provider, então o encerramento fecha a pane daquele membro e não uma pane deduzida por
+  posição.
+- **A frota nunca rouba o foco** e só fecha workspaces e surfaces do cmux cujo identificador ela
+  registrou. E nunca monta essa lista por diferença contra um baseline: "tudo que não estava aqui
+  antes é meu" também captura o que você abriu no meio do caminho.
 
 ---
 
@@ -774,7 +805,16 @@ Um membro que falhou mantém branch e worktree. Investigue ali; não relance por
   está documentado como recebendo modelo. Até estar, use `--model`/`--provider` do card do Kanban,
   ou execute inline — nunca invente um parâmetro para satisfazer a regra de modelos explícitos.
   Veja `references/hermes-tools.md`.
-- **A frota exige o cmux.** Não há fallback para tmux, por decisão de projeto.
+- **A frota exige o cmux.** Não há fallback para tmux, por decisão de projeto. O lançamento inicia
+  o cmux para você, mas não consegue instalá-lo.
+- **O painel visual é só para o Claude.** `codex` e `hermes` o recusam com uma frase e devem rodar
+  com `--auto`; nenhum dos dois tem vetor interativo verificado aqui.
+- **Um painel comporta quatro membros, e há um painel por vez.** Quatro panes é onde um grid deixa
+  de ser legível. Um segundo painel teria que crescer para dentro do primeiro dividindo e mandando
+  teclas, então é recusado em vez de mesclado.
+- **Worktree novo abre no trust prompt do Claude Code.** Uma tecla por pane. Pré-confiar exigiria
+  escrever na sua configuração do Claude Code para pular um checkpoint de segurança, coisa que o
+  plugin não faz por você.
 - **A auditoria exige `sqlite3`** e permanece desligada até o arquivo de banco existir.
 - **O template de compose assume Postgres.** Sem um `Dockerfile`, só o banco sobe, o que é
   intencional — o serviço `app` não teria como ser construído.

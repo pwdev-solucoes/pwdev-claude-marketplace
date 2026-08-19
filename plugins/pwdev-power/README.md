@@ -1,7 +1,7 @@
 # PWDEV Power
 
 Disciplined spec-driven development that runs on **Claude Code, Codex, and Hermes Agent**, with
-isolated autonomous fleets on **cmux**.
+isolated parallel fleets on **cmux** — watched side by side in a panel, or left to run unattended.
 
 ---
 
@@ -96,12 +96,17 @@ session should already know the `power` skill without being told.
 
 ### For the fleet (optional)
 
-The fleet needs **cmux running** and `jq`, `git`, `python3`, and `docker` on `PATH`. Everything
-else in the plugin works without cmux.
+The fleet needs **cmux** and `jq`, `git`, `python3`, and `docker` on `PATH`. Everything else in
+the plugin works without cmux.
 
 ```bash
-cmux ping                    # must answer before any fleet command
+cmux ping                    # answers when cmux is running
 ```
+
+cmux does not have to be open already: a fleet launch starts it and waits for its socket, saying so
+as it does. `POWER_CMUX_NO_AUTOSTART=1` turns that off, and `POWER_CMUX_START_TIMEOUT` (default 90
+seconds) covers a slow cold start. Teardown and `--status` never start it — opening an application
+in order to close a workspace would be absurd.
 
 If the CLI is not on your `PATH` (common on macOS, where it lives inside the app bundle), set:
 
@@ -403,14 +408,15 @@ what not to flag.
 
 ---
 
-## Scenario F — Several phases at once, unattended
+## Scenario F — Several phases at once
 
-For approved phases that do not overlap. Each member gets its own worktree, Docker stack and cmux
-workspace.
+For approved phases that do not overlap. Each member gets its own worktree and Docker stack. How
+you watch them is the choice: a **visual panel** where the sessions sit side by side and you steer
+any of them, or an **unattended fleet** that runs the full stage machine on its own.
 
 ### F1. Preconditions
 
-- cmux running (`cmux ping` answers)
+- cmux installed (the launch starts it if it is not running)
 - Each slug has `spec.md` with **exactly one** `Status: APPROVED` field, plus `plan.md`
 - A named current branch — not detached HEAD
 
@@ -428,36 +434,46 @@ panel runs at a time.
 Add `--auto` for the unattended fleet: one workspace per member, structured results, correction
 cycles, nobody watching.
 
-It shows the exact command shape for your runtime and **requires you to acknowledge the dangerous
-flag** before anything launches:
+It shows the exact command shape for your runtime and mode, and **requires you to acknowledge the
+dangerous flag** before anything launches:
 
-| Runtime | Vector |
-|---|---|
-| Claude Code | `claude -p --dangerously-skip-permissions --no-session-persistence --output-format json` |
-| Codex | `codex exec --dangerously-bypass-approvals-and-sandbox --ephemeral --cd <worktree> --output-schema <schema> --output-last-message <file>` |
-| Hermes | `hermes -z <prompt> --in <worktree> --yolo --accept-hooks` |
+| Runtime | Visual vector | Unattended vector |
+|---|---|---|
+| Claude Code | `claude --dangerously-skip-permissions <brief>` | `claude -p --dangerously-skip-permissions --no-session-persistence --output-format json` |
+| Codex | not implemented | `codex exec --dangerously-bypass-approvals-and-sandbox --ephemeral --cd <worktree> --output-schema <schema> --output-last-message <file>` |
+| Hermes | not implemented | `hermes -z <prompt> --in <worktree> --yolo --accept-hooks` |
+
+**Watching is not approving.** The visual session still runs with permissions bypassed and still
+acts between your glances, so the acknowledgement is required there exactly as it is for `--auto`.
 
 If two slugs mention the same repository paths you get an advisory warning naming them. It does
 not block — plausible overlap is common and only you know whether it matters here.
 
-Each member then runs `plan → execute → review → verify` on its own, committing per stage.
+Under `--auto`, each member then runs `plan → execute → review → verify` on its own, committing per
+stage. In a panel there is no stage machine: you are the loop.
 
 ### F3. Watch
 
-Status lives in the **cmux sidebar** — amber while running, green on done, red when a member needs
-you, plus a notification. There is no pane to watch.
+In a **panel**, you watch the panes. Each tab renames itself after its session, so the grid reads
+at a glance without any instrumentation.
+
+Under **`--auto`** there is no pane to watch, and status lives in the **cmux sidebar** — amber while
+running, green on done, red when a member needs you, plus a notification.
 
 ```
 /pwdev-power:fleet --status
 ```
 
-gives a one-shot table: slug, runtime, stage, status, ports, and a short message. It never prints
-worktree paths, logs or prompts.
+gives a one-shot table for either mode: slug, runtime, mode, stage, status, ports, and a short
+message. Panel members read `visual` and *driven by a human in a panel pane* — that is the normal
+state for them, not a missing runner. It never prints worktree paths, logs or prompts.
 
-Ports come from the first free slot — member 0 gets `3000`/`5432`, member 1 gets `3010`/`5442` —
-and are published on loopback only.
+Ports come from the first free slot, and a slot counts as free only when nothing else holds it:
+its index is unclaimed, its ports collide with no other member's, and neither answers a live probe.
+So your own Postgres on `5432` does not block a launch — the fleet takes the next slot and moves
+on. Published on loopback only.
 
-### F4. When a member is rejected
+### F4. When a member is rejected — `--auto` only
 
 `verify` returning `REJECTED` starts a correction cycle: `execute-fix → review-fix → verify`. At
 most **two** cycles, so ten provider invocations worst case. A third rejection becomes
@@ -469,9 +485,12 @@ most **two** cycles, so ten provider invocations worst case. A third rejection b
 /pwdev-power:fleet --teardown clinic-registry
 ```
 
-Stops the stack, closes the cmux workspace it created, removes the member record, and
-**preserves the branch and the worktree** — a member that failed is evidence. The database volume
-is kept and reported with the command to remove it.
+Stops the stack, removes the member record, and **preserves the branch and the worktree** — a
+member that failed is evidence. The database volume is kept and reported with the command to remove
+it.
+
+In a panel it closes **that member's pane** and leaves its siblings running; the workspace goes
+with the last member out. Under `--auto` it closes the member's own workspace.
 
 ```
 /pwdev-power:fleet --teardown clinic-registry --merge
@@ -543,7 +562,8 @@ Codex-specific behaviour the skills already account for:
   eight short ones.
 
 To run a fleet from Codex, use `codex-fleet-up.sh`. Your runtime is bound at launch and a runner
-with a different adapter refuses to start.
+with a different adapter refuses to start. The visual panel is Claude-only for now; on Codex the
+fleet runs unattended.
 
 ---
 
@@ -677,7 +697,9 @@ seen contradicted.
 │   ├── verdict.md                  verification evidence
 │   └── fix-01.md                   bounded correction tasks, on rejection
 ├── quick/<date>-<slug>/            contract + report
-├── fleet/<slug>.json               runtime, worktree, ports, contract hashes, cmux workspace id
+├── fleet/<slug>.json               runtime, mode, worktree, ports, contract hashes, cmux ids
+├── fleet/<slug>.pane.sh            what the member's pane runs
+├── fleet/<slug>.surface            the pane's own report of which cmux surface it is
 ├── fleet-status.json               per-worktree: stage, status, verdict, correction cycles
 └── audit/pwdev-audit.db            opt-in
 ```
@@ -726,7 +748,16 @@ block is ambiguous, and ambiguity here means launching unapproved work.
 - **Generated runtime files never reach the branch.** The environment file is written under
   `umask 077` *before* the content lands, and a generated `.gitignore` keeps it and the raw
   provider output out of what `git add -A` would carry into your base branch on merge.
-- **The fleet never steals focus** and closes only cmux workspaces whose identifier it recorded.
+- **A privileged command is never typed into a live shell.** Every member's session — autonomous or
+  interactive — is reached through a shell-quoted file. The panel is built in a single
+  `new-workspace --layout` call for that reason, since each layout surface carries its own command;
+  growing a live panel by splitting into it and sending keystrokes would give that up, which is why
+  a second panel is refused instead.
+- **Panes identify themselves.** Each one records its own cmux surface id before starting the
+  provider, so teardown closes that member's pane rather than a pane inferred from position.
+- **The fleet never steals focus** and closes only cmux workspaces and surfaces whose identifier it
+  recorded. It never builds that list by diffing against a baseline: "everything that was not here
+  before is mine" also captures whatever you opened meanwhile.
 
 ---
 
@@ -767,7 +798,16 @@ A member that failed keeps its branch and worktree. Investigate there; do not re
   as taking a model. Until it is, route through the Kanban card's `--model`/`--provider`, or run
   inline — never invent a parameter to satisfy the rule that models be explicit. See
   `references/hermes-tools.md`.
-- **The fleet requires cmux.** There is no tmux fallback by design.
+- **The fleet requires cmux.** There is no tmux fallback by design. A launch will start cmux for
+  you, but it cannot install it.
+- **The visual panel is Claude-only.** `codex` and `hermes` refuse it in a sentence and should be
+  run with `--auto`; neither has a verified interactive vector here.
+- **A panel holds four members and there is one panel at a time.** Four panes is where a grid stops
+  being readable. A second panel would have to grow into the first by splitting and sending
+  keystrokes, so it is refused rather than merged.
+- **A fresh worktree opens on Claude Code's trust prompt.** One keypress per pane. Pre-trusting
+  would mean writing into your Claude Code configuration to skip a safety checkpoint, which the
+  plugin will not do on your behalf.
 - **Audit requires `sqlite3`** and stays off until the database file exists.
 - **The compose template assumes Postgres.** Without a `Dockerfile` only the database comes up,
   which is intentional — the `app` service cannot build.
