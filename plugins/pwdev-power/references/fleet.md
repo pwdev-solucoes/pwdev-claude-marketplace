@@ -1,10 +1,35 @@
 # Fleet
 
-A fleet runs approved phases autonomously and in parallel, each in its own Git worktree, its
-own Docker stack, and its own cmux workspace. It is the only part of this plugin that
-constructs a privileged provider command, so it is also the part with the most rules.
+A fleet runs approved phases in parallel, each in its own Git worktree and its own Docker stack.
+It is the only part of this plugin that constructs a privileged provider command, so it is also
+the part with the most rules.
+
+Two modes, and the difference is who drives:
+
+- **Visual (default)** — 1 to 4 members share **one** cmux workspace, one pane each, every pane an
+  interactive provider session seeded with that phase's brief. A human watches all of them and
+  steers any of them. No structured results, no correction cap: the human is the loop.
+- **Autonomous (`--auto`)** — one workspace per member running the stage machine below,
+  unattended, with structured results and up to two correction cycles.
 
 Read [safety](safety.md) and [cmux](cmux.md) before operating one.
+
+## The panel
+
+**One panel at a time, 1 to 4 members.** Four panes is where a grid stops being readable, and an
+unreadable panel defeats the point. A second panel is refused rather than merged into the first:
+growing a live panel would mean splitting into its workspace and typing a privileged command into a
+running shell, and every packaged script exists to avoid exactly that.
+
+The whole grid is created in **one** `new-workspace --layout` call. Each layout surface carries its
+own `command`, so a member's session starts from a shell-quoted file — the same guarantee the
+autonomous runner has, for the same reason.
+
+**Members bind themselves to their panes.** Each pane writes its own `CMUX_SURFACE_ID` to
+`fleet/<slug>.surface` before exec-ing the provider. Pairing panes to slugs by index would be a
+guess, and it goes wrong the moment layout order and pane order disagree; the pane's own report
+cannot. A member whose pane never reported is usable but not tearable-down in isolation, and the
+launcher says so.
 
 ## Entry gate
 
@@ -46,9 +71,13 @@ value on the human's behalf.
 
 - **Worktree**: `<repo-parent>/<repo-name>-fleet-<slug>` on branch `power-fleet/<slug>`. A
   sibling of the repository, not a child, so it never shows up as untracked inside it.
-- **Ports**: first free slot, not an incrementing counter, so teardown releases a slot for
-  reuse. Validate three ways: range, cross-check app and db against every other member, and a
-  real probe of `127.0.0.1`.
+- **Ports**: first free slot, not an incrementing counter, so teardown releases a slot for reuse.
+  A slot is free only when all four hold: its index is unclaimed, its ports are in range, they
+  collide with no member's, and neither answers a live probe of `127.0.0.1`. All four are checked
+  **inside** the search, so a port the host already uses advances to the next slot instead of
+  refusing the launch — somebody's own Postgres on 5432 is not a reason to reject a fleet on a
+  machine with sixty-three free slots. The probe is racy by nature; a port free at probe time can
+  be taken before Docker binds it, and Docker is the right place for that failure to surface.
 - **Compose**: copy the packaged template, publish atomically with check-copy-recheck through
   a same-directory `mktemp` plus rename. Bind published ports to `127.0.0.1` only.
 - **`.env.fleet`**: write under `umask 077` **before** the content lands, not `chmod` after.
@@ -62,9 +91,13 @@ value on the human's behalf.
 ## Member record — `.planning/power/fleet/<slug>.json`
 
 Written with `jq -n` to a temporary file and published by atomic rename. Carries at minimum:
-`slug`, `runtime`, `branch`, `worktree_path`, `cmux_workspace_id`, `app_port`, `db_port`,
-`port_index`, `spec_sha256`, `plan_sha256`, `status`, `created_at`, `updated_at`, and
-`kanban_task_id` when the Kanban route is used.
+`slug`, `runtime`, `mode`, `branch`, `worktree_path`, `cmux_workspace_id`, `cmux_surface_id`,
+`app_port`, `db_port`, `port_index`, `spec_sha256`, `plan_sha256`, `status`, `created_at`,
+`updated_at`, and `kanban_task_id` when the Kanban route is used. `schema_version` is 2.
+
+`mode` is `visual` or `auto`. It is recorded rather than inferred: a visual member has no runner
+status file, and so does a member whose runner crashed before writing one. Guessing from the
+absence would report a crash as a design.
 
 `status` is one of `ACTIVE`, `RUNNING`, `DONE`, `NEEDS_HUMAN`.
 
@@ -88,7 +121,7 @@ not release ownership, because it may have left dev servers, watchers or child c
 alive. When ownership cannot be proven, retain the runner lock: an orphaned lock is a
 deliberate signal that a human must look, not a bug.
 
-## Correction cap
+## Correction cap — autonomous mode only
 
 `plan → execute → review → verify`. On `REJECTED`, up to **two** cycles of
 `execute-fix → review-fix → verify`. A third rejection is `NEEDS_HUMAN`, never `DONE`. Worst
@@ -106,8 +139,9 @@ status line, not a transcript.
 
 ## Teardown
 
-Without `--merge`: stop the stack, close the cmux workspace, remove the member record, and
-**preserve the branch and the worktree**. With `--merge`: refuse anything that is not `DONE`,
+Without `--merge`: stop the stack, close the member's cmux surface (visual) or workspace (auto),
+remove the member record, and **preserve the branch and the worktree**. A panel member closes its
+own pane; the shared workspace goes only with the last member out. With `--merge`: refuse anything that is not `DONE`,
 verify the terminal status schema again, then merge.
 
 `docker compose down` never gets `--volumes`. The named volume outlives the member; report it

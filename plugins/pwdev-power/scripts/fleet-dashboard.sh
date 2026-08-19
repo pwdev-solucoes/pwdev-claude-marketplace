@@ -24,10 +24,10 @@ truncate_message() {
 }
 
 render() {
-  printf '%-16s %-7s %-11s %-9s %-6s %-6s %s\n' SLUG RUNTIME STAGE STATUS APP DB MESSAGE
-  printf '%s\n' '--------------------------------------------------------------------------------'
+  printf '%-16s %-7s %-7s %-11s %-9s %-6s %-6s %s\n' SLUG RUNTIME MODE STAGE STATUS APP DB MESSAGE
+  printf '%s\n' '----------------------------------------------------------------------------------------'
 
-  local found=false member filename values slug runtime app db branch worktree status stage rstatus verdict message
+  local found=false member filename values slug runtime mode app db branch worktree status stage rstatus verdict message
 
   shopt -s nullglob
   for member in "$FLEET_DIR"/*.json; do
@@ -45,14 +45,14 @@ render() {
         and (.branch | type == "string" and length > 0)
         and (.worktree_path | type == "string" and length > 0)
         and (.status | . == "ACTIVE" or . == "RUNNING" or . == "DONE" or . == "NEEDS_HUMAN")
-      then [.slug, .runtime, .app_port, .db_port, .branch, .worktree_path, .status] | @tsv
+      then [.slug, .runtime, (.mode // "auto"), .app_port, .db_port, .branch, .worktree_path, .status] | @tsv
       else error("invalid member") end
     ' "$member" 2>/dev/null) || {
-      printf '%-16s %-7s %-11s %-9s %-6s %-6s %s\n' "$filename" '?' '?' MALFORMED '-' '-' 'member record is invalid'
+      printf '%-16s %-7s %-7s %-11s %-9s %-6s %-6s %s\n' "$filename" '?' '?' '?' MALFORMED '-' '-' 'member record is invalid'
       continue
     }
 
-    IFS=$'\t' read -r slug runtime app db branch worktree status <<<"$values"
+    IFS=$'\t' read -r slug runtime mode app db branch worktree status <<<"$values"
 
     stage='-'; rstatus=$status; verdict='-'; message=''
     if [[ -f $worktree/.planning/power/fleet-status.json ]]; then
@@ -68,14 +68,16 @@ render() {
       ' "$worktree/.planning/power/fleet-status.json" 2>/dev/null); then
         stage='?'; rstatus='MALFORMED'; verdict='-'; message='runner status is invalid'
       fi
+    elif [[ $mode == visual ]]; then
+      message='driven by a human in a panel pane'
     else
       message='status unavailable'
     fi
 
     [[ $verdict == NONE || $verdict == '-' ]] || message="[$verdict] $message"
 
-    printf '%-16s %-7s %-11s %-9s %-6s %-6s %s\n' \
-      "$slug" "$runtime" "$stage" "$rstatus" "$app" "$db" "$(truncate_message "$message")"
+    printf '%-16s %-7s %-7s %-11s %-9s %-6s %-6s %s\n' \
+      "$slug" "$runtime" "$mode" "$stage" "$rstatus" "$app" "$db" "$(truncate_message "$message")"
   done
   shopt -u nullglob
 

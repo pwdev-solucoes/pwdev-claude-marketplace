@@ -121,7 +121,7 @@ export PWDEV_POWER_CMUX_BIN=/Applications/cmux.app/Contents/Resources/bin/cmux
 | `/pwdev-power:exec` | `<feature-slug>` | Executes an approved plan task by task |
 | `/pwdev-power:verify` | `<feature-slug> [--strict]` | Adversarial verification, then integration |
 | `/pwdev-power:quick` | `<bounded task>` | A small understood change, no plan file |
-| `/pwdev-power:fleet` | `<slug...> [--via-kanban] \| --status \| --teardown <slug> [--merge]` | Approved phases, unattended and in parallel |
+| `/pwdev-power:fleet` | `<slug...> [--auto] [--via-kanban] \| --status \| --teardown <slug> [--merge]` | Approved phases in parallel — a visual cmux panel of 1–4, or unattended |
 
 Skills also trigger on their own — you do not have to name `power-tdd` for it to apply when code
 is being written.
@@ -419,6 +419,14 @@ workspace.
 ```
 /pwdev-power:fleet clinic-registry booking-rules
 ```
+
+By default this opens a **visual panel**: one cmux workspace with one pane per phase, each pane an
+interactive Claude session in its own worktree, already reading that phase's spec and plan. You
+watch all of them at once and steer any of them. A panel holds **1 to 4 members**, and only one
+panel runs at a time.
+
+Add `--auto` for the unattended fleet: one workspace per member, structured results, correction
+cycles, nobody watching.
 
 It shows the exact command shape for your runtime and **requires you to acknowledge the dangerous
 flag** before anything launches:
@@ -727,6 +735,11 @@ block is ambiguous, and ambiguity here means launching unapproved work.
 | What you see | What it means | What to do |
 |---|---|---|
 | `cmux: no socket at …` | cmux is not running | Start cmux. Only the fleet needs it. |
+| `a visual fleet panel is already active` | One panel at a time | Tear the current panel down, or launch with `--auto` |
+| `a panel holds at most 4 members` | More than four slugs in one panel | Split into two rounds, or run the extras with `--auto` |
+| `visual mode is not implemented for the … runtime` | Only Claude has an interactive vector here | Launch that runtime with `--auto` |
+| `cmux: could not start cmux within …` | The app did not answer within the start timeout | Start cmux yourself; raise `POWER_CMUX_START_TIMEOUT` on a slow machine |
+| `no free fleet port slot below 64` | All 64 slots are claimed or their ports are in use | Tear down finished members, or move `fleet.port_base_app` / `fleet.port_base_db` |
 | `cmux: CLI not found` | Not on `PATH` | `export PWDEV_POWER_CMUX_BIN=/Applications/cmux.app/Contents/Resources/bin/cmux` |
 | `spec must carry exactly one 'Status: APPROVED' field (found 2)` | A second approval line, often inside an example block | Leave one real approval field |
 | `no .planning/power/config.json; run init first` | No workspace | `/pwdev-power:init` |

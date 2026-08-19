@@ -121,7 +121,7 @@ export PWDEV_POWER_CMUX_BIN=/Applications/cmux.app/Contents/Resources/bin/cmux
 | `/pwdev-power:exec` | `<slug-da-feature>` | Executa um plano aprovado, task a task |
 | `/pwdev-power:verify` | `<slug-da-feature> [--strict]` | Verificação adversarial e integração |
 | `/pwdev-power:quick` | `<tarefa delimitada>` | Mudança pequena e compreendida, sem arquivo de plano |
-| `/pwdev-power:fleet` | `<slug...> [--via-kanban] \| --status \| --teardown <slug> [--merge]` | Fases aprovadas em paralelo, sem supervisão |
+| `/pwdev-power:fleet` | `<slug...> [--auto] [--via-kanban] \| --status \| --teardown <slug> [--merge]` | Fases aprovadas em paralelo — painel visual no cmux de 1 a 4, ou sem supervisão |
 
 As skills também disparam sozinhas — você não precisa citar `power-tdd` para que ela valha quando
 código está sendo escrito.
@@ -424,6 +424,14 @@ cmux próprios.
 ```
 /pwdev-power:fleet cadastro-clinicas regras-agendamento
 ```
+
+Por padrão isso abre um **painel visual**: uma workspace do cmux com uma pane por fase, cada pane
+uma sessão Claude interativa no seu próprio worktree, já lendo o spec e o plan daquela fase. Você
+vê todas ao mesmo tempo e conduz qualquer uma. O painel comporta **1 a 4 membros**, e só um painel
+roda por vez.
+
+Use `--auto` para a frota sem supervisão: uma workspace por membro, resultado estruturado, ciclos
+de correção, ninguém olhando.
 
 Ele mostra o formato exato do comando do seu runtime e **exige que você reconheça a flag
 perigosa** antes de lançar qualquer coisa:
@@ -734,6 +742,11 @@ bloco de exemplo é ambíguo, e ambiguidade aqui significa lançar trabalho não
 | O que aparece | O que significa | O que fazer |
 |---|---|---|
 | `cmux: no socket at …` | cmux não está rodando | Abra o cmux. Só a frota precisa dele. |
+| `a visual fleet panel is already active` | Um painel por vez | Desmonte o painel atual, ou lance com `--auto` |
+| `a panel holds at most 4 members` | Mais de quatro slugs num painel | Divida em duas rodadas, ou rode os extras com `--auto` |
+| `visual mode is not implemented for the … runtime` | Só o Claude tem vetor interativo aqui | Lance esse runtime com `--auto` |
+| `cmux: could not start cmux within …` | O app não respondeu dentro do timeout de início | Abra o cmux você mesmo; aumente `POWER_CMUX_START_TIMEOUT` em máquina lenta |
+| `no free fleet port slot below 64` | Os 64 slots estão tomados ou com portas em uso | Desmonte membros concluídos, ou mova `fleet.port_base_app` / `fleet.port_base_db` |
 | `cmux: CLI not found` | Não está no `PATH` | `export PWDEV_POWER_CMUX_BIN=/Applications/cmux.app/Contents/Resources/bin/cmux` |
 | `spec must carry exactly one 'Status: APPROVED' field (found 2)` | Uma segunda linha de aprovação, muitas vezes num bloco de exemplo | Deixe apenas um campo de aprovação real |
 | `no .planning/power/config.json; run init first` | Sem workspace | `/pwdev-power:init` |

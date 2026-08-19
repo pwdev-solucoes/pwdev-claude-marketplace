@@ -18,3 +18,12 @@ power_engine_codex_stage_command() {
 }
 
 power_engine_codex_publish_result() { return 0; }
+
+# Visual fleet members are not implemented for this runtime.
+#
+# Declared rather than omitted so the panel fails with a sentence instead of an unbound-function
+# error, and so the gap is visible to anyone reading the engine.
+power_engine_codex_interactive_command() {
+  printf 'visual mode is not implemented for the codex runtime\n' >&2
+  return 2
+}

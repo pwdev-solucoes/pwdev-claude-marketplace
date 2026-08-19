@@ -46,6 +46,8 @@ BRANCH=$(read_field '.branch') || fail 'member record is invalid'
 BASE_BRANCH=$(read_field '.base_branch // ""') || BASE_BRANCH=
 PROJECT_NAME=$(read_field '.project_name') || fail 'member record is invalid'
 WORKSPACE_ID=$(read_field '.cmux_workspace_id // ""') || WORKSPACE_ID=
+SURFACE_ID=$(read_field '.cmux_surface_id // ""') || SURFACE_ID=
+MODE=$(read_field '.mode // "auto"') || MODE=auto
 STATUS=$(read_field '.status') || fail 'member record is invalid'
 
 # ---- merge gate ------------------------------------------------------------------------------
@@ -80,18 +82,64 @@ if [[ -d $WORKTREE && -f $WORKTREE/$COMPOSE_FILE ]]; then
   fi
 fi
 
-# ---- cmux workspace ------------------------------------------------------------------------------
-# Close only the workspace this fleet recorded. A workspace we cannot identify is one we must
-# not touch.
+# ---- cmux ----------------------------------------------------------------------------------------
+# Close only what this fleet recorded, by id. A target we cannot identify is one we must not touch.
+#
+# Panel members share one workspace, so a visual member closes its own surface and leaves the
+# workspace to its siblings. The workspace goes only with the last member out — otherwise tearing
+# down one phase would take the other three with it.
+
+# Count the panel siblings that will still be registered once this member's record is removed.
+panel_siblings_remaining() {
+  local count=0 other
+  shopt -s nullglob
+  for other in "$FLEET_DIR"/*.json; do
+    [[ $other == "$MEMBER_FILE" ]] && continue
+    if jq -e --arg ws "$WORKSPACE_ID" '.cmux_workspace_id == $ws' "$other" >/dev/null 2>&1; then
+      count=$((count + 1))
+    fi
+  done
+  shopt -u nullglob
+  printf '%s' "$count"
+}
 
 if [[ -n $WORKSPACE_ID ]]; then
   if power_cmux_require >/dev/null 2>&1; then
-    if power_cmux_workspace_exists "$WORKSPACE_ID"; then
-      power_cmux_close_workspace "$WORKSPACE_ID" \
-        && printf 'fleet-teardown: cmux workspace closed\n' \
-        || printf 'fleet-teardown: warning: could not close the cmux workspace\n' >&2
+    CLOSE_WORKSPACE=true
+
+    if [[ $MODE == visual && $(panel_siblings_remaining) -gt 0 ]]; then
+      # Siblings are still using this workspace, so only this member's pane may go.
+      CLOSE_WORKSPACE=false
+
+      if [[ -n $SURFACE_ID ]]; then
+        if power_cmux_surface_exists "$SURFACE_ID" "$WORKSPACE_ID"; then
+          power_cmux_close_surface "$SURFACE_ID" "$WORKSPACE_ID" \
+            && printf 'fleet-teardown: cmux pane closed\n' \
+            || printf 'fleet-teardown: warning: could not close the cmux pane\n' >&2
+        else
+          printf 'fleet-teardown: cmux pane already gone\n'
+        fi
+      else
+        # Without a surface id there is nothing narrower to close. Say so rather than closing the
+        # workspace and taking the siblings down as a side effect.
+        printf 'fleet-teardown: warning: member has no recorded pane; leaving the panel alone\n' >&2
+      fi
+    fi
+
+    # The last member out closes the workspace, and the workspace takes its final pane with it.
+    # Closing that pane first is not just redundant, it is refused: cmux answers
+    # `invalid_state: Cannot close the last surface`.
+
+    if [[ $CLOSE_WORKSPACE == true ]]; then
+      if power_cmux_workspace_exists "$WORKSPACE_ID"; then
+        power_cmux_close_workspace "$WORKSPACE_ID" \
+          && printf 'fleet-teardown: cmux workspace closed\n' \
+          || printf 'fleet-teardown: warning: could not close the cmux workspace\n' >&2
+      else
+        printf 'fleet-teardown: cmux workspace already gone\n'
+      fi
     else
-      printf 'fleet-teardown: cmux workspace already gone\n'
+      printf 'fleet-teardown: panel workspace kept for its remaining members\n'
     fi
   else
     printf 'fleet-teardown: cmux is not reachable; leaving its workspace alone\n' >&2
@@ -118,5 +166,5 @@ fi
 
 # ---- member record ------------------------------------------------------------------------------------
 
-rm -f "$MEMBER_FILE" "$PANE_FILE"
+rm -f "$MEMBER_FILE" "$PANE_FILE" "$FLEET_DIR/$SLUG.surface"
 printf 'fleet-teardown: %s torn down\n' "$SLUG"

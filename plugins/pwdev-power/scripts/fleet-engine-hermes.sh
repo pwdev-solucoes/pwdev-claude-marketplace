@@ -22,3 +22,12 @@ power_engine_hermes_stage_command() {
 }
 
 power_engine_hermes_publish_result() { power_publish_bare_json "$1" "$2"; }
+
+# Visual fleet members are not implemented for this runtime.
+#
+# Declared rather than omitted so the panel fails with a sentence instead of an unbound-function
+# error, and so the gap is visible to anyone reading the engine.
+power_engine_hermes_interactive_command() {
+  printf 'visual mode is not implemented for the hermes runtime\n' >&2
+  return 2
+}
