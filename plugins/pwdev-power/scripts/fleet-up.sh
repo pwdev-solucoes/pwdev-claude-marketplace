@@ -23,6 +23,19 @@ RUNTIME=${POWER_FLEET_RUNTIME:-}
 [[ -n $RUNTIME ]] || fail_preflight 'no runtime pinned; launch through <runtime>-fleet-up.sh'
 power_require_runtime "$RUNTIME" || exit 2
 
+# A member is driven either by the autonomous runner or by a human in a panel pane. The mode is
+# recorded because teardown, the dashboard and the runner all need to know which, and guessing
+# from the absence of a status file would make a crashed runner look like a visual member.
+MODE=${POWER_FLEET_MODE:-auto}
+case $MODE in
+  auto|visual) ;;
+  *) fail_preflight "unsupported fleet mode: $MODE" ;;
+esac
+
+# The panel owns the workspace and creates it once for every member, so a deferred member records
+# a null workspace here and the orchestrator fills it in.
+DEFER_WORKSPACE=${POWER_FLEET_DEFER_WORKSPACE:-0}
+
 command -v jq >/dev/null 2>&1 || fail_preflight 'jq is required'
 command -v git >/dev/null 2>&1 || fail_preflight 'git is required'
 
@@ -42,6 +55,7 @@ WORKTREE_PATH=$REPO_PARENT/$REPO_NAME-fleet-$SLUG
 FLEET_DIR=$REPO_ROOT/.planning/power/fleet
 MEMBER_FILE=$FLEET_DIR/$SLUG.json
 PANE_FILE=$FLEET_DIR/$SLUG.pane.sh
+SURFACE_FILE=$FLEET_DIR/$SLUG.surface
 FEATURE_REL=.planning/power/features/$SLUG
 FEATURE_DIR=$REPO_ROOT/$FEATURE_REL
 CONFIG=$REPO_ROOT/.planning/power/config.json
@@ -96,7 +110,7 @@ require_absent "$WORKTREE_PATH" || fail_preflight "worktree destination already 
 ! git cat-file -e "HEAD:$ENV_FILE" 2>/dev/null || fail_preflight "generated fleet environment already tracked: $ENV_FILE"
 [[ -f $TEMPLATE ]] || fail_preflight "missing packaged compose template: $TEMPLATE"
 
-power_cmux_require || fail_preflight 'cmux is required for a fleet'
+power_cmux_require --start || fail_preflight 'cmux is required for a fleet'
 
 # Fleet configuration, defaults-first so every existing known or unknown field wins.
 FLEET_DEFAULTS='{"port_base_app":3000,"port_base_db":5432,"port_step":10,"permission_mode":"danger-full-access","auto_simplify":false,"compose_file":"docker-compose.power-fleet.yml"}'
@@ -139,7 +153,7 @@ recover() {
     git worktree prune >/dev/null 2>&1
     git branch -D "$BRANCH" >/dev/null 2>&1
   fi
-  rm -f "$MEMBER_FILE" "$PANE_FILE"
+  rm -f "$MEMBER_FILE" "$PANE_FILE" "$SURFACE_FILE"
   if [[ $LOCK_HELD == true ]]; then rmdir "$LOCK_DIR" >/dev/null 2>&1; fi
   exit "$code"
 }
@@ -159,38 +173,62 @@ trap 'recover 1 "interrupted during provisioning"' HUP INT TERM
 
 # First free slot, not an incrementing counter: teardown must release a slot for reuse.
 INDEX=0
-while :; do
-  slot_used=false
+# A slot is free only when its index is unclaimed, its ports are in range, they collide with no
+# member's, and neither answers a live probe. All four are checked *inside the search*, so a port
+# the host already uses advances to the next slot instead of aborting the launch. The human's own
+# Postgres on 5432 is not a reason to refuse a fleet.
+#
+# Returns 0 free, 1 taken, 2 a member record is malformed — which must stop the launch, not be
+# skipped over as if the slot were merely busy.
+MALFORMED_MEMBER=
+slot_is_free() {
+  local index=$1 app db member member_index member_app member_db
+  app=$((PORT_BASE_APP + PORT_STEP * index))
+  db=$((PORT_BASE_DB + PORT_STEP * index))
+
+  (( app >= 1 && app <= 65535 && db >= 1 && db <= 65535 && app != db )) || return 1
+
   shopt -s nullglob
   for member in "$FLEET_DIR"/*.json; do
     member_index=$(jq -er '.port_index' "$member" 2>/dev/null) \
-      || recover 2 "malformed fleet member: ${member##*/}"
-    [[ $member_index == "$INDEX" ]] && { slot_used=true; break; }
+      || { MALFORMED_MEMBER=${member##*/}; shopt -u nullglob; return 2; }
+    member_app=$(jq -er '.app_port' "$member" 2>/dev/null) \
+      || { MALFORMED_MEMBER=${member##*/}; shopt -u nullglob; return 2; }
+    member_db=$(jq -er '.db_port' "$member" 2>/dev/null) \
+      || { MALFORMED_MEMBER=${member##*/}; shopt -u nullglob; return 2; }
+    if [[ $member_index == "$index" ]] \
+       || [[ $app == "$member_app" || $app == "$member_db" ]] \
+       || [[ $db == "$member_app" || $db == "$member_db" ]]; then
+      shopt -u nullglob
+      return 1
+    fi
   done
   shopt -u nullglob
-  [[ $slot_used == false ]] && break
+
+  # The probe last: it is the most expensive check and the only racy one. A port free now can be
+  # taken before Docker binds it, and Docker fails loudly when that happens — which is the right
+  # place for that failure to surface, not here.
+  port_in_use "$app" && return 1
+  port_in_use "$db" && return 1
+  return 0
+}
+
+while :; do
+  # Captured through `||` rather than read from $? after an && list: under `set -e` the difference
+  # between "slot busy" and "record malformed" must not depend on how bash scopes the exemption.
+  slot_status=0
+  slot_is_free "$INDEX" || slot_status=$?
+  case $slot_status in
+    0) break ;;
+    2) recover 2 "malformed fleet member: $MALFORMED_MEMBER" ;;
+  esac
   INDEX=$((INDEX + 1))
-  [[ $INDEX -lt 64 ]] || recover 2 'no free fleet port slot below 64'
+  [[ $INDEX -lt 64 ]] \
+    || recover 2 'no free fleet port slot below 64: every slot is claimed or its ports are in use'
 done
 
 APP_PORT=$((PORT_BASE_APP + PORT_STEP * INDEX))
 DB_PORT=$((PORT_BASE_DB + PORT_STEP * INDEX))
-
-(( APP_PORT >= 1 && APP_PORT <= 65535 && DB_PORT >= 1 && DB_PORT <= 65535 && APP_PORT != DB_PORT )) \
-  || recover 2 'allocated ports are invalid or overlapping'
-
-shopt -s nullglob
-for member in "$FLEET_DIR"/*.json; do
-  member_app=$(jq -er '.app_port' "$member" 2>/dev/null) || recover 2 "malformed fleet member: ${member##*/}"
-  member_db=$(jq -er '.db_port' "$member" 2>/dev/null) || recover 2 "malformed fleet member: ${member##*/}"
-  if [[ $APP_PORT == "$member_app" || $APP_PORT == "$member_db" || $DB_PORT == "$member_app" || $DB_PORT == "$member_db" ]]; then
-    recover 2 "allocated ports collide with member ${member##*/}"
-  fi
-done
-shopt -u nullglob
-
-port_in_use "$APP_PORT" && recover 2 "app port is already occupied: $APP_PORT"
-port_in_use "$DB_PORT" && recover 2 "database port is already occupied: $DB_PORT"
 
 # ---- contracts ---------------------------------------------------------------------------
 # Hash the exact approved working-tree bytes, not HEAD bytes: an approved spec is frequently
@@ -272,20 +310,50 @@ STACK_UP=true
 # The runner is reached through a shell-quoted file, never typed into a shell. That removes the
 # entire class of injection and timing bugs that sending keystrokes invites.
 
-RUNNER=$SCRIPT_DIR/$RUNTIME-fleet-run.sh
-[[ -f $RUNNER ]] || recover 2 "missing runtime runner: $RUNNER"
-printf '#!/usr/bin/env bash\nexec %q %q %q %q\n' \
-  "$RUNNER" "$SLUG" "$WORKTREE_PATH" danger-full-access >"$PANE_FILE" \
-  || recover 2 'cannot write pane command'
+if [[ $MODE == auto ]]; then
+  RUNNER=$SCRIPT_DIR/$RUNTIME-fleet-run.sh
+  [[ -f $RUNNER ]] || recover 2 "missing runtime runner: $RUNNER"
+  printf '#!/usr/bin/env bash\nexec %q %q %q %q\n' \
+    "$RUNNER" "$SLUG" "$WORKTREE_PATH" danger-full-access >"$PANE_FILE" \
+    || recover 2 'cannot write pane command'
+else
+  # Only the engine may name the provider or add a permission flag, so the command is built there
+  # and quoted into the file here.
+  ENGINE=$SCRIPT_DIR/fleet-engine-$RUNTIME.sh
+  [[ -f $ENGINE ]] || recover 2 "missing runtime engine: $ENGINE"
+  # shellcheck source=/dev/null
+  source "$ENGINE"
+  FLOW_ENGINE_COMMAND=()
+  "power_engine_${RUNTIME}_interactive_command" "$SLUG" "$FEATURE_REL" \
+    || recover 2 "visual mode is not implemented for the $RUNTIME runtime"
+  [[ ${#FLOW_ENGINE_COMMAND[@]} -gt 0 ]] || recover 2 'engine produced no interactive command'
+
+  # The pane records its own surface id before handing the terminal over. cmux auto-sets
+  # CMUX_SURFACE_ID in every terminal it owns, and self-registration is ground truth: pairing
+  # panes to slugs by index is a guess that goes wrong the moment layout order and creation order
+  # disagree.
+  {
+    printf '#!/usr/bin/env bash\n'
+    printf 'if [[ -n ${CMUX_SURFACE_ID:-} ]]; then printf %%s "$CMUX_SURFACE_ID" >%q; fi\n' "$SURFACE_FILE"
+    printf 'cd %q || exit 1\n' "$WORKTREE_PATH"
+    printf 'exec'
+    printf ' %q' "${FLOW_ENGINE_COMMAND[@]}"
+    printf '\n'
+  } >"$PANE_FILE" || recover 2 'cannot write pane command'
+fi
 chmod 700 "$PANE_FILE"
 
 # ---- cmux workspace ------------------------------------------------------------------------
 
-CMUX_WORKSPACE_ID=$(power_cmux_new_workspace \
-  "power-fleet:$SLUG" "$WORKTREE_PATH" "bash $PANE_FILE") \
-  || recover 2 'cannot create the cmux workspace'
-[[ -n $CMUX_WORKSPACE_ID ]] || recover 2 'cmux did not return a workspace id'
-power_cmux_status "$CMUX_WORKSPACE_ID" "$SLUG queued"
+if [[ $DEFER_WORKSPACE == 1 ]]; then
+  printf 'fleet-up: %s provisioned; the panel owns its workspace\n' "$SLUG"
+else
+  CMUX_WORKSPACE_ID=$(power_cmux_new_workspace \
+    "power-fleet:$SLUG" "$WORKTREE_PATH" "bash $PANE_FILE") \
+    || recover 2 'cannot create the cmux workspace'
+  [[ -n $CMUX_WORKSPACE_ID ]] || recover 2 'cmux did not return a workspace id'
+  power_cmux_status "$CMUX_WORKSPACE_ID" "$SLUG queued"
+fi
 
 # ---- member record -------------------------------------------------------------------------
 
@@ -300,6 +368,7 @@ jq -n \
   --arg worktree "$WORKTREE_PATH" \
   --arg project "$PROJECT_NAME" \
   --arg workspace "$CMUX_WORKSPACE_ID" \
+  --arg mode "$MODE" \
   --arg spec "$SPEC_SHA" \
   --arg plan "$PLAN_SHA" \
   --arg created "$NOW" \
@@ -307,7 +376,7 @@ jq -n \
   --argjson db "$DB_PORT" \
   --argjson index "$INDEX" \
   '{
-     schema_version: 1,
+     schema_version: 2,
      slug: $slug,
      runtime: $runtime,
      branch: $branch,
@@ -315,7 +384,9 @@ jq -n \
      base_commit: $base_commit,
      worktree_path: $worktree,
      project_name: $project,
-     cmux_workspace_id: $workspace,
+     mode: $mode,
+     cmux_workspace_id: (if $workspace == "" then null else $workspace end),
+     cmux_surface_id: null,
      app_port: $app,
      db_port: $db,
      port_index: $index,

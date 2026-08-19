@@ -74,6 +74,7 @@ SOURCED_SCRIPTS = {
 EXPECTED_SCRIPTS = {
     "audit-hook.sh",
     "audit-log.sh",
+    "claude-fleet-panel.sh",
     "claude-fleet-run.sh",
     "claude-fleet-up.sh",
     "cmux-common.sh",
@@ -85,6 +86,7 @@ EXPECTED_SCRIPTS = {
     "fleet-engine-codex.sh",
     "fleet-engine-hermes.sh",
     "fleet-launch-core.sh",
+    "fleet-panel-up.sh",
     "fleet-run.sh",
     "fleet-teardown.sh",
     "fleet-up.sh",
@@ -767,6 +769,378 @@ class TestHermesSkillCatalogue(unittest.TestCase):
     def test_the_constraint_is_documented_where_skill_authors_look(self):
         runtime = (PLUGIN / "references" / "runtime.md").read_text(encoding="utf-8")
         self.assertIn("silently drops any skill", runtime)
+
+
+class TestCmuxWorkspaceIdentity(unittest.TestCase):
+    """`power_cmux_new_workspace` must yield a UUID whatever shape cmux answers in.
+
+    cmux 0.64.22 ignores --json and --id-format on new-workspace and answers "OK workspace:12".
+    The original implementation piped that straight into `jq -er`, so every fleet launch died at
+    its first workspace — and died *after* cmux had already created one, leaving an orphan in
+    the sidebar with no recorded id to close it by.
+
+    These tests stub the CLI instead of driving a real cmux: the contract under test is how the
+    function reads an answer, not whether an app is installed.
+    """
+
+    UUID = "18CE17C3-6CC5-4651-B92D-9DB92D358A8D"
+
+    def run_with_stub(self, new_workspace_stdout, *, list_json=None):
+        """Source cmux-common.sh against a fake cmux and return the CompletedProcess."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            socket_path = tmp / "cmux.sock"
+            # power_cmux_require insists on a real socket file, so bind a real one.
+            import socket as socketlib
+
+            sock = socketlib.socket(socketlib.AF_UNIX, socketlib.SOCK_STREAM)
+            sock.bind(str(socket_path))
+            try:
+                if list_json is None:
+                    list_json = json.dumps(
+                        {"workspaces": [{"ref": "workspace:12", "id": self.UUID}]}
+                    )
+                stub = tmp / "cmux"
+                stub.write_text(
+                    "#!/usr/bin/env bash\n"
+                    'for a in "$@"; do\n'
+                    '  case $a in\n'
+                    "    ping) echo PONG; exit 0 ;;\n"
+                    f"    new-workspace) cat <<'EOF'\n{new_workspace_stdout}\nEOF\n"
+                    "      exit 0 ;;\n"
+                    f"    list-workspaces) cat <<'EOF'\n{list_json}\nEOF\n"
+                    "      exit 0 ;;\n"
+                    "  esac\n"
+                    "done\n"
+                    "exit 0\n",
+                    encoding="utf-8",
+                )
+                stub.chmod(0o755)
+                script = (
+                    f'source "{SCRIPTS}/cmux-common.sh"; '
+                    "power_cmux_require || exit 9; "
+                    'power_cmux_new_workspace "power-fleet:slug" "/tmp" "true"'
+                )
+                return subprocess.run(
+                    ["bash", "-c", script],
+                    capture_output=True,
+                    text=True,
+                    env={
+                        **os.environ,
+                        "PWDEV_POWER_CMUX_BIN": str(stub),
+                        "CMUX_SOCKET_PATH": str(socket_path),
+                    },
+                )
+            finally:
+                sock.close()
+
+    def test_resolves_the_uuid_from_a_bare_ok_ref(self):
+        # The shape cmux 0.64.22 actually emits.
+        result = self.run_with_stub("OK workspace:12")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), self.UUID)
+
+    def test_still_prefers_json_when_a_build_honours_the_flags(self):
+        result = self.run_with_stub(json.dumps({"workspace_id": self.UUID}))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), self.UUID)
+
+    def test_fails_loudly_when_no_id_can_be_established(self):
+        # A ref that resolves to nothing must fail, never print a ref as if it were an id:
+        # teardown closes by id, and "close only what I created" is only provable against one.
+        result = self.run_with_stub("OK workspace:12", list_json=json.dumps({"workspaces": []}))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stdout.strip(), "")
+
+    def test_never_reintroduces_the_unguarded_jq_pipe(self):
+        text = (SCRIPTS / "cmux-common.sh").read_text(encoding="utf-8")
+        self.assertIn("power_cmux_resolve_workspace_ref", text)
+        self.assertIn("workspace:[0-9][0-9]*", text)
+
+
+class TestVisualPanel(unittest.TestCase):
+    """The panel is 1-4 members in one workspace, and the bounds are the contract.
+
+    Four panes is where a grid stops being readable, and one panel at a time is what keeps the
+    plugin from ever having to grow a live panel by typing a privileged command into a running
+    shell. Both limits are refused at the door, before any worktree exists.
+    """
+
+    def panel(self, *slugs, cwd=None, runtime="claude"):
+        return subprocess.run(
+            ["bash", str(SCRIPTS / "fleet-panel-up.sh"), *slugs],
+            capture_output=True,
+            text=True,
+            cwd=cwd or str(ROOT),
+            env={**os.environ, "POWER_FLEET_RUNTIME": runtime},
+        )
+
+    def test_zero_slugs_is_refused(self):
+        result = self.panel()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("at least one slug is required", result.stderr)
+
+    def test_five_slugs_is_refused(self):
+        result = self.panel("a", "b", "c", "d", "e")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("a panel holds at most 4 members", result.stderr)
+
+    def test_a_repeated_slug_is_refused_before_anything_is_provisioned(self):
+        # Otherwise the first member builds a worktree and the second collides with it.
+        result = self.panel("a", "a")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("more than once", result.stderr)
+
+    def test_runtime_must_be_pinned_by_a_wrapper(self):
+        result = subprocess.run(
+            ["bash", str(SCRIPTS / "fleet-panel-up.sh"), "a"],
+            capture_output=True,
+            text=True,
+            cwd=str(ROOT),
+            env={k: v for k, v in os.environ.items() if k != "POWER_FLEET_RUNTIME"},
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("no runtime pinned", result.stderr)
+
+    def test_only_the_claude_engine_names_the_interactive_vector(self):
+        # The same architectural lock the autonomous vector already has: one file may name the
+        # provider and its permission flag, so there is one place to audit.
+        engine = (SCRIPTS / "fleet-engine-claude.sh").read_text(encoding="utf-8")
+        self.assertIn("--dangerously-skip-permissions", engine)
+        for script in ("fleet-panel-up.sh", "claude-fleet-panel.sh", "fleet-up.sh"):
+            text = (SCRIPTS / script).read_text(encoding="utf-8")
+            self.assertNotIn(
+                "--dangerously-skip-permissions",
+                text,
+                f"{script} names a permission flag; only fleet-engine-*.sh may",
+            )
+
+    def test_the_interactive_vector_is_not_the_print_vector(self):
+        script = (
+            f'source "{SCRIPTS}/fleet-engine-claude.sh"; '
+            "power_engine_claude_interactive_command demo .planning/power/features/demo; "
+            'printf "%s\n" "${FLOW_ENGINE_COMMAND[@]}"'
+        )
+        out = subprocess.run(["bash", "-c", script], capture_output=True, text=True, check=True)
+        lines = out.stdout.splitlines()
+        self.assertEqual(lines[0], "claude")
+        self.assertIn("--dangerously-skip-permissions", lines)
+        self.assertNotIn("-p", lines, "the visual vector must not be the non-interactive one")
+        self.assertNotIn("--output-format", lines)
+        # The brief points at the contract rather than embedding it: argv has a limit.
+        self.assertIn("spec.md", lines[-1])
+        self.assertIn("plan.md", lines[-1])
+
+    def test_other_runtimes_refuse_visual_mode_in_a_sentence(self):
+        for runtime in ("codex", "hermes"):
+            script = (
+                f'source "{SCRIPTS}/fleet-engine-{runtime}.sh"; '
+                f"power_engine_{runtime}_interactive_command demo dir"
+            )
+            result = subprocess.run(["bash", "-c", script], capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn(
+                f"visual mode is not implemented for the {runtime} runtime", result.stderr
+            )
+
+    def test_panes_self_register_rather_than_being_matched_by_index(self):
+        # Layout order and pane order agreeing is an assumption; CMUX_SURFACE_ID is a fact.
+        up = (SCRIPTS / "fleet-up.sh").read_text(encoding="utf-8")
+        self.assertIn("CMUX_SURFACE_ID", up)
+        panel = (SCRIPTS / "fleet-panel-up.sh").read_text(encoding="utf-8")
+        self.assertIn(".surface", panel)
+
+    def test_the_panel_is_built_in_one_call_not_grown_by_splitting(self):
+        panel = (SCRIPTS / "fleet-panel-up.sh").read_text(encoding="utf-8")
+        self.assertIn("power_cmux_new_workspace_layout", panel)
+        # Comments stripped: the prohibition is on what the script *does*, and the script is
+        # entitled to explain in prose why it does not do it.
+        code = "\n".join(
+            line for line in panel.splitlines() if not line.lstrip().startswith("#")
+        )
+        for forbidden in ("new-split", "power_cmux send", "send-key"):
+            self.assertNotIn(
+                forbidden,
+                code,
+                f"the panel must not reach for {forbidden}; a privileged command "
+                "belongs in a shell-quoted file, not typed into a live shell",
+            )
+
+
+class TestPanelTeardown(unittest.TestCase):
+    """A panel member closes its own pane. The workspace goes with the last member out."""
+
+    def teardown_text(self):
+        return (SCRIPTS / "fleet-teardown.sh").read_text(encoding="utf-8")
+
+    def test_a_visual_member_closes_its_surface(self):
+        text = self.teardown_text()
+        self.assertIn("power_cmux_close_surface", text)
+        self.assertIn("cmux_surface_id", text)
+
+    def test_the_workspace_survives_while_siblings_remain(self):
+        text = self.teardown_text()
+        self.assertIn("panel_siblings_remaining", text)
+        self.assertIn("CLOSE_WORKSPACE=false", text)
+
+    def test_a_member_without_a_recorded_pane_is_left_alone(self):
+        # Closing the workspace instead would take every sibling down as a side effect.
+        self.assertIn("leaving the panel alone", self.teardown_text())
+
+    def test_the_last_member_does_not_try_to_close_its_pane_first(self):
+        """cmux refuses it: `invalid_state: Cannot close the last surface`.
+
+        Found live, not by reading: the first version closed the surface and then the workspace,
+        which worked for every member except the one that mattered. The pane close is now inside
+        the sibling branch, so the last member goes straight to the workspace.
+        """
+        text = self.teardown_text()
+        sibling_branch = text.split("panel_siblings_remaining) -gt 0 ]]; then", 1)[1]
+        sibling_branch = sibling_branch.split("# The last member out", 1)[0]
+        self.assertIn("power_cmux_close_surface", sibling_branch)
+        self.assertIn("Cannot close the last surface", text)
+
+    def test_closing_a_surface_passes_the_workspace(self):
+        """cmux rejects an explicit --surface without --workspace or --window.
+
+        Also found live. The call looked right and failed silently into a warning, which is the
+        worst shape a bug can take: the pane stayed open and the teardown reported success.
+        """
+        common = (SCRIPTS / "cmux-common.sh").read_text(encoding="utf-8")
+        body = common.split("power_cmux_close_surface() {", 1)[1].split("}", 1)[0]
+        self.assertIn("--workspace", body)
+        self.assertIn("--surface", body)
+
+
+class TestMemberRecordSchema(unittest.TestCase):
+    """Mode is recorded, never inferred from the absence of a runner status file."""
+
+    def test_the_record_carries_mode_and_surface_at_schema_2(self):
+        up = (SCRIPTS / "fleet-up.sh").read_text(encoding="utf-8")
+        self.assertIn("schema_version: 2", up)
+        self.assertIn("mode: $mode", up)
+        self.assertIn("cmux_surface_id", up)
+
+    def test_an_unsupported_mode_is_refused(self):
+        self.assertIn("unsupported fleet mode", (SCRIPTS / "fleet-up.sh").read_text(encoding="utf-8"))
+
+    def test_the_dashboard_tolerates_a_record_written_before_panels(self):
+        # A schema-1 member has no mode field; it must still render, not vanish.
+        dashboard = (SCRIPTS / "fleet-dashboard.sh").read_text(encoding="utf-8")
+        self.assertIn('(.mode // "auto")', dashboard)
+
+    def test_the_dashboard_explains_a_visual_member_rather_than_calling_it_unavailable(self):
+        dashboard = (SCRIPTS / "fleet-dashboard.sh").read_text(encoding="utf-8")
+        self.assertIn("driven by a human in a panel pane", dashboard)
+
+
+class TestPortSlotAllocation(unittest.TestCase):
+    """An occupied host port advances the slot; it does not refuse the launch.
+
+    The old shape picked a slot from the member records alone, computed its ports, and only then
+    probed them — so anyone running Postgres on 5432 could not start a fleet at all, on a machine
+    with sixty-three free slots. The probe now lives inside the search.
+    """
+
+    # Extracted from fleet-up.sh so the allocator can be exercised without provisioning anything.
+    def allocation_harness(self, members, occupied, base_app=13000, base_db=15432, step=10):
+        up = (SCRIPTS / "fleet-up.sh").read_text(encoding="utf-8")
+        logic = up.split("MALFORMED_MEMBER=\n", 1)[1]
+        logic = "MALFORMED_MEMBER=\n" + logic.split("\nAPP_PORT=", 1)[0]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            fleet_dir = Path(tmp) / "fleet"
+            fleet_dir.mkdir()
+            for name, record in members.items():
+                (fleet_dir / f"{name}.json").write_text(json.dumps(record), encoding="utf-8")
+
+            sockets = []
+            try:
+                import socket as socketlib
+
+                for port in occupied:
+                    sock = socketlib.socket()
+                    sock.setsockopt(socketlib.SOL_SOCKET, socketlib.SO_REUSEADDR, 1)
+                    sock.bind(("127.0.0.1", port))
+                    sock.listen(1)
+                    sockets.append(sock)
+
+                script = f"""
+set -Eeuo pipefail
+FLEET_DIR={fleet_dir}
+PORT_BASE_APP={base_app}; PORT_BASE_DB={base_db}; PORT_STEP={step}; INDEX=0
+port_in_use() {{ (: >/dev/tcp/127.0.0.1/"$1") >/dev/null 2>&1; }}
+recover() {{ printf 'RECOVER %s\\n' "$2"; exit "$1"; }}
+{logic}
+printf '%s\\n' "$INDEX"
+"""
+                return subprocess.run(
+                    ["bash", "-c", script], capture_output=True, text=True
+                )
+            finally:
+                for sock in sockets:
+                    sock.close()
+
+    def test_an_occupied_port_advances_to_the_next_slot(self):
+        result = self.allocation_harness(members={}, occupied=[15432])
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout.strip(), "1", "slot 0's db port was taken; slot 1 is free")
+
+    def test_a_registered_member_still_reserves_its_slot(self):
+        members = {"taken": {"port_index": 0, "app_port": 13000, "db_port": 15432}}
+        result = self.allocation_harness(members=members, occupied=[])
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout.strip(), "1")
+
+    def test_both_reasons_compose(self):
+        # Slot 0 blocked by a live port, slot 1 by a member: the answer is 2, not a failure.
+        members = {"taken": {"port_index": 1, "app_port": 13010, "db_port": 15442}}
+        result = self.allocation_harness(members=members, occupied=[13000])
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout.strip(), "2")
+
+    def test_a_malformed_member_stops_the_launch_instead_of_being_skipped(self):
+        members = {"broken": {"slug": "broken"}}
+        result = self.allocation_harness(members=members, occupied=[])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("malformed fleet member", result.stdout)
+
+
+class TestCmuxStart(unittest.TestCase):
+    """cmux can be started from the CLI, but only by a launch path, and only out loud."""
+
+    def common_text(self):
+        return (SCRIPTS / "cmux-common.sh").read_text(encoding="utf-8")
+
+    def test_starting_is_opt_in_per_call(self):
+        text = self.common_text()
+        self.assertIn("power_cmux_start", text)
+        self.assertIn("--start", text)
+        self.assertIn("POWER_CMUX_NO_AUTOSTART", text)
+
+    def test_only_launch_paths_ask_for_a_start(self):
+        # Starting a GUI app in order to close a workspace would be absurd, and the dashboard is
+        # a read-only status line.
+        for script in ("fleet-up.sh", "fleet-panel-up.sh"):
+            text = (SCRIPTS / script).read_text(encoding="utf-8")
+            self.assertIn("power_cmux_require --start", text, f"{script} should start cmux")
+        for script in ("fleet-teardown.sh", "fleet-run.sh", "kanban-bridge.sh"):
+            text = (SCRIPTS / script).read_text(encoding="utf-8")
+            self.assertNotIn(
+                "power_cmux_require --start",
+                text,
+                f"{script} must not start cmux; it is not a launch path",
+            )
+
+    def test_the_socket_is_re_resolved_while_waiting(self):
+        # A restart can move the socket, so caching the pre-start path would wait forever on a
+        # file that is never going to appear.
+        body = self.common_text().split("power_cmux_start() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn("power_cmux_alive", body)
+        self.assertIn("POWER_CMUX_START_TIMEOUT", body)
+
+    def test_a_start_that_never_answers_is_reported_not_assumed(self):
+        self.assertIn("could not start cmux within", self.common_text())
 
 
 if __name__ == "__main__":

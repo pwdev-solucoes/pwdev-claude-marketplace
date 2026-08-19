@@ -14,6 +14,21 @@ power_engine_claude_stage_command() {
     --output-format json "$4")
 }
 
+# The interactive vector, for a visual fleet member.
+#
+# `claude [prompt]` starts an interactive session and submits the prompt: no -p, no
+# --output-format, because nothing parses this session's output — a human reads it. The
+# permission flag stays, and so does the acknowledgement gate that guards it: a human watching a
+# pane is not the same as a human approving a tool call.
+#
+# The brief points at the contract instead of embedding it. spec.md and plan.md can be long,
+# argv cannot, and the session can read files perfectly well on its own.
+power_engine_claude_interactive_command() {
+  # $1 slug  $2 feature-dir-relative
+  FLOW_ENGINE_COMMAND=(claude --dangerously-skip-permissions
+    "You are the pwdev-power fleet member for phase '$1'. Your contract is $2/spec.md and $2/plan.md, in this worktree. Read both before doing anything, then implement the plan task by task. Stay inside this worktree. Ask me before anything the plan does not cover.")
+}
+
 # claude -p --output-format json wraps the answer in an envelope. Unwrap it, strip a fence the
 # model may have added, and fail closed: any failure leaves the result file empty and the
 # runner rejects the stage.
