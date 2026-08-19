@@ -27,7 +27,7 @@
       "name": "pwdev-code",
       "displayName": "PWDEV Code — Spec-Driven Development",
       "source": "./plugins/pwdev-code",
-      "description": "Spec-driven development framework v2.3 — 8 real subagents (incl. advisor), per-task model routing, curated memory graph, opt-in parallel waves, external CLI delegation (Codex/OpenCode/Kimi/Gemini/Kiro), simplification pass, strict verify, audit hooks, 22 commands",
+      "description": "Spec-driven development framework v2.4 — 8 real subagents (incl. advisor), per-task model routing, curated memory graph, opt-in parallel waves, external CLI delegation (Codex/OpenCode/Kimi/Gemini/Kiro), simplification pass, strict verify, audit hooks, 23 commands",
       "category": "workflow",
       "tags": ["sdd", "agents", "hooks", "workflow"],
       "strict": true
