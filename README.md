@@ -19,7 +19,8 @@ Core philosophy across all plugins:
 ### PWDEV Power — triple runtime
 
 `pwdev-power` runs the same approval-gated skills on Claude Code, Codex **and
-Hermes Agent**, with isolated autonomous fleets on **cmux** instead of tmux.
+Hermes Agent**, with isolated fleets on **cmux** instead of tmux — watched
+side by side in a visual panel, or left to run unattended.
 
 It pairs a product layer — requirement, then a Phase→Epic→Feature→Task roadmap
 with traceability — with subagent-driven execution: a durable ledger, one brief
@@ -59,6 +60,29 @@ Commands: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 ---
 
 ## What's New
+
+### Visual fleet panels and resumable members — pwdev-power
+
+`/pwdev-power:fleet` now opens a **visual cmux panel** by default: one pane per
+approved phase, each an interactive session in its own worktree already reading
+that phase's spec and plan, up to four at a time. `--auto` still runs the
+unattended fleet. The acknowledgement of the dangerous flag is required in both
+— watching a session is not approving what it does between your glances.
+
+A member that stopped mid-flight no longer has to start over. `--resume` re-runs
+the stage its runner status records, skips the ones already done, and restores
+the correction-cycle count so the fix loop continues instead of restarting at
+zero. It is also the only thing that may restart a member parked at
+`NEEDS_HUMAN`: that status asks for a human to look, and the flag is the human
+saying they did.
+
+Two contract fixes came with it, both found by running a real member end to end.
+The plan stage is now guarded by `spec.md` alone, so writing `plan.md` no longer
+invalidates the binding the member was launched under. And the 500-character cap
+on result messages is stated in the prose contract the claude and hermes
+runtimes read, instead of only being enforced after the fact — deviations that
+carry no information are repaired rather than failing a stage that already
+committed its work.
 
 ### Three runtimes and cmux fleets — pwdev-power v0.1.0
 
@@ -210,8 +234,8 @@ The five original plugins were rebuilt on the modern Claude Code plugin system.
 | Plugin | Description | Version | License |
 |--------|-------------|:-------:|:-------:|
 | [**pwdev-flow**](./plugins/pwdev-flow/) | Portable spec-driven development for Claude Code **and** Codex — one `.planning/flow` contract, 17 commands, semantic opt-in audit, guarded external CLI delegation, isolated native fleets (`claude -p` / `codex exec`) | 0.6.0 | Apache-2.0 |
-| [**pwdev-power**](./plugins/pwdev-power/) | Disciplined spec-driven development for Claude Code, Codex **and** Hermes Agent — brainstorm gate, plans with verbatim constraints, subagent-driven execution with a ledger and bounded fix loop, adversarial verification, codebase map, isolated cmux fleets | 0.1.0 | Apache-2.0 |
-| [**pwdev-code**](./plugins/pwdev-code/) | Spec-driven development — 8 real subagents (incl. advisor), per-task model routing, memory graph, opt-in parallel waves, external CLI delegation (Codex/OpenCode/Kimi/Gemini/Kiro), 22 commands | 2.4.0 | Apache-2.0 |
+| [**pwdev-power**](./plugins/pwdev-power/) | Disciplined spec-driven development for Claude Code, Codex **and** Hermes Agent — brainstorm gate, plans with verbatim constraints, subagent-driven execution with a ledger and bounded fix loop, adversarial verification, codebase map, isolated cmux fleets as a visual panel or unattended | 0.1.0 | Apache-2.0 |
+| [**pwdev-code**](./plugins/pwdev-code/) | Spec-driven development — 8 real subagents (incl. advisor), per-task model routing, memory graph, opt-in parallel waves, external CLI delegation (Codex/OpenCode/Kimi/Gemini/Kiro), 23 commands | 2.4.0 | Apache-2.0 |
 | [**pwdev-uiux**](./plugins/pwdev-uiux/) | UI/UX engineering — 6 real subagents, 5-phase workflow with gates, Figma, WCAG 2.1 AA | 2.0.1 | Apache-2.0 |
 | [**pwdev-feat**](./plugins/pwdev-feat/) | Simplified feature development — PWDEVIA 7-question plans inline + executor and advisor subagents | 2.1.1 | Apache-2.0 |
 | [**pwdev-prd**](./plugins/pwdev-prd/) | Interview-driven PRD creation — 12-step inline interview, Markdown + canonical JSON | 2.0.1 | Apache-2.0 |
@@ -252,6 +276,22 @@ exactly one adapter per runtime; the runtime is fixed by the launcher chosen
 before any mutation, and a runner whose adapter disagrees refuses to start. With
 Hermes present, approved phases can also be dispatched through its Kanban board.
 
+Fleets are how several approved phases run at once, and how you watch them is
+the choice. `/pwdev-power:fleet` opens a **visual cmux panel** by default — one
+pane per phase, each an interactive session in its own worktree already reading
+that phase's spec and plan, one to four members, one panel at a time. `--auto`
+runs the unattended fleet instead, driving `plan → execute → review → verify` on
+its own and reporting through the sidebar. Watching is not approving: both
+vectors run with permissions bypassed, so both require you to acknowledge the
+dangerous flag before anything launches. A member that stopped mid-flight
+resumes with `--resume`, re-running the stage its runner status records rather
+than starting over — and that flag is also the only thing that may restart a
+member parked at `NEEDS_HUMAN`.
+
+**Subagents:** mapper, roadmap, implementer, task-reviewer, verifier
+
+**Ships:** 7 commands · 5 subagents · 14 skills · hooks
+
 See the [full plugin documentation](./plugins/pwdev-power/README.md).
 
 ### pwdev-flow
@@ -274,6 +314,8 @@ vectors are built in separate adapters and can never turn into one another.
 semantic, opt-in JSONL log written only after an action actually happened, so it
 stays meaningful in both hosts instead of being host-specific telemetry.
 
+**Ships:** 17 commands · 17 skills · no subagents, no hooks, no MCP
+
 See the [full plugin documentation](./plugins/pwdev-flow/README.md).
 
 ### pwdev-code
@@ -289,6 +331,8 @@ PRD ─▶ ROADMAP ─▶ DISCOVER ─▶ DESIGN ─▶ PLAN ─▶ EXECUTE ─�
 
 **Subagents:** executor, advisor, simplifier, code-reviewer, qa, adversarial verifier, researcher, roadmap
 **Inline personas:** interviewer, architect, planner, product manager, quick engineer
+
+**Ships:** 23 commands · 8 subagents · 2 skills · hooks
 
 See the [full plugin documentation](./plugins/pwdev-code/README.md).
 
@@ -306,6 +350,8 @@ UNDERSTAND ─▶ STRUCTURE ─▶ IMPLEMENT ─▶ REVIEW ─▶ HANDOFF
 
 **Key features:** Figma MCP integration, WCAG 2.1 AA auditing, 7-axis UX review, project-specific contextual skills
 
+**Ships:** 13 commands · 6 subagents · 10 skills · hooks
+
 See the [full plugin documentation](./plugins/pwdev-uiux/README.md).
 
 ### pwdev-feat
@@ -319,6 +365,8 @@ Describe ─▶ Plan (PWDEVIA, inline) ─▶ Execute (real subagent, IMPLEMENT/
 **Agents:** PWDEVIA (inline planner) + executor and advisor (real subagents); reads pwdev-code's curated project memory when present
 
 **Plan types:** Feature, Backend, Frontend, Test, Review, Quick
+
+**Ships:** 12 commands · 2 subagents · hooks
 
 See the [full plugin documentation](./plugins/pwdev-feat/README.md).
 
@@ -334,6 +382,8 @@ Interview (12 steps) ─▶ PRD.md ─▶ Export (JSON / GitHub Issue)
 
 **Outputs:** Structured PRD with objectives, metrics, functional/non-functional requirements, architecture, risks, acceptance criteria
 
+**Ships:** 6 commands · no subagents, by design · hooks
+
 See the [full plugin documentation](./plugins/pwdev-prd/README.md).
 
 ### pwdev-copy
@@ -348,6 +398,8 @@ treinar ─▶ voc ─▶ brief ─▶ copy ─▶ revisar ─▶ publicar ─�
 
 **Subagents:** voc, copywriter, reviewer, adversarial-copy, analyst
 **Key features:** 7-sweep anti-slop review, adversarial conversion review, Ogilvy brief gate, performance analysis loop
+
+**Ships:** 9 commands · 5 subagents · 20 skills
 
 See the [full plugin documentation](./plugins/pwdev-copy/README.md) (PT-BR).
 
@@ -365,6 +417,8 @@ concept ─▶ [COST CONFIRMATION] ─▶ prompt ─▶ API generation ─▶ cu
 **Subagents:** art-director, asset-generator, creative-reviewer, figma-builder
 **Key features:** spend guard with cost triage, prompt-only mode without API keys, mandatory accessibility review
 
+**Ships:** 9 commands · 4 subagents · 19 skills · MCP
+
 See the [full plugin documentation](./plugins/pwdev-social-media/README.md) (PT-BR).
 
 ### pwdev-devops
@@ -380,6 +434,8 @@ init (env mapping) ─▶ diagnosticar / incidente / auditar / custo / documenta
 
 **Subagents:** incident-commander, infra-auditor, db-analyst, platform-documenter
 **Key features:** 19 skills (AWS, Kubernetes, Docker, Linux, Nginx, PostgreSQL, observability, incident, security, Proxmox, FinOps, …), read-only audits, FinOps reports
+
+**Ships:** 7 commands · 4 subagents · 19 skills · MCP
 
 See the [full plugin documentation](./plugins/pwdev-devops/README.md) (PT-BR).
 
@@ -398,6 +454,8 @@ init (token → Keychain) ─▶ natural conversation via MCP ─▶ sprint / re
 **Skills:** youtrack (official MCP), youtrack-rest (boards/sprints/reports)
 **Key features:** guided setup with the token stored in the macOS Keychain, token never in files or transcripts, confirm-before-mutate
 
+**Ships:** 4 commands · 2 skills · MCP
+
 See the [full plugin documentation](./plugins/pwdev-youtrack/README.md).
 
 ### pwdev-glpi
@@ -414,6 +472,8 @@ init (PAT → Keychain) ─▶ natural conversation via MCP ─▶ triagem / rel
 
 **Skills:** glpi (intent→tool map, ITIL rules)
 **Key features:** guided setup with the PAT in the macOS Keychain, triage via `triage_ticket` MCP prompt, confirm-before-mutate, pinned npm version
+
+**Ships:** 4 commands · 1 skill · MCP
 
 See the [full plugin documentation](./plugins/pwdev-glpi/README.md).
 
@@ -432,6 +492,8 @@ init (connection string → Keychain) ─▶ natural conversation via MCP ─▶
 **Skills:** postgres (intent→tool map, two-phase mutation rules)
 **Key features:** guided setup with the connection string in the macOS Keychain, dedicated `PG_MCP_DATABASE_URL` env var (no collision with project `DATABASE_URL`), mandatory dry-run on every mutation, pinned npm version
 
+**Ships:** 3 commands · 1 skill · MCP
+
 See the [full plugin documentation](./plugins/pwdev-postgres/README.md).
 
 ### pwdev-obsidian
@@ -442,6 +504,8 @@ into the "Local REST API" community plugin** — no separate server to install.
 Reads, writes and structurally edits notes by heading, block or frontmatter
 rather than rewriting whole files, and searches the vault with both JsonLogic and
 free text. Also reaches tags, the active file, and the command palette.
+
+**Ships:** 3 commands · 1 skill · MCP
 
 See the [full plugin documentation](./plugins/pwdev-obsidian/README.md).
 
@@ -466,6 +530,8 @@ raw/ (immutable) ─▶ ingest (discussed) ─▶ wiki/ OKF v0.2 ─▶ query (c
 **Skills:** brain (intent routing: "add this to my brain" / "what does my wiki say about X", intent→MCP-tool map)
 **Key features:** guided setup (global or per-project brain), immutable `raw/`, nothing written without discussion, footnote citations resolving to `sources[].id`, append-only `wiki/log.md`, BR-nnn lint rule catalog with approved-only fixes, `brain-ingestor` + `brain-linter` subagents, embedded read-only MCP with path-traversal guards and graceful filesystem fallback
 
+**Ships:** 5 commands · 2 subagents · 1 skill · embedded MCP (6 tools)
+
 See the [full plugin documentation](./plugins/pwdev-brain/README.md).
 
 ### pwdev-statusline
@@ -479,6 +545,8 @@ PWDEV | Paulo Soares | session | …/skills-ia/project | Fable 5 | main | ctx:�
 **Commands:** `install`, `uninstall`, `customize`, `preview`
 
 **Sections:** Brand, User, Session, Directory (truncated), Model, Git Branch, Context Bar (dynamic color), Tokens (formatted), Rate Limit (3-tier color)
+
+**Ships:** 4 commands · no subagents, no skills, no MCP
 
 See the [full plugin documentation](./plugins/pwdev-statusline/README.md).
 
@@ -500,7 +568,7 @@ claude plugin marketplace add https://github.com/pwdev-solucoes/pwdev-claude-mar
 ### Install plugins
 
 ```bash
-# Disciplined spec-driven development on Claude Code, Codex and Hermes (cmux fleets)
+# Disciplined spec-driven development on Claude Code, Codex and Hermes (visual cmux fleet panels)
 claude plugin install pwdev-power@pwdev-claude-marketplace
 
 # Portable spec-driven development for Claude Code and Codex (17 commands, native fleets)
