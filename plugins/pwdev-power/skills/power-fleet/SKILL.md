@@ -29,6 +29,11 @@ interactive provider session in its own worktree, seeded with that phase's brief
 all of them at once and steers any of them. `--auto` selects the previous behaviour: unattended
 members, one workspace each, structured results and correction cycles.
 
+Tell the human, before launching a panel, that every pane opens on a folder-trust prompt and waits
+there: each worktree is a path the provider has never seen, and the permission flag gates tools,
+not folders. One answer per pane, given by them. A panel that looks stuck on arrival is usually
+this.
+
 A panel holds **1 to 4 members**. Four panes is where a grid stops being readable, and an unreadable
 panel defeats the point of having one. Only one panel may be active at a time: a second one cannot
 reuse the first's workspace without splitting into it and typing a privileged command into a live
@@ -104,12 +109,14 @@ per slug. Never hand it a glob.
 | Symptom | Meaning |
 |---|---|
 | `cmux: no socket` | cmux is not running. Say so; do not proceed without it. |
+| Every panel pane sits on a folder-trust prompt | expected, not a fault. A worktree is a path the provider has never seen, and the permission flag does not answer a trust dialog — it gates tools, not folders. The human answers it once per pane. Never answer it for them. |
 | `a visual fleet panel is already active` | one panel at a time. Tear the current one down first. |
 | `a panel holds at most 4 members` | split the work across two panels, run some with `--auto`, or drop a slug. |
 | `visual mode is not implemented for the … runtime` | that runtime has no interactive vector here. Use `--auto`. |
 | `registered fleet member does not match…` | you are the wrong runtime for this member, or the worktree moved. |
 | `approved fleet contracts changed…` | someone edited the spec or plan mid-flight. The member is stopped on purpose. |
 | A retained runner lock | a provider process group could not be proven gone. A human must look before relaunching. |
-| `invalid structured result` | the provider answered with prose. The raw result is preserved next to the member's results for inspection. |
+| `invalid structured result` | the provider answered with something that is not the contract. Both the parsed file and the provider's raw bytes are preserved next to the member's results — give the human the path, never the contents. |
+| A member stopped mid-flight | relaunch the runner with `--resume` once a human has looked. It re-runs the recorded stage and keeps the correction count; without it, a re-run fails on the first finished stage. |
 
 None of these are retried by re-running the launcher. Resolve the cause first.
