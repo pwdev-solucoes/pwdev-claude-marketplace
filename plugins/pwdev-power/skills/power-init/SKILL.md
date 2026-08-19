@@ -38,12 +38,17 @@ configuration outside the repository.
 | Check | Command | If missing |
 |---|---|---|
 | Runtime | your own tool surface | — |
-| cmux binary and socket | `cmux ping` | fleet is unavailable; everything else works |
+| cmux binary and socket | source `../../scripts/cmux-common.sh` and call `power_cmux_require` | fleet is unavailable; everything else works |
 | Hermes CLI | `hermes --version` | the Kanban bridge is unavailable |
 | cmux↔Hermes hooks | `cmux hooks hermes-agent` | print `cmux hooks hermes-agent install` and let the human run it |
 | `jq`, `sqlite3` | `command -v` | audit stays off; note it |
 
 Missing tools are facts to report, not errors to fix. Only the fleet requires cmux.
+
+**Do not probe for cmux with `command -v cmux`.** On macOS the CLI lives inside the app bundle
+and is usually not on `PATH`, so that check reports "not installed" for a cmux that is running
+fine. `power_cmux_require` resolves the binary the same way the fleet does, and it distinguishes
+"not running" from "running but refusing this process".
 
 ## Step 3 — Ask what cannot be detected
 
