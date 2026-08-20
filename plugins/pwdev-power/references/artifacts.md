@@ -67,6 +67,7 @@ correction cycle count, and the exact next valid action.
 ├── features/<slug>/task-<NN>-review.md
 ├── features/<slug>/verdict.md
 ├── features/<slug>/fix-<NN>.md
+├── features/<slug>/review-<base>..<head>.diff   (working material, gitignored)
 ├── quick/<date>-<slug>/{contract,report}.md
 ├── fleet/<slug>.json
 ├── fleet/<slug>.pane.sh
@@ -92,10 +93,22 @@ is right. See [context](context.md).
 - Do not duplicate full upstream documents. Link them and quote only the clauses the
   downstream contract requires.
 
+## Review packages
+
+`review-<base>..<head>.diff` is what `scripts/review-package.sh` writes so a reviewer gets a file
+instead of a paste. It sits beside the review it belongs to, but it is **working material, not a
+contract**: hundreds of lines of raw `git diff` whose content is already in the commits it
+describes. Keep it gitignored.
+
+Versioning it puts unnecessarily large command output into the contract directory — which the
+prohibition below forbids — and an adversarial verifier is right to reject a feature for it. The
+concise review artifacts are the durable record; the package is scaffolding for producing them.
+
 ## Prohibitions
 
 - Never put secrets, raw credentials, environment dumps, or unnecessarily large command
-  output into an artifact.
+  output into an artifact. A review package is the standing example: generated beside the
+  contracts, never committed with them.
 - Audit and archive paths are durable. Never treat them as disposable build output.
 - Fleet paths are `.planning/power/fleet*`. Never translate them into another plugin's
   layout, and never read another plugin's fleet state as if it were yours.

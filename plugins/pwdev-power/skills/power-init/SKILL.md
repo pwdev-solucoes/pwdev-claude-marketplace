@@ -65,8 +65,35 @@ Create `.planning/power/` with `config.json` and `state.md` exactly as
 file — the audit scripts refuse to write into a database that does not exist, so creating it is
 the act that turns auditing on.
 
-Add `.planning/power/audit/` and `.planning/power/fleet-logs/` to the repository's `.gitignore` if
-one exists. Everything else under `.planning/power/` is a contract and belongs in version control.
+Add these to the repository's `.gitignore` if one exists — none of them is a contract:
+
+- `.planning/power/audit/` and `.planning/power/fleet-logs/` — logs
+- `.planning/power/fleet-results/` — raw provider bytes
+- `.planning/power/features/*/review-*.diff` — review packages
+- `.planning/power/fleet/` and `.planning/power/fleet-status.json` — live fleet state, which
+  records absolute worktree paths, a cmux workspace id and host ports, and is therefore true for
+  exactly one machine
+
+Everything else under `.planning/power/` is a contract and belongs in version control.
+
+**Check whether `.planning` is already ignored wholesale**, which is a common default. If it is,
+carve `.planning/power/` back out:
+
+```gitignore
+.planning/*
+!.planning/power/
+.planning/power/audit/
+.planning/power/fleet/
+.planning/power/fleet-status.json
+.planning/power/fleet-logs/
+.planning/power/fleet-results/
+.planning/power/features/*/review-*.diff
+```
+
+An ignored contract directory is not a cosmetic problem: the fleet decides whether a stage did
+any work by asking git whether the feature directory is dirty, and git never says that of an
+ignored path. Left alone, the plan stage — whose only output is `plan.md` — is refused as work
+nobody did, and `fleet-up` now declines to launch rather than let that happen mid-run.
 
 ## Step 5 — Map the codebase
 

@@ -33,6 +33,17 @@ power_result_contract_prose() {
     'status ("OK", "FAILED" or "NEEDS_HUMAN"),' \
     'message (a non-empty single-line summary of at most 500 characters; a longer message is rejected),' \
     "and verdict ($verdict)."
+  # status describes the stage, verdict describes the feature, and conflating them costs the fix
+  # loop: a verify that rejects and says FAILED is a stage the runner cannot advance past.
+  if [[ $stage == verify ]]; then
+    printf '%s ' \
+      'status is how this stage went, not what you concluded about the feature: use "OK" whenever you reached a verdict at all, including a rejection.' \
+      'Reserve "FAILED" for being unable to verify, and "NEEDS_HUMAN" for needing a person before anything else happens.' \
+      'A rejection belongs in verdict, as "REJECTED" with status "OK" — that is what opens the bounded fix loop.'
+  else
+    printf '%s ' \
+      'status is how this stage went: "OK" if it produced its artifact, "FAILED" if it could not, "NEEDS_HUMAN" if a person must look first.'
+  fi
 }
 
 # Strip an accidental markdown fence and validate that what remains is one JSON object.

@@ -93,6 +93,18 @@ PLAN=$FEATURE_DIR/plan.md
 [[ -f $SPEC ]] || fail_preflight "no spec at $FEATURE_REL/spec.md"
 [[ -f $PLAN ]] || fail_preflight "no plan at $FEATURE_REL/plan.md"
 
+# An ignored contract is a contract the fleet cannot watch.
+#
+# fleet-run decides whether a stage did any work by asking git for a moved HEAD or a dirty
+# FEATURE_REL, and git never reports an ignored path as dirty. With .planning ignored — a common
+# default, since most of it really is disposable agent state — the plan stage, whose only output
+# is plan.md, is refused as work nobody did, on the first stage of every run. artifacts.md keeps
+# these contracts in version control precisely so this is observable. Refuse here, naming the
+# fix, rather than mid-flight with a puzzle.
+if git check-ignore -q "$SPEC" 2>/dev/null || git check-ignore -q "$PLAN" 2>/dev/null; then
+  fail_preflight "the approved contracts are gitignored under $FEATURE_REL; the fleet cannot see stage work there. Un-ignore .planning/power/ (keeping audit/, fleet-logs/ and fleet-results/ ignored) and commit the contracts first"
+fi
+
 # Exactly one, not at least one: a second approval line inside an example block makes the
 # approval ambiguous, and ambiguity here means launching unapproved work.
 approved_count=$(grep -c '^Status: APPROVED[[:space:]]*$' "$SPEC" || true)

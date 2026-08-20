@@ -1375,5 +1375,162 @@ class TestRunnerResume(unittest.TestCase):
         self.assertIn("RESUME_STAGE=; return 0", body)
 
 
+class TestRejectionOpensTheFixLoop(unittest.TestCase):
+    """A verify that rejects is a verify that worked. Filing it as a failure strands the member.
+
+    Found by running a real codex fleet member end to end: verification rejected the feature and
+    reported {"status": "FAILED", "verdict": "REJECTED"}. The runner treated any non-OK status as
+    a dead stage, so it never reached the bounded fix loop that exists for exactly that verdict —
+    and --resume only re-ran verify into the same wall, with correction_cycles stuck at 0.
+    """
+
+    SCHEMA = PLUGIN / "templates" / "fleet-result.schema.json"
+
+    def runner(self):
+        return (SCRIPTS / "fleet-run.sh").read_text(encoding="utf-8")
+
+    RESCUE = "if [[ $stage == verify && $result_status == FAILED"
+
+    def test_a_rejecting_verify_reaches_the_fix_loop(self):
+        text = self.runner()
+        self.assertIn(self.RESCUE, text, "a rejecting verify must not be treated as a dead stage")
+        coercion = text.index(self.RESCUE)
+        guard = text.index('[[ $result_status == OK ]] || needs_human')
+        loop = text.index('while [[ $RESULT_VERDICT == REJECTED ]]')
+        self.assertLess(coercion, guard, "the rejection must be recognised before the guard runs")
+        self.assertLess(guard, loop, "the fix loop sits past the guard, which is why this matters")
+
+    def test_the_rescue_is_narrow(self):
+        # Only verify carries a verdict, and NEEDS_HUMAN still means what it says: the provider
+        # asking for a person. Widening this would swallow real stage failures.
+        text = self.runner()
+        self.assertIn(self.RESCUE, text, "a rejecting verify must not be treated as a dead stage")
+        condition = self.RESCUE + text.split(self.RESCUE, 1)[1].split("\n", 1)[0]
+        self.assertIn("$result_status == FAILED", condition)
+        self.assertIn("$RESULT_VERDICT == REJECTED", condition)
+        self.assertNotIn(
+            "NEEDS_HUMAN", condition, "an explicit call for a human is never overridden"
+        )
+
+    def test_the_schema_says_which_field_carries_a_rejection(self):
+        # The schema had no descriptions at all, and Codex reads it natively: the distinction it
+        # never stated is the distinction the provider got wrong.
+        props = json.loads(self.SCHEMA.read_text(encoding="utf-8"))["properties"]
+        for field in ("stage", "status", "message", "verdict"):
+            self.assertIn("description", props[field], f"{field} must explain itself")
+        self.assertIn("REJECTED", props["verdict"]["description"])
+        self.assertIn("stage", props["status"]["description"].lower())
+
+    def test_the_prose_tells_verify_the_same_thing(self):
+        # claude and hermes never see the schema; the prose contract is all they get.
+        script = f'source "{SCRIPTS}/fleet-common.sh"; power_result_contract_prose verify'
+        prose = subprocess.run(
+            ["bash", "-c", script], capture_output=True, text=True, check=True
+        ).stdout
+        self.assertIn("bounded fix loop", prose)
+        self.assertRegex(prose, r'"REJECTED" with status "OK"')
+
+    def test_the_reference_documents_the_distinction(self):
+        text = (PLUGIN / "references" / "fleet.md").read_text(encoding="utf-8")
+        self.assertIn("`status` is about the stage; `verdict` is about the feature", text)
+
+
+class TestIgnoredContractsRefuseToLaunch(unittest.TestCase):
+    """An ignored contract directory makes every stage look like work nobody did."""
+
+    def test_the_preflight_checks_both_contracts(self):
+        text = (SCRIPTS / "fleet-up.sh").read_text(encoding="utf-8")
+        self.assertIn('git check-ignore -q "$SPEC"', text)
+        self.assertIn('git check-ignore -q "$PLAN"', text)
+
+    def test_it_refuses_before_provisioning_anything(self):
+        # Failing at preflight costs nothing. Failing after the worktree, the stack and the cmux
+        # workspace exist costs a teardown and a puzzle.
+        text = (SCRIPTS / "fleet-up.sh").read_text(encoding="utf-8")
+        self.assertLess(
+            text.index("git check-ignore"),
+            text.index("power_cmux_require"),
+            "the check must precede anything that starts a process",
+        )
+
+    def test_an_ignored_contract_stops_the_launch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            feature = repo / ".planning" / "power" / "features" / "demo"
+            feature.mkdir(parents=True)
+            (repo / ".gitignore").write_text(".planning\n", encoding="utf-8")
+            (repo / ".planning" / "power" / "config.json").write_text("{}", encoding="utf-8")
+            (feature / "spec.md").write_text("Status: APPROVED\n", encoding="utf-8")
+            (feature / "plan.md").write_text("# Plan\n", encoding="utf-8")
+
+            git = {"cwd": repo, "capture_output": True, "text": True}
+            subprocess.run(["git", "init", "-q", "-b", "main", "."], **git, check=True)
+            subprocess.run(["git", "add", ".gitignore"], **git, check=True)
+            subprocess.run(
+                ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init"],
+                **git,
+                check=True,
+            )
+
+            run = subprocess.run(
+                [str(SCRIPTS / "codex-fleet-up.sh"), "demo"],
+                cwd=repo,
+                capture_output=True,
+                text=True,
+                env={**os.environ, "POWER_FLEET_MODE": "auto"},
+            )
+            self.assertNotEqual(run.returncode, 0, "an ignored contract must not launch")
+            self.assertIn("gitignored", run.stderr)
+            self.assertIn(".planning/power/", run.stderr, "the message must name the fix")
+
+
+class TestReviewPackagesAreWorkingMaterial(unittest.TestCase):
+    """The reviewer's diff file is scaffolding, not a contract.
+
+    A real run committed four of them — 733 lines of raw git diff carrying 34 whitespace errors —
+    into the versioned contract directory, and the adversarial verifier rejected the feature for
+    it. It was right to: artifacts.md forbids exactly that.
+    """
+
+    def test_the_init_skill_says_to_ignore_them(self):
+        text = (SKILLS / "power-init" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("review-*.diff", text)
+
+    def test_the_artifacts_reference_calls_them_working_material(self):
+        text = (PLUGIN / "references" / "artifacts.md").read_text(encoding="utf-8")
+        self.assertIn("working material, not a\ncontract", text)
+
+    def test_this_repository_ignores_its_own(self):
+        # The marketplace runs fleets on itself, so it has to follow its own instruction.
+        ignored = subprocess.run(
+            ["git", "check-ignore", "-q", ".planning/power/features/x/review-a..b.diff"],
+            cwd=ROOT,
+        )
+        self.assertEqual(ignored.returncode, 0, "review packages must not be committable here")
+
+    def test_the_contracts_themselves_stay_versioned(self):
+        for path in ("spec.md", "plan.md"):
+            ignored = subprocess.run(
+                ["git", "check-ignore", "-q", f".planning/power/features/x/{path}"], cwd=ROOT
+            )
+            self.assertNotEqual(ignored.returncode, 0, f"{path} must stay in version control")
+
+    def test_live_fleet_state_is_never_versioned(self):
+        # <slug>.json and <slug>.pane.sh record absolute worktree paths, a cmux workspace id and
+        # host ports. Committing them publishes one machine's layout and breaks on every other.
+        for path in (
+            ".planning/power/fleet/demo.json",
+            ".planning/power/fleet/demo.pane.sh",
+            ".planning/power/fleet-status.json",
+        ):
+            ignored = subprocess.run(["git", "check-ignore", "-q", path], cwd=ROOT)
+            self.assertEqual(ignored.returncode, 0, f"{path} is per-machine state, not a contract")
+
+    def test_the_init_skill_names_the_state_it_excludes(self):
+        text = (SKILLS / "power-init" / "SKILL.md").read_text(encoding="utf-8")
+        for path in (".planning/power/fleet/", ".planning/power/fleet-status.json"):
+            self.assertIn(path, text, f"init must tell you to ignore {path}")
+
+
 if __name__ == "__main__":
     unittest.main()

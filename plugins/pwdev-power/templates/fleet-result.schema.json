@@ -6,17 +6,21 @@
   "required": ["stage", "status", "message", "verdict"],
   "properties": {
     "stage": {
+      "description": "The stage that just ran.",
       "enum": ["plan", "execute", "review", "verify", "execute-fix", "review-fix"]
     },
     "status": {
+      "description": "How the STAGE went, never what it concluded about the feature. OK: the stage ran and produced its artifact — this includes a verify that rejects, because reaching a rejection is a verify that worked. FAILED: the stage could not produce its artifact. NEEDS_HUMAN: a person has to look before anything else happens.",
       "enum": ["OK", "FAILED", "NEEDS_HUMAN"]
     },
     "message": {
+      "description": "One line on what happened, at most 500 characters. Longer is trimmed.",
       "type": "string",
       "minLength": 1,
       "maxLength": 500
     },
     "verdict": {
+      "description": "The judgement on the feature, and the only place a rejection belongs. Required on verify; NONE everywhere else, which is the only value allowed there. REJECTED here with status OK is what opens the bounded fix loop.",
       "enum": ["NONE", "APPROVED", "CAVEATS", "REJECTED"]
     }
   }

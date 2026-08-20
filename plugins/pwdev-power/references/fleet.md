@@ -119,6 +119,18 @@ and `correction_cycles` is an integer 0–2.
 attrition. The provider's own result vocabulary is narrower (`OK`, `FAILED`, `NEEDS_HUMAN`):
 `DONE` is the runner's word, not the provider's.
 
+**`status` is about the stage; `verdict` is about the feature.** A verify that reaches a
+rejection is a verify that worked, so it reports `OK` with `verdict: REJECTED` — and that pair
+is what opens the bounded fix loop. `FAILED` means the stage could not produce its artifact at
+all; `NEEDS_HUMAN` means a person must look before anything else happens.
+
+The distinction is load-bearing and easy to lose: "verification rejected the feature" reads
+naturally as `FAILED`, and a rejection filed that way would strand the member — the fix loop it
+was supposed to open sits past the guard that non-`OK` results trip, and `--resume` would only
+re-run verify into the same wall. The runner therefore reads a `verify` that returns `FAILED`
+alongside `REJECTED` as the rejection it plainly is, and the prompt contract and result schema
+both say so outright rather than leaving providers to infer it.
+
 ## Ownership
 
 The provider leads its own process group. Prove the **whole group** absent before validating a

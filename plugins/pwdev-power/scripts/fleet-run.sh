@@ -525,6 +525,21 @@ run_stage() {
   CURRENT_RESULT_TEMP=
   rm -f "$CURRENT_RAW_TEMP"; CURRENT_RAW_TEMP=
 
+  # A rejection is what the verify stage produces, not how it fails.
+  #
+  # "Adversarial verification rejected the feature" reads naturally as FAILED, and providers
+  # report it that way — nothing ever said otherwise, because the schema carried no field
+  # descriptions at all. Treating it as a dead stage skips the bounded fix loop below, the loop
+  # that exists for exactly this verdict, and parks the member at NEEDS_HUMAN where --resume
+  # re-runs verify and lands right back here. A verify that rejects did its job, whichever of
+  # the two words the provider reached for.
+  #
+  # Narrow on purpose: only verify carries a verdict, only FAILED is the ambiguous word, and
+  # NEEDS_HUMAN still means what it says — the provider asking for a human, which is honoured.
+  if [[ $stage == verify && $result_status == FAILED && $RESULT_VERDICT == REJECTED ]]; then
+    result_status=OK
+  fi
+
   [[ $result_status == OK ]] || needs_human "$stage" "$RESULT_MESSAGE" "$RESULT_VERDICT"
 
   stage_produced_work "$before_head" \
