@@ -49,6 +49,51 @@ def install_commands(text):
     return set(re.findall(r"claude plugin install (pwdev-[a-z-]+)@", text))
 
 
+def inventory_claims(text):
+    """{plugin: declared inventory} from README inventory lines."""
+    claims = {}
+    pattern = re.compile(
+        r"^\*\*(?:Ships|Inclui):\*\* (?P<inventory>[^\n]+)\n\n"
+        r"[^\n]*\./plugins/(?P<plugin>pwdev-[a-z-]+)/",
+        re.M,
+    )
+    for match in pattern.finditer(text):
+        inventory = match["inventory"]
+
+        def count(*names):
+            labels = "|".join(names)
+            if re.search(rf"\b(?:no|sem)\s+(?:\d+\s+)?(?:{labels})\b", inventory, re.I):
+                return 0
+            found = re.search(rf"\b(\d+)\s+(?:{labels})\b", inventory, re.I)
+            return int(found[1]) if found else 0
+
+        def present(name):
+            return bool(re.search(rf"\b{name}\b", inventory, re.I)) and not bool(
+                re.search(rf"\b(?:no|sem)\s+(?:\w+\s+)*{name}\b", inventory, re.I)
+            )
+
+        claims[match["plugin"]] = {
+            "commands": count("commands", "comandos"),
+            "subagents": count("subagents", "subagentes"),
+            "skills": count("skill", "skills"),
+            "MCP": present("MCP"),
+            "hooks": present("hooks"),
+        }
+    return claims
+
+
+def plugin_inventory(name):
+    """Actual inventory from a plugin directory."""
+    plugin = ROOT / "plugins" / name
+    return {
+        "commands": sum(path.is_file() for path in (plugin / "commands").glob("*.md")),
+        "subagents": sum(path.is_file() for path in (plugin / "agents").glob("*.md")),
+        "skills": sum(path.is_file() for path in (plugin / "skills").rglob("SKILL.md")),
+        "MCP": (plugin / ".mcp.json").is_file(),
+        "hooks": (plugin / "hooks").is_dir(),
+    }
+
+
 class TestMarketplaceCoverage(unittest.TestCase):
     def test_every_shipped_plugin_has_a_table_row(self):
         for name in READMES:
@@ -97,6 +142,25 @@ class TestMarketplaceCoverage(unittest.TestCase):
                     rf"\./plugins/{re.escape(plugin)}/",
                     f"{name}: the {plugin} section does not link its plugin directory",
                 )
+
+    def test_inventory_lines_match_plugin_contents(self):
+        for name in READMES:
+            claims = inventory_claims(readme(name))
+            for plugin in marketplace_plugins():
+                stated = claims.get(plugin)
+                actual = plugin_inventory(plugin)
+                self.assertIsNotNone(
+                    stated,
+                    f"{name}: {plugin} states <missing>, real value is {actual}",
+                )
+                for dimension in ("commands", "subagents", "skills", "MCP", "hooks"):
+                    with self.subTest(readme=name, plugin=plugin, dimension=dimension):
+                        self.assertEqual(
+                            stated[dimension],
+                            actual[dimension],
+                            f"{name}: {plugin} states {stated[dimension]}, "
+                            f"real value is {actual[dimension]}",
+                        )
 
 
 if __name__ == "__main__":
