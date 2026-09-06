@@ -40,6 +40,7 @@ Process skills set the approach; implementation skills carry it out. Process com
 | About to claim something works | `power-verify` |
 | Reviewing, or receiving a review | `power-review` |
 | A requirement or a roadmap | `power-product` |
+| Roadmap status, health, coverage, or next action | `power-roadmap-status` |
 | A change of at most three files | `power-quick` |
 | Starting isolated feature work | `power-worktree` |
 | Implementation complete and green | `power-finish` |
@@ -74,7 +75,8 @@ has already happened:
 ## Runtime
 
 You are exactly one runtime. Read the mapping for yours before dispatching anything:
-`references/claude-tools.md`, `references/codex-tools.md`, or `references/hermes-tools.md`.
+`../../references/claude-tools.md`, `../../references/codex-tools.md`, or
+`../../references/hermes-tools.md`.
 
 ## Precedence
 

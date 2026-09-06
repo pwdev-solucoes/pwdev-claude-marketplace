@@ -16,7 +16,7 @@ that edit.
 ## Setup
 
 1. Ensure isolation with `pwdev-power:power-worktree`.
-2. `scripts/power-workspace.sh <slug>` prints the working directory and creates `ledger.md`.
+2. `../../scripts/power-workspace.sh <slug>` prints the working directory and creates `ledger.md`.
 3. **Read the ledger.** Its first line names its plan. Tasks marked `Task NN: complete` are
    done — do not dispatch them again. A ledger belonging to a different plan is not yours;
    ignore it.
@@ -31,18 +31,24 @@ that edit.
 
 ## Model selection
 
-Name the model on every dispatch. Omitting it inherits the session's, which is usually the
-most expensive one. Route by the task's declared `Complexity`, per
-[model-profiles](../../references/model-profiles.md).
+- **Codex** inherits host or session model and reasoning-effort settings by default. Override only
+  for an explicit user instruction, repository governance rule, configuration, or approved
+  profile, after confirming a supported model-and-effort combination on that host.
+- **Claude Code** keeps explicit model routing on every dispatch. Apply the configured profile and
+  the task's declared `Complexity` per [model-profiles](../../references/model-profiles.md), using
+  a model the runtime supports.
+- **Hermes Agent** follows [hermes-tools](../../references/hermes-tools.md) and the runtime mapping.
+  Use its documented Kanban route or run inline when per-dispatch selection is unavailable; never
+  invent model, provider, or effort parameters.
 
 ## The loop, per task
 
 ### 1. Dispatch
 
 Record `BASE=$(git rev-parse HEAD)` first. Generate the brief with
-`scripts/task-brief.sh <plan> <N>`.
+`../../scripts/task-brief.sh <plan> <N>`.
 
-The dispatch prompt has exactly five parts:
+The dispatch prompt has exactly six parts:
 
 1. One line placing the task in the project.
 2. The brief path — "read this first; these are your requirements, with exact values".
@@ -72,7 +78,7 @@ Never re-dispatch the same model against the same failure with nothing changed.
 
 ### 3. Review
 
-`scripts/review-package.sh <workspace> <BASE> <HEAD>` builds the diff file. Dispatch
+`../../scripts/review-package.sh <workspace> <BASE> <HEAD>` builds the diff file. Dispatch
 `task-reviewer` with three paths — brief, report, package — plus the plan's `Global
 Constraints` block **quoted verbatim**. Demand both verdicts: spec compliance and task quality.
 
@@ -94,8 +100,10 @@ Then, at most **five rounds**. Each round is one fix dispatch plus one re-review
 findings:
 
 - **Rounds 1–3**: resume the original implementer, which still has the context.
-- **Rounds 4–5**: a fresh implementer, one model tier up, framed as "a previous implementer
-  tried N times; here is where it stands".
+- **Rounds 4–5**: a fresh implementer, framed as "a previous implementer tried N times; here is
+  where it stands". On Claude Code, escalate one tier as the profile requires. On Codex, escalate
+  only under an explicit override. On Hermes Agent, use only the route documented by its mapping.
+  In every case, the target choice must be supported by that runtime.
 
 The re-review gives a per-finding verdict: ADDRESSED or NOT ADDRESSED. **Never fix it
 yourself.**
@@ -120,8 +128,10 @@ Every adjudication is a ledger entry. Silently dropping a finding is not allowed
 ## Final review
 
 After the last task, build one package over the whole branch — `git merge-base <base-branch>
-HEAD` to HEAD — and review it with your most capable model, using `pwdev-power:power-review`.
-Point it at the deferred-minor and parked lines in the ledger.
+HEAD` to HEAD — and review it using `pwdev-power:power-review`. Claude Code uses its most capable
+supported model for this review. Codex inherits host or session settings unless an explicit
+routing policy calls for a supported higher-tier model-and-effort combination. Hermes Agent
+follows its tool mapping. Point the review at the deferred-minor and parked lines in the ledger.
 
 If it finds anything: **one** fix dispatch with the complete list, then exactly **one** scoped
 re-review. There is no second wave.

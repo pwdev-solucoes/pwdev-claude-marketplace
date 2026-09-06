@@ -27,6 +27,7 @@ CLAUDE_MANIFEST = PLUGIN / ".claude-plugin" / "plugin.json"
 CODEX_MANIFEST = PLUGIN / ".codex-plugin" / "plugin.json"
 HERMES_MANIFEST = PLUGIN / ".hermes-plugin" / "plugin.yaml"
 MARKETPLACE = ROOT / ".claude-plugin" / "marketplace.json"
+CODEX_MARKETPLACE = ROOT / ".agents" / "plugins" / "marketplace.json"
 
 COMMAND_NAMES = {"init", "product", "plan", "exec", "fleet", "verify", "quick"}
 
@@ -45,6 +46,7 @@ SKILL_NAMES = {
     "power",
     "power-init",
     "power-product",
+    "power-roadmap-status",
     "power-brainstorm",
     "power-plan",
     "power-execute",
@@ -142,6 +144,17 @@ def run_engine(runtime, worktree="/wt", schema="/schema.json", result="/result.j
 
 
 class TestStructure(unittest.TestCase):
+    def test_roadmap_status_skill_is_read_only_and_reports_actionable_health(self):
+        skill_file = SKILLS / "power-roadmap-status" / "SKILL.md"
+        self.assertTrue(skill_file.is_file(), "power-roadmap-status skill is missing")
+        text = skill_file.read_text(encoding="utf-8")
+        for artifact in ("state.md", "prd.md", "ROADMAP.md", "TRACEABILITY.md"):
+            self.assertIn(artifact, text)
+        for output in ("gate", "phase", "epic", "feature", "task", "traceability", "next action"):
+            self.assertIn(output, text.lower())
+        self.assertIn("read-only", text.lower())
+        self.assertIn("power-fleet", text)
+
     def test_every_command_exists_and_points_at_its_skill(self):
         found = {p.stem for p in COMMANDS.glob("*.md")}
         self.assertEqual(found, COMMAND_NAMES)
@@ -186,15 +199,77 @@ class TestStructure(unittest.TestCase):
             )
             self.assertLessEqual(len(description), 1024, f"{name}: description too long")
 
-    def test_every_relative_reference_resolves(self):
-        pattern = re.compile(r"\]\((\.\./[^)]+|[A-Za-z0-9_-]+\.md)\)")
-        checked = 0
+    def test_every_local_skill_path_resolves_in_markdown_and_inline_code(self):
+        patterns = {
+            "Markdown links": re.compile(
+                r"\]\(((?:\.\.?/)+[^)#]+|[A-Za-z0-9_-]+\.md)\)"
+            ),
+            "inline operational paths": re.compile(
+                r"`((?:\.\.?/)*(?:references|scripts)/[^`\s<>]+)"
+            ),
+        }
+        checked = {kind: 0 for kind in patterns}
         for skill_file in SKILLS.glob("*/SKILL.md"):
-            for target in pattern.findall(skill_file.read_text(encoding="utf-8")):
-                resolved = (skill_file.parent / target).resolve()
-                self.assertTrue(resolved.is_file(), f"{skill_file.name} -> {target} does not resolve")
-                checked += 1
-        self.assertGreater(checked, 0, "no references were checked; the pattern is wrong")
+            text = skill_file.read_text(encoding="utf-8")
+            for kind, pattern in patterns.items():
+                for target in pattern.findall(text):
+                    resolved = (skill_file.parent / target).resolve()
+                    self.assertTrue(
+                        resolved.is_file(),
+                        f"{skill_file.parent.name}/{skill_file.name} -> {target} "
+                        f"does not resolve ({kind})",
+                    )
+                    checked[kind] += 1
+        for kind, count in checked.items():
+            self.assertGreater(count, 0, f"no {kind} were checked; the pattern is wrong")
+
+    def test_execute_dispatch_prompt_contract_has_six_parts(self):
+        text = (SKILLS / "power-execute" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("exactly six parts", text)
+        section = text.split("The dispatch prompt has exactly six parts:", 1)[1]
+        section = section.split("\n### ", 1)[0]
+        numbered_parts = re.findall(r"^(\d+)\. ", section, re.M)
+        self.assertEqual(numbered_parts, ["1", "2", "3", "4", "5", "6"])
+
+    def test_codex_adapter_uses_exposed_capabilities_not_rigid_tool_names(self):
+        text = (PLUGIN / "references" / "codex-tools.md").read_text(encoding="utf-8")
+        self.assertIn("inspect", text.lower())
+        self.assertIn("actual tool", text.lower())
+        self.assertIn("`exec_command`", text)
+        self.assertIn("`apply_patch`", text)
+        self.assertNotRegex(text, r"(?m)^\| Read a file \| `read_file` \|$")
+        self.assertNotRegex(text, r"(?m)^\| Create or replace a file \| `write_file` \|$")
+        self.assertNotRegex(text, r"(?m)^\| Run a shell command \| `shell` \|$")
+
+    def test_codex_dispatch_inherits_defaults_unless_explicitly_overridden(self):
+        codex = (PLUGIN / "references" / "codex-tools.md").read_text(encoding="utf-8")
+        runtime = (PLUGIN / "references" / "runtime.md").read_text(encoding="utf-8")
+        combined = "\n".join((codex, runtime))
+        self.assertIn("inherit", combined.lower())
+        self.assertIn("supported combination", combined.lower())
+        self.assertNotIn("Always set **both** `model` and `reasoning_effort`", combined)
+        self.assertNotIn("Always name the model explicitly when dispatching", combined)
+
+    def test_shared_model_policy_branches_by_runtime(self):
+        execute = (SKILLS / "power-execute" / "SKILL.md").read_text(encoding="utf-8")
+        profiles = (PLUGIN / "references" / "model-profiles.md").read_text(encoding="utf-8")
+        combined = "\n".join((execute, profiles))
+        for runtime in ("**Codex**", "**Claude Code**", "**Hermes Agent**"):
+            self.assertIn(runtime, execute)
+            self.assertIn(runtime, profiles)
+        self.assertIn("**Codex** inherits", combined)
+        self.assertIn("**Claude Code** keeps explicit model routing", combined)
+        self.assertIn("one tier", combined)
+        self.assertIn("most capable", combined)
+        self.assertIn("hermes-tools", combined)
+        self.assertIn("supported model-and-effort combination", combined)
+
+    def test_codex_fresh_context_is_deliberate_not_universal(self):
+        codex = (PLUGIN / "references" / "codex-tools.md").read_text(encoding="utf-8")
+        runtime = (PLUGIN / "references" / "runtime.md").read_text(encoding="utf-8")
+        for text in (codex, runtime):
+            self.assertIn("deliberate", text.lower())
+            self.assertNotIn("Always pass `fork_turns: \"none\"`", text)
 
     def test_every_agent_declares_model_and_tools(self):
         found = {p.stem for p in (PLUGIN / "agents").glob("*.md")}
@@ -245,6 +320,40 @@ class TestManifests(unittest.TestCase):
         self.assertEqual(manifest["skills"], "./skills/")
         self.assertIn("interface", manifest)
 
+    def test_codex_default_prompts_fit_the_interface_budget(self):
+        prompts = json.loads(CODEX_MANIFEST.read_text())["interface"]["defaultPrompt"]
+        self.assertEqual(len(prompts), 3)
+        for prompt in prompts:
+            self.assertIsInstance(prompt, str)
+            self.assertTrue(prompt.strip())
+            self.assertLessEqual(len(prompt), 128)
+
+    def test_codex_default_prompts_cover_the_three_workflow_groups(self):
+        prompts = [
+            prompt.lower()
+            for prompt in json.loads(CODEX_MANIFEST.read_text())["interface"]["defaultPrompt"]
+        ]
+        groups = {
+            "requirement and roadmap": ("requirement", "roadmap"),
+            "brainstorm and planning": ("brainstorm", "plan"),
+            "execution and verification": ("execut", "verif"),
+        }
+        for group, terms in groups.items():
+            self.assertTrue(
+                any(all(term in prompt for term in terms) for prompt in prompts),
+                f"defaultPrompt must cover {group} together in one prompt",
+            )
+
+    def test_codex_manifest_local_paths_resolve(self):
+        manifest = json.loads(CODEX_MANIFEST.read_text())
+        for key in ("skills",):
+            value = manifest[key]
+            self.assertIsInstance(value, str)
+            self.assertTrue(
+                (PLUGIN / value).resolve().exists(),
+                f"{key} does not resolve: {value}",
+            )
+
     def test_hermes_manifest_declares_only_the_hook_it_provides(self):
         text = HERMES_MANIFEST.read_text()
         self.assertRegex(text, re.compile(r"^name:\s*pwdev-power$", re.M))
@@ -257,6 +366,33 @@ class TestManifests(unittest.TestCase):
         self.assertIsNotNone(entry, "pwdev-power is not registered")
         self.assertEqual(entry["source"], "./plugins/pwdev-power")
         self.assertTrue(entry["strict"])
+
+    def test_plugin_is_registered_in_the_codex_marketplace(self):
+        marketplace = json.loads(CODEX_MARKETPLACE.read_text())
+        entries = marketplace["plugins"]
+        plugin_name = PLUGIN.name
+        manifest_name = json.loads(CODEX_MANIFEST.read_text())["name"]
+        entry_index = next(
+            (index for index, entry in enumerate(entries) if entry["name"] == plugin_name),
+            None,
+        )
+
+        self.assertEqual(manifest_name, plugin_name)
+        self.assertIsNotNone(entry_index, "pwdev-power is not registered for Codex")
+        self.assertGreater(entry_index, 0, "pwdev-power must follow an existing entry")
+        self.assertEqual(entries[entry_index - 1]["name"], "pwdev-flow")
+        self.assertEqual(
+            entries[entry_index],
+            {
+                "name": plugin_name,
+                "source": {"source": "local", "path": "./plugins/pwdev-power"},
+                "policy": {
+                    "installation": "AVAILABLE",
+                    "authentication": "ON_INSTALL",
+                },
+                "category": "Developer Tools",
+            },
+        )
 
     def test_hooks_declare_the_secret_guard_and_the_bootstrap(self):
         hooks = json.loads((PLUGIN / "hooks" / "hooks.json").read_text())["hooks"]

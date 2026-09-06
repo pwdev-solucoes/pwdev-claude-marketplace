@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Power Roadmap Status"
+  short_description: "Inspect roadmap health and next action"
+  default_prompt: "Use $power-roadmap-status to report the current product roadmap status."

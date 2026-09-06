@@ -556,10 +556,14 @@ $power-execute cadastro-clinicas
 
 Comportamentos do Codex que as skills já levam em conta:
 
-- Subagentes nascem com `fork_turns: "none"`. O padrão `"all"` copia o transcript inteiro para o
-  filho, o que destrói o sentido de um contexto novo.
-- Todo spawn define **tanto** `model` quanto `reasoning_effort` — definir só `model` reseta o
-  esforço para o padrão daquele modelo, em silêncio.
+- Use `fork_turns: "none"` somente quando um contexto novo e isolado for um requisito deliberado
+  do fluxo; nos demais casos, preserve o contexto adequado à tarefa.
+- Spawns herdam os padrões do host para modelo e esforço de raciocínio, salvo override explícito
+  do usuário, governança, configuração ou perfil aprovado. O override precisa ser uma combinação
+  suportada e exposta pelo host.
+- Inspecione a superfície real de ferramentas do Codex. Hosts atuais normalmente expõem
+  `exec_command` para leitura, busca e comandos e `apply_patch` para edições, mas as skills não
+  devem inventar nomes indisponíveis.
 - Rodadas de correção 1–3 usam `followup_task` para falar com o implementador que já tem o
   contexto, em vez de criar um novo.
 - `wait_agent` é assinatura de evento, não poll: uma espera com timeout de 5–10 minutos, não oito

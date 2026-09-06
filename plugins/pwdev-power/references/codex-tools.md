@@ -1,17 +1,23 @@
 # Codex Tool Mapping
 
-| Action skills request | Codex tool |
+Inspect the actual tool surface exposed in the current Codex session before acting. Tool
+availability varies by host and installed plugins, so resolve each requested capability to an
+available tool instead of inventing or requiring a fixed name.
+
+| Action skills request | Typical Codex capability when exposed |
 |---|---|
-| Read a file | `read_file` |
-| Create or replace a file | `write_file` |
-| Edit a file | `apply_patch` |
-| Run a shell command | `shell` |
-| Search file contents | `shell` with `rg` |
+| Read or search files | `exec_command` with `sed`, `rg`, or another available read-only command |
+| Create, replace, or edit a file | `apply_patch` |
+| Run a command | `exec_command` |
 | Dispatch a subagent | `spawn_agent` |
 | Reach a live child again | `followup_task` |
 | Wait for a child | `wait_agent` |
 | List children | `list_agents` |
 | Invoke a skill | `$power-<name>` |
+
+These names are examples from the current Codex surface, not a promise that every host exposes
+all of them. If a capability is absent, work inline or use another exposed equivalent. **Never
+invent a tool call.**
 
 ## Instructions file
 
@@ -24,14 +30,14 @@ say so and work inline rather than failing repeatedly.
 
 ## Subagent dispatch
 
-Always pass `fork_turns: "none"`. The default `"all"` copies the whole transcript into the
-child, which is the opposite of a fresh context and is the single most expensive mistake
-available here.
+Use `fork_turns: "none"` only when a fresh, isolated context is a deliberate requirement of the
+workflow and provide all required context in the prompt. Otherwise retain the surrounding context
+appropriate to the task.
 
-Always set **both** `model` and `reasoning_effort`. Setting only `model` resets effort to that
-model's default, which silently downgrades a task you meant to route upward. A backstop in
-`~/.codex/config.toml` under `[agents]` (`default_subagent_model`,
-`default_subagent_reasoning_effort`) is worth having, but does not excuse omitting them.
+Omit `model` and `reasoning_effort` so the child inherits the host defaults unless the user,
+repository governance, configuration, or an approved routing profile explicitly requires an
+override. When overriding, inspect the models and effort levels exposed by the host and pass only
+a supported combination; do not guess either value.
 
 ## Fix rounds
 

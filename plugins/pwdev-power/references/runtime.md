@@ -24,8 +24,8 @@ now. Then use only that runtime's launcher and tool names.
 
 - **Claude**: the `Task`/`Agent` tool with a declared `subagent_type` from `agents/` —
   `implementer`, `task-reviewer`, `verifier`, `roadmap`, `mapper`.
-- **Codex**: `spawn_agent` with `fork_turns: "none"`. The default `"all"` copies the entire
-  transcript into the child, which defeats the whole point of a fresh context.
+- **Codex**: `spawn_agent`; set `fork_turns: "none"` only when fresh, isolated context is a
+  deliberate workflow requirement, and otherwise keep the context appropriate to the task.
 - **Hermes**: `delegate_task(goal=..., context=..., toolsets=[...], role="leaf")`. Context is
   explicit; there is no transcript fork to suppress.
 
@@ -53,10 +53,12 @@ a project where the other thirteen skills loaded fine.
 
 ## Model selection
 
-Always name the model explicitly when dispatching. Omitting it inherits the session's model,
-which is usually the most expensive one. See [model-profiles.md](model-profiles.md) for the
-routing table, and the per-runtime mapping for how to express it — including what to do on
-Hermes, where per-dispatch model selection is not documented.
+On Codex, inherit the host's model and reasoning-effort defaults unless the user, repository
+governance, configuration, or an approved profile explicitly requires an override. Before an
+override, inspect the host's available models and effort levels and use only a supported
+combination. Claude keeps using the routing table in
+[model-profiles.md](model-profiles.md). On Hermes, where per-dispatch model selection is not
+documented, follow its runtime mapping rather than inventing a parameter.
 
 ## Waiting for children
 

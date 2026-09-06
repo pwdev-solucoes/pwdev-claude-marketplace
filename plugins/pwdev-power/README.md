@@ -552,10 +552,14 @@ $power-execute clinic-registry
 
 Codex-specific behaviour the skills already account for:
 
-- Subagents spawn with `fork_turns: "none"`. The default `"all"` copies the entire transcript into
-  the child, which defeats the point of a fresh context.
-- Every spawn sets **both** `model` and `reasoning_effort` — setting only `model` silently resets
-  effort to that model's default.
+- Use `fork_turns: "none"` only when fresh, isolated context is a deliberate workflow requirement;
+  otherwise preserve the context appropriate to the task.
+- Spawns inherit host defaults for model and reasoning effort unless the user, governance,
+  configuration, or an approved profile explicitly overrides them. Overrides must be a supported
+  combination exposed by that host.
+- Inspect the actual Codex tool surface. Current hosts commonly expose `exec_command` for reading,
+  searching, and commands and `apply_patch` for edits, but skills must not invent unavailable tool
+  names.
 - Fix rounds 1–3 use `followup_task` to reach the implementer that already has the context, rather
   than spawning a fresh one.
 - `wait_agent` is an event subscription, not a poll: one wait with a 5–10 minute timeout, not

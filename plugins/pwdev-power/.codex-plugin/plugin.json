@@ -1,6 +1,6 @@
 {
   "name": "pwdev-power",
-  "version": "0.1.0+codex.20260818000000",
+  "version": "0.1.0+codex.20260906005641",
   "description": "Disciplined, approval-gated development: product requirements, executable roadmap, brainstorm-gated plans, subagent-driven execution with a ledger and bounded fix loop, adversarial verification, and isolated cmux fleets.",
   "author": {
     "name": "Paulo Soares",
@@ -31,11 +31,9 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Write a product requirement and decompose it into an executable roadmap.",
-      "Brainstorm and plan this feature before touching any code.",
-      "Execute this approved plan task by task with review between tasks.",
-      "Verify this implementation adversarially before claiming it is done.",
-      "Launch approved phases as an isolated autonomous fleet."
+      "Write a product requirement and turn it into an executable roadmap.",
+      "Brainstorm and plan this feature behind an approval gate.",
+      "Execute the approved plan task by task, then verify it adversarially."
     ]
   }
 }

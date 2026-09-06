@@ -11,7 +11,7 @@ Build the reviewer's context; do not hand it your session history. It needs the 
 the diff, and the constraints — not how you got there.
 
 1. Fix the range: `BASE_SHA` and `HEAD_SHA`.
-2. Build the package with `scripts/review-package.sh`.
+2. Build the package with `../../scripts/review-package.sh`.
 3. Dispatch a reviewer with: what this was supposed to do, the plan or requirements path, the
    package path, and the constraints quoted verbatim.
 
