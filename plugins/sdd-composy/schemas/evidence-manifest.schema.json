@@ -22,7 +22,11 @@
     "test_id": {"type": "string", "pattern": "^TEST-[0-9]{3,}$"},
     "result": {"enum": ["passed", "failed", "not_applicable"]},
     "evidence_type": {"enum": ["test_output", "screenshot", "log", "report"]},
-    "evidence_path": {"type": "string", "pattern": "^(?!.*(?:^|/)\\.\\.(?:/|$))tasks/prd-[a-z0-9]+(?:-[a-z0-9]+)*/evidences/[^/].+$"},
+    "evidence_relative_path": {
+      "type": "string",
+      "description": "Forward-slash path relative to this manifest's tasks/prd-<slug>/evidences/ directory.",
+      "pattern": "^(?!tasks/prd-)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))[^/]+(?:/[^/]+)*$"
+    },
     "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "evidence": {
       "type": "object",
@@ -35,7 +39,7 @@
         "test_id": {"$ref": "#/definitions/test_id"},
         "result": {"$ref": "#/definitions/result"},
         "evidence_type": {"$ref": "#/definitions/evidence_type"},
-        "path": {"$ref": "#/definitions/evidence_path"},
+        "path": {"$ref": "#/definitions/evidence_relative_path"},
         "sha256": {"$ref": "#/definitions/sha256"}
       },
       "additionalProperties": true

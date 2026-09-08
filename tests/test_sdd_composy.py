@@ -301,14 +301,23 @@ class SddComposyOperationalSchemaTest(unittest.TestCase):
 
     def test_evidence_separates_result_and_type_and_confines_hashed_paths(self) -> None:
         schema = self.schema("evidence-manifest")
-        entry = {"requirement_id": "RF-001", "story_id": "US-001", "scenario_id": "SC-001", "criterion_id": "CA-001", "test_id": "TEST-001", "result": "passed", "evidence_type": "test_output", "path": "tasks/prd-billing-api/evidences/test-output.txt", "sha256": "b" * 64, "x-tool": "unittest"}
+        entry = {"requirement_id": "RF-001", "story_id": "US-001", "scenario_id": "SC-001", "criterion_id": "CA-001", "test_id": "TEST-001", "result": "passed", "evidence_type": "test_output", "path": "runs/test-output.txt", "sha256": "b" * 64, "x-tool": "unittest"}
         fixture = {"schema_version": "1", "prd_slug": "billing-api", "task_id": "TASK-005", "generated_at": "2026-09-08T12:30:00Z", "entries": [entry], "x-owner": "qa"}
         assert_schema_valid(self, schema, fixture)
         required = schema["definitions"]["evidence"]["required"]
         self.assertIn("result", required)
         self.assertIn("evidence_type", required)
         self.assertNotEqual(schema["definitions"]["result"]["enum"], schema["definitions"]["evidence_type"]["enum"])
-        for bad_path in ("/tmp/output.txt", "../output.txt", "tasks/prd-billing-api/report.txt", "tasks/prd-billing-api/evidences/../report.txt"):
+        for bad_path in (
+            "/tmp/output.txt",
+            "../output.txt",
+            "runs/../report.txt",
+            r"..\report.txt",
+            r"runs\..\report.txt",
+            r"runs\output.txt",
+            "tasks/prd-billing-api/evidences/output.txt",
+            "tasks/prd-payments/evidences/output.txt",
+        ):
             invalid = dict(entry, path=bad_path)
             with self.subTest(path=bad_path), self.assertRaises(AssertionError):
                 assert_schema_valid(self, schema["definitions"]["evidence"], invalid, schema)

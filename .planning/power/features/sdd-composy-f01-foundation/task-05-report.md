@@ -23,3 +23,11 @@ Status: DONE
 - No secrets or existing fleet environment files were read.
 - Known root README failures and the deferred Task 04 fixture-coverage issue were not changed.
 - Unrelated pre-existing review diff files were left untouched and uncommitted.
+
+## Review fix round 1
+
+- Changed each evidence `path` to a forward-slash path relative to the manifest's own `tasks/prd-<slug>/evidences/` directory. Repository-root paths are no longer repeated in entries, so a manifest cannot name a different PRD's evidence root.
+- Rejected backslashes everywhere in evidence paths, in addition to absolute paths and `..` segments, for portable confinement across POSIX and Windows-compatible path handling.
+- Added fixtures for same-PRD and cross-PRD repository paths, forward-slash traversal, backslash traversal, and ordinary backslash separators.
+- Re-ran `python3 -m unittest tests.test_sdd_composy`: all 17 tests passed.
+- Re-ran JSON parsing and `git diff --check`: passed.
