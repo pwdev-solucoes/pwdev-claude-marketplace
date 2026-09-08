@@ -9,6 +9,7 @@ Task 02: complete (commits 74bbe4b..e606e0a, review clean)
 Task 03: complete (commits c81fc1f..838147b, review clean)
 Task 04: minor (deferred): invalid schema fixtures combine multiple defects, so they do not independently prove every advertised constraint.
 Task 04: complete (commits 2367299..4711add, major review finding addressed; one minor deferred)
+Task 05: complete (commits 272622a..c2984c4, review findings addressed)
 
 ### Pre-flight scan
 
