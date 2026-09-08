@@ -7,6 +7,9 @@ Created: 2026-09-08T18:28:49Z
 Task 01: complete (working-tree implementation reviewed; focused suite green)
 Task 02: complete (working-tree implementation reviewed through round 2; focused suite green)
 Task 03: complete (working-tree implementation reviewed through round 2; focused suite green)
+Task 04: complete (working-tree implementation review approved; focused suites green)
+Task 05: complete (working-tree implementation reviewed through round 1; focused suite green)
+Task 06: complete (working-tree implementation reviewed through round 1; focused suites green)
 
 Pre-flight scan:
 

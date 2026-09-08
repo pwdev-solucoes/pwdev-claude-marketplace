@@ -7,10 +7,106 @@ import importlib.util
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES = ROOT / "plugins" / "sdd-composy" / "templates"
 MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+
+
+class SddMapFixtureTests(unittest.TestCase):
+    def test_external_symlink_files_and_directories_are_ignored(self):
+        import sys
+        sys.path.insert(0, str(ROOT / "plugins" / "sdd-composy" / "scripts"))
+        import sdd_map
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary); repo = base / "repo"; outside = base / "outside"
+            repo.mkdir(); outside.mkdir()
+            (outside / "leak.py").write_text("not repository evidence\n", encoding="utf-8")
+            (outside / "package.json").write_text('{"scripts":{"leak":"echo leak"}}', encoding="utf-8")
+            (repo / "external-file.py").symlink_to(outside / "leak.py")
+            (repo / "external-dir").symlink_to(outside, target_is_directory=True)
+            data = sdd_map.build_map(repo)
+            observed = {item["path"] for item in data["manifests"]}
+            self.assertNotIn("external-dir/package.json", observed)
+            self.assertNotIn("external-file.py", observed)
+            self.assertEqual(data["files_observed"], 0)
+
+    def test_companion_publication_uses_temporary_files_and_cleans_up_on_failure(self):
+        import sys
+        sys.path.insert(0, str(ROOT / "plugins" / "sdd-composy" / "scripts"))
+        import sdd_map
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = Path(temporary); data = sdd_map.build_map(repo)
+            context = repo / ".planning" / "sdd-composy" / "context"
+            original = sdd_map._atomic_write_text
+            def fail_once(path, content):
+                if path.name == "stack.md":
+                    raise RuntimeError("injected publication failure")
+                return original(path, content)
+            with mock.patch.object(sdd_map, "_atomic_write_text", side_effect=fail_once):
+                with self.assertRaisesRegex(RuntimeError, "injected publication failure"):
+                    sdd_map.write_map(repo, data)
+            self.assertFalse(list(context.glob(".*.tmp")))
+            self.assertFalse((context / "stack.md").exists())
+            self.assertTrue((context / "project.md").exists())
+
+    def test_adaptive_inventory_commands_domain_staleness_and_secret_exclusion(self):
+        import sys
+        sys.path.insert(0, str(ROOT / "plugins" / "sdd-composy" / "scripts"))
+        import sdd_map
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = Path(temporary)
+            (repo / "package.json").write_text(json.dumps({"scripts": {"test": "pytest", "lint": "ruff"}}), encoding="utf-8")
+            (repo / "pyproject.toml").write_text("[tool.pytest.ini_options]\ntestpaths=['tests']\n", encoding="utf-8")
+            (repo / "src" / "billing").mkdir(parents=True)
+            (repo / "src" / "billing" / "invoice.py").write_text("# evidence\n", encoding="utf-8")
+            (repo / ".env").write_text("SHOULD_NOT_BE_READ=secret\n", encoding="utf-8")
+            (repo / "fleet").mkdir()
+            (repo / "fleet" / ".env.production").write_text("TOKEN=secret\n", encoding="utf-8")
+            output = repo / ".planning" / "sdd-composy" / "context"
+            data = sdd_map.build_map(repo, output)
+            self.assertEqual(data["schema_version"], "0.2")
+            self.assertEqual([x["name"] for x in data["languages"]], ["Python"])
+            self.assertEqual([x["command"] for x in data["commands"]], ["npm run lint", "npm run test", "pytest"])
+            self.assertTrue(any(x["term"] == "billing" for x in data["domain_evidence"]))
+            self.assertFalse(any(".env" in item["path"] for item in data["manifests"]))
+            output.mkdir(parents=True)
+            (output / "codebase.json").write_text(json.dumps({"source_commit": "old"}), encoding="utf-8")
+            refreshed = sdd_map.build_map(repo, output)
+            self.assertFalse(refreshed["staleness"]["stale"])
+
+    def test_json_serialization_is_deterministic_and_write_is_repository_bound(self):
+        import sys
+        sys.path.insert(0, str(ROOT / "plugins" / "sdd-composy" / "scripts"))
+        import sdd_map
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = Path(temporary)
+            (repo / "app.py").write_text("print('ok')\n", encoding="utf-8")
+            first = sdd_map.build_map(repo)
+            second = sdd_map.build_map(repo)
+            self.assertEqual(json.dumps(first, indent=2, sort_keys=True), json.dumps(second, indent=2, sort_keys=True))
+            path = sdd_map.write_map(repo, first)
+            self.assertTrue(path.is_file())
+            self.assertIn('okf_version: "0.2"', (path.parent / "stack.md").read_text(encoding="utf-8"))
+            with self.assertRaises(ValueError):
+                sdd_map.write_map(repo, first, Path(temporary).parent / "outside")
+
+    def test_external_output_is_rejected_before_read_or_write_in_both_modes(self):
+        import sys
+        sys.path.insert(0, str(ROOT / "plugins" / "sdd-composy" / "scripts"))
+        import sdd_map
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary); repo = base / "repo"; outside = base / "outside"
+            repo.mkdir(); outside.mkdir()
+            # Invalid JSON proves the read-only path rejects the location before
+            # attempting to inspect a prior map outside the repository.
+            (outside / "codebase.json").write_text("not json\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "inside repository root"):
+                sdd_map.build_map(repo, outside)
+            with self.assertRaisesRegex(ValueError, "inside repository root"):
+                sdd_map.write_map(repo, {}, outside)
+            self.assertEqual(list(outside.iterdir()), [outside / "codebase.json"])
 
 
 class SddComposyGovernanceTemplateTests(unittest.TestCase):

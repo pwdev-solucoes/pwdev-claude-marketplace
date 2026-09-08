@@ -46,7 +46,10 @@ def unregistered_skills(plugin):
     commands_root = plugin / "commands"
     skill_names = {path.parent.name for path in skills_root.glob("*/SKILL.md")}
     command_names = {path.stem for path in commands_root.glob("*.md")}
-    return skill_names - command_names
+    # Portable skills use the sdd-* namespace while Claude adapters use the
+    # shorter command name (for example sdd-init -> init).
+    registered = command_names | {f"sdd-{name}" for name in command_names}
+    return skill_names - registered
 
 
 def assert_schema_valid(test, schema, value, root=None, path="$"):
@@ -258,6 +261,85 @@ class SddComposyRuntimeContractTest(unittest.TestCase):
             self.assertIn("$sdd-composy-<name>", text)
             self.assertIn("/sdd-composy:<name>", text)
             self.assertIn("references/runtime.md", text)
+
+
+class SddComposyInitAdapterTest(unittest.TestCase):
+    def test_init_skill_is_discoverable_with_codex_metadata(self) -> None:
+        skill = PLUGIN / "skills" / "sdd-init" / "SKILL.md"
+        metadata = skill.parent / "agents" / "openai.yaml"
+        self.assertTrue(skill.is_file(), "portable sdd-init skill must exist")
+        self.assertTrue(metadata.is_file(), "Codex metadata must exist")
+        skill_text = skill.read_text(encoding="utf-8")
+        metadata_text = metadata.read_text(encoding="utf-8")
+        self.assertRegex(skill_text, r"(?m)^name:\s*sdd-init\s*$")
+        self.assertIn("description:", skill_text)
+        self.assertIn("display_name:", metadata_text)
+        self.assertIn("$sdd-init", metadata_text)
+
+    def test_init_skill_routes_through_the_shared_helper_contract(self) -> None:
+        skill = (PLUGIN / "skills" / "sdd-init" / "SKILL.md").read_text(encoding="utf-8")
+        helper = "${CLAUDE_PLUGIN_ROOT}/scripts/sdd_init.py"
+        self.assertIn(helper, skill)
+        for operation in ("inspect", "plan", "apply", "verify"):
+            self.assertRegex(skill, rf"\b{operation}\b")
+        for shared_reference in ("references/runtime.md", "references/safety.md"):
+            self.assertIn(shared_reference, skill)
+        self.assertIn("--plan-token", skill)
+        self.assertIn("tasks/index.md", skill)
+        self.assertIn("never read", skill.lower())
+        self.assertIn(".env", skill)
+
+    def test_claude_init_command_is_a_thin_route_to_portable_skill(self) -> None:
+        command_path = PLUGIN / "commands" / "init.md"
+        self.assertTrue(command_path.is_file(), "Claude init command must exist")
+        command = command_path.read_text(encoding="utf-8")
+        self.assertIn("/sdd-composy:init", command)
+        self.assertIn("$ARGUMENTS", command)
+        self.assertIn("$sdd-init", command)
+        self.assertIn("skills/sdd-init/SKILL.md", command)
+        self.assertLess(len(command), 1200, "Claude adapter should remain thin")
+        for policy in ("Never overwrite", "lifecycle", "gate logic", "schema semantics"):
+            self.assertNotIn(policy.lower(), command.lower())
+
+
+class SddComposyMapAdapterTest(unittest.TestCase):
+    def test_map_skill_is_discoverable_and_declares_evidence_contract(self) -> None:
+        skill = PLUGIN / "skills" / "sdd-map" / "SKILL.md"
+        metadata = skill.parent / "agents" / "openai.yaml"
+        self.assertTrue(skill.is_file(), "portable sdd-map skill must exist")
+        self.assertTrue(metadata.is_file(), "Codex metadata must exist")
+        text = skill.read_text(encoding="utf-8")
+        self.assertRegex(text, r"(?m)^name:\s*sdd-map\s*$")
+        for required in (
+            "observation-only", "source_commit", "staleness", "--write",
+            ".planning/sdd-composy/context/codebase.json", "project.md",
+            "stack.md", "domain.md", "pitfalls.md", "references/mapping.md",
+            "Never inspect or open", "manifest commands", "PRD", "STORIES",
+            "TECHSPEC", "TASKS",
+        ):
+            self.assertIn(required, text)
+        self.assertIn("$sdd-map", metadata.read_text(encoding="utf-8"))
+
+    def test_map_skill_keeps_runtime_and_scanner_boundaries(self) -> None:
+        text = (PLUGIN / "skills" / "sdd-map" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("scripts/sdd_map.py", text)
+        self.assertIn("Do not execute commands discovered in manifests", text)
+        self.assertIn("must not duplicate scanner logic", text)
+        self.assertIn("runtime-specific tools", text)
+        for forbidden in ("mcp__", "codex_app", "claude -p"):
+            self.assertNotIn(forbidden, text)
+
+    def test_claude_map_command_is_a_thin_route_to_portable_skill(self) -> None:
+        command_path = PLUGIN / "commands" / "map.md"
+        self.assertTrue(command_path.is_file(), "Claude map command must exist")
+        command = command_path.read_text(encoding="utf-8")
+        self.assertIn("/sdd-composy:map", command)
+        self.assertIn("$ARGUMENTS", command)
+        self.assertIn("$sdd-map", command)
+        self.assertIn("skills/sdd-map/SKILL.md", command)
+        self.assertLess(len(command), 1000, "Claude adapter should remain thin")
+        for policy in ("staleness", "secret exclusion", "architecture", "downstream"):
+            self.assertNotIn(policy.lower(), command.lower())
 
 
 class SddComposyCoreSchemaTest(unittest.TestCase):
