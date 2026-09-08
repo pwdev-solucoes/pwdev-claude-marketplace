@@ -4,6 +4,8 @@ Created: 2026-09-08T15:25:23Z
 
 ## Progress
 
+Task 01: complete (commits fb759b4..7156478, review clean)
+
 ### Pre-flight scan
 
 | Tasks | Shared file/interface | Producer / consumer agreement |
