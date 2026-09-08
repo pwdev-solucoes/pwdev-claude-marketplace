@@ -2,6 +2,7 @@
 
 import json
 import unittest
+from datetime import datetime
 from pathlib import Path
 
 
@@ -13,6 +14,52 @@ CLAUDE_MARKETPLACE = ROOT / ".claude-plugin" / "marketplace.json"
 CODEX_MARKETPLACE = ROOT / ".agents" / "plugins" / "marketplace.json"
 REFERENCES = PLUGIN / "references"
 READMES = (PLUGIN / "README.md", PLUGIN / "README.pt-BR.md")
+SCHEMAS = PLUGIN / "schemas"
+
+
+def assert_schema_valid(test, schema, value, root=None, path="$"):
+    """Small dependency-free validator for the schema features used by fixtures."""
+    root = root or schema
+    if "$ref" in schema:
+        target = root
+        for part in schema["$ref"].removeprefix("#/").split("/"):
+            target = target[part]
+        return assert_schema_valid(test, target, value, root, path)
+    if "const" in schema:
+        test.assertEqual(value, schema["const"], path)
+    if "enum" in schema:
+        test.assertIn(value, schema["enum"], path)
+    expected = schema.get("type")
+    if isinstance(expected, list):
+        if value is None and "null" in expected:
+            return
+        expected = next(item for item in expected if item != "null")
+    if expected == "object":
+        test.assertIsInstance(value, dict, path)
+        for key in schema.get("required", []):
+            test.assertIn(key, value, f"{path}.{key}")
+        for key, child in schema.get("properties", {}).items():
+            if key in value:
+                assert_schema_valid(test, child, value[key], root, f"{path}.{key}")
+    elif expected == "array":
+        test.assertIsInstance(value, list, path)
+        test.assertGreaterEqual(len(value), schema.get("minItems", 0), path)
+        if schema.get("uniqueItems"):
+            test.assertEqual(len(value), len({json.dumps(v, sort_keys=True) for v in value}), path)
+        for index, item in enumerate(value):
+            assert_schema_valid(test, schema.get("items", {}), item, root, f"{path}[{index}]")
+    elif expected == "string":
+        test.assertIsInstance(value, str, path)
+        test.assertGreaterEqual(len(value), schema.get("minLength", 0), path)
+        if "pattern" in schema:
+            test.assertRegex(value, schema["pattern"], path)
+        if schema.get("format") == "date-time":
+            datetime.fromisoformat(value.replace("Z", "+00:00"))
+    elif expected == "integer":
+        test.assertIsInstance(value, int, path)
+        test.assertGreaterEqual(value, schema.get("minimum", value), path)
+    elif expected == "boolean":
+        test.assertIsInstance(value, bool, path)
 
 
 class SddComposyManifestTest(unittest.TestCase):
@@ -140,6 +187,44 @@ class SddComposyRuntimeContractTest(unittest.TestCase):
             self.assertIn("$sdd-composy-<name>", text)
             self.assertIn("/sdd-composy:<name>", text)
             self.assertIn("references/runtime.md", text)
+
+
+class SddComposyCoreSchemaTest(unittest.TestCase):
+    def schema(self, name: str) -> dict:
+        path = SCHEMAS / f"{name}.schema.json"
+        self.assertTrue(path.is_file(), f"core schema must exist: {path}")
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def test_schema_shape_is_versioned_strict_and_extension_safe(self) -> None:
+        for name in ("config", "state", "tasks", "trace"):
+            schema = self.schema(name)
+            self.assertEqual(schema["$schema"], "https://json-schema.org/draft/2020-12/schema")
+            self.assertEqual(schema["type"], "object")
+            self.assertIn("schema_version", schema["required"])
+            self.assertEqual(schema["properties"]["schema_version"]["const"], "1")
+            self.assertTrue(schema["additionalProperties"])
+            self.assertIn("definitions", schema)
+
+    def test_valid_core_documents_include_portable_extensions(self) -> None:
+        fixtures = {
+            "config": {"schema_version": "1", "actor_id": "agent:codex-1", "human_root": "tasks", "operational_root": ".planning/sdd-composy", "x-team": {"mode": "safe"}},
+            "state": {"schema_version": "1", "revision": 3, "stage": "EXECUTE", "active_prd": "billing-api", "active_task": "TASK-004", "last_gate": {"name": "TASKS", "status": "approved", "at": "2026-09-08T12:00:00+00:00", "actor_id": "human:paulo"}, "blockers": [], "loops": [], "fleet": [], "trace": {"healthy": True, "source_event_count": 8}, "updated_at": "2026-09-08T12:01:00Z", "next_action": "Run focused tests", "x-runtime": "codex"},
+            "tasks": {"schema_version": "1", "prd_slug": "billing-api", "updated_at": "2026-09-08T12:01:00Z", "tasks": [{"id": "TASK-004", "title": "Add schemas", "state": "ready", "dependencies": ["TASK-003"], "acceptance_criteria": ["CA-001"], "verification_commands": ["python3 -m unittest"], "allowed_paths": ["plugins/sdd-composy/schemas/"], "evidence_required": False, "x-owner": "platform"}]},
+            "trace": {"schema_version": "1", "source_event_count": 1, "generated_at": "2026-09-08T12:02:00Z", "events": [{"sequence": 1, "id": "EVT-000001", "at": "2026-09-08T12:01:00Z", "actor_id": "agent:codex-1", "type": "task.transitioned", "stage": "EXECUTE", "task_id": "TASK-004", "data": {"from": "ready", "to": "running"}, "x-host": "codex"}]},
+        }
+        for name, fixture in fixtures.items():
+            assert_schema_valid(self, self.schema(name), fixture)
+
+    def test_invalid_identifiers_states_and_roots_are_rejected(self) -> None:
+        invalid = {
+            "config": {"schema_version": "1", "actor_id": "bad id", "human_root": ".planning", "operational_root": "tasks"},
+            "state": {"schema_version": "1", "revision": 0, "stage": "DONE", "active_prd": None, "active_task": None, "last_gate": None, "blockers": [], "loops": [], "fleet": [], "trace": {"healthy": True, "source_event_count": 0}, "updated_at": "2026-09-08T12:01:00Z", "next_action": "none"},
+            "tasks": {"schema_version": "1", "prd_slug": "Bad Slug", "updated_at": "2026-09-08T12:01:00Z", "tasks": [{"id": "4", "title": "Bad", "state": "done", "dependencies": [], "acceptance_criteria": [], "verification_commands": [], "allowed_paths": [], "evidence_required": False}]},
+            "trace": {"schema_version": "1", "source_event_count": 1, "generated_at": "2026-09-08T12:02:00Z", "events": [{"sequence": 0, "id": "event 1", "at": "2026-09-08T12:01:00Z", "actor_id": "bad id", "type": "bad type!", "stage": "DONE", "task_id": "4", "data": {}}]},
+        }
+        for name, fixture in invalid.items():
+            with self.assertRaises(AssertionError, msg=name):
+                assert_schema_valid(self, self.schema(name), fixture)
 
 
 if __name__ == "__main__":

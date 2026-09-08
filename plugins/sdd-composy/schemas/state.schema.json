@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sdd-composy.local/schemas/state.schema.json",
+  "title": "SDD Composy global state v1",
+  "type": "object",
+  "required": ["schema_version", "revision", "stage", "active_prd", "active_task", "last_gate", "blockers", "loops", "fleet", "trace", "updated_at", "next_action"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "revision": {"type": "integer", "minimum": 0},
+    "stage": {"$ref": "#/definitions/stage"},
+    "active_prd": {"type": ["string", "null"], "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "active_task": {"type": ["string", "null"], "pattern": "^TASK-[0-9]{3,}$"},
+    "last_gate": {
+      "type": ["object", "null"],
+      "required": ["name", "status", "at", "actor_id"],
+      "properties": {
+        "name": {"enum": ["PRD", "STORIES", "TECHSPEC", "TASKS", "COMPLETE"]},
+        "status": {"enum": ["approved", "rejected"]},
+        "at": {"type": "string", "format": "date-time"},
+        "actor_id": {"$ref": "#/definitions/actor_id"}
+      },
+      "additionalProperties": true
+    },
+    "blockers": {"type": "array", "items": {"$ref": "#/definitions/summary"}},
+    "loops": {"type": "array", "items": {"$ref": "#/definitions/summary"}},
+    "fleet": {"type": "array", "items": {"$ref": "#/definitions/summary"}},
+    "trace": {
+      "type": "object",
+      "required": ["healthy", "source_event_count"],
+      "properties": {
+        "healthy": {"type": "boolean"},
+        "source_event_count": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": true
+    },
+    "updated_at": {"type": "string", "format": "date-time"},
+    "next_action": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": true,
+  "definitions": {
+    "actor_id": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._-]*$"},
+    "stage": {"enum": ["INIT", "MAP", "PRD", "STORIES", "TECHSPEC", "TASKS", "EXECUTE", "QA", "EVIDENCE", "REVIEW", "VERIFY", "COMPLETE"]},
+    "summary": {
+      "type": "object",
+      "required": ["id", "status"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._-]*$"},
+        "status": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": true
+    }
+  }
+}

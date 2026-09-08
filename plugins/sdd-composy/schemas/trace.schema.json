@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sdd-composy.local/schemas/trace.schema.json",
+  "title": "SDD Composy derived trace projection v1",
+  "description": "Deterministic projection of trace/events.jsonl; never edited directly.",
+  "type": "object",
+  "required": ["schema_version", "source_event_count", "generated_at", "events"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "source_event_count": {"type": "integer", "minimum": 0},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "events": {"type": "array", "items": {"$ref": "#/definitions/event"}}
+  },
+  "additionalProperties": true,
+  "definitions": {
+    "actor_id": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._-]*$"},
+    "stage": {"enum": ["INIT", "MAP", "PRD", "STORIES", "TECHSPEC", "TASKS", "EXECUTE", "QA", "EVIDENCE", "REVIEW", "VERIFY", "COMPLETE"]},
+    "event": {
+      "type": "object",
+      "required": ["sequence", "id", "at", "actor_id", "type", "stage", "task_id", "data"],
+      "properties": {
+        "sequence": {"type": "integer", "minimum": 1},
+        "id": {"type": "string", "pattern": "^EVT-[0-9]{6,}$"},
+        "at": {"type": "string", "format": "date-time"},
+        "actor_id": {"$ref": "#/definitions/actor_id"},
+        "type": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)+$"},
+        "stage": {"$ref": "#/definitions/stage"},
+        "task_id": {"type": ["string", "null"], "pattern": "^TASK-[0-9]{3,}$"},
+        "data": {"type": "object", "additionalProperties": true}
+      },
+      "additionalProperties": true
+    }
+  }
+}
