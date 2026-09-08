@@ -11,6 +11,7 @@ Task 04: minor (resolved by Task 06): invalid schema fixtures now start from val
 Task 04: complete (commits 2367299..4711add, major review finding addressed; minor later resolved by Task 06)
 Task 05: complete (commits 272622a..c2984c4, review findings addressed)
 Task 06: complete (commits 07cd072..c014c43, review clean)
+Task 07: complete (working-tree implementation reviewed through round 5; focused suite green)
 
 ### Pre-flight scan
 
@@ -53,3 +54,5 @@ Task 06: complete (commits 07cd072..c014c43, review clean)
 Ruling: Treat the two existing `pwdev-power` README inventory failures as the approved baseline exception; if this is wrong, F01 may appear red for a defect it did not introduce.
 
 Ruling: F01 Task 01 may add only the `sdd-composy` marketplace entries and must not repair unrelated plugin inventory metadata; if this is wrong, final marketplace validation will retain the two known failures until their owning change lands.
+
+Ruling: Treat the final Task 07 P2 as resolved by the explicit `log.md` exemption added to the OKF reference; if this is wrong, reserved operational logs may be linted more strictly than the implementation contract intends.

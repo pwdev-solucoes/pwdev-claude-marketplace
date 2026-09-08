@@ -4,6 +4,7 @@ import json
 import re
 import tempfile
 import unittest
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import unquote
@@ -404,6 +405,58 @@ class SddComposyOperationalSchemaTest(unittest.TestCase):
             with self.subTest(sha256=bad_hash), self.assertRaises(AssertionError):
                 assert_schema_valid(self, schema["definitions"]["evidence"], invalid, schema)
 
+
+class SddComposyOkfTest(unittest.TestCase):
+    def _okf(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('sdd_okf_extra', PLUGIN / 'scripts' / 'sdd_okf.py')
+        mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod); return mod
+
+    def test_frontmatter_quoted_colons_and_nested(self):
+        okf = self._okf()
+        meta, body = okf.parse_frontmatter('---\ntype: Concept\ntitle: "A: useful \\\"note\\\""\nitems:\n  - name: one\n    tags: [a, b]\n---\nbody')
+        self.assertEqual(meta['title'], 'A: useful "note"')
+        self.assertEqual(meta['items'][0]['tags'], ['a', 'b']); self.assertEqual(body, 'body')
+
+    def test_inline_values_preserve_strings_commas_and_nested_literals(self):
+        okf = self._okf()
+        meta, _ = okf.parse_frontmatter('---\ntype: Concept\nvalues: [feature, "true", "a,b", {enabled: true, label: "false"}]\n---\n')
+        self.assertEqual(meta['values'], ['feature', 'true', 'a,b', {'enabled': True, 'label': 'false'}])
+
+    def test_block_scalars_and_malformed_inline_values_are_rejected(self):
+        okf = self._okf()
+        with self.assertRaises(ValueError):
+            okf.parse_frontmatter('---\ntype: Concept\ntext: |\n  not supported\n---\n')
+        with self.assertRaises(ValueError):
+            okf.parse_frontmatter('---\ntype: Concept\nvalues: ["unterminated, true]\n---\n')
+
+    def test_cli_executable_exit_and_json_contract(self):
+        import subprocess, sys
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td); (root/'bad.md').write_text('---\ntitle: [broken\n---\n', encoding='utf-8')
+            p=subprocess.run([str(PLUGIN/'scripts'/'sdd_okf.py'),'lint',str(root)], text=True, capture_output=True)
+            self.assertEqual(p.returncode, 1); self.assertFalse(__import__('json').loads(p.stdout)['ok'])
+            p=subprocess.run([str(PLUGIN/'scripts'/'sdd_okf.py'),'index',str(root)], text=True, capture_output=True)
+            self.assertEqual(p.returncode, 2); self.assertIn('error', __import__('json').loads(p.stdout))
+
+    def test_okf_lint_and_index_contract(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('sdd_okf', PLUGIN / 'scripts' / 'sdd_okf.py')
+        okf = importlib.util.module_from_spec(spec); spec.loader.exec_module(okf)
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td); (root/'doc.md').write_text('---\ntype: Concept\ncustom: keep\ngenerated:\n  by: human:me\n  at: 2026-01-01T00:00:00Z\nverified:\n  - by: human:me\n    at: 2026-01-01T00:00:00Z\nsources:\n  - resource: https://example.test\n---\n[missing](no.md)\n', encoding='utf-8')
+            result = okf.lint(root, 'human:me'); self.assertTrue(result['ok']); self.assertEqual(len(result['warnings']), 1)
+            index = okf.generate_index(root); self.assertIn('okf_version: "0.2"', index); self.assertIn('doc.md', index)
+            (root/'index.md').write_text(index, encoding='utf-8'); self.assertTrue(okf.lint(root)['ok'])
+            (root/'log.md').write_text('# Log\n', encoding='utf-8'); self.assertTrue(okf.lint(root)['ok'])
+            (root/'bad.md').write_text('---\ntitle: [broken\n---\n', encoding='utf-8'); self.assertFalse(okf.lint(root)['ok'])
+            (root/'bad.md').unlink()
+            (root/'mismatch.md').write_text('---\ntype: Concept\ngenerated:\n  by: tool/1\n---\n', encoding='utf-8')
+            self.assertFalse(okf.lint(root, 'human:me')['ok'])
+            (root/'mismatch.md').unlink()
+            (root/'log.md').write_text('---\ntype: Bad\n---\n[no](missing.md)\n', encoding='utf-8')
+            self.assertTrue(okf.lint(root)['ok'])
+            self.assertIn('custom: keep', (root/'doc.md').read_text(encoding='utf-8'))
 
 if __name__ == "__main__":
     unittest.main()
