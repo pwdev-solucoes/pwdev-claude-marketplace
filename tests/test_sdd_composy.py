@@ -67,6 +67,7 @@ def assert_schema_valid(test, schema, value, root=None, path="$"):
     elif expected == "integer":
         test.assertIsInstance(value, int, path)
         test.assertGreaterEqual(value, schema.get("minimum", value), path)
+        test.assertLessEqual(value, schema.get("maximum", value), path)
     elif expected == "boolean":
         test.assertIsInstance(value, bool, path)
 
@@ -261,6 +262,60 @@ class SddComposyCoreSchemaTest(unittest.TestCase):
             with self.subTest(justification=invalid_justification):
                 with self.assertRaises(AssertionError):
                     assert_schema_valid(self, task_schema, invalid, schema)
+
+
+class SddComposyOperationalSchemaTest(unittest.TestCase):
+    def schema(self, name: str) -> dict:
+        path = SCHEMAS / f"{name}.schema.json"
+        self.assertTrue(path.is_file(), f"operational schema must exist: {path}")
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def test_operational_schemas_are_versioned_and_extension_safe(self) -> None:
+        for name in ("loop", "fleet-member", "fleet-result", "evidence-manifest"):
+            schema = self.schema(name)
+            self.assertEqual(schema["$schema"], "https://json-schema.org/draft/2020-12/schema")
+            self.assertEqual(schema["properties"]["schema_version"]["const"], "1")
+            self.assertTrue(schema["additionalProperties"])
+            for definition in schema["definitions"].values():
+                if definition.get("type") == "object":
+                    self.assertTrue(definition["additionalProperties"])
+
+    def test_loop_defaults_to_three_iterations_and_accepts_terminal_state(self) -> None:
+        schema = self.schema("loop")
+        self.assertEqual(schema["properties"]["max_iterations"]["default"], 3)
+        self.assertEqual(schema["properties"]["max_iterations"]["minimum"], 1)
+        fixture = {"schema_version": "1", "id": "loop-001", "task_id": "TASK-005", "status": "iteration_cap", "iteration": 3, "max_iterations": 3, "stop_reason": "Iteration cap reached", "started_at": "2026-09-08T12:00:00Z", "updated_at": "2026-09-08T12:30:00Z", "finished_at": "2026-09-08T12:30:00Z", "x-runtime-note": "portable"}
+        assert_schema_valid(self, schema, fixture)
+        self.assertIn("completed", schema["definitions"]["loop_status"]["enum"])
+        self.assertIn("cancelled", schema["definitions"]["loop_status"]["enum"])
+
+    def test_fleet_runtime_ui_and_terminal_enums(self) -> None:
+        member = self.schema("fleet-member")
+        result = self.schema("fleet-result")
+        self.assertEqual(member["definitions"]["runtime"]["enum"], ["claude-code", "codex"])
+        self.assertEqual(member["definitions"]["ui"]["enum"], ["cmux", "tmux", "headless"])
+        assert_schema_valid(self, member, {"schema_version": "1", "id": "member-001", "task_id": "TASK-005", "status": "running", "runtime": "codex", "ui": "headless", "branch": "codex/schemas", "worktree_path": ".worktrees/schemas", "started_at": "2026-09-08T12:00:00Z", "updated_at": "2026-09-08T12:01:00Z", "x-host": "local"})
+        assert_schema_valid(self, result, {"schema_version": "1", "member_id": "member-001", "task_id": "TASK-005", "status": "completed", "commit": "0123456789abcdef0123456789abcdef01234567", "verification": [{"command": "python3 -m unittest", "result": "passed", "output_sha256": "a" * 64}], "completed_at": "2026-09-08T12:30:00Z", "x-review": True})
+        for terminal in ("completed", "failed", "blocked", "cancelled"):
+            self.assertIn(terminal, result["definitions"]["result_status"]["enum"])
+
+    def test_evidence_separates_result_and_type_and_confines_hashed_paths(self) -> None:
+        schema = self.schema("evidence-manifest")
+        entry = {"requirement_id": "RF-001", "story_id": "US-001", "scenario_id": "SC-001", "criterion_id": "CA-001", "test_id": "TEST-001", "result": "passed", "evidence_type": "test_output", "path": "tasks/prd-billing-api/evidences/test-output.txt", "sha256": "b" * 64, "x-tool": "unittest"}
+        fixture = {"schema_version": "1", "prd_slug": "billing-api", "task_id": "TASK-005", "generated_at": "2026-09-08T12:30:00Z", "entries": [entry], "x-owner": "qa"}
+        assert_schema_valid(self, schema, fixture)
+        required = schema["definitions"]["evidence"]["required"]
+        self.assertIn("result", required)
+        self.assertIn("evidence_type", required)
+        self.assertNotEqual(schema["definitions"]["result"]["enum"], schema["definitions"]["evidence_type"]["enum"])
+        for bad_path in ("/tmp/output.txt", "../output.txt", "tasks/prd-billing-api/report.txt", "tasks/prd-billing-api/evidences/../report.txt"):
+            invalid = dict(entry, path=bad_path)
+            with self.subTest(path=bad_path), self.assertRaises(AssertionError):
+                assert_schema_valid(self, schema["definitions"]["evidence"], invalid, schema)
+        for bad_hash in ("b" * 63, "B" * 64, "not-a-digest"):
+            invalid = dict(entry, sha256=bad_hash)
+            with self.subTest(sha256=bad_hash), self.assertRaises(AssertionError):
+                assert_schema_valid(self, schema["definitions"]["evidence"], invalid, schema)
 
 
 if __name__ == "__main__":
