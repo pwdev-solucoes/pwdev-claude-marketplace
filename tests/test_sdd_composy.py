@@ -1,9 +1,12 @@
 """Structural contract tests for the portable sdd-composy plugin."""
 
 import json
+import re
+import tempfile
 import unittest
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import unquote
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,6 +18,34 @@ CODEX_MARKETPLACE = ROOT / ".agents" / "plugins" / "marketplace.json"
 REFERENCES = PLUGIN / "references"
 READMES = (PLUGIN / "README.md", PLUGIN / "README.pt-BR.md")
 SCHEMAS = PLUGIN / "schemas"
+
+PLACEHOLDER_PATTERN = re.compile(r"(?im)(?:^|\W)(TODO|TBD|FIXME|XXX)(?:\W|$)|\{\{[^}\n]+\}\}")
+MARKDOWN_LINK_PATTERN = re.compile(r"(?<!!)\[[^]]+\]\(([^)]+)\)")
+
+
+def unresolved_placeholders(paths):
+    return [path for path in paths if PLACEHOLDER_PATTERN.search(path.read_text(encoding="utf-8"))]
+
+
+def broken_relative_links(paths):
+    broken = []
+    for path in paths:
+        for raw_target in MARKDOWN_LINK_PATTERN.findall(path.read_text(encoding="utf-8")):
+            target = raw_target.strip().split(maxsplit=1)[0].strip("<>")
+            if not target or target.startswith(("#", "/", "mailto:")) or "://" in target:
+                continue
+            relative = unquote(target.split("#", 1)[0])
+            if relative and not (path.parent / relative).resolve().exists():
+                broken.append((path, target))
+    return broken
+
+
+def unregistered_skills(plugin):
+    skills_root = plugin / "skills"
+    commands_root = plugin / "commands"
+    skill_names = {path.parent.name for path in skills_root.glob("*/SKILL.md")}
+    command_names = {path.stem for path in commands_root.glob("*.md")}
+    return skill_names - command_names
 
 
 def assert_schema_valid(test, schema, value, root=None, path="$"):
@@ -83,8 +114,11 @@ class SddComposyManifestTest(unittest.TestCase):
         self.assertEqual(claude["name"], "sdd-composy")
         self.assertEqual(codex["name"], "sdd-composy")
         self.assertEqual(codex["skills"], "./skills/")
-        self.assertEqual(claude["version"].split("+", 1)[0], "0.1.0")
-        self.assertEqual(codex["version"].split("+", 1)[0], "0.1.0")
+        claude_version = claude["version"].split("+", 1)[0]
+        codex_version = codex["version"].split("+", 1)[0]
+        self.assertEqual(claude_version, "0.1.0")
+        self.assertEqual(codex_version, "0.1.0")
+        self.assertEqual(claude_version, codex_version, "runtime manifest versions diverged")
         self.assertEqual(codex["interface"]["displayName"], "SDD Composy")
         for manifest in (claude, codex):
             self.assertNotIn("hooks", manifest)
@@ -170,6 +204,32 @@ class SddComposySharedContractTest(unittest.TestCase):
         self.assertIn("same-directory temporary files", safety)
         self.assertIn("atomically replace", safety)
 
+    def test_foundation_markdown_has_no_placeholders_or_broken_relative_links(self) -> None:
+        markdown = (*READMES, *sorted(REFERENCES.glob("*.md")))
+        self.assertEqual(unresolved_placeholders(markdown), [])
+        self.assertEqual(broken_relative_links(markdown), [])
+
+    def test_structural_checks_reject_bad_fixtures(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            placeholder = root / "placeholder.md"
+            placeholder.write_text("## TODO: replace this\n", encoding="utf-8")
+            broken = root / "broken.md"
+            broken.write_text("[missing](./absent.md)\n", encoding="utf-8")
+            self.assertEqual(unresolved_placeholders((placeholder,)), [placeholder])
+            self.assertEqual(broken_relative_links((broken,)), [(broken, "./absent.md")])
+
+    def test_every_portable_skill_has_a_claude_adapter(self) -> None:
+        self.assertEqual(unregistered_skills(PLUGIN), set())
+
+    def test_skill_registration_check_rejects_an_orphan(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            plugin = Path(temporary)
+            skill = plugin / "skills" / "orphan"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text("# Orphan\n", encoding="utf-8")
+            self.assertEqual(unregistered_skills(plugin), {"orphan"})
+
 
 class SddComposyRuntimeContractTest(unittest.TestCase):
     def test_runtime_contract_defines_shared_core_discovery(self) -> None:
@@ -226,14 +286,32 @@ class SddComposyCoreSchemaTest(unittest.TestCase):
             assert_schema_valid(self, self.schema(name), fixture)
 
     def test_invalid_identifiers_states_and_roots_are_rejected(self) -> None:
-        invalid = {
-            "config": {"schema_version": "1", "actor_id": "bad id", "human_root": ".planning", "operational_root": "tasks"},
-            "state": {"schema_version": "1", "revision": 0, "stage": "DONE", "active_prd": None, "active_task": None, "last_gate": None, "blockers": [], "loops": [], "fleet": [], "trace": {"healthy": True, "source_event_count": 0}, "updated_at": "2026-09-08T12:01:00Z", "next_action": "none"},
-            "tasks": {"schema_version": "1", "prd_slug": "Bad Slug", "updated_at": "2026-09-08T12:01:00Z", "tasks": [{"id": "4", "title": "Bad", "state": "done", "dependencies": [], "acceptance_criteria": [], "verification_commands": [], "allowed_paths": [], "evidence_required": False}]},
-            "trace": {"schema_version": "1", "source_event_count": 1, "generated_at": "2026-09-08T12:02:00Z", "events": [{"sequence": 0, "id": "event 1", "at": "2026-09-08T12:01:00Z", "actor_id": "bad id", "type": "bad type!", "stage": "DONE", "task_id": "4", "data": {}}]},
-        }
-        for name, fixture in invalid.items():
-            with self.assertRaises(AssertionError, msg=name):
+        config = {"schema_version": "1", "actor_id": "agent:codex-1", "human_root": "tasks", "operational_root": ".planning/sdd-composy"}
+        state = {"schema_version": "1", "revision": 1, "stage": "EXECUTE", "active_prd": None, "active_task": None, "last_gate": None, "blockers": [], "loops": [], "fleet": [], "trace": {"healthy": True, "source_event_count": 0}, "updated_at": "2026-09-08T12:01:00Z", "next_action": "none"}
+        task = {"id": "TASK-004", "title": "Valid", "state": "ready", "dependencies": [], "acceptance_criteria": ["CA-001"], "verification_commands": ["python3 -m unittest"], "allowed_paths": ["plugins/sdd-composy/schemas/"], "evidence_required": False}
+        tasks = {"schema_version": "1", "prd_slug": "good-slug", "updated_at": "2026-09-08T12:01:00Z", "tasks": [task]}
+        event = {"sequence": 1, "id": "EVT-000001", "at": "2026-09-08T12:01:00Z", "actor_id": "agent:codex-1", "type": "task.transitioned", "stage": "EXECUTE", "task_id": "TASK-004", "data": {}}
+        trace = {"schema_version": "1", "source_event_count": 1, "generated_at": "2026-09-08T12:02:00Z", "events": [event]}
+        cases = (
+            ("config actor", "config", dict(config, actor_id="bad id")),
+            ("config human root", "config", dict(config, human_root=".planning")),
+            ("config operational root", "config", dict(config, operational_root="tasks")),
+            ("state stage", "state", dict(state, stage="DONE")),
+            ("task slug", "tasks", dict(tasks, prd_slug="Bad Slug")),
+            ("task id", "tasks", dict(tasks, tasks=[dict(task, id="4")])),
+            ("task state", "tasks", dict(tasks, tasks=[dict(task, state="done")])),
+            ("task criteria", "tasks", dict(tasks, tasks=[dict(task, acceptance_criteria=[])])),
+            ("task commands", "tasks", dict(tasks, tasks=[dict(task, verification_commands=[])])),
+            ("task paths", "tasks", dict(tasks, tasks=[dict(task, allowed_paths=[])])),
+            ("trace sequence", "trace", dict(trace, events=[dict(event, sequence=0)])),
+            ("trace event id", "trace", dict(trace, events=[dict(event, id="event 1")])),
+            ("trace actor", "trace", dict(trace, events=[dict(event, actor_id="bad id")])),
+            ("trace type", "trace", dict(trace, events=[dict(event, type="bad type!")])),
+            ("trace stage", "trace", dict(trace, events=[dict(event, stage="DONE")])),
+            ("trace task id", "trace", dict(trace, events=[dict(event, task_id="4")])),
+        )
+        for label, name, fixture in cases:
+            with self.subTest(label=label), self.assertRaises(AssertionError):
                 assert_schema_valid(self, self.schema(name), fixture)
 
     def test_skipped_task_requires_explicit_non_empty_justification(self) -> None:

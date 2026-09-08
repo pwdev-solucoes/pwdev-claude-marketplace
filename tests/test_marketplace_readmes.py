@@ -17,6 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MARKETPLACE = ROOT / ".claude-plugin" / "marketplace.json"
 READMES = ("README.md", "README.pt-BR.md")
+PLUGIN_NAME = r"(?:pwdev|sdd)-[a-z-]+"
 
 
 def marketplace_plugins():
@@ -37,16 +38,16 @@ def readme(name):
 def table_rows(text):
     """{plugin: version} from the plugin table."""
     return dict(
-        re.findall(r"\[\*\*(pwdev-[a-z-]+)\*\*\][^|]*\|[^|]*\|\s*([0-9][^ |]*)\s*\|", text)
+        re.findall(rf"\[\*\*({PLUGIN_NAME})\*\*\][^|]*\|[^|]*\|\s*([0-9][^ |]*)\s*\|", text)
     )
 
 
 def sections(text):
-    return set(re.findall(r"^### (pwdev-[a-z-]+)$", text, re.M))
+    return set(re.findall(rf"^### ({PLUGIN_NAME})$", text, re.M))
 
 
 def install_commands(text):
-    return set(re.findall(r"claude plugin install (pwdev-[a-z-]+)@", text))
+    return set(re.findall(rf"claude plugin install ({PLUGIN_NAME})@", text))
 
 
 def inventory_claims(text):
@@ -54,7 +55,7 @@ def inventory_claims(text):
     claims = {}
     pattern = re.compile(
         r"^\*\*(?:Ships|Inclui):\*\* (?P<inventory>[^\n]+)\n\n"
-        r"[^\n]*\./plugins/(?P<plugin>pwdev-[a-z-]+)/",
+        rf"[^\n]*\./plugins/(?P<plugin>{PLUGIN_NAME})/",
         re.M,
     )
     for match in pattern.finditer(text):
