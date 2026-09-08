@@ -11,6 +11,7 @@ CLAUDE_MANIFEST = PLUGIN / ".claude-plugin" / "plugin.json"
 CODEX_MANIFEST = PLUGIN / ".codex-plugin" / "plugin.json"
 CLAUDE_MARKETPLACE = ROOT / ".claude-plugin" / "marketplace.json"
 CODEX_MARKETPLACE = ROOT / ".agents" / "plugins" / "marketplace.json"
+REFERENCES = PLUGIN / "references"
 
 
 class SddComposyManifestTest(unittest.TestCase):
@@ -53,6 +54,63 @@ class SddComposyManifestTest(unittest.TestCase):
         self.assertEqual(entry["policy"]["installation"], "AVAILABLE")
         self.assertEqual(entry["policy"]["authentication"], "ON_INSTALL")
         self.assertEqual(entry["category"], "Developer Tools")
+
+
+class SddComposySharedContractTest(unittest.TestCase):
+    def reference(self, name: str) -> str:
+        path = REFERENCES / f"{name}.md"
+        self.assertTrue(path.is_file(), f"shared reference must exist: {path}")
+        return path.read_text(encoding="utf-8")
+
+    def test_workflow_defines_canonical_lifecycle_and_gates(self) -> None:
+        workflow = self.reference("workflow")
+        for phase in (
+            "INIT", "MAP", "PRD", "STORIES", "TECHSPEC", "TASKS",
+            "EXECUTE", "QA", "EVIDENCE", "REVIEW", "VERIFY", "COMPLETE",
+        ):
+            self.assertIn(phase, workflow)
+        self.assertIn("NOT_APPLICABLE", workflow)
+        self.assertIn("explicit human approval", workflow)
+        self.assertIn("fresh", workflow)
+        self.assertIn("QUICK", workflow)
+        self.assertIn("5 implementation files", workflow)
+
+    def test_artifacts_separate_human_and_operational_roots(self) -> None:
+        artifacts = self.reference("artifacts")
+        self.assertIn("tasks/prd-<slug>/", artifacts)
+        self.assertIn(".planning/sdd-composy/", artifacts)
+        self.assertIn("OKF v0.2", artifacts)
+        self.assertIn("type", artifacts)
+        self.assertIn("unknown", artifacts.lower())
+        self.assertIn("events.jsonl", artifacts)
+        self.assertIn("trace.json", artifacts)
+        self.assertIn("never edited directly", artifacts.lower())
+
+    def test_states_define_guarded_task_transitions(self) -> None:
+        states = self.reference("states")
+        for state in (
+            "pending", "ready", "running", "qa_required", "evidence_required",
+            "review_required", "verify_required", "complete", "blocked",
+            "rejected", "skipped",
+        ):
+            self.assertIn(state, states)
+        self.assertIn("rejected -> ready", states)
+        self.assertIn("dependencies", states)
+        self.assertIn("explicit justification", states)
+        self.assertIn("fresh test evidence", states)
+
+    def test_safety_prohibits_secrets_and_unsafe_automation(self) -> None:
+        safety = self.reference("safety")
+        for prohibited in (
+            ".env", "credentials", "tokens", "private keys", "certificates",
+            "fleet environment files",
+        ):
+            self.assertIn(prohibited, safety)
+        self.assertIn("Never merge fleet branches automatically", safety)
+        self.assertIn("Never infer human approval", safety)
+        self.assertIn("Preserve unknown JSON fields", safety)
+        self.assertIn("same-directory temporary files", safety)
+        self.assertIn("atomically replace", safety)
 
 
 if __name__ == "__main__":
