@@ -31,6 +31,13 @@ Additional checks:
 - `git diff --check` passed.
 - `python3 -m json.tool` parsed all four schemas successfully.
 
+### Review round 1 fix
+
+- Added Draft 2020-12 `if`/`then` validation requiring a non-empty `justification` whenever a task's state is `skipped`, while retaining `additionalProperties: true`.
+- Added focused fixtures proving that a justified skipped task with an extension is valid and that both a missing and an empty justification are invalid.
+- `python3 -m unittest tests.test_sdd_composy`: 13 tests passed.
+- `git diff --check`: passed.
+
 ## Scope
 
 Only the four Task 04 schemas, the shared focused test, the task brief, and this report are intended for the task commit. Pre-existing review diff files remain untracked and untouched. Known root README coverage failures are outside Task 04 scope.

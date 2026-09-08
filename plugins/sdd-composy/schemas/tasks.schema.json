@@ -31,6 +31,11 @@
         "claimed_by": {"type": ["string", "null"], "pattern": "^[A-Za-z][A-Za-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._-]*$"},
         "justification": {"type": "string", "minLength": 1}
       },
+      "if": {
+        "properties": {"state": {"const": "skipped"}},
+        "required": ["state"]
+      },
+      "then": {"required": ["justification"]},
       "additionalProperties": true
     }
   }

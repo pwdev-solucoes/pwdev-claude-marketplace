@@ -29,7 +29,16 @@ def assert_schema_valid(test, schema, value, root=None, path="$"):
         test.assertEqual(value, schema["const"], path)
     if "enum" in schema:
         test.assertIn(value, schema["enum"], path)
+    if "if" in schema:
+        try:
+            assert_schema_valid(test, schema["if"], value, root, path)
+        except AssertionError:
+            pass
+        else:
+            assert_schema_valid(test, schema["then"], value, root, path)
     expected = schema.get("type")
+    if expected is None and ("properties" in schema or "required" in schema):
+        expected = "object"
     if isinstance(expected, list):
         if value is None and "null" in expected:
             return
@@ -225,6 +234,33 @@ class SddComposyCoreSchemaTest(unittest.TestCase):
         for name, fixture in invalid.items():
             with self.assertRaises(AssertionError, msg=name):
                 assert_schema_valid(self, self.schema(name), fixture)
+
+    def test_skipped_task_requires_explicit_non_empty_justification(self) -> None:
+        schema = self.schema("tasks")
+        task_schema = schema["definitions"]["task"]
+        skipped = {
+            "id": "TASK-004",
+            "title": "Superseded task",
+            "state": "skipped",
+            "dependencies": [],
+            "acceptance_criteria": ["CA-001"],
+            "verification_commands": ["python3 -m unittest"],
+            "allowed_paths": ["plugins/sdd-composy/schemas/"],
+            "evidence_required": False,
+            "justification": "Superseded by the approved TASK-005 contract",
+            "x-authority": "human:paulo",
+        }
+
+        assert_schema_valid(self, task_schema, skipped, schema)
+        for invalid_justification in (None, ""):
+            invalid = dict(skipped)
+            if invalid_justification is None:
+                invalid.pop("justification")
+            else:
+                invalid["justification"] = invalid_justification
+            with self.subTest(justification=invalid_justification):
+                with self.assertRaises(AssertionError):
+                    assert_schema_valid(self, task_schema, invalid, schema)
 
 
 if __name__ == "__main__":
