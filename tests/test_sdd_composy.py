@@ -12,6 +12,7 @@ CODEX_MANIFEST = PLUGIN / ".codex-plugin" / "plugin.json"
 CLAUDE_MARKETPLACE = ROOT / ".claude-plugin" / "marketplace.json"
 CODEX_MARKETPLACE = ROOT / ".agents" / "plugins" / "marketplace.json"
 REFERENCES = PLUGIN / "references"
+READMES = (PLUGIN / "README.md", PLUGIN / "README.pt-BR.md")
 
 
 class SddComposyManifestTest(unittest.TestCase):
@@ -111,6 +112,34 @@ class SddComposySharedContractTest(unittest.TestCase):
         self.assertIn("Preserve unknown JSON fields", safety)
         self.assertIn("same-directory temporary files", safety)
         self.assertIn("atomically replace", safety)
+
+
+class SddComposyRuntimeContractTest(unittest.TestCase):
+    def test_runtime_contract_defines_shared_core_discovery(self) -> None:
+        runtime = (REFERENCES / "runtime.md").read_text(encoding="utf-8")
+        for shared_root in ("skills/", "references/", "scripts/", "templates/", "schemas/"):
+            self.assertIn(shared_root, runtime)
+        self.assertIn(".claude-plugin/plugin.json", runtime)
+        self.assertIn(".codex-plugin/plugin.json", runtime)
+        self.assertIn('"skills": "./skills/"', runtime)
+        self.assertIn("commands/<name>.md", runtime)
+        self.assertIn("thin adapter", runtime.lower())
+        self.assertIn("must not duplicate", runtime.lower())
+        self.assertIn("must not depend", runtime.lower())
+        self.assertIn("pwdev-flow", runtime)
+        self.assertIn("pwdev-feat", runtime)
+
+    def test_bilingual_readmes_describe_the_same_portable_contract(self) -> None:
+        for path in READMES:
+            text = path.read_text(encoding="utf-8")
+            self.assertIn("Claude Code", text)
+            self.assertIn("Codex", text)
+            self.assertIn("tasks/prd-<slug>/", text)
+            self.assertIn(".planning/sdd-composy/", text)
+            self.assertIn("OKF v0.2", text)
+            self.assertIn("$sdd-composy-<name>", text)
+            self.assertIn("/sdd-composy:<name>", text)
+            self.assertIn("references/runtime.md", text)
 
 
 if __name__ == "__main__":
