@@ -234,6 +234,7 @@ The five original plugins were rebuilt on the modern Claude Code plugin system.
 | Plugin | Description | Version | License |
 |--------|-------------|:-------:|:-------:|
 | [**pwdev-flow**](./plugins/pwdev-flow/) | Portable spec-driven development for Claude Code **and** Codex — one `.planning/flow` contract, 17 commands, semantic opt-in audit, guarded external CLI delegation, isolated native fleets (`claude -p` / `codex exec`) | 0.6.0 | Apache-2.0 |
+| [**sdd-composy**](./plugins/sdd-composy/) | Portable spec-driven development for Claude Code and Codex — shared contracts, durable state, OKF v0.2 artifacts, traceability, bounded loops, and isolated fleets | 0.1.0 | Apache-2.0 |
 | [**pwdev-power**](./plugins/pwdev-power/) | Disciplined spec-driven development for Claude Code, Codex **and** Hermes Agent — brainstorm gate, plans with verbatim constraints, subagent-driven execution with a ledger and bounded fix loop, adversarial verification, codebase map, isolated cmux fleets as a visual panel or unattended | 0.1.0 | Apache-2.0 |
 | [**pwdev-code**](./plugins/pwdev-code/) | Spec-driven development — 8 real subagents (incl. advisor), per-task model routing, memory graph, opt-in parallel waves, external CLI delegation (Codex/OpenCode/Kimi/Gemini/Kiro), 23 commands | 2.4.0 | Apache-2.0 |
 | [**pwdev-uiux**](./plugins/pwdev-uiux/) | UI/UX engineering — 6 real subagents, 5-phase workflow with gates, Figma, WCAG 2.1 AA | 2.0.1 | Apache-2.0 |
@@ -317,6 +318,20 @@ stays meaningful in both hosts instead of being host-specific telemetry.
 **Ships:** 17 commands · 17 skills · no subagents, no hooks, no MCP
 
 See the [full plugin documentation](./plugins/pwdev-flow/README.md).
+
+### sdd-composy
+
+Portable spec-driven development for Claude Code and Codex from one shared contract set.
+It keeps human contracts under `tasks/prd-<slug>/`, operational state under
+`.planning/sdd-composy/`, and generated project Markdown aligned with OKF v0.2.
+
+```
+INIT ─▶ MAP ─▶ PRD ─▶ STORIES ─▶ TECHSPEC ─▶ TASKS ─▶ EXECUTE ─▶ QA ─▶ EVIDENCE ─▶ REVIEW ─▶ VERIFY
+```
+
+**Ships:** 0 commands · no subagents · no MCP
+
+See the [full plugin documentation](./plugins/sdd-composy/README.md).
 
 ### pwdev-code
 
@@ -573,6 +588,9 @@ claude plugin install pwdev-power@pwdev-claude-marketplace
 
 # Portable spec-driven development for Claude Code and Codex (17 commands, native fleets)
 claude plugin install pwdev-flow@pwdev-claude-marketplace
+
+# Portable SDD workflow with OKF v0.2 artifacts and traceable execution
+claude plugin install sdd-composy@pwdev-claude-marketplace
 
 # Spec-driven development (8 subagents, 6 phases, memory graph)
 claude plugin install pwdev-code@pwdev-claude-marketplace

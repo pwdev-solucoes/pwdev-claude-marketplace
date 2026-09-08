@@ -238,6 +238,7 @@ foram reestruturados.
 | Plugin | Descrição | Versão | Licença |
 |--------|-----------|:------:|:------:|
 | [**pwdev-flow**](./plugins/pwdev-flow/) | Desenvolvimento orientado a especificação portátil para Claude Code **e** Codex — um único contrato `.planning/flow`, 17 comandos, auditoria semântica opt-in, delegação guardada a CLIs externas, frotas nativas isoladas (`claude -p` / `codex exec`) | 0.6.0 | Apache-2.0 |
+| [**sdd-composy**](./plugins/sdd-composy/) | Desenvolvimento orientado a especificação portátil para Claude Code e Codex — contratos compartilhados, estado durável, artefatos OKF v0.2, rastreabilidade, loops delimitados e frotas isoladas | 0.1.0 | Apache-2.0 |
 | [**pwdev-power**](./plugins/pwdev-power/) | Desenvolvimento orientado a especificação com disciplina, para Claude Code, Codex **e** Hermes Agent — portão de brainstorm, planos com restrições literais, execução dirigida por subagentes com registro e ciclo de correção limitado, verificação adversarial, mapa do codebase, frotas isoladas no cmux como painel visual ou sozinhas | 0.1.0 | Apache-2.0 |
 | [**pwdev-code**](./plugins/pwdev-code/) | Desenvolvimento orientado a especificação — 8 subagentes reais (incl. advisor), roteamento por task, grafo de memória, waves paralelas opt-in, delegação a CLIs externas (Codex/OpenCode/Kimi/Gemini/Kiro), 23 comandos | 2.4.0 | Apache-2.0 |
 | [**pwdev-uiux**](./plugins/pwdev-uiux/) | Engenharia UI/UX — 6 subagentes reais, fluxo de 5 fases com gates, Figma, WCAG 2.1 AA | 2.0.1 | Apache-2.0 |
@@ -326,6 +327,21 @@ virar telemetria específica de um deles.
 **Inclui:** 17 comandos · 17 skills · sem subagentes, sem hooks, sem MCP
 
 Veja a [documentação completa do plugin](./plugins/pwdev-flow/README.pt-BR.md).
+
+### sdd-composy
+
+Desenvolvimento orientado a especificação portátil para Claude Code e Codex a partir
+de um conjunto compartilhado de contratos. Mantém contratos humanos em
+`tasks/prd-<slug>/`, estado operacional em `.planning/sdd-composy/` e Markdown
+gerado alinhado ao OKF v0.2.
+
+```
+INIT ─▶ MAPA ─▶ PRD ─▶ HISTÓRIAS ─▶ TECHSPEC ─▶ TASKS ─▶ EXECUÇÃO ─▶ QA ─▶ EVIDÊNCIA ─▶ REVISÃO ─▶ VERIFICAÇÃO
+```
+
+**Inclui:** 0 comandos · sem subagentes · sem MCP
+
+Veja a [documentação completa do plugin](./plugins/sdd-composy/README.pt-BR.md).
 
 ### pwdev-code
 
@@ -581,6 +597,9 @@ claude plugin install pwdev-power@pwdev-claude-marketplace
 
 # Desenvolvimento orientado a especificação portátil para Claude Code e Codex (17 comandos, frotas nativas)
 claude plugin install pwdev-flow@pwdev-claude-marketplace
+
+# Fluxo SDD portátil com artefatos OKF v0.2 e execução rastreável
+claude plugin install sdd-composy@pwdev-claude-marketplace
 
 # Desenvolvimento orientado a especificação (8 subagentes, 6 fases, grafo de memória)
 claude plugin install pwdev-code@pwdev-claude-marketplace
