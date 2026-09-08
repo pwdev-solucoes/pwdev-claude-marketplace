@@ -1,0 +1,38 @@
+{
+  "name": "sdd-composy",
+  "version": "0.1.0+codex.20260908000000",
+  "description": "Portable spec-driven development with human-readable contracts, durable operational state, traceability, bounded autonomous correction, and isolated fleets.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "codex",
+    "spec-driven-development",
+    "workflow",
+    "traceability",
+    "verification",
+    "fleet",
+    "portable"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "SDD Composy",
+    "shortDescription": "Portable spec-driven development workflows",
+    "longDescription": "Create human-readable product contracts, maintain durable operational state, execute and verify traceable tasks, run bounded autonomous correction loops, and coordinate isolated fleets from the same portable artifacts in Claude Code and Codex.",
+    "developerName": "PWDEV Solucoes",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Initialize or resume an SDD Composy workspace.",
+      "Create and execute a traceable spec-driven development plan.",
+      "Review and verify this implementation against its approved contracts."
+    ]
+  }
+}
