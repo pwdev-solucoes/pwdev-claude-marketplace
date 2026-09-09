@@ -53,7 +53,7 @@ def unregistered_skills(plugin):
 
 
 def assert_schema_valid(test, schema, value, root=None, path="$"):
-    """Small dependency-free validator for the schema features used by fixtures."""
+    """Dependency-free Draft 2020-12 subset used by the repository schemas."""
     root = root or schema
     if "$ref" in schema:
         target = root
@@ -77,11 +77,21 @@ def assert_schema_valid(test, schema, value, root=None, path="$"):
     if isinstance(expected, list):
         if value is None and "null" in expected:
             return
-        expected = next(item for item in expected if item != "null")
+        test.assertTrue(any((item == "null" and value is None) or
+                            (item == "object" and isinstance(value, dict)) or
+                            (item == "array" and isinstance(value, list)) or
+                            (item == "string" and isinstance(value, str)) or
+                            (item == "integer" and isinstance(value, int) and not isinstance(value, bool)) or
+                            (item == "boolean" and isinstance(value, bool))
+                            for item in expected), path)
+        expected = next((item for item in expected if item != "null"), None)
     if expected == "object":
         test.assertIsInstance(value, dict, path)
         for key in schema.get("required", []):
             test.assertIn(key, value, f"{path}.{key}")
+        if schema.get("additionalProperties") is False:
+            allowed = set(schema.get("properties", {}))
+            test.assertTrue(set(value).issubset(allowed), f"{path} has additional properties")
         for key, child in schema.get("properties", {}).items():
             if key in value:
                 assert_schema_valid(test, child, value[key], root, f"{path}.{key}")
@@ -101,6 +111,7 @@ def assert_schema_valid(test, schema, value, root=None, path="$"):
             datetime.fromisoformat(value.replace("Z", "+00:00"))
     elif expected == "integer":
         test.assertIsInstance(value, int, path)
+        test.assertNotIsInstance(value, bool, path)
         test.assertGreaterEqual(value, schema.get("minimum", value), path)
         test.assertLessEqual(value, schema.get("maximum", value), path)
     elif expected == "boolean":
@@ -723,6 +734,20 @@ class SddComposyOperationalSchemaTest(unittest.TestCase):
         assert_schema_valid(self, result, {"schema_version": "1", "member_id": "member-001", "task_id": "TASK-005", "status": "completed", "commit": "0123456789abcdef0123456789abcdef01234567", "verification": [{"command": "python3 -m unittest", "result": "passed", "output_sha256": "a" * 64}], "completed_at": "2026-09-08T12:30:00Z", "x-review": True})
         for terminal in ("completed", "failed", "blocked", "cancelled"):
             self.assertIn(terminal, result["definitions"]["result_status"]["enum"])
+
+    def test_fleet_draft_validator_rejects_all_used_constraint_classes(self) -> None:
+        schema = self.schema("fleet-member")
+        valid = {"schema_version":"2","id":"member-001","task_id":"TASK-005","status":"pending","runtime":"codex","ui":"headless","branch":"fleet/member","worktree_path":"/tmp/member","repository_root":"/tmp/repo","started_at":"2026-09-09T12:00:00Z","updated_at":"2026-09-09T12:01:00Z","owner":{"kind":"sdd-composy-fleet","fleet_id":"demo","member_id":"member-001"},"resources":{"branch":"fleet/member","worktree_path":"/tmp/member","port":43000,"compose_project":"sdd_fleet_demo","compose_file":"docker-compose.yml"}}
+        assert_schema_valid(self,schema,valid)
+        invalid=[]
+        extra=json.loads(json.dumps(valid)); extra["owner"]["foreign"]=True; invalid.append(extra)
+        boolean=json.loads(json.dumps(valid)); boolean["resources"]["port"]=True; invalid.append(boolean)
+        bad_ref=json.loads(json.dumps(valid)); bad_ref["task_id"]="task-005"; invalid.append(bad_ref)
+        bad_pattern=json.loads(json.dumps(valid)); bad_pattern["worktree_path"]="relative/path"; invalid.append(bad_pattern)
+        terminal=json.loads(json.dumps(valid)); terminal["status"]="completed"; invalid.append(terminal)
+        for value in invalid:
+            with self.subTest(value=value):
+                with self.assertRaises(AssertionError): assert_schema_valid(self,schema,value)
 
     def test_evidence_separates_result_and_type_and_confines_hashed_paths(self) -> None:
         schema = self.schema("evidence-manifest")

@@ -60,6 +60,8 @@ legacy_path = Path(data['worktree_path'])
 if legacy_path.is_absolute() or '..' in legacy_path.parts:
     raise SystemExit('sdd-fleet-run: legacy worktree path is not safely relative')
 worktree = (root / legacy_path).resolve(strict=True)
+if worktree == root:
+    raise SystemExit('sdd-fleet-run: legacy member must use an independent Git worktree')
 registration = subprocess.check_output(['git','-C',str(root),'worktree','list','--porcelain'], text=True)
 registered = False; active = False
 for line in registration.splitlines():
