@@ -19,7 +19,7 @@ case "$TARGET" in
   *.env.example*|*.env.template*|*.env.sample*) exit 0 ;;
 esac
 
-if printf '%s' "$TARGET" | grep -Eq '(^|[/ "'"'"'])\.env([^a-zA-Z]|\.local|\.production|\.development|\.staging|$)|\.pem([^a-zA-Z]|$)|\.key([^a-zA-Z]|$)|id_rsa'; then
+if printf '%s' "$TARGET" | grep -Eq '(^|[/ "'"'"'])\.env([^a-zA-Z]|\.local|\.production|\.development|\.staging|$)|[A-Za-z0-9_-]\.(pem|key)($|[[:space:];&"'"'"'])|id_rsa'; then
   echo "pwdev-uiux guard: blocked access to secret file ($TARGET). Use .env.example instead." >&2
   exit 2
 fi

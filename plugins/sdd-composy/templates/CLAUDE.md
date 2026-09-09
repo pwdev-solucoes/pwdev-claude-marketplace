@@ -1,0 +1,8 @@
+# Claude Code compatibility
+
+`AGENTS.md` is the canonical governance contract for this repository. Read it before
+starting work and follow its codebase, commands, workflow, gates, artifacts, and safety
+rules. This file exists only as a short compatibility pointer for Claude Code; do not
+maintain a second set of project instructions here.
+
+The generated contract was produced for `{{PROJECT_NAME}}` at `{{GENERATED_AT}}`.

@@ -38,6 +38,7 @@ Thumbs.db
 .claude
 .agents
 .docs
+.worktrees/
 
 # .planning is agent state and stays out, with one carve-out: pwdev-power keeps its approved
 # contracts under .planning/power/, and its fleet runner decides whether a stage did any work by
