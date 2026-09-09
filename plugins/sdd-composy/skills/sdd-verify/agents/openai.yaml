@@ -1,0 +1,3 @@
+display_name: "SDD Verify"
+short_description: "Independently reproduce fresh verification truths"
+default_prompt: "Use $sdd-verify to run fresh commands, refute claims, reject stale evidence, and produce a guarded verdict."

@@ -5,6 +5,18 @@
   },
   "plugins": [
     {
+      "name": "sdd-composy",
+      "source": {
+        "source": "local",
+        "path": "./plugins/sdd-composy"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
       "name": "pwdev-flow",
       "source": {
         "source": "local",

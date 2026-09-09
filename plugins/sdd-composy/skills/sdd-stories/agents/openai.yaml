@@ -1,0 +1,4 @@
+interface:
+  display_name: "SDD Stories"
+  short_description: "Draft and gate traceable product stories"
+  default_prompt: "Use $sdd-stories to create, revise, or resolve applicability for user stories and stop at the explicit human gate."

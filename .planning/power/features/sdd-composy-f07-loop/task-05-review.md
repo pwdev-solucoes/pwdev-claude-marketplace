@@ -52,4 +52,3 @@ alone does not satisfy that orchestration contract.
 The implementation has a sound atomic publication primitive and the adapters
 are provider-isolated, but the three findings above are in scope and prevent
 approval of Task 05.
-

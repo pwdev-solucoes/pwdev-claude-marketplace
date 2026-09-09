@@ -1,0 +1,4 @@
+interface:
+  display_name: "SDD Tasks"
+  short_description: "Import, inspect, and safely advance traceable tasks"
+  default_prompt: "Use $sdd-tasks to inspect or safely advance the SDD Composy task projection, requesting explicit approval before state changes."

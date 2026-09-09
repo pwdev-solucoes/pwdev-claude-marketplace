@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sdd-composy.local/schemas/config.schema.json",
+  "title": "SDD Composy configuration v1",
+  "type": "object",
+  "required": ["schema_version", "actor_id", "human_root", "operational_root"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "actor_id": {"$ref": "#/definitions/actor_id"},
+    "human_root": {"const": "tasks"},
+    "operational_root": {"const": ".planning/sdd-composy"}
+  },
+  "additionalProperties": true,
+  "definitions": {
+    "actor_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._-]*$"
+    }
+  }
+}

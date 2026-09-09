@@ -25,6 +25,21 @@ project artifacts.
 - Use existing repository conventions recorded by `sdd-map`; do not invent a parallel
   structure when an established module or test pattern exists.
 
+## Rules
+
+The focused rules are installed under `.agents/rules/` and are subordinate to this
+canonical contract. Read them for the relevant concern; do not treat them as a second
+governance root:
+
+- [00-sdd-composy.md](.agents/rules/00-sdd-composy.md) — rule discovery, precedence,
+  and the shared SDD Composy boundary.
+- [architecture.md](.agents/rules/architecture.md) — evidence-based architecture
+  decisions and separation of observation from intent.
+- [testing.md](.agents/rules/testing.md) — focused verification, fresh evidence, and
+  failure classification.
+- [workflow.md](.agents/rules/workflow.md) — lifecycle sequencing, approvals, and
+  bounded execution paths.
+
 ## Commands
 
 The detected verification commands are:
@@ -112,6 +127,3 @@ SHA-256 digests, known result/type values, and escaped or sanitized report text.
   expansion, missing progress, unrecoverable environment failure, or cancellation.
 - Never merge fleet branches automatically; preserve recoverable branches and worktrees
   after failure.
-
-When a conflict or unsafe condition is found, report the exact paths, evidence, and
-next human action. Do not guess or mutate around the guard.

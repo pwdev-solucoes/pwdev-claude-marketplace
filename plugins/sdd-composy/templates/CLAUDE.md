@@ -6,3 +6,4 @@ rules. This file exists only as a short compatibility pointer for Claude Code; d
 maintain a second set of project instructions here.
 
 The generated contract was produced for `{{PROJECT_NAME}}` at `{{GENERATED_AT}}`.
+

@@ -194,13 +194,23 @@ def _inventory(root: Path) -> dict[str, Any]:
     }
 
 
-def build_map(root: Path, output_dir: Path | None = None) -> dict[str, Any]:
+def _validated_context(root: Path, output_dir: Path | None = None) -> tuple[Path, Path]:
+    """Resolve the repository and context once, refusing external output paths."""
     root = root.resolve()
     if not root.is_dir():
         raise ValueError(f"repository root is not a directory: {root}")
+    context = (output_dir or root / DEFAULT_CONTEXT).resolve()
+    try:
+        context.relative_to(root)
+    except ValueError as exc:
+        raise ValueError("output directory must be inside repository root") from exc
+    return root, context
+
+
+def build_map(root: Path, output_dir: Path | None = None) -> dict[str, Any]:
+    root, context = _validated_context(root, output_dir)
     source_commit = _git_commit(root)
     inventory = _inventory(root)
-    context = (output_dir or root / DEFAULT_CONTEXT).resolve()
     previous_path = context / "codebase.json"
     previous_commit = None
     if previous_path.is_file() and not _sensitive(_safe_relative(previous_path, root)):
@@ -254,8 +264,7 @@ def _atomic_write_text(path: Path, content: str) -> None:
 
 
 def write_map(root: Path, data: dict[str, Any], output_dir: Path | None = None) -> Path:
-    context = (output_dir or root / DEFAULT_CONTEXT).resolve()
-    context.relative_to(root.resolve())
+    root, context = _validated_context(root, output_dir)
     context.mkdir(parents=True, exist_ok=True)
     codebase = context / "codebase.json"
     serialized = json.dumps(data, indent=2, sort_keys=True) + "\n"

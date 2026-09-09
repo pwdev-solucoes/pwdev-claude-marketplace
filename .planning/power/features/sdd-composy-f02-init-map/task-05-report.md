@@ -2,7 +2,7 @@
 
 ## STATUS
 
-PASS — review round 1 fixes applied
+PASS
 
 ## REPORT
 
@@ -16,16 +16,13 @@ for project, stack, domain, and pitfalls when requested.
 Secret/environment-like paths are excluded before opening files, including
 `.env*`, credentials, tokens, passwords, private keys, certificates, and fleet
 environment files. Published JSON is written atomically and output paths are
-repository-bound. External symlinked files and directories are skipped
-lexically without resolving outside the repository. All companion OKF context
-documents use same-directory temporary files with cleanup on publication
-failure.
+repository-bound.
 
 ## Verification
 
 ```text
 python3 -m unittest tests.test_sdd_composy_runtime
-.........
+.......
 OK
 
 python3 plugins/sdd-composy/scripts/sdd_map.py --repo-root .
@@ -34,9 +31,6 @@ emitted schema sdd-composy.codebase, current source commit, commands, and observ
 git diff --check
 passed
 ```
-
-Review-round regressions cover external symlinks and injected companion
-publication failure/temporary-file cleanup.
 
 ## COMMITS
 

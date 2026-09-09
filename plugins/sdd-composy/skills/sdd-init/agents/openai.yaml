@@ -1,0 +1,4 @@
+interface:
+  display_name: "SDD Init"
+  short_description: "Initialize an SDD Composy workspace safely"
+  default_prompt: "Use $sdd-init to inspect, plan, apply, and verify the shared SDD workspace."
