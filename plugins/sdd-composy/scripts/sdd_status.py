@@ -29,19 +29,24 @@ def status(root: Path | str, feature: str | None = None, include_tasks: bool = F
            include_fleet: bool = False) -> dict[str, Any]:
     """Aggregate known state without creating or modifying any path."""
     base = Path(root).absolute()
-    op = base / ".planning" / "sdd-composy"
-    config, cs = _validated_object(op / "config.json")
-    global_state, gs = _validated_object(op / "state.json")
-    loops, ls = _records(op / "loops")
-    fleet, fs = _fleet_records(op / "fleet")
+    planning = base / ".planning"; op = planning / "sdd-composy"
+    unsafe_operational_root = planning.is_symlink() or op.is_symlink()
+    if unsafe_operational_root:
+        config = global_state = None; loops = fleet = []; tasks = []
+        cs = gs = ls = fs = task_state = "unsafe_symlink"
+    else:
+        config, cs = _validated_object(op / "config.json")
+        global_state, gs = _validated_object(op / "state.json")
+        loops, ls = _records(op / "loops")
+        fleet, fs = _fleet_records(op / "fleet")
+        tasks, task_state = _task_summary(base, feature)
     trace_path = op / "trace" / "events.jsonl"
-    if trace_path.is_symlink():
+    if unsafe_operational_root or (op / "trace").is_symlink() or trace_path.is_symlink():
         tr, ts = {"ok": False, "errors": ["trace target is an unsafe symlink"]}, "unsafe_symlink"
     elif trace_path.exists() and verify_trace:
         try: tr = verify_trace(base); ts = "valid" if tr.get("ok") else "divergent"
         except Exception: tr, ts = {"ok": False, "errors": ["trace unavailable"]}, "malformed"
     else: tr, ts = {"ok": True, "source_event_count": 0}, "missing"
-    tasks, task_state = _task_summary(base, feature)
     reasons: list[str] = []
     state_name = "uninitialized"
     next_action = "run sdd-init"
@@ -97,6 +102,7 @@ def _records(directory: Path) -> tuple[list[Any], str]:
     for path in sorted(directory.glob("*.json")):
         value, state = _load(path)
         if state != "valid": return [], state
+        if not isinstance(value, dict): return [], "malformed"
         out.append(value)
     return out, "valid"
 
@@ -110,7 +116,8 @@ def _fleet_records(directory: Path) -> tuple[list[Any], str]:
     if direct_state in {"malformed", "unsafe_symlink"}: return [], direct_state
     out.extend(x for x in direct if isinstance(x, dict))
     for fleet_dir in sorted(directory.iterdir()):
-        if fleet_dir.is_symlink() or not fleet_dir.is_dir(): continue
+        if fleet_dir.is_symlink(): return [], "unsafe_symlink"
+        if not fleet_dir.is_dir(): continue
         members, state = _records(fleet_dir / "members")
         if state in {"malformed", "unsafe_symlink"}: return [], state
         out.extend(x for x in members if isinstance(x, dict))

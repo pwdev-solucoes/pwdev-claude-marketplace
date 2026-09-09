@@ -209,6 +209,43 @@ class StatusContractTest(unittest.TestCase):
                 self.assertEqual(result["sources"][source]["state"], "unsafe_symlink")
             self.assertNotEqual(result["sources"]["trace"]["state"], "missing")
 
+    def test_status_rejects_each_controlled_symlink_ancestor(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d); outside = root.parent / (root.name + "-outside"); (outside / "sdd-composy").mkdir(parents=True)
+            (outside / "sdd-composy" / "config.json").write_text(json.dumps({"schema_version": "1"}))
+            (root / ".planning").symlink_to(outside, target_is_directory=True)
+            result = sdd_status.status(root)
+            self.assertEqual(result["status"], "malformed")
+            for source in ("config", "global", "tasks", "trace", "loops", "fleet"):
+                self.assertEqual(result["sources"][source]["state"], "unsafe_symlink", source)
+                self.assertEqual(result["sources"][source]["confidence"], "low", source)
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d); planning = root / ".planning"; planning.mkdir()
+            outside = root.parent / (root.name + "-operational"); outside.mkdir()
+            (planning / "sdd-composy").symlink_to(outside, target_is_directory=True)
+            result = sdd_status.status(root)
+            self.assertEqual(result["status"], "malformed")
+            self.assertTrue(all(source["state"] == "unsafe_symlink" for source in result["sources"].values()))
+
+    def test_trace_directory_symlink_is_unsafe_not_divergent(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d); op = root / ".planning" / "sdd-composy"; op.mkdir(parents=True)
+            outside = root.parent / (root.name + "-trace"); outside.mkdir()
+            (op / "trace").symlink_to(outside, target_is_directory=True)
+            result = sdd_status.status(root)
+            self.assertEqual(result["status"], "malformed")
+            self.assertEqual(result["sources"]["trace"]["state"], "unsafe_symlink")
+
+    def test_loop_and_fleet_non_object_json_fail_closed(self):
+        for source in ("loops", "fleet"):
+            with self.subTest(source=source), tempfile.TemporaryDirectory() as d:
+                root = Path(d); directory = root / ".planning" / "sdd-composy" / source; directory.mkdir(parents=True)
+                (directory / "bad.json").write_text("[]", encoding="utf-8")
+                result = sdd_status.status(root)
+                self.assertEqual(result["status"], "malformed")
+                self.assertEqual(result["sources"][source]["state"], "malformed")
+                self.assertEqual(result["sources"][source]["confidence"], "low")
+
     def test_projection_verification_detects_source_event_divergence(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d); sdd_trace.record(root, self.event(), now="2026-01-01T00:00:00Z")
