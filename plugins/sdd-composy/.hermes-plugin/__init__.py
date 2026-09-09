@@ -1,6 +1,5 @@
 """Hermes bootstrap for SDD Composy."""
 from pathlib import Path
-import os, re
 
 def _plugin_dir() -> str:
     here = Path(__file__).resolve().parent
@@ -9,18 +8,16 @@ def _plugin_dir() -> str:
             return str(candidate)
     raise RuntimeError("sdd-composy: skills directory not found")
 
-def _strip_frontmatter(text: str) -> str:
-    match = re.match(r"^---\n[\s\S]*?\n---\n([\s\S]*)$", text)
-    return (match.group(1) if match else text).strip()
-
 def _bootstrap(root: str) -> str:
-    root_path = Path(root)
-    power = _strip_frontmatter((root_path / "skills/sdd-init/SKILL.md").read_text(encoding="utf-8"))
-    mapping = (root_path / "references/hermes-tools.md").read_text(encoding="utf-8").strip()
     return ("<EXTREMELY_IMPORTANT>\n"
-            "sdd-composy Hermes bootstrap loaded. Use the registered SDD Composy skills.\n\n"
-            f"{power}\n\n{mapping}\n"
-            "Do not fall back silently to Claude or Codex.\n"
+            "SDD Composy routing is available through the registered skills. Read AGENTS.md "
+            "before changing a project. Invoke the capability needed for the current request "
+            "with skill_view(\"sdd-composy:skill-name\"); load its referenced local resources "
+            "only when needed. Use read_file, write_file or patch, terminal, search_files, and "
+            "delegate_task according to that skill. Do not start a lifecycle, mutate project "
+            "state, or dispatch work merely because this bootstrap loaded. Do not fall back "
+            "silently to Claude or Codex. Automated Hermes execution requires independently "
+            "established isolation or the user's specific consent.\n"
             "</EXTREMELY_IMPORTANT>")
 
 def register(ctx):
