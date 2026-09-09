@@ -198,11 +198,19 @@ class GeneratedLanguageTests(unittest.TestCase):
         import sdd_map
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            (root / 'app.py').write_text('# non-empty repository\n')
+            (root / '.worktrees/nested').mkdir(parents=True)
+            (root / '.worktrees/nested/duplicate.py').write_text('# duplicate\n')
             data = sdd_map.build_map(root)
             self.assertEqual(sdd_map.write_map(root, data), sdd_language.NOT_INITIALIZED)
             self.assertFalse((root / '.planning').exists())
-            for language, heading in [('pt-BR', 'Contexto do projeto'), ('en-US', 'Project context')]:
-                sdd_language.persist_language(root, language)
+        for language, heading in [('pt-BR', 'Contexto do projeto'), ('en-US', 'Project context')]:
+            with self.subTest(language=language), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                init = load_init()
+                plan = init.run_plan(root, 'human:test', ROOT / 'plugins/sdd-composy/templates', language)
+                init.apply(root, plan, ROOT / 'plugins/sdd-composy/templates')
+                data = sdd_map.build_map(root)
                 sdd_map.write_map(root, data)
                 self.assertIn(heading, (root / '.planning/sdd-composy/context/project.md').read_text())
 

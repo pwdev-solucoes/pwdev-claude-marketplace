@@ -34,7 +34,7 @@ _SECRET_PARTS = {
 _SECRET_SUFFIXES = {".pem", ".key", ".p12", ".pfx", ".crt", ".cer"}
 _SKIP_DIRS = {".git", ".hg", ".svn", "node_modules", "vendor", "target",
               "__pycache__", ".venv", "venv", "dist", "build", ".tox",
-              ".mypy_cache", ".pytest_cache"}
+              ".mypy_cache", ".pytest_cache", ".worktrees"}
 _LANGUAGE_SUFFIXES = {
     ".py": "Python", ".js": "JavaScript", ".jsx": "JavaScript",
     ".ts": "TypeScript", ".tsx": "TypeScript", ".go": "Go",
@@ -68,13 +68,14 @@ def _sensitive(relative: str) -> bool:
     return False
 
 
-def _files(root: Path) -> list[tuple[str, Path]]:
+def _files(root: Path, excluded_dir: Path | None = None) -> list[tuple[str, Path]]:
     result: list[tuple[str, Path]] = []
     for current, dirs, names in os.walk(root):
         current_path = Path(current)
         dirs[:] = sorted(
             d for d in dirs
             if d not in _SKIP_DIRS
+            and (excluded_dir is None or current_path / d != excluded_dir)
             and not (current_path / d).is_symlink()
             and not _sensitive(_safe_relative(current_path / d, root))
         )
@@ -156,8 +157,8 @@ def _manifest_commands(relative: str, path: Path) -> list[dict[str, str]]:
     return commands
 
 
-def _inventory(root: Path) -> dict[str, Any]:
-    entries = _files(root)
+def _inventory(root: Path, excluded_dir: Path | None = None) -> dict[str, Any]:
+    entries = _files(root, excluded_dir)
     manifests = [{"path": rel, "name": Path(rel).name} for rel, _ in entries if Path(rel).name in _MANIFESTS]
     languages: dict[str, int] = {}
     for relative, _ in entries:
@@ -197,22 +198,42 @@ def _inventory(root: Path) -> dict[str, Any]:
 
 def _validated_context(root: Path, output_dir: Path | None = None) -> tuple[Path, Path]:
     """Resolve the repository and context once, refusing external output paths."""
-    root = root.resolve()
-    if not root.is_dir():
-        raise ValueError(f"repository root is not a directory: {root}")
-    context = (output_dir or root / DEFAULT_CONTEXT).resolve()
+    lexical_root = Path(os.path.abspath(root))
+    if not lexical_root.is_dir():
+        raise ValueError(f"repository root is not a directory: {lexical_root}")
+    context = output_dir or lexical_root / DEFAULT_CONTEXT
+    if not context.is_absolute():
+        context = lexical_root / context
+    context = Path(os.path.abspath(context))
     try:
-        context.relative_to(root)
+        relative = context.relative_to(lexical_root)
     except ValueError as exc:
         raise ValueError("output directory must be inside repository root") from exc
+    current = lexical_root
+    for part in relative.parts:
+        current = current / part
+        if current.is_symlink():
+            raise ValueError(f"output directory has symlink ancestor: {current}")
+    root = lexical_root.resolve()
+    context = root.joinpath(*relative.parts)
     return root, context
+
+
+def _reject_symlink_path(path: Path, root: Path) -> None:
+    """Reject a controlled destination or any of its repository ancestors."""
+    current = root
+    for part in path.relative_to(root).parts:
+        current = current / part
+        if current.is_symlink():
+            raise ValueError(f"controlled path has symlink ancestor: {current}")
 
 
 def build_map(root: Path, output_dir: Path | None = None) -> dict[str, Any]:
     root, context = _validated_context(root, output_dir)
     source_commit = _git_commit(root)
-    inventory = _inventory(root)
+    inventory = _inventory(root, context)
     previous_path = context / "codebase.json"
+    _reject_symlink_path(previous_path, root)
     previous_commit = None
     if previous_path.is_file() and not _sensitive(_safe_relative(previous_path, root)):
         try:
@@ -267,28 +288,13 @@ def _atomic_write_text(path: Path, content: str) -> None:
 def write_map(root: Path, data: dict[str, Any], output_dir: Path | None = None) -> Path:
     root, context = _validated_context(root, output_dir)
     resolved = resolve_language(root)
-    # Keep the low-level writer usable for callers that already supplied a
-    # fully formed map; the CLI still requires init before generation.
     if 'language' not in resolved:
-        if not data.get('files_observed'):
-            return resolved
-        resolved = {'language': 'en-US'}
-    context.mkdir(parents=True, exist_ok=True)
+        return resolved
     codebase = context / "codebase.json"
+    for name in ("codebase.json", "project.md", "stack.md", "domain.md", "pitfalls.md"):
+        _reject_symlink_path(context / name, root)
+    context.mkdir(parents=True, exist_ok=True)
     serialized = json.dumps(data, indent=2, sort_keys=True) + "\n"
-    descriptor, temporary = tempfile.mkstemp(prefix=".codebase.", suffix=".tmp", dir=context)
-    try:
-        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-            handle.write(serialized)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, codebase)
-    except BaseException:
-        try:
-            os.unlink(temporary)
-        except OSError:
-            pass
-        raise
     languages = ", ".join(f'{x["name"]} ({x["file_count"]})' for x in data["languages"]) or "none observed"
     commands = "\n".join(f'- `{x["command"]}` (from `{x["source"]}`)' for x in data["commands"]) or "- none observed"
     documents = {
@@ -316,8 +322,48 @@ def write_map(root: Path, data: dict[str, Any], output_dir: Path | None = None) 
             for source, target in replacements.items():
                 content = content.replace(source, target)
             documents[name] = content
-    for name, content in documents.items():
-        _atomic_write_text(context / name, content)
+    publications = {codebase: serialized}
+    publications.update({context / name: content for name, content in documents.items()})
+    temporaries: dict[Path, str] = {}
+    previous = {path: path.read_bytes() if path.is_file() else None for path in publications}
+    published: list[Path] = []
+    try:
+        for path, content in publications.items():
+            descriptor, temporary = tempfile.mkstemp(
+                prefix=f".{path.name}.", suffix=".tmp", dir=context
+            )
+            temporaries[path] = temporary
+            with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                handle.write(content)
+                handle.flush()
+                os.fsync(handle.fileno())
+        for path, temporary in temporaries.items():
+            os.replace(temporary, path)
+            published.append(path)
+    except BaseException:
+        for path in reversed(published):
+            old = previous[path]
+            if old is None:
+                try:
+                    path.unlink()
+                except FileNotFoundError:
+                    pass
+            else:
+                descriptor, rollback = tempfile.mkstemp(
+                    prefix=f".{path.name}.", suffix=".tmp", dir=context
+                )
+                with os.fdopen(descriptor, "wb") as handle:
+                    handle.write(old)
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                os.replace(rollback, path)
+        raise
+    finally:
+        for temporary in temporaries.values():
+            try:
+                os.unlink(temporary)
+            except FileNotFoundError:
+                pass
     return codebase
 
 

@@ -17,6 +17,16 @@ MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 
 
 class SddMapFixtureTests(unittest.TestCase):
+    @staticmethod
+    def initialize(repo, language="en-US"):
+        spec = importlib.util.spec_from_file_location("sdd_init_map_fixture", ROOT / "plugins/sdd-composy/scripts/sdd_init.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        plan = module.run_plan(repo, "human:test", TEMPLATES, language)
+        result = module.apply(repo, plan, TEMPLATES)
+        if result.get("ok") is not True:
+            raise AssertionError(result)
+
     def test_external_symlink_files_and_directories_are_ignored(self):
         import sys
         sys.path.insert(0, str(ROOT / "plugins" / "sdd-composy" / "scripts"))
@@ -42,9 +52,80 @@ class SddMapFixtureTests(unittest.TestCase):
         import sdd_map
         import sdd_language
         with tempfile.TemporaryDirectory() as temporary:
-            repo = Path(temporary); data = sdd_map.build_map(repo)
-            self.assertEqual(sdd_map.write_map(repo, data), sdd_language.NOT_INITIALIZED)
-            self.assertFalse((repo / ".planning").exists())
+            repo = Path(temporary)
+            self.initialize(repo)
+            data = sdd_map.build_map(repo)
+            context = repo / ".planning/sdd-composy/context"
+            context.mkdir(parents=True)
+            previous = {name: f"previous {name}\n" for name in ("codebase.json", "project.md", "stack.md", "domain.md", "pitfalls.md")}
+            for name, content in previous.items():
+                (context / name).write_text(content, encoding="utf-8")
+            original = sdd_map.os.replace
+            calls = []
+
+            def fail_on_third(source, destination):
+                calls.append(Path(destination).name)
+                if len(calls) == 3:
+                    raise OSError("injected publication failure")
+                return original(source, destination)
+
+            with mock.patch.object(sdd_map.os, "replace", side_effect=fail_on_third):
+                with self.assertRaisesRegex(OSError, "injected publication failure"):
+                    sdd_map.write_map(repo, data)
+            self.assertEqual(
+                {name: (context / name).read_text(encoding="utf-8") for name in previous},
+                previous,
+            )
+            self.assertEqual(list(context.glob(".*.tmp")), [])
+
+    def test_map_excludes_nested_worktrees_and_its_output_without_hiding_legitimate_directories(self):
+        import sdd_map
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = Path(temporary)
+            self.initialize(repo)
+            (repo / ".worktrees/nested/src").mkdir(parents=True)
+            (repo / ".worktrees/nested/src/duplicate.py").write_text("# duplicate\n", encoding="utf-8")
+            (repo / "src/worktrees").mkdir(parents=True)
+            (repo / "src/worktrees/legitimate.py").write_text("# legitimate\n", encoding="utf-8")
+            first = sdd_map.build_map(repo)
+            sdd_map.write_map(repo, first)
+            second = sdd_map.build_map(repo)
+            self.assertEqual(first["files_observed"], second["files_observed"])
+            evidence = {path for item in second["domain_evidence"] for path in item["evidence"]}
+            self.assertIn("src/worktrees/legitimate.py", evidence)
+            self.assertFalse(any(path.startswith(".worktrees/") for path in evidence))
+            self.assertFalse(any(path.startswith(".planning/sdd-composy/context/") for path in evidence))
+
+    def test_map_refuses_symlink_output_and_ancestor_before_reading_or_writing(self):
+        import sdd_map
+        with tempfile.TemporaryDirectory() as temporary, tempfile.TemporaryDirectory() as outside:
+            repo = Path(temporary)
+            self.initialize(repo)
+            context = repo / "generated/context"
+            context.parent.mkdir()
+            context.symlink_to(outside, target_is_directory=True)
+            (Path(outside) / "codebase.json").write_text("not json\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "symlink"):
+                sdd_map.build_map(repo, context)
+            with self.assertRaisesRegex(ValueError, "symlink"):
+                sdd_map.write_map(repo, {}, context)
+            self.assertEqual((Path(outside) / "codebase.json").read_text(encoding="utf-8"), "not json\n")
+
+    def test_map_refuses_symlink_publication_destination_before_reading_or_writing(self):
+        import sdd_map
+        with tempfile.TemporaryDirectory() as temporary, tempfile.TemporaryDirectory() as outside:
+            repo = Path(temporary)
+            self.initialize(repo)
+            context = repo / ".planning/sdd-composy/context"
+            context.mkdir(parents=True)
+            external = Path(outside) / "codebase.json"
+            external.write_text("not json\n", encoding="utf-8")
+            (context / "codebase.json").symlink_to(external)
+            with self.assertRaisesRegex(ValueError, "symlink"):
+                sdd_map.build_map(repo)
+            with self.assertRaisesRegex(ValueError, "symlink"):
+                sdd_map.write_map(repo, {})
+            self.assertEqual(external.read_text(encoding="utf-8"), "not json\n")
 
     def test_adaptive_inventory_commands_domain_staleness_and_secret_exclusion(self):
         import sys
@@ -77,6 +158,7 @@ class SddMapFixtureTests(unittest.TestCase):
         import sdd_map
         with tempfile.TemporaryDirectory() as temporary:
             repo = Path(temporary)
+            self.initialize(repo)
             (repo / "app.py").write_text("print('ok')\n", encoding="utf-8")
             first = sdd_map.build_map(repo)
             second = sdd_map.build_map(repo)
