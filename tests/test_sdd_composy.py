@@ -699,7 +699,7 @@ class SddComposyOperationalSchemaTest(unittest.TestCase):
         for name in ("loop", "fleet-member", "fleet-result", "evidence-manifest"):
             schema = self.schema(name)
             self.assertEqual(schema["$schema"], "https://json-schema.org/draft/2020-12/schema")
-            self.assertEqual(schema["properties"]["schema_version"]["const"], "1")
+            self.assertEqual(schema["properties"]["schema_version"]["const"], "2" if name == "fleet-member" else "1")
             self.assertTrue(schema["additionalProperties"])
             for definition in schema["definitions"].values():
                 if definition.get("type") == "object":
@@ -717,9 +717,9 @@ class SddComposyOperationalSchemaTest(unittest.TestCase):
     def test_fleet_runtime_ui_and_terminal_enums(self) -> None:
         member = self.schema("fleet-member")
         result = self.schema("fleet-result")
-        self.assertEqual(member["definitions"]["runtime"]["enum"], ["claude-code", "codex"])
+        self.assertEqual(member["definitions"]["runtime"]["enum"], ["claude-code", "codex", "hermes"])
         self.assertEqual(member["definitions"]["ui"]["enum"], ["cmux", "tmux", "headless"])
-        assert_schema_valid(self, member, {"schema_version": "1", "id": "member-001", "task_id": "TASK-005", "status": "running", "runtime": "codex", "ui": "headless", "branch": "codex/schemas", "worktree_path": ".worktrees/schemas", "started_at": "2026-09-08T12:00:00Z", "updated_at": "2026-09-08T12:01:00Z", "x-host": "local"})
+        assert_schema_valid(self, member, {"schema_version": "2", "id": "member-001", "task_id": "TASK-005", "status": "running", "runtime": "hermes", "ui": "headless", "branch": "codex/schemas", "worktree_path": "/tmp/worktree", "repository_root": "/tmp/repository", "started_at": "2026-09-08T12:00:00Z", "updated_at": "2026-09-08T12:01:00Z", "owner": {"kind":"sdd-composy-fleet","fleet_id":"demo","member_id":"member-001"}, "resources": {"branch":"codex/schemas","worktree_path":"/tmp/worktree","port":43000,"compose_project":"sdd_fleet_demo","compose_file":"docker-compose.yml"}, "x-host": "local"})
         assert_schema_valid(self, result, {"schema_version": "1", "member_id": "member-001", "task_id": "TASK-005", "status": "completed", "commit": "0123456789abcdef0123456789abcdef01234567", "verification": [{"command": "python3 -m unittest", "result": "passed", "output_sha256": "a" * 64}], "completed_at": "2026-09-08T12:30:00Z", "x-review": True})
         for terminal in ("completed", "failed", "blocked", "cancelled"):
             self.assertIn(terminal, result["definitions"]["result_status"]["enum"])

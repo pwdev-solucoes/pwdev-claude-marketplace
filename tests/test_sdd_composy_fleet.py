@@ -1,5 +1,6 @@
 import hashlib, json, os, subprocess, tempfile, unittest
 from pathlib import Path
+from tests.test_sdd_composy import assert_schema_valid
 
 ROOT = Path(__file__).parents[1]
 LAUNCH = ROOT / "plugins/sdd-composy/scripts/fleet/launch.sh"
@@ -31,15 +32,16 @@ class FleetLaunchTest(unittest.TestCase):
 
     def test_emitted_members_validate_against_v2_schema_for_all_runtimes(self):
         schema=json.loads((ROOT/"plugins/sdd-composy/schemas/fleet-member.schema.json").read_text())
-        required=set(schema["required"]); statuses=set(schema["definitions"]["member_status"]["enum"])
         for requested,stored in (("claude","claude-code"),("codex","codex"),("hermes","hermes")):
             with self.subTest(runtime=requested):
                 self.task(); r=self.invoke(self.contract,runtime=requested); self.assertEqual(r.returncode,0,r.stderr)
                 record=json.loads((self.repo/".planning/sdd-composy/fleet/demo/members/TASK-001.json").read_text())
-                self.assertEqual(required-set(record),set()); self.assertIn(record["status"],statuses)
+                assert_schema_valid(self,schema,record)
                 self.assertEqual(record["schema_version"],"2"); self.assertEqual(record["runtime"],stored)
                 self.assertEqual(Path(record["worktree_path"]),Path(record["worktree_path"]).resolve())
                 self.assertEqual(record["repository_root"],str(self.repo.resolve()))
+                broken=json.loads(json.dumps(record)); broken["resources"]["port"]="43000"
+                with self.assertRaises(AssertionError): assert_schema_valid(self,schema,broken)
                 self.tearDown(); self.setUp()
 
     def test_prepare_only_requires_known_explicit_runtime_without_mutation(self):

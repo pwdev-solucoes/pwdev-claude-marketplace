@@ -4,6 +4,93 @@ set -Eeuo pipefail
 
 usage() { printf 'Usage: %s <lowercase-slug> <worktree-path> [danger-full-access]\n' "${0##*/}" >&2; exit 2; }
 fail() { printf 'sdd-fleet-run: %s\n' "$*" >&2; exit 2; }
+if [[ ${1:-} == --migrate-member ]]; then
+  [[ $# -eq 4 && $3 == --root ]] || fail 'migration usage: run.sh --migrate-member MEMBER.json --root ROOT'
+  python3 - "$2" "$4" <<'PY'
+import json, os, re, subprocess, sys, tempfile
+from pathlib import Path
+
+member_arg, root_arg = map(Path, sys.argv[1:3])
+try:
+    root = root_arg.resolve(strict=True)
+    git_root = Path(subprocess.check_output(
+        ['git', '-C', str(root), 'rev-parse', '--show-toplevel'], text=True,
+        stderr=subprocess.DEVNULL).strip()).resolve(strict=True)
+except Exception:
+    raise SystemExit('sdd-fleet-run: migration root is not an exact Git root')
+if root != git_root:
+    raise SystemExit('sdd-fleet-run: migration root is not an exact Git root')
+if member_arg.is_symlink():
+    raise SystemExit('sdd-fleet-run: unsafe migration member path')
+try:
+    member = member_arg.resolve(strict=True)
+except OSError:
+    raise SystemExit('sdd-fleet-run: unsafe migration member path')
+try:
+    relative = member.relative_to(root)
+except ValueError:
+    raise SystemExit('sdd-fleet-run: migration member is outside the repository')
+parts = relative.parts
+if len(parts) != 6 or parts[:3] != ('.planning', 'sdd-composy', 'fleet') or parts[4] != 'members' or member.suffix != '.json':
+    raise SystemExit('sdd-fleet-run: migration member is outside controlled fleet state')
+fleet_id = parts[3]
+try:
+    data = json.loads(member.read_text())
+except Exception as exc:
+    raise SystemExit(f'sdd-fleet-run: malformed legacy member: {exc}')
+required = ('id','task_id','status','runtime','ui','branch','worktree_path','started_at','updated_at','port','compose_project','compose_file')
+if not isinstance(data, dict) or data.get('schema_version') != '1' or any(key not in data for key in required):
+    raise SystemExit('sdd-fleet-run: v1 migration requires a complete legacy member')
+if data['runtime'] not in ('claude-code','codex') or data['ui'] not in ('cmux','tmux','headless'):
+    raise SystemExit('sdd-fleet-run: unsupported legacy member runtime or UI')
+if data['status'] not in ('pending','running','completed','failed','blocked','cancelled'):
+    raise SystemExit('sdd-fleet-run: unsupported legacy member status')
+if data['status'] in ('completed','failed','blocked','cancelled') and not all(data.get(k) for k in ('finished_at','result_path')):
+    raise SystemExit('sdd-fleet-run: terminal legacy member lacks result evidence')
+for key in ('started_at','updated_at'):
+    if not isinstance(data[key], str) or not data[key]:
+        raise SystemExit(f'sdd-fleet-run: invalid legacy member field: {key}')
+def safe_relative(value):
+    return isinstance(value, str) and bool(value) and not Path(value).is_absolute() and '..' not in Path(value).parts
+if not safe_relative(data['compose_file']) or ('result_path' in data and not safe_relative(data['result_path'])):
+    raise SystemExit('sdd-fleet-run: legacy evidence or Compose path is unsafe')
+if not isinstance(data['port'], int) or isinstance(data['port'], bool) or not 1 <= data['port'] <= 65535:
+    raise SystemExit('sdd-fleet-run: invalid legacy member port')
+legacy_path = Path(data['worktree_path'])
+if legacy_path.is_absolute() or '..' in legacy_path.parts:
+    raise SystemExit('sdd-fleet-run: legacy worktree path is not safely relative')
+worktree = (root / legacy_path).resolve(strict=True)
+registration = subprocess.check_output(['git','-C',str(root),'worktree','list','--porcelain'], text=True)
+registered = False; active = False
+for line in registration.splitlines():
+    if line.startswith('worktree '): active = Path(line[9:]).resolve() == worktree
+    elif active and line == 'branch refs/heads/' + data['branch']:
+        registered = True; break
+if not registered:
+    raise SystemExit('sdd-fleet-run: legacy worktree/branch is not registered in this repository')
+for key in ('id','task_id','branch','compose_project','compose_file'):
+    if not isinstance(data[key], str) or not data[key]:
+        raise SystemExit(f'sdd-fleet-run: invalid legacy member field: {key}')
+if not re.fullmatch(r'[A-Za-z][A-Za-z0-9._-]*', data['id']) or not re.fullmatch(r'TASK-[0-9]{3,}', data['task_id']):
+    raise SystemExit('sdd-fleet-run: invalid legacy member identity')
+data.update({
+    'schema_version':'2', 'worktree_path':str(worktree), 'repository_root':str(root),
+    'owner':{'kind':'sdd-composy-fleet','fleet_id':fleet_id,'member_id':data['id']},
+    'resources':{'branch':data['branch'],'worktree_path':str(worktree),'port':data['port'],
+                 'compose_project':data['compose_project'],'compose_file':data['compose_file']},
+})
+fd, temporary = tempfile.mkstemp(prefix='.' + member.name + '.', dir=member.parent)
+try:
+    with os.fdopen(fd, 'w') as stream:
+        json.dump(data, stream, sort_keys=True, indent=2); stream.write('\n')
+        stream.flush(); os.fsync(stream.fileno())
+    os.replace(temporary, member)
+finally:
+    if os.path.exists(temporary): os.unlink(temporary)
+print(json.dumps(data, sort_keys=True))
+PY
+  exit $?
+fi
 [[ $# -eq 2 || $# -eq 3 ]] || usage
 SLUG=$1; WORKTREE_INPUT=$2
 EXPECTED_RUNTIME=${SDD_FLEET_RUNTIME:-}

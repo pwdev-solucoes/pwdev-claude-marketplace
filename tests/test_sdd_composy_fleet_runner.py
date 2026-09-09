@@ -1,5 +1,6 @@
 import json, os, subprocess, tempfile, unittest
 from pathlib import Path
+from tests.test_sdd_composy import assert_schema_valid
 
 ROOT = Path(__file__).parents[1]
 FLEET = ROOT / "plugins/sdd-composy/scripts/fleet"
@@ -42,6 +43,27 @@ class FleetRunnerTest(unittest.TestCase):
         runner = FLEET / "run.sh"
         r=subprocess.run([str(runner),"demo","/tmp/no-such-worktree"],env={k:v for k,v in os.environ.items() if k != "SDD_FLEET_RUNTIME"},capture_output=True,text=True)
         self.assertNotEqual(r.returncode,0); self.assertIn("runtime is required",r.stderr)
+
+    def test_explicit_v1_migration_is_atomic_preserves_extensions_and_validates_terminals(self):
+        schema=json.loads((Path(__file__).parents[1]/"plugins/sdd-composy/schemas/fleet-member.schema.json").read_text())
+        old_schema={"type":"object","required":["schema_version","id","task_id","status","runtime","ui","branch","worktree_path","started_at","updated_at"],"properties":{"schema_version":{"const":"1"},"id":{"type":"string","pattern":"^[A-Za-z][A-Za-z0-9._-]*$"},"task_id":{"type":"string","pattern":"^TASK-[0-9]{3,}$"},"status":{"enum":["pending","running","completed","failed","blocked","cancelled"]},"runtime":{"enum":["claude-code","codex"]},"ui":{"enum":["cmux","tmux","headless"]},"branch":{"type":"string","minLength":1},"worktree_path":{"type":"string","pattern":"^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},"started_at":{"type":"string","format":"date-time"},"updated_at":{"type":"string","format":"date-time"},"finished_at":{"type":"string","format":"date-time"},"result_path":{"type":"string","minLength":1}},"if":{"properties":{"status":{"enum":["completed","failed","blocked","cancelled"]}},"required":["status"]},"then":{"required":["finished_at","result_path"]},"additionalProperties":True}
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)/"repo"; root.mkdir(); subprocess.run(["git","init","-q",str(root)],check=True); subprocess.run(["git","-C",str(root),"config","user.email","test@example.invalid"],check=True); subprocess.run(["git","-C",str(root),"config","user.name","Test"],check=True)
+            (root/"README").write_text("x\n"); subprocess.run(["git","-C",str(root),"add","."],check=True); subprocess.run(["git","-C",str(root),"commit","-qm","base"],check=True)
+            branch=subprocess.check_output(["git","-C",str(root),"branch","--show-current"],text=True).strip(); members=root/".planning/sdd-composy/fleet/demo/members"; members.mkdir(parents=True); member=members/"TASK-001.json"
+            legacy={"schema_version":"1","id":"TASK-001","task_id":"TASK-001","slug":"TASK-001","status":"completed","runtime":"codex","ui":"headless","branch":branch,"worktree_path":".","started_at":"2026-09-09T12:00:00Z","updated_at":"2026-09-09T12:01:00Z","finished_at":"2026-09-09T12:02:00Z","result_path":"result.json","port":43000,"compose_project":"legacy-owned","compose_file":"docker-compose.yml","x-owner-note":{"keep":True}}
+            assert_schema_valid(self,old_schema,legacy); member.write_text(json.dumps(legacy))
+            refused=subprocess.run([str(FLEET/"run.sh"),"TASK-001",str(root)],env={**os.environ,"SDD_FLEET_RUNTIME":"codex","SDD_FLEET_MEMBER_FILE":str(member)},capture_output=True,text=True)
+            self.assertNotEqual(refused.returncode,0); self.assertIn("explicit migration",refused.stderr); self.assertEqual(json.loads(member.read_text()),legacy)
+            unsafe={**legacy,"result_path":"../escape.json"}; member.write_text(json.dumps(unsafe)); failed=subprocess.run([str(FLEET/"run.sh"),"--migrate-member",str(member),"--root",str(root)],capture_output=True,text=True)
+            self.assertNotEqual(failed.returncode,0); self.assertEqual(json.loads(member.read_text()),unsafe)
+            for terminal in ("completed","failed","blocked","cancelled"):
+                with self.subTest(status=terminal):
+                    candidate={**legacy,"status":terminal}; member.write_text(json.dumps(candidate)); before_inode=member.stat().st_ino
+                    migrated=subprocess.run([str(FLEET/"run.sh"),"--migrate-member",str(member),"--root",str(root)],capture_output=True,text=True)
+                    self.assertEqual(migrated.returncode,0,migrated.stderr); value=json.loads(member.read_text()); assert_schema_valid(self,schema,value)
+                    self.assertEqual(value["schema_version"],"2"); self.assertEqual(value["status"],terminal); self.assertEqual(value["x-owner-note"],{"keep":True}); self.assertNotEqual(member.stat().st_ino,before_inode)
+                    self.assertEqual(value["worktree_path"],str(root.resolve())); self.assertEqual(value["owner"]["fleet_id"],"demo")
 
     def test_claude_code_record_selects_claude_adapter_only(self):
         runner=(FLEET/"run.sh").read_text()
