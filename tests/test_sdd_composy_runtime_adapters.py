@@ -1,4 +1,5 @@
 import importlib.util
+import hashlib
 import json
 import os
 import subprocess
@@ -98,14 +99,39 @@ print(json.dumps({result()!r}))
                 with self.assertRaisesRegex(adapter.RuntimeError_, "runtime unavailable"):
                     adapter.run(contract(**permission), Path(directory), executable=str(Path(directory) / "missing"))
 
-    def test_adapters_reject_stage_identity_and_false_verify(self):
+    def test_adapters_reject_stage_identity_and_synthetic_canonical_verify(self):
         for adapter in (CODEX, HERMES):
             with self.subTest(adapter=adapter.__name__):
                 with self.assertRaisesRegex(adapter.RuntimeError_, "requested stage"):
                     adapter.validate_result(result("qa"), "plan")
-                false_verify = result("verify", evidence={"status": "passed"})
+                false_verify = result("VERIFY", evidence={"status": "passed", "command_record": {
+                    "path": "evidence/invented.json", "sha256": "0" * 64,
+                    "command": ["python3", "-m", "unittest"], "exit_code": 0,
+                }})
                 with self.assertRaisesRegex(adapter.RuntimeError_, "VERIFY requires real command evidence"):
-                    adapter.validate_result(false_verify, "verify")
+                    adapter.validate_result(false_verify, "VERIFY", root=Path("/tmp"),
+                                            stage_contract=contract("VERIFY"))
+
+    def test_adapters_verify_canonical_record_against_durable_loop(self):
+        for adapter in (CODEX, HERMES):
+            with self.subTest(adapter=adapter.__name__), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                loops = root / ".planning/sdd-composy/loops"
+                records = root / "evidence"
+                loops.mkdir(parents=True); records.mkdir()
+                command = {"task_id": "TASK-004", "loop_id": "loop-04", "status": "passed",
+                           "exit_code": 0, "command": ["python3", "-m", "unittest"],
+                           "stdout": "OK", "stderr": "", "started_at": 101, "ended_at": 102}
+                command["sha256"] = hashlib.sha256(b"OK\n").hexdigest()
+                raw = json.dumps(command, sort_keys=True).encode()
+                (records / "verify.json").write_bytes(raw)
+                loop = {"id": "loop-04", "task_id": "TASK-004", "status": "running",
+                        "stages": [{"name": "REVIEW", "published_at": "1970-01-01T00:01:40Z"}]}
+                (loops / "loop-04.json").write_text(json.dumps(loop), encoding="utf-8")
+                verified = result("VERIFY", evidence={"status": "passed", "command_record": {
+                    "path": "evidence/verify.json", "sha256": hashlib.sha256(raw).hexdigest()}})
+                self.assertEqual(adapter.validate_result(
+                    verified, "VERIFY", root=root, stage_contract=contract("VERIFY"), now=103), verified)
 
 
 class FleetHermesAdapterTests(unittest.TestCase):
