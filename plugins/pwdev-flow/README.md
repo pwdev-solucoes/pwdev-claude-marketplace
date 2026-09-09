@@ -123,3 +123,6 @@ plugins/pwdev-flow/
 ## License
 
 Apache-2.0. See [LICENSE](../../LICENSE).
+# Segurança
+
+As etapas permanecem bloqueadas por aprovação e verificação; não pule os gates.

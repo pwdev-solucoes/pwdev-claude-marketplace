@@ -68,3 +68,6 @@ Then restart Claude Code.
 ## License
 
 Apache-2.0
+# Segurança
+
+O status line não deve expor segredos, tokens ou conteúdo privado do projeto.

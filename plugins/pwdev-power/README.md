@@ -843,3 +843,6 @@ Two conventions worth knowing before editing a skill:
 ## License
 
 Apache-2.0. See [LICENSE](./LICENSE).
+# Segurança
+
+Frotas e execução autônoma exigem aprovação explícita e revisão das permissões.

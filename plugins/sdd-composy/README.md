@@ -43,3 +43,10 @@ SDD Composy has no runtime dependency on `pwdev-flow` or `pwdev-feat`. It never 
 ## License
 
 Apache-2.0. See [LICENSE](../../LICENSE).
+# Setup
+
+Execute `/sdd-composy:init` antes de gerar artefatos e escolha o idioma do projeto.
+
+# Segurança
+
+Não pule gates de aprovação, QA, evidência ou verificação.

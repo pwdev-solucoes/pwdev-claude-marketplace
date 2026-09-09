@@ -95,3 +95,6 @@ both the env var and the context file (useful for multiple brains).
 | Artifacts loose in `wiki/` | Generated files outside `wiki/output/YYYY-MM-DD-<slug>/` — `/pwdev-brain:lint` flags (BR-006) and moves them on approval |
 | MCP tools failing with a valid brain | Session started before the plugin/env var, or Node missing — restart the session; the plugin keeps working via filesystem meanwhile |
 | Tool answers "Brain não configurado" | No `brain_path` argument, no `PWDEV_BRAIN_PATH`, and no project context file — run `/pwdev-brain:init` or set the env var |
+# Segurança
+
+Use apenas fontes autorizadas e revise citações antes de publicar conhecimento.

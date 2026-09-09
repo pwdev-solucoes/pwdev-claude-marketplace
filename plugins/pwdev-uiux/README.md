@@ -426,3 +426,6 @@ Apache-2.0 — See [LICENSE](./LICENSE)
 
 *PWDEV-UIUX v2.0.0 — Quality as a gate, not an aspiration.*
 *Maintained by [Paulo Soares](https://github.com/soarescbm)*
+# Segurança
+
+Valide acessibilidade e permissões antes de publicar alterações de interface.

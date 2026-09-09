@@ -123,3 +123,6 @@ Derivado de dois catálogos:
   e os padrões Path A/B e Limites
 
 Detalhamento em `NOTICE.md`. Licença Apache-2.0.
+# Segurança
+
+Não invente provas, depoimentos ou dados; confirme qualquer publicação externamente.
