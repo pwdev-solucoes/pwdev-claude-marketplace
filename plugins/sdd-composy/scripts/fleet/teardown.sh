@@ -45,10 +45,26 @@ if [[ $merge == true ]]; then
   branch_commit=$(git -C "$root" rev-parse "$branch" 2>/dev/null) || fail 'refusing merge: member branch is unavailable'
   [[ "$result_commit" == "$actual_commit" && "$result_commit" == "$branch_commit" ]] || fail 'refusing merge: result commit is not the registered member tip'
 fi
-compose_file=$(fleet_json_string "$member_file" compose_file 2>/dev/null || true)
-project=$(fleet_json_string "$member_file" compose_project 2>/dev/null || fleet_json_string "$member_file" project_name 2>/dev/null || true)
-if [[ -n $compose_file && -n $project && -f "$worktree/$compose_file" && ! -L "$worktree/$compose_file" ]]; then
+resources=$(jq -e '.resources | type == "object"' "$member_file" >/dev/null 2>&1 && echo yes || echo no)
+[[ $resources == yes ]] || fail 'member resources are missing; recovery state preserved'
+compose_file=$(jq -er '.resources.compose_file | select(type == "string" and length > 0)' "$member_file" 2>/dev/null || true)
+project=$(jq -er '.resources.compose_project | select(type == "string" and length > 0)' "$member_file" 2>/dev/null || true)
+[[ -n $compose_file && -n $project ]] || fail 'owned Compose resources are missing; recovery state preserved'
+jq -e --arg branch "$branch" --arg worktree "$worktree" --arg file "$compose_file" --arg project "$project" \
+  '(.resources.branch == $branch) and (.resources.worktree_path == $worktree) and (.resources.compose_file == $file) and (.resources.compose_project == $project)' \
+  "$member_file" >/dev/null || fail 'resource ownership does not match member identity; recovery state preserved'
+# Older records may mirror the owned values at the top level.  If a legacy
+# field points at an existing file, retain it for the shutdown attempt; the
+# central resources record remains the ownership source and is never deleted.
+legacy_file=$(fleet_json_string "$member_file" compose_file 2>/dev/null || true)
+legacy_project=$(fleet_json_string "$member_file" compose_project 2>/dev/null || true)
+if [[ -n $legacy_file && -n $legacy_project && -f "$worktree/$legacy_file" ]]; then
+  compose_file=$legacy_file; project=$legacy_project
+fi
+if [[ -f "$worktree/$compose_file" && ! -L "$worktree/$compose_file" ]]; then
   fleet_no_symlink_components "$worktree/$compose_file" || fail 'recorded Compose path or parent is a symlink'
+  expected_compose=$(fleet_json_string "$member_file" resources.compose_sha256 2>/dev/null || true)
+  if [[ -n $expected_compose ]]; then [[ $(fleet_hash "$worktree/$compose_file") == "$expected_compose" ]] || fail 'Compose file ownership hash changed; recovery state preserved'; fi
   command -v docker >/dev/null 2>&1 || fail 'docker is required to stop the recorded Compose project'
   docker compose --project-name "$project" -f "$worktree/$compose_file" down >/dev/null || fail 'Compose shutdown failed; recovery state preserved'
 fi
