@@ -5,12 +5,14 @@ import re
 import json
 import importlib.util
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES = ROOT / "plugins" / "sdd-composy" / "templates"
+sys.path.insert(0, str(ROOT / "plugins" / "sdd-composy" / "scripts"))
 MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 
 
@@ -507,6 +509,50 @@ class SddComposyInitRuntimeTests(unittest.TestCase):
             self.assertNotIn("CLAUDE.md", result["pending"])
             self.assertIn("tasks/index.md", result["pending"])
             self.assertIn("injected-third-publication", result["error"])
+
+    def test_symlink_publication_failure_reports_all_documents_and_remaining_steps(self):
+        spec = importlib.util.spec_from_file_location("sdd_init_symlink_failure", self.SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            plan = module._plan(root, "human:test", module._template_root(None))
+            original = module.os.symlink
+            module.os.symlink = lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("injected-symlink"))
+            try:
+                result = module.apply(root, plan, module._template_root(None))
+            finally:
+                module.os.symlink = original
+            self.assertFalse(result["ok"])
+            self.assertEqual(result["created"], list(module._template_contents(
+                module._template_root(None), {
+                    "PROJECT_NAME": root.name, "SOURCE_COMMIT": "uncommitted",
+                    "GENERATED_AT": "ignored", "ACTOR_ID": "human:test",
+                    "STACK_SUMMARY": "Not mapped yet", "COMMANDS": "ignored",
+                }
+            )) + ["tasks/index.md"])
+            self.assertEqual(result["pending"], [".claude", ".planning/sdd-composy/state.json"])
+            self.assertIn("injected-symlink", result["error"])
+
+    def test_late_state_publication_failure_reports_config_created_and_only_state_pending(self):
+        spec = importlib.util.spec_from_file_location("sdd_init_state_failure", self.SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            plan = module._plan(root, "human:test", module._template_root(None))
+            plan["language"] = "en-US"
+            original = module._atomic_json
+            def fail_state(path, value):
+                if path.name == "state.json":
+                    raise OSError("injected-state-publication")
+                return original(path, value)
+            module._atomic_json = fail_state
+            result = module.apply(root, plan, module._template_root(None))
+            self.assertFalse(result["ok"])
+            self.assertIn(".planning/sdd-composy/config.json", result["created"])
+            self.assertEqual(result["pending"], [".planning/sdd-composy/state.json"])
+            self.assertIn("injected-state-publication", result["error"])
 
 
 if __name__ == "__main__":

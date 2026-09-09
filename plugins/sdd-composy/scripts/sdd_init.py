@@ -345,48 +345,53 @@ def apply(root: Path, plan: dict[str, Any], template_root: Path) -> dict[str, An
     candidates = [relative for relative in contents
                   if relative not in blocked and not any(relative.startswith(item + "/") for item in blocked if item != ".agents")
                   and not (root / relative).is_file()]
+    claude = root / ".claude"
+    compatibility_target = None
+    if not claude.exists() and not claude.is_symlink() and ".claude" not in blocked:
+        compatibility_target = ".claude"
+    elif not claude.is_symlink() and claude.is_dir() and ".claude/AGENTS.md" not in blocked:
+        bridge = claude / "AGENTS.md"
+        if not bridge.exists() and not bridge.is_symlink():
+            compatibility_target = ".claude/AGENTS.md"
+    config_path = root / ".planning/sdd-composy/config.json"
+    config_existed = config_path.exists()
+    planned = list(candidates)
+    if compatibility_target:
+        planned.append(compatibility_target)
+    if "language" in plan and not config_existed:
+        planned.append(".planning/sdd-composy/config.json")
+    if not state_existed and not plan["conflicts"]:
+        planned.append(".planning/sdd-composy/state.json")
     try:
         for relative in candidates:
             _safe_relative(root, relative)
             _atomic_create(root / relative, contents[relative])
             created.append(relative)
-    except OSError as exc:
-        pending = [relative for relative in candidates if relative not in created]
-        if ".claude" not in blocked and not (root / ".claude").exists() and not (root / ".claude").is_symlink():
-            pending.append(".claude")
-        if "language" in plan and not (root / ".planning/sdd-composy/config.json").exists():
-            pending.append(".planning/sdd-composy/config.json")
-        if not plan["conflicts"] and not state_existed:
-            pending.append(".planning/sdd-composy/state.json")
-        return {"ok": False, "created": created, "pending": pending,
-                "conflicts": plan["conflicts"], "actor": plan["actor"], "error": str(exc)}
-    agents = root / ".agents"
-    if not agents.exists() and ".agents" not in blocked:
-        agents.mkdir()
-    rules = agents / "rules"
-    if not rules.exists():
-        rules.mkdir(parents=True)
-    claude = root / ".claude"
-    if not claude.exists() and not claude.is_symlink() and ".claude" not in blocked:
-        os.symlink(".agents", claude)
-        created.append(".claude")
-    elif not claude.is_symlink() and claude.is_dir() and ".claude/AGENTS.md" not in blocked:
-        bridge = claude / "AGENTS.md"
-        if not bridge.exists() and not bridge.is_symlink():
+        agents = root / ".agents"
+        if not agents.exists() and ".agents" not in blocked:
+            agents.mkdir()
+        rules = agents / "rules"
+        if not rules.exists():
+            rules.mkdir(parents=True)
+        if compatibility_target == ".claude":
+            os.symlink(".agents", claude)
+            created.append(".claude")
+        elif compatibility_target == ".claude/AGENTS.md":
+            bridge = claude / "AGENTS.md"
             _atomic_create(bridge, "../AGENTS.md\n")
             created.append(".claude/AGENTS.md")
-    if "language" in plan:
-        config_path = root / ".planning/sdd-composy/config.json"
-        config_existed = config_path.exists()
-        persist_language(root, plan["language"])
-        if not config_existed:
-            created.append(".planning/sdd-composy/config.json")
-    # INIT is authoritative only after every required artifact was generated.
-    # A token-authorized conflicted apply may publish its non-conflicting
-    # subset, but it must not claim successful initialization.
-    if not state_existed and not plan["conflicts"]:
-        _atomic_json(state_path, new_state)
-        created.append(".planning/sdd-composy/state.json")
+        if "language" in plan:
+            persist_language(root, plan["language"])
+            if not config_existed:
+                created.append(".planning/sdd-composy/config.json")
+        # INIT is authoritative only after every required artifact was generated.
+        if not state_existed and not plan["conflicts"]:
+            _atomic_json(state_path, new_state)
+            created.append(".planning/sdd-composy/state.json")
+    except (OSError, ValueError) as exc:
+        return {"ok": False, "created": created,
+                "pending": [relative for relative in planned if relative not in created],
+                "conflicts": plan["conflicts"], "actor": plan["actor"], "error": str(exc)}
     return {"ok": not bool(plan["conflicts"]), "created": created, "conflicts": plan["conflicts"], "actor": plan["actor"]}
 
 
