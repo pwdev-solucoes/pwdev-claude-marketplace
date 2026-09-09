@@ -1,0 +1,7 @@
+name: sdd-fleet
+description: Run bounded, isolated SDD task fleets with explicit approval and cmux presentation.
+metadata:
+  version: 0.1.0
+  display_name: SDD Fleet
+  short_description: Launch and inspect isolated ready-task fleets
+  default_prompt: Use $sdd-fleet to launch, inspect, or tear down an approved SDD fleet; preserve recoverability and never merge automatically.

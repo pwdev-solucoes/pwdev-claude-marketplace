@@ -1,0 +1,4 @@
+interface:
+  display_name: "SDD PRD"
+  short_description: "Draft and gate a problem-first product contract"
+  default_prompt: "Use $sdd-prd to create or revise a problem-first PRD and stop at its explicit human approval gate."

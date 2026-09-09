@@ -234,8 +234,50 @@ class SddComposySharedContractTest(unittest.TestCase):
             (skill / "SKILL.md").write_text("# Orphan\n", encoding="utf-8")
             self.assertEqual(unregistered_skills(plugin), {"orphan"})
 
+    def test_loop_skill_and_adapter_are_registered_and_disclose_bounds(self) -> None:
+        skill = PLUGIN / "skills" / "sdd-loop" / "SKILL.md"
+        adapter = PLUGIN / "skills" / "sdd-loop" / "agents" / "openai.yaml"
+        command = PLUGIN / "commands" / "loop.md"
+        self.assertTrue(skill.is_file())
+        self.assertTrue(adapter.is_file())
+        self.assertTrue(command.is_file())
+        content = skill.read_text(encoding="utf-8")
+        for required in (
+            "sdd_loop.py", "start", "status", "continue", "cancel",
+            "3 iterations", "human", "scope", "architecture", "destructive",
+            "cancellation", "safe-stop", "sdd-verify",
+        ):
+            self.assertIn(required, content)
+        self.assertIn("$sdd-loop", command.read_text(encoding="utf-8"))
+        metadata = adapter.read_text(encoding="utf-8")
+        self.assertIn("display_name", metadata)
+        self.assertIn("bounded", metadata)
+
 
 class SddComposyRuntimeContractTest(unittest.TestCase):
+    def test_trace_skill_and_adapter_are_registered_and_safe(self) -> None:
+        skill = PLUGIN / "skills" / "sdd-trace" / "SKILL.md"
+        metadata = skill.parent / "agents" / "openai.yaml"
+        command = PLUGIN / "commands" / "trace.md"
+        self.assertTrue(skill.is_file())
+        self.assertTrue(metadata.is_file())
+        self.assertTrue(command.is_file())
+        text = skill.read_text(encoding="utf-8")
+        for required in (
+            "name: sdd-trace", "scripts/sdd_trace.py", "record", "events",
+            "summary", "verify", "build", "query", "verify-projection",
+            "events.jsonl", "trace.json", "append-only", "Never record prompts",
+            "Never edit trace.json", "semantic events are recorded only after",
+        ):
+            self.assertIn(required, text)
+        self.assertIn("$sdd-trace", metadata.read_text(encoding="utf-8"))
+        adapter = command.read_text(encoding="utf-8")
+        for required in ("/sdd-composy:trace", "$ARGUMENTS", "$sdd-trace", "skills/sdd-trace/SKILL.md"):
+            self.assertIn(required, adapter)
+        self.assertLess(len(adapter), 1200)
+        for forbidden in ("Never edit trace.json", "event validation", "append-only"):
+            self.assertNotIn(forbidden.lower(), adapter.lower())
+
     def test_runtime_contract_defines_shared_core_discovery(self) -> None:
         runtime = (REFERENCES / "runtime.md").read_text(encoding="utf-8")
         for shared_root in ("skills/", "references/", "scripts/", "templates/", "schemas/"):
@@ -339,6 +381,228 @@ class SddComposyMapAdapterTest(unittest.TestCase):
         self.assertIn("skills/sdd-map/SKILL.md", command)
         self.assertLess(len(command), 1000, "Claude adapter should remain thin")
         for policy in ("staleness", "secret exclusion", "architecture", "downstream"):
+            self.assertNotIn(policy.lower(), command.lower())
+
+
+class SddComposyPrdAdapterTest(unittest.TestCase):
+    def test_prd_skill_is_discoverable_and_routes_the_product_contract(self) -> None:
+        skill = PLUGIN / "skills" / "sdd-prd" / "SKILL.md"
+        metadata = skill.parent / "agents" / "openai.yaml"
+        self.assertTrue(skill.is_file(), "portable sdd-prd skill must exist")
+        self.assertTrue(metadata.is_file(), "Codex metadata must exist")
+        text = skill.read_text(encoding="utf-8")
+        self.assertRegex(text, r"(?m)^name:\s*sdd-prd\s*$")
+        for required in (
+            "references/product.md", "templates/prd.md", "user problem",
+            "tasks/prd-<slug>/prd.md", "RF-", "CA-", "no architecture decisions",
+        ):
+            self.assertIn(required, text)
+        self.assertIn("$sdd-prd", metadata.read_text(encoding="utf-8"))
+
+    def test_prd_skill_enforces_an_explicit_human_gate(self) -> None:
+        text = (PLUGIN / "skills" / "sdd-prd" / "SKILL.md").read_text(encoding="utf-8")
+        for required in (
+            "human_approval", "PENDING", "APPROVED", "verified", "human",
+            "existence does not imply approval", "stops downstream generation",
+        ):
+            self.assertIn(required, text)
+        self.assertNotIn("automatically approve", text.lower())
+
+    def test_prd_skill_is_runtime_neutral(self) -> None:
+        text = (PLUGIN / "skills" / "sdd-prd" / "SKILL.md").read_text(encoding="utf-8")
+        for forbidden in ("mcp__", "codex_app", "claude -p"):
+            self.assertNotIn(forbidden, text)
+        self.assertIn("runtime-specific tools", text)
+
+    def test_claude_prd_command_is_a_thin_route_to_portable_skill(self) -> None:
+        command_path = PLUGIN / "commands" / "prd.md"
+        self.assertTrue(command_path.is_file(), "Claude PRD command must exist")
+        command = command_path.read_text(encoding="utf-8")
+        self.assertIn("/sdd-composy:prd", command)
+        self.assertIn("$ARGUMENTS", command)
+        self.assertIn("$sdd-prd", command)
+        self.assertIn("skills/sdd-prd/SKILL.md", command)
+        self.assertLess(len(command), 1000, "Claude adapter should remain thin")
+        for policy in ("human_approval", "architecture", "RF-", "CA-"):
+            self.assertNotIn(policy.lower(), command.lower())
+
+
+class SddComposyStoriesAdapterTest(unittest.TestCase):
+    def test_claude_stories_command_is_a_thin_route_to_portable_skill(self) -> None:
+        command_path = PLUGIN / "commands" / "stories.md"
+        self.assertTrue(command_path.is_file(), "Claude stories command must exist")
+        command = command_path.read_text(encoding="utf-8")
+        self.assertIn("/sdd-composy:stories", command)
+        self.assertIn("$ARGUMENTS", command)
+        self.assertIn("$sdd-stories", command)
+        self.assertIn("skills/sdd-stories/SKILL.md", command)
+        self.assertLess(len(command), 1000, "Claude adapter should remain thin")
+        for policy in ("human_approval", "NOT_APPLICABLE", "architecture", "US-", "SC-"):
+            self.assertNotIn(policy.lower(), command.lower())
+
+
+class SddComposyTasksAdapterTest(unittest.TestCase):
+    def test_tasks_skill_routes_all_operations_and_boundaries(self) -> None:
+        skill = PLUGIN / "skills" / "sdd-tasks" / "SKILL.md"
+        metadata = skill.parent / "agents" / "openai.yaml"
+        self.assertTrue(skill.is_file())
+        self.assertTrue(metadata.is_file())
+        text = skill.read_text(encoding="utf-8")
+        self.assertRegex(text, r"(?m)^name:\s*sdd-tasks\s*$")
+        for operation in ("import", "list", "next", "show", "start", "block", "transition", "verify"):
+            self.assertIn(operation, text)
+        for required in ("scripts/sdd_tasks.py", "tasks/prd-<slug>/", "explicit human approval",
+                         "stable", "unknown JSON fields", "atomic replacement", "runtime-neutral"):
+            self.assertIn(required, text)
+        for forbidden in ("mcp__", "codex_app", "claude -p"):
+            self.assertNotIn(forbidden, text)
+        self.assertIn("$sdd-tasks", metadata.read_text(encoding="utf-8"))
+
+    def test_claude_tasks_command_is_a_thin_route(self) -> None:
+        command = (PLUGIN / "commands" / "tasks.md").read_text(encoding="utf-8")
+        for required in ("/sdd-composy:tasks", "$ARGUMENTS", "$sdd-tasks",
+                         "skills/sdd-tasks/SKILL.md", "return the shared skill's result unchanged"):
+            self.assertIn(required, command)
+        self.assertLess(len(command), 1000)
+        for policy in ("human approval", "dependencies", "atomic replacement", "evidence"):
+            self.assertNotIn(policy, command.lower())
+
+
+class SddComposySyncAdapterTest(unittest.TestCase):
+    def test_sync_skill_is_discoverable_and_exposes_safe_operations(self) -> None:
+        skill = PLUGIN / "skills" / "sdd-sync" / "SKILL.md"
+        metadata = skill.parent / "agents" / "openai.yaml"
+        self.assertTrue(skill.is_file(), "portable sdd-sync skill must exist")
+        self.assertTrue(metadata.is_file(), "Codex metadata must exist")
+        text = skill.read_text(encoding="utf-8")
+        self.assertRegex(text, r"(?m)^name:\s*sdd-sync\s*$")
+        for operation in ("inspect", "plan", "apply", "sdd_sync.py", "CONFIRM-SDD-SYNC"):
+            self.assertIn(operation, text)
+        for required in ("read-only", "explicit", "authority", "conflict", "runtime-neutral"):
+            self.assertIn(required, text.lower())
+        for forbidden in ("mcp__", "codex_app", "claude -p"):
+            self.assertNotIn(forbidden, text)
+        self.assertIn("$sdd-sync", metadata.read_text(encoding="utf-8"))
+
+    def test_claude_sync_command_is_a_thin_route(self) -> None:
+        command = (PLUGIN / "commands" / "sync.md").read_text(encoding="utf-8")
+        for required in ("/sdd-composy:sync", "$ARGUMENTS", "$sdd-sync",
+                         "skills/sdd-sync/SKILL.md", "return the shared skill's result unchanged"):
+            self.assertIn(required, command)
+        self.assertLess(len(command), 1000)
+        for policy in ("CONFIRM-SDD-SYNC", "authority", "conflict", "atomic replacement"):
+            self.assertNotIn(policy.lower(), command.lower())
+
+
+class SddComposyStatusAdapterTest(unittest.TestCase):
+    def test_status_skill_is_discoverable_and_read_only(self) -> None:
+        skill = PLUGIN / "skills" / "sdd-status" / "SKILL.md"
+        metadata = skill.parent / "agents" / "openai.yaml"
+        self.assertTrue(skill.is_file(), "portable sdd-status skill must exist")
+        self.assertTrue(metadata.is_file(), "Codex metadata must exist")
+        text = skill.read_text(encoding="utf-8")
+        self.assertRegex(text, r"(?m)^name:\s*sdd-status\s*$")
+        for required in ("sdd_status.py", "--feature", "--tasks", "--fleet", "--json", "read-only", "runtime-neutral"):
+            self.assertIn(required, text)
+        for forbidden in ("mcp__", "codex_app", "claude -p", "write", "repair"):
+            self.assertNotIn(forbidden, text.lower())
+        self.assertIn("$sdd-status", metadata.read_text(encoding="utf-8"))
+
+    def test_claude_status_command_is_a_thin_route(self) -> None:
+        command = (PLUGIN / "commands" / "status.md").read_text(encoding="utf-8")
+        for required in ("/sdd-composy:status", "$ARGUMENTS", "$sdd-status",
+                         "skills/sdd-status/SKILL.md", "return the shared skill's result unchanged"):
+            self.assertIn(required, command)
+        self.assertLess(len(command), 1000)
+        for policy in ("repair", "write"):
+            self.assertNotIn(policy.lower(), command.lower())
+
+
+class SddComposyQaAdapterTest(unittest.TestCase):
+    def test_claude_qa_command_is_a_thin_route(self) -> None:
+        command_path = PLUGIN / "commands" / "qa.md"
+        self.assertTrue(command_path.is_file(), "Claude QA command must exist")
+        command = command_path.read_text(encoding="utf-8")
+        for required in (
+            "/sdd-composy:qa", "$ARGUMENTS", "$sdd-qa",
+            "skills/sdd-qa/SKILL.md", "return the shared skill's result unchanged",
+        ):
+            self.assertIn(required, command)
+        self.assertLess(len(command), 1000, "Claude adapter should remain thin")
+        for policy in ("qa_required", "evidence_required", "CA-", "SC-", "browser", "REJECTED"):
+            self.assertNotIn(policy.lower(), command.lower())
+
+
+class SddComposyTechSpecAdapterTest(unittest.TestCase):
+    def skill_text(self) -> str:
+        path = PLUGIN / "skills" / "sdd-techspec" / "SKILL.md"
+        self.assertTrue(path.is_file(), "portable sdd-techspec skill must exist")
+        return path.read_text(encoding="utf-8")
+
+    def test_techspec_skill_is_discoverable_and_routes_contracts(self) -> None:
+        skill = PLUGIN / "skills" / "sdd-techspec" / "SKILL.md"
+        metadata = skill.parent / "agents" / "openai.yaml"
+        text = self.skill_text()
+        self.assertTrue(metadata.is_file(), "Codex metadata must exist")
+        self.assertRegex(text, r"(?m)^name:\s*sdd-techspec\s*$")
+        for required in (
+            "references/specification.md", "templates/techspec.md",
+            "references/workflow.md", "tasks/prd-<slug>/techspec.md",
+        ):
+            self.assertIn(required, text)
+        self.assertIn("$sdd-techspec", metadata.read_text(encoding="utf-8"))
+
+    def test_techspec_skill_enforces_upstream_prd_and_stories_gates(self) -> None:
+        text = self.skill_text()
+        for required in (
+            "human_approval: APPROVED", "verified", "existence does not imply approval",
+            "NOT_APPLICABLE", "applicability_justification", "user-facing behavior",
+            "externally consumed APIs", "pending", "rejected", "stale", "contradictory",
+        ):
+            self.assertIn(required, text)
+        self.assertRegex(text.lower(), r"(?:stop|block).*(?:missing|pending|rejected|stale|contradictory)")
+
+    def test_techspec_skill_uses_progressive_disclosure(self) -> None:
+        text = self.skill_text()
+        self.assertIn("Read `references/specification.md`", text)
+        self.assertIn("Render `templates/techspec.md`", text)
+        self.assertRegex(text, r"(?i)only (?:when|if) persistence changes")
+        self.assertRegex(text, r"(?i)only (?:when|if) (?:an |the )?API changes")
+        self.assertIn("NOT_APPLICABLE", text)
+        for detailed_policy in (
+            "migration and backfill order", "authentication, authorization",
+        ):
+            self.assertNotIn(detailed_policy, text.lower())
+
+    def test_techspec_skill_has_exact_output_and_runtime_neutrality(self) -> None:
+        text = self.skill_text()
+        self.assertIn("Write only `tasks/prd-<slug>/techspec.md`", text)
+        self.assertIn("Return exactly", text)
+        for output_field in (
+            "path", "slug", "consumed sources", "generated actor and timestamp",
+            "lifecycle status", "human approval", "exact draft artifact reference",
+            "trace summary", "unresolved decisions", "risks",
+            "next permitted lifecycle stage", "do not duplicate the techspec body",
+        ):
+            self.assertIn(output_field, text.lower())
+        self.assertIn("runtime-specific tools", text)
+        for forbidden in ("mcp__", "codex_app", "claude -p"):
+            self.assertNotIn(forbidden, text)
+
+    def test_claude_techspec_command_is_a_thin_route(self) -> None:
+        command_path = PLUGIN / "commands" / "techspec.md"
+        self.assertTrue(command_path.is_file(), "Claude TechSpec command must exist")
+        command = command_path.read_text(encoding="utf-8")
+        for required in (
+            "/sdd-composy:techspec", "$ARGUMENTS", "$sdd-techspec",
+            "skills/sdd-techspec/SKILL.md", "return the shared skill's result unchanged",
+        ):
+            self.assertIn(required, command)
+        self.assertLess(len(command), 1000, "Claude adapter should remain thin")
+        for policy in (
+            "human_approval", "NOT_APPLICABLE", "applicability_justification",
+            "TU-", "TI-", "E2E-", "architecture",
+        ):
             self.assertNotIn(policy.lower(), command.lower())
 
 
@@ -539,6 +803,55 @@ class SddComposyOkfTest(unittest.TestCase):
             (root/'log.md').write_text('---\ntype: Bad\n---\n[no](missing.md)\n', encoding='utf-8')
             self.assertTrue(okf.lint(root)['ok'])
             self.assertIn('custom: keep', (root/'doc.md').read_text(encoding='utf-8'))
+
+
+class SddComposyQuickAdapterTest(unittest.TestCase):
+    def test_quick_is_discoverable_with_thin_claude_and_codex_adapters(self):
+        command = PLUGIN / "commands" / "quick.md"
+        adapter = PLUGIN / "skills" / "sdd-quick" / "agents" / "openai.yaml"
+        self.assertTrue(command.exists())
+        self.assertTrue(adapter.exists())
+        text = command.read_text(encoding="utf-8")
+        self.assertIn("$sdd-quick", text)
+        self.assertIn("ARGUMENTS", text)
+        metadata = adapter.read_text(encoding="utf-8")
+        self.assertIn("display_name", metadata)
+        self.assertIn("default_prompt", metadata)
+
+    def test_quick_adapter_preserves_escalation_boundary_and_task_guards(self):
+        skill = (PLUGIN / "skills" / "sdd-quick" / "SKILL.md").read_text(encoding="utf-8")
+        command = (PLUGIN / "commands" / "quick.md").read_text(encoding="utf-8")
+        for token in ("five-file", "ESCALATE", "TASK-*", "sdd_tasks.py", "evidence", "sdd_trace.py"):
+            self.assertIn(token, skill)
+        self.assertIn("portable `$sdd-quick` skill", command)
+
+
+class SddComposyFleetAdapterTest(unittest.TestCase):
+    def test_fleet_is_discoverable_and_routes_all_operations(self):
+        skill = PLUGIN / "skills" / "sdd-fleet" / "SKILL.md"
+        adapter = skill.parent / "agents" / "openai.yaml"
+        command = PLUGIN / "commands" / "fleet.md"
+        self.assertTrue(skill.is_file())
+        self.assertTrue(adapter.is_file())
+        self.assertTrue(command.is_file())
+        content = skill.read_text(encoding="utf-8")
+        for required in ("launch", "status", "teardown", "sdd-fleet", "cmux", "never merge", "ready"):
+            self.assertIn(required.lower(), content.lower())
+        self.assertIn("$sdd-fleet", command.read_text(encoding="utf-8"))
+        metadata = adapter.read_text(encoding="utf-8")
+        self.assertIn("display_name", metadata)
+        self.assertIn("default_prompt", metadata)
+
+    def test_fleet_adapter_is_thin_and_provider_neutral(self):
+        command = (PLUGIN / "commands" / "fleet.md").read_text(encoding="utf-8")
+        self.assertIn("ARGUMENTS", command)
+        self.assertLess(len(command), 1400)
+        self.assertNotIn("claude -p", command)
+        self.assertNotIn("codex exec", command)
+
+    def test_full_plugin_catalogue_has_seventeen_skills_and_commands(self):
+        self.assertEqual(len(list((PLUGIN / "skills").glob("*/SKILL.md"))), 17)
+        self.assertEqual(len(list((PLUGIN / "commands").glob("*.md"))), 17)
 
 if __name__ == "__main__":
     unittest.main()

@@ -291,7 +291,7 @@ member parked at `NEEDS_HUMAN`.
 
 **Subagents:** mapper, roadmap, implementer, task-reviewer, verifier
 
-**Ships:** 7 commands · 5 subagents · 14 skills · hooks
+**Ships:** 7 commands · 5 subagents · 15 skills · hooks
 
 See the [full plugin documentation](./plugins/pwdev-power/README.md).
 
@@ -329,7 +329,7 @@ It keeps human contracts under `tasks/prd-<slug>/`, operational state under
 INIT ─▶ MAP ─▶ PRD ─▶ STORIES ─▶ TECHSPEC ─▶ TASKS ─▶ EXECUTE ─▶ QA ─▶ EVIDENCE ─▶ REVIEW ─▶ VERIFY
 ```
 
-**Ships:** 0 commands · no subagents · no MCP
+**Ships:** 17 commands · 17 skills · no subagents · no MCP
 
 See the [full plugin documentation](./plugins/sdd-composy/README.md).
 

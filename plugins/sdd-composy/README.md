@@ -20,7 +20,7 @@ INIT -> MAP -> PRD -> STORIES -> TECHSPEC -> TASKS
                               EXECUTE -> QA -> EVIDENCE -> REVIEW -> VERIFY -> COMPLETE
 ```
 
-Product and execution gates require explicit human approval. Verification reproduces fresh evidence. Reduced `QUICK`, bounded `LOOP`, and isolated `FLEET` paths retain the same durable contracts and safety rules.
+Product and execution gates require explicit human approval. Verification reproduces fresh evidence. Reduced `QUICK`, bounded `LOOP`, and isolated `FLEET` paths retain the same durable contracts and safety rules. Fleet launch accepts only ready tasks, preserves recoverable branches, uses cmux for presentation when available, and never merges automatically.
 
 ## Independence and safety
 

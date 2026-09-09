@@ -1,0 +1,6 @@
+services:
+  fleet-placeholder:
+    image: alpine:3.20
+    command: ["sh", "-c", "sleep infinity"]
+    ports:
+      - "127.0.0.1:${SDD_FLEET_PORT}:8080"

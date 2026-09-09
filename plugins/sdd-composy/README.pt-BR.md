@@ -20,7 +20,7 @@ INIT -> MAP -> PRD -> STORIES -> TECHSPEC -> TASKS
                               EXECUTE -> QA -> EVIDENCE -> REVIEW -> VERIFY -> COMPLETE
 ```
 
-Os portões de produto e execução exigem aprovação humana explícita. A verificação reproduz evidência nova. Os caminhos reduzido `QUICK`, delimitado `LOOP` e isolado `FLEET` mantêm os mesmos contratos duráveis e regras de segurança.
+Os portões de produto e execução exigem aprovação humana explícita. A verificação reproduz evidência nova. Os caminhos reduzido `QUICK`, delimitado `LOOP` e isolado `FLEET` mantêm os mesmos contratos duráveis e regras de segurança. O lançamento da fleet aceita apenas tarefas prontas, preserva branches recuperáveis, usa cmux para apresentação quando disponível e nunca faz merge automaticamente.
 
 ## Independência e segurança
 

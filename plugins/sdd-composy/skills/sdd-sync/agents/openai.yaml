@@ -1,0 +1,4 @@
+interface:
+  display_name: "SDD Sync"
+  short_description: "Inspect and explicitly approve SDD task synchronization"
+  default_prompt: "Use $sdd-sync to inspect and plan task synchronization, then apply only with explicit authority and CONFIRM-SDD-SYNC."

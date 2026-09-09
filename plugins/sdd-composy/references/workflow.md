@@ -31,6 +31,17 @@ Execution must remain inside the approved requirements, stories, architecture, s
 
 `EVIDENCE` is required when the approved task contract calls for an acceptance dossier; otherwise the stage may be explicitly recorded as not required. A rejected QA, evidence, review, or verification outcome transitions the task to `rejected`; correction begins only through the guarded `rejected -> ready` transition.
 
+## Human-contract lifecycle vocabulary
+
+PRD, stories, and TechSpec documents use one portable, case-sensitive lifecycle vocabulary:
+`DRAFT`, `APPROVED`, `REJECTED`, and `NOT_APPLICABLE`. `DRAFT` pairs with
+`human_approval: PENDING` and an empty approval event set. `APPROVED` pairs with
+`human_approval: APPROVED` and a matching human `verified` event. `REJECTED` pairs with
+`human_approval: REJECTED` and a matching human `verified` event. `NOT_APPLICABLE` is valid
+only for the pure-internal stories gate; it pairs with `applicability: NOT_APPLICABLE`, a
+non-empty `applicability_justification`, `human_approval: APPROVED`, and a matching human
+`verified` event. No runtime may invent aliases such as `VERIFIED` or infer a transition.
+
 ## Reduced and concurrent paths
 
 `QUICK` is a bounded reduced path:

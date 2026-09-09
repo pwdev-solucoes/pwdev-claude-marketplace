@@ -297,7 +297,7 @@ coisa que pode reiniciar um membro parado em `NEEDS_HUMAN`.
 
 **Subagentes:** mapper, roadmap, implementer, task-reviewer, verifier
 
-**Inclui:** 7 comandos · 5 subagentes · 14 skills · hooks
+**Inclui:** 7 comandos · 5 subagentes · 15 skills · hooks
 
 Veja a [documentação completa do plugin](./plugins/pwdev-power/README.pt-BR.md).
 
@@ -339,7 +339,7 @@ gerado alinhado ao OKF v0.2.
 INIT ─▶ MAPA ─▶ PRD ─▶ HISTÓRIAS ─▶ TECHSPEC ─▶ TASKS ─▶ EXECUÇÃO ─▶ QA ─▶ EVIDÊNCIA ─▶ REVISÃO ─▶ VERIFICAÇÃO
 ```
 
-**Inclui:** 0 comandos · sem subagentes · sem MCP
+**Inclui:** 17 comandos · 17 skills · sem subagentes · sem MCP
 
 Veja a [documentação completa do plugin](./plugins/sdd-composy/README.pt-BR.md).
 
