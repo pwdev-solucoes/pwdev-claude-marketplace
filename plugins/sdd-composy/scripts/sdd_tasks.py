@@ -38,7 +38,7 @@ def validate(data: dict[str, Any], root: Path | None = None) -> None:
         tid = task["id"]
         if not isinstance(tid, str) or not TASK_ID.fullmatch(tid) or tid in ids: raise TaskError(f"invalid or duplicate task id: {tid}")
         ids.add(tid)
-        if not isinstance(task["title"], str) or not task["title"] or task["state"] not in STATES: raise TaskError(f"invalid task {tid}")
+        if not isinstance(task["title"], str) or not task["title"] or not isinstance(task["state"], str) or task["state"] not in STATES: raise TaskError(f"invalid task {tid}")
         if not isinstance(task["dependencies"], list) or len(set(task["dependencies"])) != len(task["dependencies"]): raise TaskError(f"invalid dependencies: {tid}")
         if not all(isinstance(x, str) and TASK_ID.fullmatch(x) for x in task["dependencies"]): raise TaskError(f"invalid dependency: {tid}")
         if not isinstance(task["acceptance_criteria"], list) or not task["acceptance_criteria"] or not all(isinstance(x,str) and CRITERION.fullmatch(x) for x in task["acceptance_criteria"]): raise TaskError(f"invalid acceptance criteria: {tid}")
@@ -221,6 +221,10 @@ def update(path: Path | str, task_id: str, target: str, **kwargs: Any) -> dict[s
     data = load(path); transition(data, task_id, target, **kwargs); _atomic_write(Path(path), data); return data
 
 def _atomic_write(path: Path, data: dict[str, Any]) -> None:
+    if path.is_symlink(): raise TaskError("output must not be a symlink")
+    current = path.parent
+    while not current.exists() and current != current.parent: current = current.parent
+    if current.is_symlink(): raise TaskError("output ancestor must not be a symlink")
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent), text=True)
     try:
@@ -241,21 +245,35 @@ def import_tasks(markdown_root: Path | str, output: Path | str, prd_slug: str | 
     repository = Path(root).resolve(strict=True) if root is not None else markdown_root.resolve(strict=True).parents[1]
     if output.is_symlink() or not _confined(output, repository): raise TaskError("output must be repository-bound and non-symlinked")
     existing = json.loads(output.read_text(encoding="utf-8")) if output.exists() else None
+    if existing is not None and (not isinstance(existing, dict) or not isinstance(existing.get("tasks", []), list)):
+        raise TaskError("existing task projection is malformed")
     slug = prd_slug or (existing or {}).get("prd_slug") or markdown_root.name.removeprefix("prd-")
     if not SLUG.fullmatch(slug): raise TaskError("invalid prd_slug")
     old = {t.get("id"): t for t in (existing or {}).get("tasks", []) if isinstance(t, dict)}
-    tasks = []
+    tasks = []; divergences = []; seen = set()
     for path in sorted(markdown_root.glob("task-*.md")):
         meta, _ = parse_frontmatter(path.read_text(encoding="utf-8"))
         raw = (meta or {}).get("task")
         if not isinstance(raw, dict): raise TaskError(f"missing task frontmatter: {path}")
         tid = raw.get("id")
-        if tid in old: merged = dict(old[tid]); merged.update(raw); raw = merged
+        seen.add(tid)
+        if tid in old:
+            merged = dict(old[tid]); live_state = merged.get("state")
+            merged.update(raw)
+            if live_state in STATES and raw.get("state") != live_state:
+                divergences.append({"task_id": tid, "field": "state", "json": live_state, "markdown": raw.get("state")})
+            if live_state in STATES: merged["state"] = live_state
+            raw = merged
+        elif raw.get("state") != "pending":
+            raise TaskError(f"new task cannot be imported in promoted state: {tid}")
         tasks.append(raw)
+    tasks.extend(copy.deepcopy(task) for tid, task in old.items() if tid not in seen)
     clock = now or dt.datetime.now(dt.timezone.utc)
     if clock.tzinfo is None: raise TaskError("now must include timezone")
     result = {**(existing or {}), "schema_version": "1", "prd_slug": slug,
               "updated_at": clock.replace(microsecond=0).isoformat().replace("+00:00", "Z"), "tasks": tasks}
+    if divergences: result["divergences"] = divergences
+    else: result.pop("divergences", None)
     validate(result); _atomic_write(output, result); return result
 
 def load(path: Path | str) -> dict[str, Any]:

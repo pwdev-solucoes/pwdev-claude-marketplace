@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fail-closed append-only semantic trace for SDD Composy."""
 from __future__ import annotations
-import argparse, datetime as dt, hashlib, json, os, re
+import argparse, datetime as dt, hashlib, json, os, re, tempfile
 from pathlib import Path
 from typing import Any
 
@@ -23,11 +23,16 @@ def _root(root: Path | str) -> Path:
     return raw
 
 def _target(root: Path | str, *, create: bool = False) -> Path:
+    """Resolve trace below a repository root (never an operational root)."""
     base = _root(root)
-    trace = base / "trace"
+    operational = base / ".planning" / "sdd-composy"
+    for controlled in (base / ".planning", operational):
+        if controlled.is_symlink() or (controlled.exists() and not controlled.is_dir()):
+            raise ValueError("operational trace ancestor must be regular")
+    trace = operational / "trace"
     if trace.is_symlink() or (trace.exists() and not trace.is_dir()): raise ValueError("trace directory must be regular")
     if create:
-        trace.mkdir(mode=0o700, exist_ok=True)
+        trace.mkdir(mode=0o700, parents=True, exist_ok=True)
         os.chmod(trace, 0o700)
     path = trace / "events.jsonl"
     if path.is_symlink() or (path.exists() and not path.is_file()): raise ValueError("trace target must be regular")
@@ -101,7 +106,10 @@ def summary(root: Path | str) -> dict[str, Any]:
     return {"schema_version": "1", "source_event_count": len(rows), "by_type": dict(sorted(by_type.items()))}
 
 def _projection_path(root: Path | str) -> Path:
-    base = _root(root); trace = base / "trace"
+    base = _root(root); trace = base / ".planning" / "sdd-composy" / "trace"
+    for controlled in (base / ".planning", base / ".planning" / "sdd-composy"):
+        if controlled.is_symlink() or (controlled.exists() and not controlled.is_dir()):
+            raise ValueError("operational trace ancestor must be regular")
     if trace.is_symlink() or (trace.exists() and not trace.is_dir()):
         raise ValueError("trace directory must be regular")
     path = trace / "trace.json"
@@ -145,7 +153,7 @@ def build(root: Path | str, graph: dict[str, Any] | None = None, *, generated_at
     """Atomically publish a deterministic graph projection bound to events.jsonl."""
     base = _root(root); source = _read(_target(base));
     if graph is None:
-        candidate = base / "trace" / "graph.json"
+        candidate = base / ".planning" / "sdd-composy" / "trace" / "graph.json"
         graph = json.loads(candidate.read_text(encoding="utf-8")) if candidate.exists() else {}
     if not isinstance(graph, dict): raise ValueError("graph must be an object")
     nodes = _graph_nodes(graph); links = _graph_edges(graph, nodes)
@@ -154,9 +162,17 @@ def build(root: Path | str, graph: dict[str, Any] | None = None, *, generated_at
                "nodes": nodes, "links": links, "events": source}
     payload["projection_hash"] = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
     out = _projection_path(base); out.parent.mkdir(mode=0o700, exist_ok=True); os.chmod(out.parent, 0o700)
-    tmp = out.with_name(out.name + ".tmp")
-    tmp.write_text(json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
-    os.chmod(tmp, 0o600); tmp.replace(out); os.chmod(out, 0o600)
+    fd, name = tempfile.mkstemp(prefix=f".{out.name}.", suffix=".tmp", dir=str(out.parent), text=True)
+    tmp = Path(name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+            handle.flush(); os.fsync(handle.fileno())
+        os.chmod(tmp, 0o600); os.replace(tmp, out); os.chmod(out, 0o600)
+    except Exception:
+        try: tmp.unlink()
+        except OSError: pass
+        raise
     return payload
 
 def query(root: Path | str, node_id: str | None = None) -> dict[str, Any]:

@@ -20,11 +20,11 @@ class TraceContractTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             self.assertIsNone(sdd_trace.record(root, self.event(), enabled=False))
-            self.assertFalse((root / "trace" / "events.jsonl").exists())
+            self.assertFalse((root / ".planning" / "sdd-composy" / "trace" / "events.jsonl").exists())
 
     def test_safe_append_and_preserve_existing_lines(self):
         with tempfile.TemporaryDirectory() as d:
-            root = Path(d); path = root / "trace" / "events.jsonl"
+            root = Path(d); path = root / ".planning" / "sdd-composy" / "trace" / "events.jsonl"
             first = sdd_trace.record(root, self.event(), now="2026-01-01T00:00:00Z")
             second = sdd_trace.record(root, self.event(), now="2026-01-01T00:00:01Z")
             self.assertEqual([first["sequence"], second["sequence"]], [1, 2])
@@ -33,7 +33,7 @@ class TraceContractTest(unittest.TestCase):
 
     def test_invalid_jsonl_and_prohibited_keys_rejected(self):
         with tempfile.TemporaryDirectory() as d:
-            root = Path(d); path = root / "trace" / "events.jsonl"; path.parent.mkdir()
+            root = Path(d); path = root / ".planning" / "sdd-composy" / "trace" / "events.jsonl"; path.parent.mkdir(parents=True)
             path.write_text("not-json\n")
             with self.assertRaises(ValueError): sdd_trace.record(root, self.event())
             path.unlink()
@@ -43,20 +43,20 @@ class TraceContractTest(unittest.TestCase):
     def test_unsafe_target_and_queries(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d); outside = root.parent / (root.name + "-outside"); outside.mkdir()
-            link = root / "trace"; link.symlink_to(outside, target_is_directory=True)
+            link = root / ".planning" / "sdd-composy" / "trace"; link.parent.mkdir(parents=True); link.symlink_to(outside, target_is_directory=True)
             with self.assertRaises(ValueError): sdd_trace.record(root, self.event())
 
     def test_summary_verify_are_read_only_and_deterministic(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d); sdd_trace.record(root, self.event(), now="2026-01-01T00:00:00Z")
-            before = (root / "trace" / "events.jsonl").read_bytes()
+            before = (root / ".planning" / "sdd-composy" / "trace" / "events.jsonl").read_bytes()
             self.assertTrue(sdd_trace.verify(root)["ok"])
             self.assertEqual(sdd_trace.summary(root)["source_event_count"], 1)
-            self.assertEqual(before, (root / "trace" / "events.jsonl").read_bytes())
+            self.assertEqual(before, (root / ".planning" / "sdd-composy" / "trace" / "events.jsonl").read_bytes())
 
     def test_existing_trace_directory_is_restricted_before_append(self):
         with tempfile.TemporaryDirectory() as d:
-            root = Path(d); trace = root / "trace"; trace.mkdir(mode=0o755)
+            root = Path(d); trace = root / ".planning" / "sdd-composy" / "trace"; trace.mkdir(mode=0o755, parents=True)
             trace.chmod(0o755)
             sdd_trace.record(root, self.event(), now="2026-01-01T00:00:00Z")
             self.assertEqual(trace.stat().st_mode & 0o777, 0o700)
@@ -67,9 +67,9 @@ class TraceContractTest(unittest.TestCase):
             graph = {"nodes": [{"id": x, "kind": x.split("-")[0]} for x in
                 ("RF-001", "US-001", "SC-001", "CA-001", "TASK-001", "TEST-001", "EVIDENCE-001", "MANIFEST-001", "ARTIFACT-001", "HASH-001", "VERDICT-001")],
                 "links": [{"from": a, "to": b} for a, b in (("RF-001","US-001"),("US-001","SC-001"),("SC-001","CA-001"),("CA-001","TASK-001"),("TASK-001","TEST-001"),("TEST-001","EVIDENCE-001"),("EVIDENCE-001","MANIFEST-001"),("MANIFEST-001","ARTIFACT-001"),("ARTIFACT-001","HASH-001"),("HASH-001","VERDICT-001"))]}
-            first = sdd_trace.build(root, graph); raw = (root / "trace" / "trace.json").read_bytes()
+            first = sdd_trace.build(root, graph); raw = (root / ".planning" / "sdd-composy" / "trace" / "trace.json").read_bytes()
             second = sdd_trace.build(root, graph)
-            self.assertEqual(first, second); self.assertEqual(raw, (root / "trace" / "trace.json").read_bytes())
+            self.assertEqual(first, second); self.assertEqual(raw, (root / ".planning" / "sdd-composy" / "trace" / "trace.json").read_bytes())
             self.assertEqual(sdd_trace.query(root, "TASK-001")["node"]["id"], "TASK-001")
             self.assertTrue(sdd_trace.verify_projection(root)["ok"])
 
@@ -83,7 +83,7 @@ class TraceContractTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d); sdd_trace.record(root, self.event(), now="2026-01-01T00:00:00Z")
             graph = {"nodes": [{"id": "RF-001"}], "links": []}; sdd_trace.build(root, graph)
-            path = root / "trace" / "trace.json"; before = path.read_bytes()
+            path = root / ".planning" / "sdd-composy" / "trace" / "trace.json"; before = path.read_bytes()
             data = json.loads(path.read_text()); data["nodes"].append({"id": "RF-001"}); path.write_text(json.dumps(data))
             result = sdd_trace.verify_projection(root)
             self.assertFalse(result["ok"]); self.assertIn("duplicate graph id", result["errors"][0])
@@ -95,10 +95,19 @@ class TraceContractTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d); sdd_trace.record(root, self.event(), now="2026-01-01T00:00:00Z")
             target = root.parent / (root.name + "-outside.json"); target.write_text("{}")
-            path = root / "trace" / "trace.json"; path.symlink_to(target)
+            path = root / ".planning" / "sdd-composy" / "trace" / "trace.json"; path.symlink_to(target)
             with self.assertRaises(ValueError): sdd_trace.build(root, {"nodes": [], "links": []})
             with self.assertRaises(ValueError): sdd_trace.query(root)
             self.assertFalse(sdd_trace.verify_projection(root)["ok"])
+
+    def test_projection_publish_does_not_follow_predictable_temp_symlink(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d); sdd_trace.record(root, self.event(), now="2026-01-01T00:00:00Z")
+            trace = root / ".planning" / "sdd-composy" / "trace"
+            outside = root / "outside"; outside.write_text("sentinel", encoding="utf-8")
+            (trace / "trace.json.tmp").symlink_to(outside)
+            sdd_trace.build(root, {"nodes": [], "links": []})
+            self.assertEqual(outside.read_text(encoding="utf-8"), "sentinel")
 
 
 class StatusContractTest(unittest.TestCase):
@@ -108,6 +117,15 @@ class StatusContractTest(unittest.TestCase):
         op = root / ".planning" / "sdd-composy"; op.mkdir(parents=True, exist_ok=True)
         base = {"schema_version": "1", "stage": "EXECUTE", "next_action": "inspect the active stage"}
         base.update(values); (op / "state.json").write_text(json.dumps(base, sort_keys=True))
+
+    def write_tasks(self, root, slug="demo", states=("pending",)):
+        op = root / ".planning" / "sdd-composy" / "tasks"; op.mkdir(parents=True, exist_ok=True)
+        tasks = [{"id": f"TASK-{n:03d}", "title": f"Task {n}", "state": state,
+                  "dependencies": [], "acceptance_criteria": [f"CA-{n:03d}"],
+                  "verification_commands": ["true"], "allowed_paths": ["src/app.py"],
+                  "evidence_required": True} for n, state in enumerate(states, 1)]
+        (op / f"{slug}.json").write_text(json.dumps({"schema_version": "1", "prd_slug": slug,
+            "updated_at": "2026-01-01T00:00:00Z", "tasks": tasks}), encoding="utf-8")
 
     def test_uninitialized_and_active(self):
         with tempfile.TemporaryDirectory() as d:
@@ -170,7 +188,7 @@ class StatusContractTest(unittest.TestCase):
 
     def test_broken_projection_symlink_fails_closed_and_is_unchanged(self):
         with tempfile.TemporaryDirectory() as d:
-            root = Path(d); (root / "trace").mkdir(); path = root / "trace" / "trace.json"
+            root = Path(d); (root / ".planning" / "sdd-composy" / "trace").mkdir(parents=True); path = root / ".planning" / "sdd-composy" / "trace" / "trace.json"
             path.symlink_to(root / "missing-trace.json")
             before = path.read_bytes() if path.exists() else os.readlink(path).encode()
             with self.assertRaises(ValueError): sdd_trace.build(root, {"nodes": [], "links": []})
@@ -184,7 +202,7 @@ class StatusContractTest(unittest.TestCase):
             for name in ("state.json", "loops", "fleet"):
                 (op / name).symlink_to(op / ("missing-" + name))
             (root / "tasks").symlink_to(root / "missing-tasks", target_is_directory=True)
-            (root / "trace").mkdir(); (root / "trace" / "events.jsonl").symlink_to(root / "missing-events.jsonl")
+            (root / ".planning" / "sdd-composy" / "trace").mkdir(); (root / ".planning" / "sdd-composy" / "trace" / "events.jsonl").symlink_to(root / "missing-events.jsonl")
             result = sdd_status.status(root)
             self.assertEqual(result["status"], "malformed")
             for source in ("global", "loops", "fleet", "tasks", "trace"):
@@ -195,9 +213,53 @@ class StatusContractTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d); sdd_trace.record(root, self.event(), now="2026-01-01T00:00:00Z")
             sdd_trace.build(root, {"nodes": [], "links": []})
-            path = root / "trace" / "trace.json"; data = json.loads(path.read_text()); data["source_event_count"] = 0
+            path = root / ".planning" / "sdd-composy" / "trace" / "trace.json"; data = json.loads(path.read_text()); data["source_event_count"] = 0
             path.write_text(json.dumps(data))
             self.assertFalse(sdd_trace.verify_projection(root)["ok"])
+
+    def test_malformed_status_has_priority_over_running_tasks_loop_and_fleet(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d); op = root / ".planning" / "sdd-composy"; op.mkdir(parents=True)
+            (op / "config.json").write_text("{broken", encoding="utf-8")
+            self.write_tasks(root, states=("running",))
+            (op / "loops").mkdir(); (op / "loops" / "L.json").write_text(json.dumps({"status": "running"}))
+            (op / "fleet").mkdir(); (op / "fleet" / "F.json").write_text(json.dumps({"status": "running"}))
+            result = sdd_status.status(root)
+            self.assertEqual(result["status"], "malformed")
+            self.assertEqual(result["sources"]["config"]["state"], "malformed")
+
+    def test_empty_or_missing_task_frontmatter_is_malformed_and_low_confidence(self):
+        for body in ("---\ntype: TASK\n---\n", "---\ntype: TASK\ntask: {}\n---\n"):
+            with self.subTest(body=body), tempfile.TemporaryDirectory() as d:
+                root = Path(d); task = root / "tasks" / "prd-demo"; task.mkdir(parents=True)
+                (task / "task-001.md").write_text(body, encoding="utf-8")
+                result = sdd_status.status(root)
+                self.assertEqual(result["status"], "malformed")
+                self.assertEqual(result["sources"]["tasks"]["confidence"], "low")
+
+    def test_canonical_task_queue_filters_feature_and_complete_is_not_active(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d); self.write_tasks(root, "alpha", ("complete",)); self.write_tasks(root, "beta", ("ready",))
+            alpha = sdd_status.status(root, feature="alpha", include_tasks=True)
+            beta = sdd_status.status(root, feature="beta", include_tasks=True)
+            self.assertEqual(alpha["status"], "active")
+            self.assertEqual(alpha["task_summary"][0]["prd_slug"], "alpha")
+            self.assertFalse(alpha["task_summary"][0]["has_ready_task"])
+            self.assertTrue(beta["task_summary"][0]["has_ready_task"])
+            self.assertEqual({x["prd_slug"] for x in sdd_status.status(root, include_tasks=True)["task_summary"]}, {"alpha", "beta"})
+
+    def test_status_reads_operational_trace_and_does_not_mutate_sources(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d); op = root / ".planning" / "sdd-composy"; op.mkdir(parents=True)
+            (op / "config.json").write_text(json.dumps({"schema_version": "1", "language": "en-US"}))
+            self.write_tasks(root)
+            sdd_trace.record(root, self.event(), now="2026-01-01T00:00:00Z")
+            sentinel = root / "sentinel"; sentinel.write_text("keep")
+            before = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+            result = sdd_status.status(root)
+            after = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+            self.assertEqual(result["sources"]["trace"]["value"]["source_event_count"], 1)
+            self.assertEqual(before, after)
 
 
 class QuickContractTest(unittest.TestCase):

@@ -19,27 +19,36 @@ def _load(path: Path) -> tuple[Any, str]:
 def _source(value: Any, state: str) -> dict[str, Any]:
     return {"confidence": "high" if state == "valid" else "low", "state": state, "value": value}
 
+def _validated_object(path: Path, *, allow_empty: bool = False) -> tuple[Any, str]:
+    value, state = _load(path)
+    if state == "valid" and (not isinstance(value, dict) or (not allow_empty and not value)):
+        return None, "malformed"
+    return value, state
+
 def status(root: Path | str, feature: str | None = None, include_tasks: bool = False,
            include_fleet: bool = False) -> dict[str, Any]:
     """Aggregate known state without creating or modifying any path."""
     base = Path(root).absolute()
     op = base / ".planning" / "sdd-composy"
-    config, cs = _load(op / "config.json")
-    global_state, gs = _load(op / "state.json")
+    config, cs = _validated_object(op / "config.json")
+    global_state, gs = _validated_object(op / "state.json")
     loops, ls = _records(op / "loops")
     fleet, fs = _fleet_records(op / "fleet")
-    trace_path = base / "trace" / "events.jsonl"
+    trace_path = op / "trace" / "events.jsonl"
     if trace_path.is_symlink():
         tr, ts = {"ok": False, "errors": ["trace target is an unsafe symlink"]}, "unsafe_symlink"
     elif trace_path.exists() and verify_trace:
-        try: tr = verify_trace(base); ts = "valid" if tr.get("ok") else "malformed"
+        try: tr = verify_trace(base); ts = "valid" if tr.get("ok") else "divergent"
         except Exception: tr, ts = {"ok": False, "errors": ["trace unavailable"]}, "malformed"
     else: tr, ts = {"ok": True, "source_event_count": 0}, "missing"
-    tasks, task_state = _task_summary(base)
+    tasks, task_state = _task_summary(base, feature)
     reasons: list[str] = []
     state_name = "uninitialized"
     next_action = "run sdd-init"
-    if any(x in {"malformed", "unsafe_symlink"} for x in (cs, gs, ls, fs, ts, task_state)):
+    fatal = any(x in {"malformed", "unsafe_symlink"} for x in (cs, gs, ls, fs, ts, task_state))
+    divergent = ts == "divergent" or (gs == "valid" and isinstance(global_state, dict)
+                                      and global_state.get("trace", {}).get("healthy") is False)
+    if fatal:
         state_name, next_action = "malformed", "repair the malformed source manually, then rerun sdd-status"
         reasons.append("one or more state sources are malformed")
     elif gs == "valid" and isinstance(global_state, dict):
@@ -50,19 +59,22 @@ def status(root: Path | str, feature: str | None = None, include_tasks: bool = F
             reasons.extend(str(x.get("reason", x.get("id", "blocker"))) for x in global_state["blockers"] if isinstance(x, dict))
         elif global_state.get("active_task") or tasks:
             state_name = "active"
-    if tasks:
-        md_states = {str(t.get("state")) for t in tasks if isinstance(t, dict)}
+    task_rows = [task for item in tasks for task in (item.get("tasks", []) if isinstance(item, dict) and isinstance(item.get("tasks"), list) else [item]) if isinstance(task, dict)]
+    if task_rows and not fatal and not divergent:
+        md_states = {str(t.get("state")) for t in task_rows}
         if "blocked" in md_states:
             state_name, next_action = "blocked", "resolve the blocked task and transition it to ready"
         elif "running" in md_states:
             state_name, next_action = "active", "continue the running task"
+        else:
+            state_name, next_action = "active", "inspect the task queue and continue the next ready task"
     running_loops = [x for x in loops if isinstance(x, dict) and x.get("status") == "running"]
-    if running_loops:
+    if running_loops and not fatal and not divergent:
         state_name, next_action = "looping", "continue the loop or stop it at its configured guard"
     fleet_active = [x for x in fleet if isinstance(x, dict) and x.get("status") in {"running", "pending"}]
-    if fleet_active or fleet:
+    if (fleet_active or fleet) and not fatal and not divergent:
         state_name, next_action = "fleet", "inspect fleet members and collect their results"
-    if gs == "valid" and isinstance(global_state, dict) and global_state.get("trace", {}).get("healthy") is False:
+    if divergent and not fatal:
         state_name, next_action = "divergent", "verify trace integrity and resolve the reported divergence"
     result = {"schema": "sdd-composy.status", "read_only": True, "status": state_name,
             "next_action": next_action, "reasons": sorted(set(reasons)),
@@ -104,8 +116,28 @@ def _fleet_records(directory: Path) -> tuple[list[Any], str]:
         out.extend(x for x in members if isinstance(x, dict))
     return out, ("valid" if out else "missing")
 
-def _task_summary(root: Path) -> tuple[list[dict[str, Any]], str]:
+def _task_summary(root: Path, feature: str | None = None) -> tuple[list[dict[str, Any]], str]:
     out = []
+    canonical = root / ".planning" / "sdd-composy" / "tasks"
+    if canonical.is_symlink(): return out, "unsafe_symlink"
+    if canonical.exists():
+        if not canonical.is_dir(): return out, "malformed"
+        try:
+            from sdd_tasks import validate
+            for path in sorted(canonical.glob("*.json")):
+                if path.is_symlink(): return [], "unsafe_symlink"
+                data, state = _load(path)
+                if state != "valid" or not isinstance(data, dict): return [], "malformed"
+                validate(data, root=root)
+                if feature is not None and data["prd_slug"] != feature: continue
+                rows = data["tasks"]
+                eligible = {t["id"] for t in __import__("sdd_tasks").ready_tasks(data)}
+                out.append({"prd_slug": data["prd_slug"], "tasks": rows,
+                            "eligible_task_ids": sorted(eligible),
+                            "ready_task_ids": sorted(t["id"] for t in rows if t["state"] == "ready"),
+                            "has_ready_task": any(t["state"] == "ready" for t in rows)})
+        except (OSError, UnicodeError, ValueError, json.JSONDecodeError): return [], "malformed"
+        return out, ("valid" if out else "missing")
     tasks = root / "tasks"
     if tasks.is_symlink(): return out, "unsafe_symlink"
     if not tasks.exists(): return out, "missing"
@@ -117,7 +149,7 @@ def _task_summary(root: Path) -> tuple[list[dict[str, Any]], str]:
         try:
             from sdd_okf import parse_frontmatter
             meta, _ = parse_frontmatter(path.read_text(encoding="utf-8")); task = meta.get("task", {}) if isinstance(meta, dict) else {}
-            if not isinstance(meta, dict) or not isinstance(task, dict): return out, "malformed"
+            if not isinstance(meta, dict) or not isinstance(task, dict) or not task: return out, "malformed"
             out.append(task)
         except (OSError, UnicodeError, ValueError):
             return out, "malformed"

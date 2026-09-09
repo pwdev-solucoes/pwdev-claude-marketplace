@@ -190,6 +190,39 @@ class TaskRuntimeTest(unittest.TestCase):
         self.assertEqual(first["tasks"][0]["old"], "keep"); self.assertEqual(first["custom"], "keep")
         self.assertEqual(sdd_tasks.load(self.out)["tasks"][0]["id"], "TASK-001")
         before = self.out.read_text(); sdd_tasks.import_tasks(self.src, self.out, root=self.repo, now=fixed); self.assertEqual(before, self.out.read_text())
+
+    def test_import_preserves_live_json_state_and_reports_markdown_divergence(self):
+        self.out.parent.mkdir(); self.out.write_text(json.dumps({"schema_version":"1","prd_slug":"demo",
+            "updated_at":"2026-01-01T00:00:00Z","custom":"keep","tasks":[{
+            "id":"TASK-001","title":"First","state":"running","dependencies":[],
+            "acceptance_criteria":["CA-001"],"verification_commands":["true"],
+            "allowed_paths":["src/app.py"],"evidence_required":True,"runtime_note":"keep"}]}))
+        result = sdd_tasks.import_tasks(self.src, self.out, root=self.repo,
+            now=dt.datetime(2026, 1, 2, tzinfo=dt.timezone.utc))
+        self.assertEqual(result["tasks"][0]["state"], "running")
+        self.assertEqual(result["tasks"][0]["runtime_note"], "keep")
+        self.assertEqual(result["divergences"][0]["field"], "state")
+
+    def test_import_rejects_new_task_prepromoted_by_markdown(self):
+        text = (self.src / "task-001.md").read_text(encoding="utf-8").replace("state: pending", "state: ready")
+        (self.src / "task-001.md").write_text(text, encoding="utf-8")
+        with self.assertRaises(sdd_tasks.TaskError):
+            sdd_tasks.import_tasks(self.src, self.out, root=self.repo)
+
+    def test_import_preserves_json_only_tasks(self):
+        self.out.parent.mkdir(); existing = self._graph()
+        self.out.write_text(json.dumps(existing), encoding="utf-8")
+        result = sdd_tasks.import_tasks(self.src, self.out, root=self.repo,
+            now=dt.datetime(2026, 1, 2, tzinfo=dt.timezone.utc))
+        self.assertEqual([task["id"] for task in result["tasks"]], ["TASK-001", "TASK-002"])
+
+    def test_validate_rejects_wrong_json_types_and_symlink_ancestors(self):
+        data = self._graph(); data["tasks"][0]["state"] = 1
+        with self.assertRaises(sdd_tasks.TaskError): sdd_tasks.validate(data)
+        outside = self.repo.parent / (self.repo.name + "-outside"); outside.mkdir()
+        linked = self.repo / "linked"; linked.symlink_to(outside, target_is_directory=True)
+        with self.assertRaises(sdd_tasks.TaskError):
+            sdd_tasks.import_tasks(self.src, linked / "tasks.json", root=self.repo)
     def test_invalid_timestamp_and_unsafe_outputs(self):
         for stamp in ("not-a-date", "2026-01-01", "2026-01-01T00:00:00"):
             data={"schema_version":"1","prd_slug":"demo","updated_at":stamp,"tasks":[]}
