@@ -8,6 +8,7 @@ import importlib.util
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "plugins/sdd-composy/scripts"))
 import sdd_language
+import sdd_localization
 
 INIT = ROOT / "plugins/sdd-composy/scripts/sdd_init.py"
 
@@ -105,6 +106,54 @@ class InitLanguageIntegrationTests(unittest.TestCase):
         result = self.init.run_plan(self.root, "agent:test", self.templates, None)
         self.assertEqual(result["language"], "en-US")
         self.assertEqual(result["language_source"], "persisted")
+
+    def test_governance_renderer_localizes_static_blocks_only(self):
+        dynamic = "Projeto do Usuário / TASK-777 / Não traduza esta evidência"
+        source = {
+            "AGENTS.md": "# " + dynamic + " — SDD Composy Governance\n\n## Context\n\n"
+                         "- Stack summary: " + dynamic + "\n",
+            "CLAUDE.md": "# Claude Code compatibility\n\nThe generated contract was produced for `"
+                         + dynamic + "` at `2026-09-09T00:00:00+00:00`.\n",
+            ".agents/rules/testing.md": "# Testing rule\n\n## Responsibility\n",
+        }
+        rendered = sdd_localization.render_governance(source, "pt-BR")
+        self.assertIn(dynamic, rendered["AGENTS.md"])
+        self.assertIn(dynamic, rendered["CLAUDE.md"])
+        self.assertIn("## Contexto", rendered["AGENTS.md"])
+        self.assertIn("# Compatibilidade com Claude Code", rendered["CLAUDE.md"])
+        self.assertIn("# Regra de testes", rendered[".agents/rules/testing.md"])
+        self.assertEqual(sdd_localization.render_governance(source, "en-US"), source)
+
+    def test_template_localization_happens_before_dynamic_values_are_inserted(self):
+        dynamic = "Never read .env / TASK-777 / ## Context"
+        rendered = self.init._template_contents(
+            self.templates,
+            {
+                "PROJECT_NAME": dynamic,
+                "SOURCE_COMMIT": "TASK-777",
+                "GENERATED_AT": "2026-09-09T00:00:00+00:00",
+                "ACTOR_ID": "human:test",
+                "STACK_SUMMARY": dynamic,
+                "COMMANDS": dynamic,
+            },
+            "pt-BR",
+        )
+        self.assertIn(dynamic, rendered["AGENTS.md"])
+        self.assertIn("Resumo da stack: " + dynamic, rendered["AGENTS.md"])
+
+    def test_pt_br_init_localizes_all_governance_documents(self):
+        plan = self.init.run_plan(self.root, "agent:test", self.templates, "pt-BR")
+        self.init.apply(self.root, plan, self.templates)
+        expected = {
+            "AGENTS.md": "## Contexto",
+            "CLAUDE.md": "# Compatibilidade com Claude Code",
+            ".agents/rules/00-sdd-composy.md": "## Descoberta e precedência",
+            ".agents/rules/architecture.md": "# Regra de arquitetura",
+            ".agents/rules/testing.md": "# Regra de testes",
+            ".agents/rules/workflow.md": "# Regra de fluxo de trabalho",
+        }
+        for relative, marker in expected.items():
+            self.assertIn(marker, (self.root / relative).read_text(), relative)
 
 
 class LanguageRoutingDocumentationTests(unittest.TestCase):

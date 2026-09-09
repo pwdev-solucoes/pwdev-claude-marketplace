@@ -268,6 +268,96 @@ class SddComposyInitRuntimeTests(unittest.TestCase):
             after = {str(path.relative_to(root)): path.read_bytes() for path in root.rglob("*") if path.is_file()}
             self.assertEqual(before, after)
 
+    def test_apply_reports_only_real_creations_and_publishes_valid_init_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _, first = self.run_init(root, "apply")
+            self.assertEqual(set(first["created"]), {
+                "AGENTS.md", "CLAUDE.md", ".agents/rules/00-sdd-composy.md",
+                ".agents/rules/architecture.md", ".agents/rules/testing.md",
+                ".agents/rules/workflow.md", "tasks/index.md", ".claude",
+                ".planning/sdd-composy/config.json", ".planning/sdd-composy/state.json",
+            })
+            state = json.loads((root / ".planning/sdd-composy/state.json").read_text())
+            self.assertEqual(state["schema_version"], "1")
+            self.assertEqual(state["revision"], 0)
+            self.assertEqual(state["stage"], "INIT")
+            self.assertIsNone(state["active_prd"])
+            self.assertIsNone(state["active_task"])
+            self.assertIsNone(state["last_gate"])
+            self.assertEqual(state["blockers"], [])
+            self.assertEqual(state["loops"], [])
+            self.assertEqual(state["fleet"], [])
+            self.assertEqual(state["trace"], {"healthy": True, "source_event_count": 0})
+            self.assertEqual(state["next_action"], "run_map")
+            _, second = self.run_init(root, "apply")
+            self.assertEqual(second["created"], [])
+
+    def test_apply_preserves_unknown_existing_state_fields(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.run_init(root, "apply")
+            state_path = root / ".planning/sdd-composy/state.json"
+            state = json.loads(state_path.read_text())
+            state["extension"] = {"owned_by": "user", "id": "TASK-999"}
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            _, payload = self.run_init(root, "apply")
+            self.assertEqual(payload["created"], [])
+            self.assertEqual(json.loads(state_path.read_text())["extension"], state["extension"])
+
+    def test_conflicted_apply_does_not_publish_init_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "AGENTS.md").write_text("user-owned\n", encoding="utf-8")
+            _, plan = self.run_init(root, "plan")
+            result, payload = self.run_init(root, "apply", "--plan-token", plan["plan_token"])
+            self.assertNotEqual(result.returncode, 0, payload)
+            self.assertFalse(payload["ok"])
+            self.assertNotIn(".planning/sdd-composy/state.json", payload["created"])
+            self.assertFalse((root / ".planning/sdd-composy/state.json").exists())
+
+    def test_invalid_existing_state_is_rejected_before_any_publication(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_path = root / ".planning/sdd-composy/state.json"
+            state_path.parent.mkdir(parents=True)
+            state_path.write_text('{"schema_version":"1","extension":{"id":"TASK-999"}}\n', encoding="utf-8")
+            before = {str(path.relative_to(root)): path.read_bytes() for path in root.rglob("*") if path.is_file()}
+            result, payload = self.run_init(root, "apply")
+            self.assertNotEqual(result.returncode, 0, payload)
+            after = {str(path.relative_to(root)): path.read_bytes() for path in root.rglob("*") if path.is_file()}
+            self.assertEqual(after, before)
+
+    def test_existing_claude_directory_requires_coherent_bridge_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / ".claude").mkdir()
+            _, plan = self.run_init(root, "plan")
+            self.assertEqual(plan["claude_compatibility"], "existing_directory")
+            self.assertIn({"path": ".claude/AGENTS.md", "operation": "create"}, plan["actions"])
+            _, applied = self.run_init(root, "apply")
+            self.assertIn(".claude/AGENTS.md", applied["created"])
+            self.assertEqual((root / ".claude/AGENTS.md").read_text(), "../AGENTS.md\n")
+            verified = self.run_init(root, "verify")[1]
+            self.assertTrue(verified["ok"], verified)
+            self.assertFalse(verified["claude_link_ok"])
+            self.assertEqual(verified["claude_compatibility"], "existing_directory")
+
+    def test_verify_requires_valid_language_and_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.run_init(root, "apply")
+            (root / ".planning/sdd-composy/config.json").write_text('{"language":"fr-FR"}')
+            result = self.run_init(root, "verify")[1]
+            self.assertFalse(result["ok"])
+            self.assertFalse(result["language_ok"])
+            (root / ".planning/sdd-composy/config.json").write_text('{"language":"en-US"}')
+            (root / ".planning/sdd-composy/state.json").unlink()
+            result = self.run_init(root, "verify")[1]
+            self.assertFalse(result["ok"])
+            self.assertFalse(result["state_ok"])
+            self.assertEqual(result["next_action"], "reconcile_init_state")
+
     def test_file_directory_and_symlink_conflicts_are_reported_without_overwrite(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -276,7 +366,7 @@ class SddComposyInitRuntimeTests(unittest.TestCase):
             result, plan = self.run_init(root, "plan")
             self.assertEqual(result.returncode, 0)
             self.assertIn({"path": "AGENTS.md", "reason": "file"}, plan["conflicts"])
-            self.assertIn({"path": ".agents", "reason": "existing directory"}, plan["conflicts"])
+            self.assertIn(".agents", plan["unchanged"])
             before = (root / "AGENTS.md").read_text(encoding="utf-8")
             bad = self.run_init(root, "apply", "--plan-token", "wrong")[0]
             self.assertNotEqual(bad.returncode, 0)
@@ -325,7 +415,8 @@ class SddComposyInitRuntimeTests(unittest.TestCase):
             _, plan = self.run_init(root, "plan")
             self.assertIn({"path": "AGENTS.md", "reason": "directory"}, plan["conflicts"])
             applied, payload = self.run_init(root, "apply", "--plan-token", plan["plan_token"])
-            self.assertEqual(applied.returncode, 0, payload)
+            self.assertNotEqual(applied.returncode, 0, payload)
+            self.assertFalse(payload["ok"])
             self.assertTrue((root / "CLAUDE.md").is_file())
             self.assertTrue((root / "AGENTS.md").is_dir())
 
@@ -356,7 +447,7 @@ class SddComposyInitRuntimeTests(unittest.TestCase):
             module._atomic_create = fail_after_first
             with self.assertRaises(OSError):
                 module.apply(root, plan, module._template_root(None))
-            self.assertFalse(list(root.rglob(".*.*")))
+            self.assertFalse([path for path in root.rglob("*") if path.name.startswith(".") and path.is_file()])
 
 
 if __name__ == "__main__":

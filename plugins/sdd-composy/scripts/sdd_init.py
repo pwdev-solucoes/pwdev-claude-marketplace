@@ -21,8 +21,10 @@ from typing import Any
 
 try:
     from sdd_language import resolve_language, persist_language
+    from sdd_localization import render_governance
 except ImportError:  # pragma: no cover - direct package loading
     from .sdd_language import resolve_language, persist_language
+    from .sdd_localization import render_governance
 
 
 ACTOR_RE = re.compile(r"^[A-Za-z][A-Za-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._-]*$")
@@ -95,19 +97,68 @@ def _template_root(value: str | os.PathLike[str] | None) -> Path:
     return root
 
 
-def _template_contents(template_root: Path, variables: dict[str, str]) -> dict[str, str]:
+def _template_contents(template_root: Path, variables: dict[str, str], language: str = "en-US") -> dict[str, str]:
     output: dict[str, str] = {}
     for source, destination in TEMPLATE_FILES:
         source_path = template_root / source
         if not source_path.is_file() or source_path.is_symlink():
             raise ValueError(f"missing or unsafe template: {source}")
-        text = source_path.read_text(encoding="utf-8")
+        output[destination] = source_path.read_text(encoding="utf-8")
+    # Translate only plugin-owned template text.  Interpolating afterward is
+    # what makes runtime values opaque to localization, even when user content
+    # happens to equal one of the static source phrases.
+    output = render_governance(output, language)
+    for destination, text in output.items():
         for key, value in variables.items():
             text = text.replace("{{" + key + "}}", value)
         if re.search(r"\{\{[A-Z][A-Z0-9_]*\}\}", text):
-            raise ValueError(f"unresolved template variable in {source}")
+            raise ValueError(f"unresolved template variable in {destination}")
         output[destination] = text
     return output
+
+
+def _state(generated_at: str, current: dict[str, Any] | None = None) -> dict[str, Any]:
+    result = dict(current or {})
+    defaults = {
+        "schema_version": "1", "revision": 0, "stage": "INIT",
+        "active_prd": None, "active_task": None, "last_gate": None,
+        "blockers": [], "loops": [], "fleet": [],
+        "trace": {"healthy": True, "source_event_count": 0},
+        "updated_at": generated_at, "next_action": "run_map",
+    }
+    for key, value in defaults.items():
+        result.setdefault(key, value)
+    return result
+
+
+def _valid_state(value: Any) -> bool:
+    return (isinstance(value, dict) and value.get("schema_version") == "1"
+            and isinstance(value.get("revision"), int) and value.get("revision", -1) >= 0
+            and value.get("stage") in {"INIT", "MAP", "PRD", "STORIES", "TECHSPEC", "TASKS", "EXECUTE", "QA", "EVIDENCE", "REVIEW", "VERIFY", "COMPLETE"}
+            and all(key in value for key in ("active_prd", "active_task", "last_gate", "blockers", "loops", "fleet", "trace", "updated_at", "next_action"))
+            and isinstance(value.get("blockers"), list) and isinstance(value.get("loops"), list)
+            and isinstance(value.get("fleet"), list) and isinstance(value.get("trace"), dict)
+            and isinstance(value["trace"].get("healthy"), bool)
+            and isinstance(value["trace"].get("source_event_count"), int)
+            and isinstance(value.get("next_action"), str) and bool(value["next_action"]))
+
+
+def _atomic_json(path: Path, value: dict[str, Any]) -> None:
+    _safe_relative(path.parents[2], str(path.relative_to(path.parents[2])))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(path.parent), text=True)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
+            json.dump(value, handle, ensure_ascii=False, indent=2, sort_keys=True)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
 
 
 def _index_text(actor: str, generated_at: str, language: str = "en-US") -> str:
@@ -147,7 +198,7 @@ def _plan(root: Path, actor: str, template_root: Path, language: str = "en-US") 
         "STACK_SUMMARY": "Not mapped yet",
         "COMMANDS": "Run the repository's focused verification command",
     }
-    templates = _template_contents(template_root, variables)
+    templates = _template_contents(template_root, variables, language)
     targets = dict(templates)
     targets["tasks/index.md"] = _index_text(actor, variables["GENERATED_AT"], language)
     actions: list[dict[str, str]] = []
@@ -169,19 +220,13 @@ def _plan(root: Path, actor: str, template_root: Path, language: str = "en-US") 
                 conflicts.append({"path": relative, "reason": "file"})
         else:
             actions.append({"path": relative, "operation": "create"})
-    # Existing .agents/.claude are compatibility paths, not files to merge.
+    # Existing compatibility directories are preserved. Missing owned files are
+    # planned independently, so their contents are never adopted by existence.
     agents = root / ".agents"
     if agents.is_symlink() or (agents.exists() and not agents.is_dir()):
         conflicts.append({"path": ".agents", "reason": "unsafe path"})
     elif agents.exists():
-        # A pre-existing empty/foreign .agents directory is a collision. The
-        # directory created by this helper is recognized by its complete rules
-        # set so that a rerun remains a no-op.
-        rules = agents / "rules"
-        expected_rules = {name.rsplit("/", 1)[-1] for name, _ in TEMPLATE_FILES if name.startswith("rules/")}
-        present_rules = {item.name for item in rules.iterdir()} if rules.is_dir() else set()
-        if not rules.is_dir() or not expected_rules.issubset(present_rules):
-            conflicts.append({"path": ".agents", "reason": "existing directory"})
+        unchanged.append(".agents")
     else:
         actions.append({"path": ".agents", "operation": "mkdir"})
     claude = root / ".claude"
@@ -194,12 +239,20 @@ def _plan(root: Path, actor: str, template_root: Path, language: str = "en-US") 
         except OSError:
             conflicts.append({"path": ".claude", "reason": "unreadable symlink"})
     elif claude.exists():
-        # Preserve an existing Claude configuration directory; it is a valid
-        # compatibility target even though it cannot be replaced by a symlink.
-        unchanged.append(".claude")
+        if claude.is_dir():
+            bridge = claude / "AGENTS.md"
+            if bridge.is_symlink() or (bridge.exists() and (not bridge.is_file() or bridge.read_text(encoding="utf-8") != "../AGENTS.md\n")):
+                conflicts.append({"path": ".claude/AGENTS.md", "reason": "conflict"})
+            elif bridge.exists():
+                unchanged.append(".claude/AGENTS.md")
+            else:
+                actions.append({"path": ".claude/AGENTS.md", "operation": "create"})
+        else:
+            conflicts.append({"path": ".claude", "reason": "conflict"})
     else:
         actions.append({"path": ".claude", "operation": "symlink", "target": ".agents"})
-    plan = {"version": 1, "root": str(root), "actor": actor, "actions": actions, "conflicts": conflicts, "unchanged": unchanged}
+    compatibility = "symlink" if claude.is_symlink() and os.readlink(claude) == ".agents" else ("existing_directory" if claude.is_dir() else ("conflict" if claude.exists() or claude.is_symlink() else "symlink"))
+    plan = {"version": 1, "root": str(root), "actor": actor, "actions": actions, "conflicts": conflicts, "unchanged": unchanged, "claude_compatibility": compatibility}
     digest = hashlib.sha256(json.dumps(plan, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     plan["plan_token"] = digest
     return plan
@@ -234,10 +287,29 @@ def apply(root: Path, plan: dict[str, Any], template_root: Path) -> dict[str, An
         if 'status' in resolved or 'choices' in resolved:
             return resolved
     generated_at = _utc_now()
+    # State is operational authority, so validate it before publishing any
+    # generated artifact.  A malformed existing state must be preserved for
+    # explicit repair and must not leave an otherwise half-initialized tree.
+    state_path = root / ".planning/sdd-composy/state.json"
+    _safe_relative(root, ".planning/sdd-composy/state.json")
+    state_existed = state_path.exists()
+    current = None
+    if state_existed:
+        try:
+            current = json.loads(state_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError("invalid state; preserve and repair state.json") from exc
+        if not _valid_state(current):
+            raise ValueError("invalid state; preserve and repair state.json")
+    new_state = _state(generated_at, current)
+    if not _valid_state(new_state):
+        raise ValueError("generated INIT state is invalid")
+
     variables = {"PROJECT_NAME": root.name, "SOURCE_COMMIT": _source_commit(root), "GENERATED_AT": generated_at, "ACTOR_ID": plan["actor"], "STACK_SUMMARY": "Not mapped yet", "COMMANDS": "Run the repository's focused verification command"}
-    contents = _template_contents(template_root, variables)
+    contents = _template_contents(template_root, variables, plan.get("language", "en-US"))
     contents["tasks/index.md"] = _index_text(plan["actor"], generated_at, plan.get("language", "en-US"))
     blocked = {item["path"] for item in plan["conflicts"]}
+    created: list[str] = []
     for relative, content in contents.items():
         if relative in blocked or any(relative.startswith(item + "/") for item in blocked if item != ".agents"):
             continue
@@ -246,6 +318,7 @@ def apply(root: Path, plan: dict[str, Any], template_root: Path) -> dict[str, An
         if path.exists() and path.is_file():
             continue
         _atomic_create(path, content)
+        created.append(relative)
     agents = root / ".agents"
     if not agents.exists() and ".agents" not in blocked:
         agents.mkdir()
@@ -255,9 +328,25 @@ def apply(root: Path, plan: dict[str, Any], template_root: Path) -> dict[str, An
     claude = root / ".claude"
     if not claude.exists() and not claude.is_symlink() and ".claude" not in blocked:
         os.symlink(".agents", claude)
+        created.append(".claude")
+    elif not claude.is_symlink() and claude.is_dir() and ".claude/AGENTS.md" not in blocked:
+        bridge = claude / "AGENTS.md"
+        if not bridge.exists() and not bridge.is_symlink():
+            _atomic_create(bridge, "../AGENTS.md\n")
+            created.append(".claude/AGENTS.md")
     if "language" in plan:
+        config_path = root / ".planning/sdd-composy/config.json"
+        config_existed = config_path.exists()
         persist_language(root, plan["language"])
-    return {"ok": True, "created": list(contents) + [".claude"], "actor": plan["actor"]}
+        if not config_existed:
+            created.append(".planning/sdd-composy/config.json")
+    # INIT is authoritative only after every required artifact was generated.
+    # A token-authorized conflicted apply may publish its non-conflicting
+    # subset, but it must not claim successful initialization.
+    if not state_existed and not plan["conflicts"]:
+        _atomic_json(state_path, new_state)
+        created.append(".planning/sdd-composy/state.json")
+    return {"ok": not bool(plan["conflicts"]), "created": created, "conflicts": plan["conflicts"], "actor": plan["actor"]}
 
 
 def verify(root: Path, actor: str) -> dict[str, Any]:
@@ -286,11 +375,33 @@ def verify(root: Path, actor: str) -> dict[str, Any]:
     valid_index = (index_meta.get("type") == "Index" and index_meta.get("okf_version") == "0.2" and index_meta.get("actor_id") == actor and isinstance(generated, dict) and generated.get("by") == actor and valid_timestamp)
     claude = root / ".claude"
     compatible_link = False
+    compatibility = "conflict"
     if claude.is_symlink():
         compatible_link = os.readlink(claude) == ".agents" and claude.resolve(strict=False) == root / ".agents" and (root / ".agents").is_dir()
+        compatibility = "symlink" if compatible_link else "conflict"
     elif claude.is_dir():
-        compatible_link = True
-    return {"ok": not missing and valid_index and compatible_link, "missing": missing, "index_ok": valid_index, "claude_link_ok": compatible_link, "actor": actor}
+        bridge = claude / "AGENTS.md"
+        compatibility = "existing_directory" if bridge.is_file() and not bridge.is_symlink() and bridge.read_text(encoding="utf-8") == "../AGENTS.md\n" else "conflict"
+    try:
+        language_result = resolve_language(root)
+        language_ok = language_result.get("language") in {"pt-BR", "en-US"}
+    except ValueError:
+        language_ok = False
+    state_path = root / ".planning/sdd-composy/state.json"
+    state_ok = False
+    if state_path.is_file() and not state_path.is_symlink():
+        try:
+            state_ok = _valid_state(json.loads(state_path.read_text(encoding="utf-8")))
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            state_ok = False
+    compatibility_ok = compatible_link or compatibility == "existing_directory"
+    result = {"ok": not missing and valid_index and compatibility_ok and language_ok and state_ok,
+              "missing": missing, "index_ok": valid_index, "claude_link_ok": compatible_link,
+              "claude_compatibility": compatibility, "language_ok": language_ok,
+              "state_ok": state_ok, "actor": actor}
+    if not state_ok:
+        result["next_action"] = "reconcile_init_state"
+    return result
 
 
 def main(argv: list[str] | None = None) -> int:
