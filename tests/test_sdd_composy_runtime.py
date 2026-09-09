@@ -430,6 +430,37 @@ class SddComposyInitRuntimeTests(unittest.TestCase):
             self.assertNotEqual(applied.returncode, 0)
             self.assertFalse((Path(outside) / "index.md").exists())
 
+    def test_plan_rejects_symlink_ancestor_without_reading_external_content(self):
+        with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as outside:
+            root = Path(directory)
+            external = Path(outside)
+            (root / ".agents").mkdir()
+            (root / ".agents/rules").symlink_to(external, target_is_directory=True)
+            (external / "testing.md").write_text("external sentinel", encoding="utf-8")
+            _, plan = self.run_init(root, "plan")
+            self.assertIn({"path": ".agents/rules/00-sdd-composy.md", "reason": "ancestor symlink"}, plan["conflicts"])
+            self.assertNotIn({"path": ".agents/rules/testing.md", "reason": "file"}, plan["conflicts"])
+
+    def test_state_validation_enforces_schema_patterns_types_and_ranges(self):
+        spec = importlib.util.spec_from_file_location("sdd_init_state_validation", self.SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        valid = module._state("2026-09-09T00:00:00+00:00")
+        invalid_values = [
+            {**valid, "active_prd": 123},
+            {**valid, "active_prd": "Bad Slug"},
+            {**valid, "active_task": "task-2"},
+            {**valid, "updated_at": "not-a-date"},
+            {**valid, "blockers": [{"id": "bad id", "status": "open"}]},
+            {**valid, "loops": [{"id": "LOOP-1", "status": ""}]},
+            {**valid, "fleet": ["not-an-object"]},
+            {**valid, "trace": {"healthy": True, "source_event_count": -1}},
+            {**valid, "revision": True},
+        ]
+        for value in invalid_values:
+            with self.subTest(value=value):
+                self.assertFalse(module._valid_state(value))
+
     def test_atomic_failure_cleans_temporary_publication_file(self):
         spec = importlib.util.spec_from_file_location("sdd_init_under_test", self.SCRIPT)
         module = importlib.util.module_from_spec(spec)
@@ -445,9 +476,37 @@ class SddComposyInitRuntimeTests(unittest.TestCase):
                     raise OSError("injected publication failure")
                 return original(path, text)
             module._atomic_create = fail_after_first
-            with self.assertRaises(OSError):
-                module.apply(root, plan, module._template_root(None))
+            result = module.apply(root, plan, module._template_root(None))
+            self.assertFalse(result["ok"])
+            self.assertEqual(result["created"], ["AGENTS.md"])
+            self.assertEqual(result["pending"][0], "CLAUDE.md")
+            self.assertIn("tasks/index.md", result["pending"])
+            self.assertIn("injected publication failure", result["error"])
             self.assertFalse([path for path in root.rglob("*") if path.name.startswith(".") and path.is_file()])
+
+    def test_third_publication_failure_reports_exact_created_and_pending(self):
+        spec = importlib.util.spec_from_file_location("sdd_init_partial_report", self.SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            plan = module._plan(root, "human:test", module._template_root(None))
+            original = module._atomic_create
+            calls = []
+            def fail_on_third(path, text):
+                calls.append(path)
+                if len(calls) == 3:
+                    raise OSError("injected-third-publication")
+                return original(path, text)
+            module._atomic_create = fail_on_third
+            result = module.apply(root, plan, module._template_root(None))
+            self.assertFalse(result["ok"])
+            self.assertEqual(result["created"], ["AGENTS.md", "CLAUDE.md"])
+            self.assertEqual(result["pending"][0], ".agents/rules/00-sdd-composy.md")
+            self.assertNotIn("AGENTS.md", result["pending"])
+            self.assertNotIn("CLAUDE.md", result["pending"])
+            self.assertIn("tasks/index.md", result["pending"])
+            self.assertIn("injected-third-publication", result["error"])
 
 
 if __name__ == "__main__":

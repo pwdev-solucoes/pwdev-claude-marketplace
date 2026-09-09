@@ -132,15 +132,45 @@ def _state(generated_at: str, current: dict[str, Any] | None = None) -> dict[str
 
 
 def _valid_state(value: Any) -> bool:
+    summary_re = re.compile(r"^[A-Za-z][A-Za-z0-9._-]*$")
+    def valid_summary(item: Any) -> bool:
+        return (isinstance(item, dict) and isinstance(item.get("id"), str)
+                and bool(summary_re.fullmatch(item["id"]))
+                and isinstance(item.get("status"), str) and bool(item["status"]))
+    def valid_datetime(item: Any) -> bool:
+        if not isinstance(item, str): return False
+        try:
+            _dt.datetime.fromisoformat(item.replace("Z", "+00:00"))
+            return bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}T.+(?:Z|[+-]\d{2}:\d{2})", item))
+        except ValueError:
+            return False
+    last_gate = value.get("last_gate") if isinstance(value, dict) else None
+    valid_gate = last_gate is None or (isinstance(last_gate, dict)
+        and last_gate.get("name") in {"PRD", "STORIES", "TECHSPEC", "TASKS", "COMPLETE"}
+        and last_gate.get("status") in {"approved", "rejected"}
+        and valid_datetime(last_gate.get("at"))
+        and isinstance(last_gate.get("actor_id"), str) and bool(ACTOR_RE.fullmatch(last_gate["actor_id"])))
     return (isinstance(value, dict) and value.get("schema_version") == "1"
-            and isinstance(value.get("revision"), int) and value.get("revision", -1) >= 0
+            and isinstance(value.get("revision"), int) and not isinstance(value.get("revision"), bool) and value.get("revision", -1) >= 0
             and value.get("stage") in {"INIT", "MAP", "PRD", "STORIES", "TECHSPEC", "TASKS", "EXECUTE", "QA", "EVIDENCE", "REVIEW", "VERIFY", "COMPLETE"}
             and all(key in value for key in ("active_prd", "active_task", "last_gate", "blockers", "loops", "fleet", "trace", "updated_at", "next_action"))
-            and isinstance(value.get("blockers"), list) and isinstance(value.get("loops"), list)
-            and isinstance(value.get("fleet"), list) and isinstance(value.get("trace"), dict)
+            and (value.get("active_prd") is None or isinstance(value.get("active_prd"), str) and bool(re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", value["active_prd"])))
+            and (value.get("active_task") is None or isinstance(value.get("active_task"), str) and bool(re.fullmatch(r"TASK-[0-9]{3,}", value["active_task"])))
+            and valid_gate and all(isinstance(value.get(k), list) and all(valid_summary(x) for x in value[k]) for k in ("blockers", "loops", "fleet"))
+            and isinstance(value.get("trace"), dict)
             and isinstance(value["trace"].get("healthy"), bool)
-            and isinstance(value["trace"].get("source_event_count"), int)
+            and isinstance(value["trace"].get("source_event_count"), int) and not isinstance(value["trace"].get("source_event_count"), bool)
+            and value["trace"]["source_event_count"] >= 0 and valid_datetime(value.get("updated_at"))
             and isinstance(value.get("next_action"), str) and bool(value["next_action"]))
+
+
+def _has_symlink_ancestor(root: Path, relative: str) -> bool:
+    cursor = root
+    for component in Path(relative).parts[:-1]:
+        cursor = cursor / component
+        if cursor.is_symlink():
+            return True
+    return False
 
 
 def _atomic_json(path: Path, value: dict[str, Any]) -> None:
@@ -206,7 +236,9 @@ def _plan(root: Path, actor: str, template_root: Path, language: str = "en-US") 
     unchanged: list[str] = []
     for relative, content in targets.items():
         path = root / relative
-        if path.is_symlink():
+        if _has_symlink_ancestor(root, relative):
+            conflicts.append({"path": relative, "reason": "ancestor symlink"})
+        elif path.is_symlink():
             conflicts.append({"path": relative, "reason": "symlink"})
         elif path.exists():
             if path.is_dir():
@@ -310,15 +342,24 @@ def apply(root: Path, plan: dict[str, Any], template_root: Path) -> dict[str, An
     contents["tasks/index.md"] = _index_text(plan["actor"], generated_at, plan.get("language", "en-US"))
     blocked = {item["path"] for item in plan["conflicts"]}
     created: list[str] = []
-    for relative, content in contents.items():
-        if relative in blocked or any(relative.startswith(item + "/") for item in blocked if item != ".agents"):
-            continue
-        _safe_relative(root, relative)
-        path = root / relative
-        if path.exists() and path.is_file():
-            continue
-        _atomic_create(path, content)
-        created.append(relative)
+    candidates = [relative for relative in contents
+                  if relative not in blocked and not any(relative.startswith(item + "/") for item in blocked if item != ".agents")
+                  and not (root / relative).is_file()]
+    try:
+        for relative in candidates:
+            _safe_relative(root, relative)
+            _atomic_create(root / relative, contents[relative])
+            created.append(relative)
+    except OSError as exc:
+        pending = [relative for relative in candidates if relative not in created]
+        if ".claude" not in blocked and not (root / ".claude").exists() and not (root / ".claude").is_symlink():
+            pending.append(".claude")
+        if "language" in plan and not (root / ".planning/sdd-composy/config.json").exists():
+            pending.append(".planning/sdd-composy/config.json")
+        if not plan["conflicts"] and not state_existed:
+            pending.append(".planning/sdd-composy/state.json")
+        return {"ok": False, "created": created, "pending": pending,
+                "conflicts": plan["conflicts"], "actor": plan["actor"], "error": str(exc)}
     agents = root / ".agents"
     if not agents.exists() and ".agents" not in blocked:
         agents.mkdir()

@@ -108,17 +108,13 @@ class InitLanguageIntegrationTests(unittest.TestCase):
         self.assertEqual(result["language_source"], "persisted")
 
     def test_governance_renderer_localizes_static_blocks_only(self):
-        dynamic = "Projeto do Usuário / TASK-777 / Não traduza esta evidência"
         source = {
-            "AGENTS.md": "# " + dynamic + " — SDD Composy Governance\n\n## Context\n\n"
-                         "- Stack summary: " + dynamic + "\n",
-            "CLAUDE.md": "# Claude Code compatibility\n\nThe generated contract was produced for `"
-                         + dynamic + "` at `2026-09-09T00:00:00+00:00`.\n",
+            "AGENTS.md": "template source",
+            "CLAUDE.md": "template source",
             ".agents/rules/testing.md": "# Testing rule\n\n## Responsibility\n",
         }
         rendered = sdd_localization.render_governance(source, "pt-BR")
-        self.assertIn(dynamic, rendered["AGENTS.md"])
-        self.assertIn(dynamic, rendered["CLAUDE.md"])
+        self.assertIn("{{PROJECT_NAME}}", rendered["AGENTS.md"])
         self.assertIn("## Contexto", rendered["AGENTS.md"])
         self.assertIn("# Compatibilidade com Claude Code", rendered["CLAUDE.md"])
         self.assertIn("# Regra de testes", rendered[".agents/rules/testing.md"])
@@ -153,7 +149,14 @@ class InitLanguageIntegrationTests(unittest.TestCase):
             ".agents/rules/workflow.md": "# Regra de fluxo de trabalho",
         }
         for relative, marker in expected.items():
-            self.assertIn(marker, (self.root / relative).read_text(), relative)
+            text = (self.root / relative).read_text()
+            self.assertIn(marker, text, relative)
+            for english in (
+                "The map is observation", "Keep changes within", "The focused rules",
+                "Apply only the concern-specific rule", "This rule does not define",
+                "Return rejected gates", "This focused rule is subordinate",
+            ):
+                self.assertNotIn(english, text, relative)
 
 
 class LanguageRoutingDocumentationTests(unittest.TestCase):
