@@ -203,7 +203,7 @@ class FleetLaunchTest(unittest.TestCase):
     def _launched_member(self, status="running"):
         self.task(); self.assertEqual(self.invoke(self.contract).returncode, 0)
         state=self.repo/".planning/sdd-composy/fleet/demo"; mf=state/"members/TASK-001.json"
-        d=json.loads(mf.read_text()); d["status"]=status; d["worktree_path"]=d["worktree"]
+        d=json.loads(mf.read_text()); d["status"]=status; d["worktree_path"]=d["worktree"]; d.setdefault("resources", {}).update(compose_allocated=False, compose_file="", compose_project="")
         mf.write_text(json.dumps(d)); return state,mf,d,Path(d["worktree"])
 
     def _teardown(self, *extra):
@@ -232,7 +232,7 @@ class FleetLaunchTest(unittest.TestCase):
             with self.subTest(command=command):
                 self.task(verification_commands=[command])
                 result=self.invoke(self.contract); self.assertEqual(result.returncode,0,result.stderr)
-                state=self.repo/'.planning/sdd-composy/fleet/demo'; mf=state/'members/TASK-001.json'; d=json.loads(mf.read_text()); work=Path(d['worktree'])
+                state=self.repo/'.planning/sdd-composy/fleet/demo'; mf=state/'members/TASK-001.json'; d=json.loads(mf.read_text()); d['resources']['compose_allocated']=False; d['resources']['compose_file']=''; d['resources']['compose_project']=''; work=Path(d['worktree'])
                 (work/'src/app.py').write_text('changed\n'); subprocess.run(['git','-C',str(work),'add','.'],check=True); subprocess.run(['git','-C',str(work),'commit','-qm','change'],check=True)
                 tip=subprocess.check_output(['git','-C',str(work),'rev-parse','HEAD'],text=True).strip()
                 report=state/'result.json'; report.write_text(json.dumps({'member_id':'TASK-001','status':'completed','commit':tip})); d.update(status='completed',result_path=str(report)); mf.write_text(json.dumps(d))
@@ -265,8 +265,16 @@ class FleetLaunchTest(unittest.TestCase):
         state,mf,d,work=self._launched_member("running"); parent=Path(self.tmp.name)/"nested-target"; parent.mkdir(); link=Path(self.tmp.name)/"nested-link"; link.symlink_to(parent); d["worktree_path"]=str(link/"child"); mf.write_text(json.dumps(d)); r=self._teardown(); self.assertNotEqual(r.returncode,0); self.assertTrue(mf.exists())
 
     def test_teardown_compose_failure_preserves_metadata_and_never_uses_volumes(self):
-        state,mf,d,work=self._launched_member("running"); compose=work/"compose.yml"; compose.write_text("services: {}\n"); d.update({"compose_file":"compose.yml","compose_project":"owned-project"}); mf.write_text(json.dumps(d)); bind=Path(self.tmp.name)/"bin"; bind.mkdir(); log=Path(self.tmp.name)/"docker.log"; (bind/"docker").write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" >> '"+str(log)+"'\nexit 1\n"); (bind/"docker").chmod(0o755)
+        state,mf,d,work=self._launched_member("running"); compose=work/"compose.yml"; compose.write_text("services: {}\n"); d.update({"compose_file":"compose.yml","compose_project":"owned-project"}); d["resources"].update(compose_allocated=True,compose_file="compose.yml",compose_project="owned-project"); mf.write_text(json.dumps(d)); bind=Path(self.tmp.name)/"bin"; bind.mkdir(); log=Path(self.tmp.name)/"docker.log"; (bind/"docker").write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" >> '"+str(log)+"'\nexit 1\n"); (bind/"docker").chmod(0o755)
         r=subprocess.run([str(ROOT/"plugins/sdd-composy/scripts/fleet/teardown.sh"),"--root",str(self.repo),"--fleet-id","demo","--member-id","TASK-001"],env={**os.environ,"PATH":str(bind)+":"+os.environ.get("PATH","")},capture_output=True,text=True); self.assertNotEqual(r.returncode,0); self.assertTrue(mf.exists()); self.assertTrue(work.exists()); self.assertNotIn("--volumes",log.read_text())
+
+    def test_teardown_legacy_compose_mirror_cannot_override_central_resource(self):
+        state,mf,d,work=self._launched_member("running"); (work/"docker-compose.yml").write_text("services: {}\n"); (work/"other.yml").write_text("services: {}\n"); d["resources"].update(compose_allocated=True,compose_file="docker-compose.yml",compose_project=d["resources"].get("compose_project", "owned-project"))
+        d["compose_file"]="other.yml"; mf.write_text(json.dumps(d)); bind=Path(self.tmp.name)/"bin"; bind.mkdir(); log=Path(self.tmp.name)/"docker.log"; (bind/"docker").write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" >> '"+str(log)+"'\nexit 1\n"); (bind/"docker").chmod(0o755)
+        r=subprocess.run([str(ROOT/"plugins/sdd-composy/scripts/fleet/teardown.sh"),"--root",str(self.repo),"--fleet-id","demo","--member-id","TASK-001"],env={**os.environ,"PATH":str(bind)+":"+os.environ.get("PATH","")},capture_output=True,text=True); self.assertNotEqual(r.returncode,0); self.assertIn("docker-compose.yml",log.read_text()); self.assertTrue(mf.exists())
+
+    def test_teardown_missing_central_compose_preserves_metadata(self):
+        state,mf,d,work=self._launched_member("running"); d["resources"]["compose_allocated"]=True; mf.write_text(json.dumps(d)); r=self._teardown(); self.assertNotEqual(r.returncode,0); self.assertTrue(mf.exists()); self.assertTrue(work.exists())
 
     def test_teardown_lock_release_failure_preserves_recovery_state(self):
         state,mf,d,work=self._launched_member("running"); lock=state/".TASK-001.runner.lock"; lock.mkdir(); (lock/"owner").write_text("keep"); r=self._teardown(); self.assertNotEqual(r.returncode,0); self.assertTrue(mf.exists()); self.assertTrue(work.exists()); self.assertTrue((lock/"owner").exists())

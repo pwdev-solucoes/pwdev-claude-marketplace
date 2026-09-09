@@ -34,4 +34,8 @@ class HermesPluginTest(unittest.TestCase):
         adapter = (ROOT / "plugins/sdd-composy/scripts/fleet/engine-hermes.sh").read_text()
         self.assertIn("hermes run", adapter)
 
+    def test_status_with_configured_tasks_is_not_uninitialized(self):
+        status = (ROOT / "plugins/sdd-composy/scripts/sdd_status.py").read_text()
+        self.assertIn('state_name, next_action = "active", "inspect the task queue', status)
+
 if __name__ == "__main__": unittest.main()
