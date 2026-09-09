@@ -9,7 +9,9 @@ spec.loader.exec_module(module)
 
 class ReadmeMarketplaceTest(unittest.TestCase):
     def test_all_manifests_are_documented_consistently(self):
-        self.assertEqual(module.validate(), [])
+        errors, warnings = module.validate()
+        self.assertEqual(errors, [])
+        self.assertIsInstance(warnings, list)
 
 if __name__ == "__main__":
     unittest.main()

@@ -20,6 +20,7 @@ def rows(text):
 def validate():
     expected = manifests()
     errors = []
+    warnings = []
     for plugin in expected:
         if not (ROOT / "plugins" / plugin / "README.md").is_file():
             errors.append(f"{plugin}: missing README.md")
@@ -37,13 +38,25 @@ def validate():
                 label, version = parsed[name][plugin]
                 if label != data["name"]: errors.append(f"{name}: {plugin} name mismatch")
                 if version != data["version"]: errors.append(f"{name}: {plugin} version mismatch")
+                if not (ROOT / "plugins" / plugin).is_dir(): errors.append(f"{name}: {plugin} link target missing")
     if set(parsed["README.md"]) != set(parsed["README.pt-BR.md"]):
         errors.append("README language tables differ")
-    return errors
+    aliases = {
+        "setup": ("setup", "install", "installation", "instalação", "configuração"),
+        "security": ("security", "segurança", "token security", "secret security", "safety model"),
+    }
+    for plugin in expected:
+        text = (ROOT / "plugins" / plugin / "README.md").read_text(encoding="utf-8").lower()
+        for section, terms in aliases.items():
+            if not any(term in text for term in terms):
+                warnings.append(f"{plugin}: missing semantic {section} heading")
+    return errors, warnings
 
 if __name__ == "__main__":
-    errors = validate()
+    errors, warnings = validate()
     if errors:
         for error in errors: print(error)
         raise SystemExit(1)
+    for warning in warnings:
+        print(f"warning: {warning}")
     print(f"validated {len(manifests())} plugins in both READMEs")
