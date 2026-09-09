@@ -194,7 +194,9 @@ def _plan(root: Path, actor: str, template_root: Path, language: str = "en-US") 
         except OSError:
             conflicts.append({"path": ".claude", "reason": "unreadable symlink"})
     elif claude.exists():
-        conflicts.append({"path": ".claude", "reason": "existing path"})
+        # Preserve an existing Claude configuration directory; it is a valid
+        # compatibility target even though it cannot be replaced by a symlink.
+        unchanged.append(".claude")
     else:
         actions.append({"path": ".claude", "operation": "symlink", "target": ".agents"})
     plan = {"version": 1, "root": str(root), "actor": actor, "actions": actions, "conflicts": conflicts, "unchanged": unchanged}
@@ -237,7 +239,7 @@ def apply(root: Path, plan: dict[str, Any], template_root: Path) -> dict[str, An
     contents["tasks/index.md"] = _index_text(plan["actor"], generated_at, plan.get("language", "en-US"))
     blocked = {item["path"] for item in plan["conflicts"]}
     for relative, content in contents.items():
-        if relative in blocked or any(relative.startswith(item + "/") for item in blocked):
+        if relative in blocked or any(relative.startswith(item + "/") for item in blocked if item != ".agents"):
             continue
         _safe_relative(root, relative)
         path = root / relative
@@ -248,8 +250,8 @@ def apply(root: Path, plan: dict[str, Any], template_root: Path) -> dict[str, An
     if not agents.exists() and ".agents" not in blocked:
         agents.mkdir()
     rules = agents / "rules"
-    if not rules.exists() and ".agents" not in blocked:
-        rules.mkdir()
+    if not rules.exists():
+        rules.mkdir(parents=True)
     claude = root / ".claude"
     if not claude.exists() and not claude.is_symlink() and ".claude" not in blocked:
         os.symlink(".agents", claude)
@@ -286,6 +288,8 @@ def verify(root: Path, actor: str) -> dict[str, Any]:
     compatible_link = False
     if claude.is_symlink():
         compatible_link = os.readlink(claude) == ".agents" and claude.resolve(strict=False) == root / ".agents" and (root / ".agents").is_dir()
+    elif claude.is_dir():
+        compatible_link = True
     return {"ok": not missing and valid_index and compatible_link, "missing": missing, "index_ok": valid_index, "claude_link_ok": compatible_link, "actor": actor}
 
 
