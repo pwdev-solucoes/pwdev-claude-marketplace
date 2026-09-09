@@ -6,13 +6,13 @@ usage() { printf 'Usage: %s <lowercase-slug> <worktree-path> [danger-full-access
 fail() { printf 'sdd-fleet-run: %s\n' "$*" >&2; exit 2; }
 [[ $# -eq 2 || $# -eq 3 ]] || usage
 SLUG=$1; WORKTREE_INPUT=$2
-EXPECTED_RUNTIME=${SDD_FLEET_RUNTIME:-codex}
-case "$EXPECTED_RUNTIME" in codex|claude|hermes) ;; *) fail "unsupported fleet runtime: $EXPECTED_RUNTIME";; esac
+EXPECTED_RUNTIME=${SDD_FLEET_RUNTIME:-}
+case "$EXPECTED_RUNTIME" in codex|hermes) CLI_RUNTIME=$EXPECTED_RUNTIME;; claude-code) CLI_RUNTIME=claude;; '') fail 'fleet runtime is required';; *) fail "unsupported fleet runtime: $EXPECTED_RUNTIME";; esac
 [[ $SLUG =~ ^[A-Za-z0-9][A-Za-z0-9-]*$ && $SLUG != dashboard && $SLUG != DASHBOARD ]] || fail "invalid slug: $SLUG"
 SDD_FLEET_PERMISSION_MODE=safe
 if [[ $# -eq 3 ]]; then [[ $3 == danger-full-access ]] || fail 'permission mode must be danger-full-access'; SDD_FLEET_PERMISSION_MODE=danger-full-access; fi
 # $EXPECTED_RUNTIME is constrained to codex|claude above, so it names the provider binary.
-for binary in git jq "$EXPECTED_RUNTIME" shasum awk python3 sleep; do command -v "$binary" >/dev/null 2>&1 || fail "required binary unavailable: $binary"; done
+for binary in git jq "$CLI_RUNTIME" shasum awk python3 sleep; do command -v "$binary" >/dev/null 2>&1 || fail "required binary unavailable: $binary"; done
 PYTHON3_BIN=$(command -v python3)
 
 WORKTREE=$(cd -- "$WORKTREE_INPUT" 2>/dev/null && pwd -P) || fail 'worktree path is unavailable'
@@ -76,11 +76,11 @@ registered_worktree_matches() {
 
 member_binding_matches() {
   require_regular_nosymlink "$MEMBER_FILE" || return 1
-  MEMBER_WORKTREE=$(jq -r '.worktree_path // .worktree // ""' "$MEMBER_FILE" 2>/dev/null)
+  MEMBER_WORKTREE=$(jq -r '.worktree_path // ""' "$MEMBER_FILE" 2>/dev/null)
   MEMBER_WORKTREE=$(cd -- "$MEMBER_WORKTREE" 2>/dev/null && pwd -P) || return 1
-  jq -e --arg slug "$SLUG" --arg branch "$EXPECTED_BRANCH" --arg worktree "$WORKTREE" --arg runtime "$EXPECTED_RUNTIME" '
-    type == "object" and ((.slug // .id) == $slug) and .branch == $branch and
-    ((.worktree_path // .worktree) | type == "string") and ((.runtime // "codex") == $runtime) and (.status == "ACTIVE" or .status == "running" or .state == "locked")
+  jq -e --arg slug "$SLUG" --arg branch "$EXPECTED_BRANCH" --arg worktree "$WORKTREE" --arg runtime "$EXPECTED_RUNTIME" --arg root "$MAIN_ROOT" '
+    type == "object" and .schema_version == "2" and .slug == $slug and .branch == $branch and
+    .worktree_path == $worktree and .repository_root == $root and .runtime == $runtime and (.status == "pending" or .status == "running")
   ' "$MEMBER_FILE" >/dev/null 2>&1
 }
 
@@ -100,12 +100,12 @@ worktree_identity_matches() {
 
 safe_main_dir .planning/sdd-composy/fleet false || fail 'registered fleet member central state path is unsafe'
 require_regular_nosymlink "$MEMBER_FILE" || fail "registered fleet member is unavailable or unsafe for $SLUG"
+if ! jq -e '.schema_version == "2"' "$MEMBER_FILE" >/dev/null 2>&1; then fail 'legacy fleet member requires explicit migration'; fi
 if ! jq -e --arg slug "$SLUG" --arg branch "$EXPECTED_BRANCH" --arg worktree "$WORKTREE" '
-  type == "object" and ((.slug // .id) == $slug) and .branch == $branch and
-  ((.worktree_path // .worktree) | type == "string") and ((.status // .state) | type == "string")
+  type == "object" and .slug == $slug and .branch == $branch and .worktree_path == $worktree and (.status | type == "string")
 ' "$MEMBER_FILE" >/dev/null 2>&1; then fail "registered fleet member does not bind $SLUG to the supplied worktree"; fi
-CENTRAL_STATUS=$(jq -r '.status // .state // ""' "$MEMBER_FILE")
-[[ $CENTRAL_STATUS == ACTIVE || $CENTRAL_STATUS == running || $CENTRAL_STATUS == locked ]] || fail "central member status $CENTRAL_STATUS cannot start a runner"
+CENTRAL_STATUS=$(jq -r '.status // ""' "$MEMBER_FILE")
+[[ $CENTRAL_STATUS == pending || $CENTRAL_STATUS == running ]] || fail "central member status $CENTRAL_STATUS cannot start a runner"
 BOUND_SPEC_SHA256=$(jq -r '.spec_sha256 // ""' "$MEMBER_FILE"); BOUND_DECISIONS_SHA256=$(jq -r '.decisions_sha256 // ""' "$MEMBER_FILE")
 worktree_identity_matches || fail 'registered fleet member does not match canonical Git worktree registration'
 
@@ -115,7 +115,7 @@ require_regular_nosymlink "$SCHEMA" || fail "missing result schema: $SCHEMA"
 # The privileged vector lives in exactly one adapter, selected here from the
 # runtime already bound into the central member. Nothing below builds a
 # provider command or a permission flag of its own.
-ENGINE_ADAPTER=$SCRIPT_DIR/engine-$EXPECTED_RUNTIME.sh
+ENGINE_ADAPTER=$SCRIPT_DIR/engine-$CLI_RUNTIME.sh
 require_regular_nosymlink "$ENGINE_ADAPTER" || fail "missing runtime adapter: $ENGINE_ADAPTER"
 # shellcheck source=/dev/null
 source "$ENGINE_ADAPTER"
@@ -372,8 +372,8 @@ build_prompt() {
     *) return 1 ;;
   esac
   # The invocation syntax and the result contract are runtime-specific.
-  skill=$("sdd_engine_${EXPECTED_RUNTIME}_skill_ref" "$capability")$arguments
-  suffix=$("sdd_engine_${EXPECTED_RUNTIME}_prompt_suffix" "$stage")
+  skill=$("sdd_engine_${CLI_RUNTIME}_skill_ref" "$capability")$arguments
+  suffix=$("sdd_engine_${CLI_RUNTIME}_prompt_suffix" "$stage")
   printf -v STAGE_PROMPT '%s ' "FLOW_FLEET_SLUG=$SLUG" "FLOW_FLEET_STAGE=$stage" \
     "Invoke $skill for phase $SLUG and $instruction." \
     'This is an already-authorized autonomous fleet stage in an isolated worktree.' \
@@ -399,7 +399,7 @@ run_stage() {
   CURRENT_LOG_TEMP=$(mktemp "$LOG_DIR/.${stage}-${timestamp}.log.XXXXXX")
   # Only the adapter builds the privileged vector; the runner never names a provider.
   FLOW_ENGINE_COMMAND=(); FLOW_ENGINE_CWD=; FLOW_ENGINE_RESULT_FROM_STDOUT=false; SDD_ENGINE_COMMAND=(); SDD_ENGINE_CWD=; SDD_ENGINE_RESULT_FROM_STDOUT=false
-  "sdd_engine_${EXPECTED_RUNTIME}_stage_command" \
+  "sdd_engine_${CLI_RUNTIME}_stage_command" \
     "$WORKTREE" "$SCHEMA" "$CURRENT_RESULT_TEMP" "$STAGE_PROMPT"
   SDD_ENGINE_COMMAND=("${FLOW_ENGINE_COMMAND[@]}"); SDD_ENGINE_CWD=$FLOW_ENGINE_CWD; SDD_ENGINE_RESULT_FROM_STDOUT=$FLOW_ENGINE_RESULT_FROM_STDOUT
   if [[ $FLOW_ENGINE_RESULT_FROM_STDOUT == true ]]; then
@@ -425,7 +425,7 @@ run_stage() {
   contracts_match_bound_member || needs_human "$stage" 'approved fleet contracts changed during provider execution'
   if [[ $provider_status -ne 0 ]]; then needs_human "$stage" "provider exited non-zero for $stage: $provider_status"; fi
   if [[ -n $CURRENT_RAW_TEMP ]]; then
-    "sdd_engine_${EXPECTED_RUNTIME}_publish_result" "$CURRENT_RAW_TEMP" "$CURRENT_RESULT_TEMP" || true
+    "sdd_engine_${CLI_RUNTIME}_publish_result" "$CURRENT_RAW_TEMP" "$CURRENT_RESULT_TEMP" || true
     rm -f "$CURRENT_RAW_TEMP"; CURRENT_RAW_TEMP=
   fi
   if [[ ! -s $CURRENT_RESULT_TEMP ]] || ! validate_result "$stage" "$CURRENT_RESULT_TEMP"; then

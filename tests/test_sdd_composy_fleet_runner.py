@@ -38,6 +38,16 @@ class FleetRunnerTest(unittest.TestCase):
         r = subprocess.run([str(runner), "demo", "/tmp/no-such-worktree"], env={**os.environ, "SDD_FLEET_RUNTIME":"unknown"}, capture_output=True, text=True)
         self.assertNotEqual(r.returncode, 0); self.assertIn("unsupported fleet runtime", r.stderr)
 
+    def test_missing_runtime_and_legacy_member_require_migration(self):
+        runner = FLEET / "run.sh"
+        r=subprocess.run([str(runner),"demo","/tmp/no-such-worktree"],env={k:v for k,v in os.environ.items() if k != "SDD_FLEET_RUNTIME"},capture_output=True,text=True)
+        self.assertNotEqual(r.returncode,0); self.assertIn("runtime is required",r.stderr)
+
+    def test_claude_code_record_selects_claude_adapter_only(self):
+        runner=(FLEET/"run.sh").read_text()
+        self.assertIn('claude-code) CLI_RUNTIME=claude',runner)
+        self.assertIn('ENGINE_ADAPTER=$SCRIPT_DIR/engine-$CLI_RUNTIME.sh',runner)
+
     def test_registered_worktree_reaches_provider_and_cleans_process_group(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "repo"; root.mkdir()
@@ -47,11 +57,11 @@ class FleetRunnerTest(unittest.TestCase):
             (root / "README").write_text("x\n"); subprocess.run(["git", "-C", str(root), "add", "."], check=True); subprocess.run(["git", "-C", str(root), "commit", "-qm", "base"], check=True)
             contract = root / "contract.json"; contract.write_text(json.dumps({"id":"demo","state":"ready","dependencies":[],"acceptance_criteria":["ok"],"verification_commands":["true"],"allowed_paths":["README"],"contract_path":str(contract)}))
             launch = FLEET / "launch.sh"
-            launched = subprocess.run([str(launch), "--prepare-only", "--root", str(root), "--fleet-id", "demo", "--base-branch", "master", "--task", str(contract)], capture_output=True, text=True)
+            launched = subprocess.run([str(launch), "--prepare-only", "--runtime", "codex", "--root", str(root), "--fleet-id", "demo", "--base-branch", "master", "--task", str(contract)], capture_output=True, text=True)
             if launched.returncode != 0:
                 # git's initial branch may be named main in the host image.
                 base = subprocess.check_output(["git", "-C", str(root), "branch", "--show-current"], text=True).strip()
-                launched = subprocess.run([str(launch), "--prepare-only", "--root", str(root), "--fleet-id", "demo", "--base-branch", base, "--task", str(contract)], capture_output=True, text=True)
+                launched = subprocess.run([str(launch), "--prepare-only", "--runtime", "codex", "--root", str(root), "--fleet-id", "demo", "--base-branch", base, "--task", str(contract)], capture_output=True, text=True)
             self.assertEqual(launched.returncode, 0, launched.stderr)
             state = root / ".planning/sdd-composy/fleet/demo/members"; record = json.loads((state / "demo.json").read_text()); work = Path(record["worktree"])
             phase = work / ".planning/sdd-composy/phases/demo"; phase.mkdir(parents=True)
@@ -59,7 +69,7 @@ class FleetRunnerTest(unittest.TestCase):
             spec.write_text("Status: APPROVED\n"); decisions.write_text("Status: APPROVED\n")
             import hashlib
             record.update({"spec_sha256":hashlib.sha256(spec.read_bytes()).hexdigest(), "decisions_sha256":hashlib.sha256(decisions.read_bytes()).hexdigest()})
-            record.update({"id":"demo", "slug":"demo", "status":"ACTIVE", "runtime":"codex", "worktree":str(work), "worktree_path":str(work)}); (state / "demo.json").write_text(json.dumps(record))
+            record.update({"id":"demo", "slug":"demo", "status":"pending", "runtime":"codex", "worktree":str(work), "worktree_path":str(work)}); (state / "demo.json").write_text(json.dumps(record))
             fake = Path(d) / "bin"; fake.mkdir(); called = Path(d) / "called"; child = Path(d) / "child.pid"
             fake.joinpath("codex").write_text("#!/bin/sh\nprintf x > '%s'\nsleep 60 & echo $! > '%s'\nexit 7\n" % (called, child)); fake.joinpath("codex").chmod(0o755)
             env = {**os.environ, "PATH": str(fake) + ":/usr/bin:/bin", "SDD_FLEET_RUNTIME":"codex", "SDD_FLEET_MEMBER_FILE":str(state/'demo.json')}
@@ -70,5 +80,18 @@ class FleetRunnerTest(unittest.TestCase):
             self.assertTrue(child.exists())
             child_pid = int(child.read_text())
             self.assertNotEqual(subprocess.run(["kill", "-0", str(child_pid)]).returncode, 0)
+
+    def test_member_from_another_repository_is_rejected_before_provider(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)/"repo"; root.mkdir(); subprocess.run(["git","init","-q",str(root)],check=True)
+            subprocess.run(["git","-C",str(root),"config","user.email","test@example.invalid"],check=True); subprocess.run(["git","-C",str(root),"config","user.name","Test"],check=True)
+            (root/"README").write_text("x\n"); subprocess.run(["git","-C",str(root),"add","."],check=True); subprocess.run(["git","-C",str(root),"commit","-qm","base"],check=True)
+            base=subprocess.check_output(["git","-C",str(root),"branch","--show-current"],text=True).strip(); contract=root/"contract.json"
+            contract.write_text(json.dumps({"id":"demo","state":"ready","dependencies":[],"acceptance_criteria":["ok"],"verification_commands":["true"],"allowed_paths":["README"],"contract_path":str(contract)}))
+            launched=subprocess.run([str(FLEET/"launch.sh"),"--prepare-only","--runtime","codex","--root",str(root),"--fleet-id","demo","--base-branch",base,"--task",str(contract)],capture_output=True,text=True); self.assertEqual(launched.returncode,0,launched.stderr)
+            member=root/".planning/sdd-composy/fleet/demo/members/demo.json"; record=json.loads(member.read_text()); record["repository_root"]=str(Path(d)/"foreign"); member.write_text(json.dumps(record))
+            called=Path(d)/"called"; fake=Path(d)/"bin"; fake.mkdir(); (fake/"codex").write_text("#!/bin/sh\ntouch '"+str(called)+"'\n"); (fake/"codex").chmod(0o755)
+            r=subprocess.run([str(FLEET/"run.sh"),"demo",record["worktree_path"]],env={**os.environ,"PATH":str(fake)+":/usr/bin:/bin","SDD_FLEET_RUNTIME":"codex","SDD_FLEET_MEMBER_FILE":str(member)},capture_output=True,text=True)
+            self.assertNotEqual(r.returncode,0); self.assertFalse(called.exists())
 
 if __name__ == "__main__": unittest.main()

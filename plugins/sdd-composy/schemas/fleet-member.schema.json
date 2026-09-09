@@ -1,18 +1,31 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sdd-composy.local/schemas/fleet-member.schema.json",
-  "title": "SDD Composy fleet member v1",
+  "title": "SDD Composy fleet member v2",
   "type": "object",
-  "required": ["schema_version", "id", "task_id", "status", "runtime", "ui", "branch", "worktree_path", "started_at", "updated_at"],
+  "required": ["schema_version", "id", "task_id", "status", "runtime", "ui", "branch", "worktree_path", "repository_root", "started_at", "updated_at", "owner", "resources"],
   "properties": {
-    "schema_version": {"const": "1"},
+    "schema_version": {"const": "2"},
     "id": {"$ref": "#/definitions/member_id"},
     "task_id": {"$ref": "#/definitions/task_id"},
     "status": {"$ref": "#/definitions/member_status"},
     "runtime": {"$ref": "#/definitions/runtime"},
     "ui": {"$ref": "#/definitions/ui"},
     "branch": {"type": "string", "minLength": 1},
-    "worktree_path": {"$ref": "#/definitions/relative_path"},
+    "worktree_path": {"$ref": "#/definitions/absolute_path"},
+    "repository_root": {"$ref": "#/definitions/absolute_path"},
+    "owner": {
+      "type": "object",
+      "required": ["kind", "fleet_id", "member_id"],
+      "properties": {"kind": {"const": "sdd-composy-fleet"}, "fleet_id": {"type": "string", "minLength": 1}, "member_id": {"$ref": "#/definitions/member_id"}},
+      "additionalProperties": false
+    },
+    "resources": {
+      "type": "object",
+      "required": ["branch", "worktree_path", "port", "compose_project", "compose_file"],
+      "properties": {"branch": {"type": "string", "minLength": 1}, "worktree_path": {"$ref": "#/definitions/absolute_path"}, "port": {"type": "integer", "minimum": 1, "maximum": 65535}, "compose_project": {"type": "string", "minLength": 1}, "compose_file": {"$ref": "#/definitions/relative_path"}},
+      "additionalProperties": true
+    },
     "started_at": {"type": "string", "format": "date-time"},
     "updated_at": {"type": "string", "format": "date-time"},
     "finished_at": {"type": "string", "format": "date-time"},
@@ -26,8 +39,9 @@
     "member_id": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._-]*$"},
     "task_id": {"type": "string", "pattern": "^TASK-[0-9]{3,}$"},
     "member_status": {"enum": ["pending", "running", "completed", "failed", "blocked", "cancelled"]},
-    "runtime": {"enum": ["claude-code", "codex"]},
+    "runtime": {"enum": ["claude-code", "codex", "hermes"]},
     "ui": {"enum": ["cmux", "tmux", "headless"]},
-    "relative_path": {"type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"}
+    "relative_path": {"type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
+    "absolute_path": {"type": "string", "minLength": 2, "pattern": "^/"}
   }
 }

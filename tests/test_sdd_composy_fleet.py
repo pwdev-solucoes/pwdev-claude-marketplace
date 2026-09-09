@@ -18,8 +18,8 @@ class FleetLaunchTest(unittest.TestCase):
     def tearDown(self): self.tmp.cleanup()
     def task(self, **kw):
         d={"id":"TASK-001","state":"ready","dependencies":[],"acceptance_criteria":["CA-1"],"verification_commands":["true"],"allowed_paths":["src/app.py"],"contract_path":str(self.contract)}; d.update(kw); self.contract.write_text(json.dumps(d)); return d
-    def invoke(self,*tasks, extra=None):
-        args=[str(LAUNCH),"--prepare-only","--root",str(self.repo),"--fleet-id","demo","--base-branch",self.base]
+    def invoke(self,*tasks, extra=None, runtime="codex"):
+        args=[str(LAUNCH),"--prepare-only","--runtime",runtime,"--root",str(self.repo),"--fleet-id","demo","--base-branch",self.base]
         for t in tasks: args += ["--task",str(t)]
         return subprocess.run(args,capture_output=True,text=True,env={**os.environ,**(extra or {})})
     def test_ready_contract_hash_and_central_preserved(self):
@@ -28,6 +28,49 @@ class FleetLaunchTest(unittest.TestCase):
         member=self.repo/".planning/sdd-composy/fleet/demo/members/TASK-001.json"; d=json.loads(member.read_text())
         self.assertEqual(d["contract_sha256"],hashlib.sha256(self.contract.read_bytes()).hexdigest()); self.assertEqual(d["state"],"locked")
         self.assertEqual((self.repo/"src/app.py").read_bytes(),before)
+
+    def test_emitted_members_validate_against_v2_schema_for_all_runtimes(self):
+        schema=json.loads((ROOT/"plugins/sdd-composy/schemas/fleet-member.schema.json").read_text())
+        required=set(schema["required"]); statuses=set(schema["definitions"]["member_status"]["enum"])
+        for requested,stored in (("claude","claude-code"),("codex","codex"),("hermes","hermes")):
+            with self.subTest(runtime=requested):
+                self.task(); r=self.invoke(self.contract,runtime=requested); self.assertEqual(r.returncode,0,r.stderr)
+                record=json.loads((self.repo/".planning/sdd-composy/fleet/demo/members/TASK-001.json").read_text())
+                self.assertEqual(required-set(record),set()); self.assertIn(record["status"],statuses)
+                self.assertEqual(record["schema_version"],"2"); self.assertEqual(record["runtime"],stored)
+                self.assertEqual(Path(record["worktree_path"]),Path(record["worktree_path"]).resolve())
+                self.assertEqual(record["repository_root"],str(self.repo.resolve()))
+                self.tearDown(); self.setUp()
+
+    def test_prepare_only_requires_known_explicit_runtime_without_mutation(self):
+        self.task()
+        for runtime in (None,"unknown"):
+            args=[str(LAUNCH),"--prepare-only","--root",str(self.repo),"--fleet-id","demo","--base-branch",self.base,"--task",str(self.contract)]
+            if runtime: args[2:2]=["--runtime",runtime]
+            r=subprocess.run(args,capture_output=True,text=True)
+            self.assertNotEqual(r.returncode,0); self.assertFalse((self.repo/".planning").exists())
+
+    def test_symlinked_state_ancestor_is_rejected_without_external_write(self):
+        self.task(); outside=Path(self.tmp.name+"-outside"); outside.mkdir(); (self.repo/".planning").symlink_to(outside,target_is_directory=True)
+        r=self.invoke(self.contract); self.assertNotEqual(r.returncode,0); self.assertEqual(list(outside.iterdir()),[])
+        (self.repo/".planning").unlink(); outside.rmdir()
+
+    def test_rollback_uses_real_git_registration_and_removes_created_branch(self):
+        self.task(); before=subprocess.check_output(["git","-C",str(self.repo),"worktree","list","--porcelain"],text=True)
+        r=self.invoke(self.contract,extra={"SDD_FLEET_FAIL_AFTER_WORKTREE":"1"}); self.assertNotEqual(r.returncode,0)
+        after=subprocess.check_output(["git","-C",str(self.repo),"worktree","list","--porcelain"],text=True)
+        self.assertEqual(after,before)
+        self.assertNotEqual(subprocess.run(["git","-C",str(self.repo),"show-ref","--verify","--quiet","refs/heads/sdd-fleet/demo/TASK-001"]).returncode,0)
+
+    def test_compose_template_and_member_ownership_are_recorded(self):
+        launch=LAUNCH.read_text()
+        self.assertIn('$HERE/../../templates/docker-compose.sdd-fleet.yml',launch)
+        self.assertNotIn('$HERE/../../../templates/docker-compose.sdd-fleet.yml',launch)
+        self.task(); r=self.invoke(self.contract); self.assertEqual(r.returncode,0,r.stderr)
+        record=json.loads((self.repo/".planning/sdd-composy/fleet/demo/members/TASK-001.json").read_text())
+        self.assertEqual(record["owner"],{"kind":"sdd-composy-fleet","fleet_id":"demo","member_id":"TASK-001"})
+        self.assertEqual(record["resources"]["port"],record["port"])
+        self.assertEqual(record["resources"]["branch"],record["branch"])
 
     def test_members_have_distinct_worktrees_branches_and_ports(self):
         self.task(); other=self.repo/'other.json'

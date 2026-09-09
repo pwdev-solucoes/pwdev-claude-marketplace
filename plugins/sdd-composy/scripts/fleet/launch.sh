@@ -2,18 +2,24 @@
 set -euo pipefail
 HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$HERE/common.sh"
-usage(){ echo "usage: launch.sh --root ROOT --fleet-id ID --base-branch BRANCH --task TASK.json [--task TASK.json ...] [--compose] [--ui auto|cmux|tmux|headless]" >&2; exit 2; }
+usage(){ echo "usage: launch.sh --runtime claude|codex|hermes --root ROOT --fleet-id ID --base-branch BRANCH --task TASK.json [--task TASK.json ...] [--compose] [--ui auto|cmux|tmux|headless]" >&2; exit 2; }
 root= fleet_id= base_branch= compose=0; ui=auto; tasks=(); prepare=0; runtime=
 while (($#)); do case "$1" in
   --root) root=${2:-}; shift 2;; --fleet-id) fleet_id=${2:-}; shift 2;;
   --prepare-only) prepare=1; shift;; --runtime) runtime=${2:-}; shift 2;;
   --base-branch) base_branch=${2:-}; shift 2;; --task) tasks+=("${2:-}"); shift 2;; --compose) compose=1; shift;; --ui) ui=${2:-}; shift 2;; *) usage;; esac; done
 [[ -n "$root" && -n "$fleet_id" && -n "$base_branch" && ${#tasks[@]} -gt 0 ]] || usage
+case "$runtime" in claude) record_runtime=claude-code; cli_runtime=claude;; codex|hermes) record_runtime=$runtime; cli_runtime=$runtime;; '') fleet_die 'launch runtime is required';; *) fleet_die 'unsupported fleet runtime';; esac
 root=$(fleet_abs "$root"); [[ -d "$root/.git" || -f "$root/.git" ]] || fleet_die "root is not a git repository"
-[[ $prepare == 1 || $runtime == codex || $runtime == claude || $runtime == hermes ]] || fleet_die 'launch requires --runtime codex|claude|hermes or --prepare-only'
-[[ $prepare == 1 ]] || command -v "$runtime" >/dev/null || fleet_die 'runtime unavailable'
+root=$(cd -- "$root" && pwd -P)
+git_root=$(git -C "$root" rev-parse --show-toplevel 2>/dev/null) || fleet_die 'root is not a git repository'
+git_root=$(cd -- "$git_root" && pwd -P)
+[[ $git_root == "$root" ]] || fleet_die 'root must be the exact Git worktree root'
+[[ $prepare == 1 ]] || command -v "$cli_runtime" >/dev/null || fleet_die 'runtime unavailable'
 ui=$(fleet_select_ui "$ui") || exit $?
-state=$(fleet_state_dir "$root" "$fleet_id"); mkdir -p "$state/members"
+state=$(fleet_state_dir "$root" "$fleet_id")
+fleet_no_symlink_components "$state" || fleet_die 'fleet state path has a symlink component'
+mkdir -p "$state/members"
 export FLEET_ID="$fleet_id"
 fleet_preexisting=0; [[ -e "$state/fleet.json" || -L "$state/fleet.json" ]] && fleet_preexisting=1
 preexisting_members=(); while IFS= read -r -d '' f; do preexisting_members+=("$f"); done < <(find "$state/members" -maxdepth 1 -type f -name '*.json' -print0 2>/dev/null)
@@ -22,10 +28,10 @@ lock="$state/.lock"; fleet_lock "$lock"; trap 'fleet_unlock "$lock"' EXIT
 command -v git >/dev/null || fleet_die "git is required"
 git -C "$root" show-ref --verify --quiet "refs/heads/$base_branch" || fleet_die "unknown base branch"
 
-python3 - "$root" "$state" "$fleet_id" "$base_branch" "$ui" "${tasks[@]}" <<'PY'
-import json,sys,hashlib,re
+python3 - "$root" "$state" "$fleet_id" "$base_branch" "$ui" "$record_runtime" "${tasks[@]}" <<'PY'
+import json,sys,hashlib,re,os,tempfile
 from pathlib import Path
-root,state=map(Path,sys.argv[1:3]); fleet_id=sys.argv[3]; base_branch=sys.argv[4]; ui=sys.argv[5]; files=[Path(x) for x in sys.argv[6:]]
+root,state=map(Path,sys.argv[1:3]); fleet_id=sys.argv[3]; base_branch=sys.argv[4]; ui=sys.argv[5]; runtime=sys.argv[6]; files=[Path(x) for x in sys.argv[7:]]
 seen=[]; records=[]
 for f in files:
     if f.is_symlink(): raise SystemExit(f"fleet: task symlink rejected: {f}")
@@ -61,23 +67,29 @@ for f in files:
       contract=Path(str(task.get('contract_path', f)))
       if contract.is_symlink() or not contract.exists(): raise SystemExit(f'fleet: dirty contract {tid}')
       blob=contract.read_bytes(); h=hashlib.sha256(blob).hexdigest()
-      records.append({'id':tid,'slug':tid.lower(),'contract_path':str(contract.absolute()),'contract_sha256':h,'allowed_paths':norm,'verification_commands':task['verification_commands'],'state':'locked'})
+      records.append({'schema_version':'2','id':tid,'task_id':tid,'slug':tid.lower(),'contract_path':str(contract.absolute()),'contract_sha256':h,'allowed_paths':norm,'verification_commands':task['verification_commands'],'state':'locked','status':'pending','runtime':runtime,'ui':ui,'repository_root':str(root.resolve()),'owner':{'kind':'sdd-composy-fleet','fleet_id':fleet_id,'member_id':tid}})
 out=state/'members'; out.mkdir(parents=True,exist_ok=True)
 if (state/'fleet.json').exists() or (state/'fleet.json').is_symlink(): raise SystemExit('fleet: fleet metadata already exists')
 destinations=[out/(r['id']+'.json') for r in records]
 for r,destination in zip(records,destinations):
     if destination.exists() or destination.is_symlink(): raise SystemExit(f"fleet: member metadata already exists: {r['id']}")
-for r,destination in zip(records,destinations):
-    destination.write_text(json.dumps(r,sort_keys=True,indent=2)+'\n')
-(state/'fleet.json').write_text(json.dumps({'fleet_id':fleet_id,'base_branch':base_branch,'ui':ui,'members':[r['id'] for r in records]},sort_keys=True,indent=2)+'\n')
+def publish(path,data):
+    fd,tmp=tempfile.mkstemp(prefix='.'+path.name+'.',dir=path.parent)
+    try:
+      with os.fdopen(fd,'w') as stream: json.dump(data,stream,sort_keys=True,indent=2); stream.write('\n')
+      os.replace(tmp,path)
+    finally:
+      if os.path.exists(tmp): os.unlink(tmp)
+for r,destination in zip(records,destinations): publish(destination,r)
+publish(state/'fleet.json',{'schema_version':'2','fleet_id':fleet_id,'base_branch':base_branch,'runtime':runtime,'ui':ui,'owner':{'kind':'sdd-composy-fleet','fleet_id':fleet_id},'members':[r['id'] for r in records]})
 PY
 
-created=(); ports=(); port=; runtime_created=0; state_created=1; compose_created=0; compose_started=0; base="sdd-fleet/$fleet_id"
-cleanup(){ local rc=$?; if ((rc!=0)); then
+created=(); branches=(); ports=(); port=; runtime_created=0; state_created=1; compose_created=0; compose_started=0; base="sdd-fleet/$fleet_id"
+cleanup(){ local rc=$?; set +e; if ((rc!=0)); then
   if ((compose_started)); then docker compose --project-name "sdd_fleet_$fleet_id" --env-file "$state/runtime.env" -f "$state/docker-compose.yml" down >/dev/null 2>&1 || true; fi
   if ((compose_created)); then rm -f "$state/docker-compose.yml"; fi
   [[ -n "$port" ]] && rm -f "$state/port-$port"
-  for allocated in "${ports[@]}"; do rm -f "$state/port-$allocated"; done
+  if ((${#ports[@]})); then for allocated in "${ports[@]}"; do rm -f "$state/port-$allocated"; done; fi
   if ((runtime_created)); then rm -f "$state/runtime.env"; fi
   if ((state_created)); then
     if ((fleet_preexisting == 0)); then
@@ -91,8 +103,9 @@ cleanup(){ local rc=$?; if ((rc!=0)); then
       done
     fi
   fi
-  for p in "${created[@]}"; do git -C "$root" worktree remove --force "$p" >/dev/null 2>&1 || true; done
+  if ((${#created[@]})); then for p in "${created[@]}"; do git -C "$root" worktree remove --force "$p" >/dev/null 2>&1 || true; done; fi
   git -C "$root" worktree prune >/dev/null 2>&1 || true
+  if ((${#branches[@]})); then for b in "${branches[@]}"; do git -C "$root" branch -D "$b" >/dev/null 2>&1 || true; done; fi
 fi; fleet_unlock "$lock"; exit "$rc"; }
 trap cleanup EXIT
 for member_file in "$state"/members/*.json; do
@@ -102,21 +115,27 @@ git -C "$root" show-ref --verify --quiet "refs/heads/$branch" && fleet_die "bran
 git -C "$root" worktree add -b "$branch" "$work" "$base_branch" >/dev/null
 work=$(cd "$work" && pwd -P)
 created+=("$work")
+branches+=("$branch")
 [[ "${SDD_FLEET_FAIL_AFTER_WORKTREE:-}" == 1 ]] && fleet_die "injected post-worktree failure"
 port=$(fleet_allocate_port "$state" "${SDD_FLEET_PORT_START:-43000}" "${SDD_FLEET_PORT_END:-43100}")
 ports+=("$port")
 if ((runtime_created == 0)); then fleet_write_runtime_env "$state" "$port"; runtime_created=1; fi
-python3 - "$member_file" "$work" "$branch" "$port" "$runtime" <<'PY'
-import json,sys
+python3 - "$member_file" "$work" "$branch" "$port" "$record_runtime" "$fleet_id" <<'PY'
+import json,sys,os,tempfile
+from datetime import datetime,timezone
 from pathlib import Path
-p=Path(sys.argv[1]); d=json.loads(p.read_text()); d.update(worktree=str(Path(sys.argv[2]).resolve()),branch=sys.argv[3],port=int(sys.argv[4]),runtime=sys.argv[5] or 'codex'); p.write_text(json.dumps(d,indent=2)+'\n')
+p=Path(sys.argv[1]); d=json.loads(p.read_text()); work=str(Path(sys.argv[2]).resolve()); branch=sys.argv[3]; port=int(sys.argv[4]); now=datetime.now(timezone.utc).isoformat().replace('+00:00','Z'); compose_project='sdd_fleet_'+sys.argv[6]
+d.update(worktree=work,worktree_path=work,branch=branch,port=port,runtime=sys.argv[5],started_at=now,updated_at=now,resources={'branch':branch,'worktree_path':work,'port':port,'compose_project':compose_project,'compose_file':'docker-compose.yml'})
+fd,tmp=tempfile.mkstemp(prefix='.'+p.name+'.',dir=p.parent)
+with os.fdopen(fd,'w') as stream: json.dump(d,stream,sort_keys=True,indent=2); stream.write('\n')
+os.replace(tmp,p)
 PY
 done
 if ((compose)); then
   command -v docker >/dev/null || fleet_die "docker is required for Compose startup"
   docker compose version >/dev/null 2>&1 || fleet_die "Docker Compose v2 is required"
   [[ ! -e "$state/docker-compose.yml" && ! -L "$state/docker-compose.yml" ]] || fleet_die "Compose file already exists"
-  cp "$HERE/../../../templates/docker-compose.sdd-fleet.yml" "$state/docker-compose.yml"
+  cp "$HERE/../../templates/docker-compose.sdd-fleet.yml" "$state/docker-compose.yml"
   compose_created=1
   docker compose --project-name "sdd_fleet_$fleet_id" --env-file "$state/runtime.env" -f "$state/docker-compose.yml" up -d >/dev/null || fleet_die "Compose startup failed"
   compose_started=1
@@ -137,7 +156,7 @@ if ((prepare == 0)); then
   for member_file in "$state"/members/*.json; do
     work=$(fleet_json_string "$member_file" worktree); slug=$(fleet_json_string "$member_file" slug)
     handle="$state/$slug.ui.json"
-    cmd=(env "SDD_FLEET_RUNTIME=$runtime" "SDD_FLEET_MEMBER_FILE=$member_file" "$HERE/run.sh" "$slug" "$work")
+    cmd=(env "SDD_FLEET_RUNTIME=$record_runtime" "SDD_FLEET_MEMBER_FILE=$member_file" "$HERE/run.sh" "$slug" "$work")
     if [[ $ui == headless ]]; then fleet_ui_headless_start "$handle" "$work" "${cmd[@]}"
     else "fleet_ui_${ui}_start" "$handle" "$work" "$fleet_id-$slug" "${cmd[@]}"; fi
   done
