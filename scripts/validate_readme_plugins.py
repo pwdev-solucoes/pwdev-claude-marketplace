@@ -20,6 +20,11 @@ def rows(text):
 def validate():
     expected = manifests()
     errors = []
+    for plugin in expected:
+        if not (ROOT / "plugins" / plugin / "README.md").is_file():
+            errors.append(f"{plugin}: missing README.md")
+        if not (ROOT / "plugins" / plugin / "README.pt-BR.md").is_file():
+            errors.append(f"{plugin}: missing README.pt-BR.md")
     parsed = {}
     for name in ("README.md", "README.pt-BR.md"):
         parsed[name] = rows((ROOT / name).read_text())
