@@ -2,6 +2,20 @@
 
 > [English version](./README.md)
 
+## Origem e adaptação
+
+Este plugin é um fork da metodologia de Desenvolvimento Orientado a Especificações
+implementada por [Rodrigo Branas](https://github.com/rodrigobranas) e
+[Pedro Nauck](https://github.com/pedronauck). Ele foi adaptado ao fluxo de trabalho
+PWDEV e é destinado ao uso com o [Compozy](https://github.com/compozy/compozy).
+
+## Hermes Agent
+
+O SDD Composy também possui um adaptador explícito para o Hermes Agent. O Hermes registra as
+mesmas skills por `.hermes-plugin`, carrega o mapeamento de ferramentas no primeiro turno e usa
+`hermes run` para membros da fleet. Não há fallback silencioso para Claude Code ou Codex. A
+integração real com Hermes, Kanban e cmux deve ser validada em um ambiente que possua essas ferramentas.
+
 SDD Composy é um fluxo com portões de aprovação que roda no Claude Code e no Codex a partir de um único pacote portátil. Os dois runtimes usam o mesmo ciclo de vida, schemas, skills, referências, scripts e templates; um fluxo pode mudar de host sem mudar de significado.
 
 Contratos legíveis por pessoas ficam em `tasks/prd-<slug>/`. O estado operacional fica em `.planning/sdd-composy/`. O Markdown gerado para o projeto segue OKF v0.2, exige `type` não vazio e permite campos de extensão desconhecidos. Atualizações suportadas de JSON e Markdown preservam campos desconhecidos.

@@ -76,3 +76,9 @@ It is limited to **5 implementation files**. Before editing, escalate to the ful
 ## Portable resumption
 
 The durable human contracts and operational state are the source for resumption. A runtime reads and validates them, determines the exact next valid action, and publishes successful transitions before reporting progress. Switching runtimes must not alter lifecycle meaning or repeat a successfully published stage.
+# Runtime Hermes
+
+Quando executado no Hermes Agent, o plugin usa `.hermes-plugin/__init__.py` para registrar as
+skills e o hook `pre_llm_call`. O runtime deve ser declarado como `hermes`; qualquer divergência
+de runtime deve interromper a execução. O bootstrap não substitui os contratos, schemas ou gates
+do fluxo compartilhado.

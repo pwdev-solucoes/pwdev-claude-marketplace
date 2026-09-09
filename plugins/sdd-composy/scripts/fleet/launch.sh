@@ -10,7 +10,7 @@ while (($#)); do case "$1" in
   --base-branch) base_branch=${2:-}; shift 2;; --task) tasks+=("${2:-}"); shift 2;; --compose) compose=1; shift;; --ui) ui=${2:-}; shift 2;; *) usage;; esac; done
 [[ -n "$root" && -n "$fleet_id" && -n "$base_branch" && ${#tasks[@]} -gt 0 ]] || usage
 root=$(fleet_abs "$root"); [[ -d "$root/.git" || -f "$root/.git" ]] || fleet_die "root is not a git repository"
-[[ $prepare == 1 || $runtime == codex || $runtime == claude ]] || fleet_die 'launch requires --runtime codex|claude or --prepare-only'
+[[ $prepare == 1 || $runtime == codex || $runtime == claude || $runtime == hermes ]] || fleet_die 'launch requires --runtime codex|claude|hermes or --prepare-only'
 [[ $prepare == 1 ]] || command -v "$runtime" >/dev/null || fleet_die 'runtime unavailable'
 ui=$(fleet_select_ui "$ui") || exit $?
 state=$(fleet_state_dir "$root" "$fleet_id"); mkdir -p "$state/members"

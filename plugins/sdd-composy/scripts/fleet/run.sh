@@ -7,7 +7,7 @@ fail() { printf 'sdd-fleet-run: %s\n' "$*" >&2; exit 2; }
 [[ $# -eq 2 || $# -eq 3 ]] || usage
 SLUG=$1; WORKTREE_INPUT=$2
 EXPECTED_RUNTIME=${SDD_FLEET_RUNTIME:-codex}
-case "$EXPECTED_RUNTIME" in codex|claude) ;; *) fail "unsupported fleet runtime: $EXPECTED_RUNTIME";; esac
+case "$EXPECTED_RUNTIME" in codex|claude|hermes) ;; *) fail "unsupported fleet runtime: $EXPECTED_RUNTIME";; esac
 [[ $SLUG =~ ^[A-Za-z0-9][A-Za-z0-9-]*$ && $SLUG != dashboard && $SLUG != DASHBOARD ]] || fail "invalid slug: $SLUG"
 SDD_FLEET_PERMISSION_MODE=safe
 if [[ $# -eq 3 ]]; then [[ $3 == danger-full-access ]] || fail 'permission mode must be danger-full-access'; SDD_FLEET_PERMISSION_MODE=danger-full-access; fi

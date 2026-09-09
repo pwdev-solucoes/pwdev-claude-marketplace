@@ -1,0 +1,6 @@
+name: sdd-composy
+version: 0.1.0
+description: SDD Composy portable spec-driven development workflow for Hermes Agent
+author: Paulo Soares
+provides_hooks:
+  - pre_llm_call
