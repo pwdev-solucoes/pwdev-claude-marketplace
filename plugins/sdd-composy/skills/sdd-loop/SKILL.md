@@ -5,6 +5,16 @@ description: Run a bounded, provider-neutral SDD correction loop with explicit a
 
 # `$sdd-loop`
 
+## Workspace language
+
+Before generating artifacts, run the bundled `scripts/sdd_language.py <repo-root>`.
+Consume only the persisted `.planning/sdd-composy/config.json` language. If the
+result is `not_initialized`, return it with `next_action: run_init`; do not ask
+for a language here. For `pt-BR`, write human narrative, summaries, descriptions,
+and labels in Brazilian Portuguese; for `en-US`, use English. Translate template
+placeholder prose when rendering, preserving IDs, schema keys, enum values,
+filenames, commands, and parser-required headings. Do not translate user evidence.
+
 Use this portable skill to continue one approved `TASK-*` through the canonical
 SDD stages. It is runtime-neutral: invoke `scripts/sdd_loop.py` for state and
 use only the dedicated provider adapter for runtime command vectors.

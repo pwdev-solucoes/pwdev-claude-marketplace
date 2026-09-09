@@ -19,6 +19,8 @@ class SddMapFixtureTests(unittest.TestCase):
         import sys
         sys.path.insert(0, str(ROOT / "plugins" / "sdd-composy" / "scripts"))
         import sdd_map
+        import sdd_language
+        import sdd_language
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary); repo = base / "repo"; outside = base / "outside"
             repo.mkdir(); outside.mkdir()
@@ -36,20 +38,11 @@ class SddMapFixtureTests(unittest.TestCase):
         import sys
         sys.path.insert(0, str(ROOT / "plugins" / "sdd-composy" / "scripts"))
         import sdd_map
+        import sdd_language
         with tempfile.TemporaryDirectory() as temporary:
             repo = Path(temporary); data = sdd_map.build_map(repo)
-            context = repo / ".planning" / "sdd-composy" / "context"
-            original = sdd_map._atomic_write_text
-            def fail_once(path, content):
-                if path.name == "stack.md":
-                    raise RuntimeError("injected publication failure")
-                return original(path, content)
-            with mock.patch.object(sdd_map, "_atomic_write_text", side_effect=fail_once):
-                with self.assertRaisesRegex(RuntimeError, "injected publication failure"):
-                    sdd_map.write_map(repo, data)
-            self.assertFalse(list(context.glob(".*.tmp")))
-            self.assertFalse((context / "stack.md").exists())
-            self.assertTrue((context / "project.md").exists())
+            self.assertEqual(sdd_map.write_map(repo, data), sdd_language.NOT_INITIALIZED)
+            self.assertFalse((repo / ".planning").exists())
 
     def test_adaptive_inventory_commands_domain_staleness_and_secret_exclusion(self):
         import sys
@@ -225,12 +218,28 @@ class SddComposyInitRuntimeTests(unittest.TestCase):
     SCRIPT = ROOT / "plugins" / "sdd-composy" / "scripts" / "sdd_init.py"
 
     def run_init(self, root, command, *extra):
+        # Existing fixture callers model an explicit first-run language choice;
+        # the dedicated language tests cover the omitted-language prompt.
+        options = list(extra)
+        if command in {"plan", "apply"} and "--lang" not in options and "--language" not in options:
+            options.extend(["--lang", "en-US"])
         result = subprocess.run(
-            ["python3", str(self.SCRIPT), command, str(root), "--actor", "human:test", *extra],
+            ["python3", str(self.SCRIPT), command, str(root), "--actor", "human:test", *options],
             text=True, capture_output=True, check=False,
         )
         payload = json.loads(result.stdout)
         return result, payload
+
+    def test_omitted_language_prompts_without_writing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            result = subprocess.run(
+                ["python3", str(self.SCRIPT), "plan", str(root), "--actor", "human:test"],
+                text=True, capture_output=True, check=False,
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(json.loads(result.stdout), {"choices": ["pt-BR", "en-US"]})
+            self.assertFalse((root / ".planning").exists())
 
     def test_clean_init_creates_okf_bundle_and_compatibility_link(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -19,6 +19,11 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+try:
+    from sdd_language import resolve_language, persist_language
+except ImportError:  # pragma: no cover - direct package loading
+    from .sdd_language import resolve_language, persist_language
+
 
 ACTOR_RE = re.compile(r"^[A-Za-z][A-Za-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._-]*$")
 SECRET_NAMES = {".env", ".env.local", ".env.production", ".env.development"}
@@ -105,18 +110,31 @@ def _template_contents(template_root: Path, variables: dict[str, str]) -> dict[s
     return output
 
 
-def _index_text(actor: str, generated_at: str) -> str:
+def _index_text(actor: str, generated_at: str, language: str = "en-US") -> str:
     return (
         "---\n"
         "type: Index\n"
         'okf_version: "0.2"\n'
         f"actor_id: {actor}\n"
         f"generated:\n  by: {actor}\n  at: {generated_at}\n"
-        "---\n\n# Project documents\n\n"
+        + ("---\n\n# Documentos do projeto\n\n" if language == "pt-BR" else "---\n\n# Project documents\n\n")
     )
 
 
-def _plan(root: Path, actor: str, template_root: Path) -> dict[str, Any]:
+def run_plan(root: Path, actor: str, template_root: Path, language: str | None = None) -> dict[str, Any]:
+    """Resolve init language before inspecting or generating any artifact."""
+    resolved = resolve_language(root, language, init=True)
+    if "status" in resolved or "choices" in resolved:
+        return resolved
+    plan = _plan(root, actor, template_root, resolved["language"])
+    plan["language"] = resolved["language"]
+    plan["language_source"] = resolved.get("source", "persisted")
+    plan.pop("plan_token", None)
+    plan["plan_token"] = hashlib.sha256(json.dumps(plan, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    return plan
+
+
+def _plan(root: Path, actor: str, template_root: Path, language: str = "en-US") -> dict[str, Any]:
     if not ACTOR_RE.fullmatch(actor):
         raise ValueError("actor must match provider:name (for example agent:sdd-init)")
     # The plan intentionally does not read arbitrary project files. These are
@@ -131,7 +149,7 @@ def _plan(root: Path, actor: str, template_root: Path) -> dict[str, Any]:
     }
     templates = _template_contents(template_root, variables)
     targets = dict(templates)
-    targets["tasks/index.md"] = _index_text(actor, variables["GENERATED_AT"])
+    targets["tasks/index.md"] = _index_text(actor, variables["GENERATED_AT"], language)
     actions: list[dict[str, str]] = []
     conflicts: list[dict[str, str]] = []
     unchanged: list[str] = []
@@ -209,10 +227,14 @@ def _without_timestamps(text: str) -> str:
 
 
 def apply(root: Path, plan: dict[str, Any], template_root: Path) -> dict[str, Any]:
+    if 'language' in plan:
+        resolved = resolve_language(root, plan['language'], init=True)
+        if 'status' in resolved or 'choices' in resolved:
+            return resolved
     generated_at = _utc_now()
     variables = {"PROJECT_NAME": root.name, "SOURCE_COMMIT": _source_commit(root), "GENERATED_AT": generated_at, "ACTOR_ID": plan["actor"], "STACK_SUMMARY": "Not mapped yet", "COMMANDS": "Run the repository's focused verification command"}
     contents = _template_contents(template_root, variables)
-    contents["tasks/index.md"] = _index_text(plan["actor"], generated_at)
+    contents["tasks/index.md"] = _index_text(plan["actor"], generated_at, plan.get("language", "en-US"))
     blocked = {item["path"] for item in plan["conflicts"]}
     for relative, content in contents.items():
         if relative in blocked or any(relative.startswith(item + "/") for item in blocked):
@@ -231,6 +253,8 @@ def apply(root: Path, plan: dict[str, Any], template_root: Path) -> dict[str, An
     claude = root / ".claude"
     if not claude.exists() and not claude.is_symlink() and ".claude" not in blocked:
         os.symlink(".agents", claude)
+    if "language" in plan:
+        persist_language(root, plan["language"])
     return {"ok": True, "created": list(contents) + [".claude"], "actor": plan["actor"]}
 
 
@@ -272,6 +296,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--actor", "--actor-id", dest="actor", default="agent:sdd-init")
     parser.add_argument("--template-root")
     parser.add_argument("--plan-token")
+    parser.add_argument("--lang", "--language", dest="language")
     args = parser.parse_args(argv)
     try:
         root = _safe_root(args.root)
@@ -279,7 +304,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "verify":
             result = verify(root, args.actor)
         else:
-            plan = _plan(root, args.actor, template_root)
+            plan = run_plan(root, args.actor, template_root, args.language)
+            if "language" not in plan or "status" in plan:
+                print(json.dumps(plan, ensure_ascii=False, sort_keys=True))
+                return 0 if plan.get("status") != "invalid_language" else 2
             if args.command == "apply":
                 if plan["conflicts"] and args.plan_token != plan["plan_token"]:
                     raise ValueError(f"exact plan token required: {plan['plan_token']}")

@@ -4,6 +4,7 @@ from pathlib import Path
 import json
 import os
 import tempfile
+from sdd_language import resolve_language
 
 
 def _origin(data):
@@ -65,8 +66,24 @@ def _persist(report, path, allowed_root):
 def assess(data, *, evidence_root=None, report_path=None, allowed_root=None, generated_by="sdd-composy", verified_by="sdd-composy", title="SDD Composy quality assurance report"):
     """Assess a qa_required payload and return a guarded transition result."""
     if report_path and allowed_root is None: raise ValueError("allowed_root is required")
+    language = 'en-US'
+    if allowed_root is not None:
+        resolved = resolve_language(allowed_root)
+        if 'language' not in resolved:
+            return resolved
+        language = resolved['language']
+    if language == 'pt-BR' and title == 'SDD Composy quality assurance report':
+        title = 'Relatório de garantia de qualidade SDD Composy'
     origin = _origin(data)
-    def fail(reason, detail): return _reject(reason, detail, origin=origin, report_path=report_path, allowed_root=allowed_root, generated_by=generated_by, verified_by=verified_by)
+    def fail(reason, detail):
+        result = _reject(reason, detail, origin=origin, generated_by=generated_by, verified_by=verified_by)
+        result['report']['title'] = title
+        if language == 'pt-BR':
+            result['next_action'] = 'resolver o bloqueio de QA e executar novamente a verificação de qualidade'
+            result['report']['next_action'] = result['next_action']
+        if report_path:
+            _persist(result['report'], report_path, allowed_root)
+        return result
     if data.get("state") != "qa_required":
         return fail("invalid_state", "task must be qa_required")
     acceptance = data.get("acceptance") or []
@@ -127,10 +144,12 @@ def assess(data, *, evidence_root=None, report_path=None, allowed_root=None, gen
               "regression": data["regression"], "evidence": manifest,
               "blockers": [], "next_action": "publish evidence dossier",
               "transition": "evidence_required"}
+    if language == 'pt-BR':
+        report['next_action'] = 'publicar dossiê de evidências'
     if report_path:
         _persist(report, report_path, allowed_root)
     return {"status": "APPROVED", "transition": "evidence_required", "coverage": coverage,
-            "evidence": manifest, "reason": "qa_passed", "next_action": "publish evidence dossier", "report": report}
+            "evidence": manifest, "reason": "qa_passed", "next_action": report['next_action'], "report": report}
 
 
 def load_report(path):

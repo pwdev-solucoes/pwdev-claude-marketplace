@@ -19,7 +19,7 @@ class FleetLaunchTest(unittest.TestCase):
     def task(self, **kw):
         d={"id":"TASK-001","state":"ready","dependencies":[],"acceptance_criteria":["CA-1"],"verification_commands":["true"],"allowed_paths":["src/app.py"],"contract_path":str(self.contract)}; d.update(kw); self.contract.write_text(json.dumps(d)); return d
     def invoke(self,*tasks, extra=None):
-        args=[str(LAUNCH),"--root",str(self.repo),"--fleet-id","demo","--base-branch",self.base]
+        args=[str(LAUNCH),"--prepare-only","--root",str(self.repo),"--fleet-id","demo","--base-branch",self.base]
         for t in tasks: args += ["--task",str(t)]
         return subprocess.run(args,capture_output=True,text=True,env={**os.environ,**(extra or {})})
     def test_ready_contract_hash_and_central_preserved(self):
@@ -28,6 +28,36 @@ class FleetLaunchTest(unittest.TestCase):
         member=self.repo/".planning/sdd-composy/fleet/demo/members/TASK-001.json"; d=json.loads(member.read_text())
         self.assertEqual(d["contract_sha256"],hashlib.sha256(self.contract.read_bytes()).hexdigest()); self.assertEqual(d["state"],"locked")
         self.assertEqual((self.repo/"src/app.py").read_bytes(),before)
+
+    def test_members_have_distinct_worktrees_branches_and_ports(self):
+        self.task(); other=self.repo/'other.json'
+        other.write_text(json.dumps({'id':'TASK-002','state':'ready','acceptance_criteria':['ok'],'verification_commands':['true'],'allowed_paths':['other']}))
+        result=self.invoke(self.contract,other)
+        self.assertEqual(result.returncode,0,result.stderr)
+        records=[json.loads(p.read_text()) for p in (self.repo/'.planning/sdd-composy/fleet/demo/members').glob('*.json')]
+        for key in ('worktree','branch','port'):
+            self.assertEqual(len({r[key] for r in records}),2,key)
+
+    def test_launch_dispatches_real_runner_to_mock_provider_without_metadata_rewrite(self):
+        import time
+        phase=self.repo/'.planning/sdd-composy/phases/task-001'; phase.mkdir(parents=True)
+        for name in ('spec.md','decisions.md'): (phase/name).write_text('Status: APPROVED\n')
+        subprocess.run(['git','-C',str(self.repo),'add','.'],check=True)
+        subprocess.run(['git','-C',str(self.repo),'commit','-qm','approved phase'],check=True)
+        self.task(); fake=self.repo/'bin'; fake.mkdir(); called=self.repo/'provider-called'
+        (fake/'codex').write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "'+str(called)+'"\nexit 7\n'); (fake/'codex').chmod(0o755)
+        result=subprocess.run([str(LAUNCH),'--runtime','codex','--ui','headless','--root',str(self.repo),'--fleet-id','demo','--base-branch',self.base,'--task',str(self.contract)],capture_output=True,text=True,env={**os.environ,'PATH':str(fake)+':/usr/bin:/bin'})
+        self.assertEqual(result.returncode,0,result.stderr)
+        state=self.repo/'.planning/sdd-composy/fleet/demo'; member=json.loads((state/'members/TASK-001.json').read_text()); work=Path(member['worktree'])
+        deadline=time.monotonic()+10
+        while time.monotonic()<deadline:
+            status=work/'.planning/sdd-composy/fleet-status.json'
+            if status.exists() and json.loads(status.read_text()).get('status')=='NEEDS_HUMAN': break
+            time.sleep(.05)
+        self.assertTrue(called.exists())
+        args=called.read_text(); self.assertIn('TASK-001',args); self.assertIn(str(self.contract),args)
+        self.assertNotIn('--dangerously-bypass',args)
+        self.assertEqual(json.loads(status.read_text())['status'],'NEEDS_HUMAN')
     def test_eligibility_and_required_contract_fields(self):
         for key,val in (("state","pending"),("acceptance_criteria",[]),("verification_commands",[]),("dependencies_complete",False)):
             self.task(**{key:val}); self.assertNotEqual(self.invoke(self.contract).returncode,0)
@@ -150,7 +180,22 @@ class FleetLaunchTest(unittest.TestCase):
 
     def test_teardown_nonmerge_stops_and_preserves_recoverable_worktree(self):
         state,mf,d,work=self._launched_member("running"); unknown=work/"unknown.txt"; unknown.write_text("keep")
-        r=self._teardown(); self.assertEqual(r.returncode,0,r.stderr); self.assertFalse(mf.exists()); self.assertTrue(work.exists()); self.assertTrue(unknown.exists()); self.assertEqual(subprocess.run(["git","-C",str(self.repo),"show-ref","--verify","--quiet","refs/heads/sdd-fleet/demo"]).returncode,0)
+        r=self._teardown(); self.assertEqual(r.returncode,0,r.stderr); self.assertFalse(mf.exists()); self.assertTrue(work.exists()); self.assertTrue(unknown.exists()); self.assertEqual(subprocess.run(["git","-C",str(self.repo),"show-ref","--verify","--quiet","refs/heads/"+d['branch']]).returncode,0)
+
+    def test_merge_executes_bound_checks_and_keeps_recovery_on_failure(self):
+        for command,success in [('printf verified > verification.txt',True),('exit 1',False)]:
+            with self.subTest(command=command):
+                self.task(verification_commands=[command])
+                result=self.invoke(self.contract); self.assertEqual(result.returncode,0,result.stderr)
+                state=self.repo/'.planning/sdd-composy/fleet/demo'; mf=state/'members/TASK-001.json'; d=json.loads(mf.read_text()); work=Path(d['worktree'])
+                (work/'src/app.py').write_text('changed\n'); subprocess.run(['git','-C',str(work),'add','.'],check=True); subprocess.run(['git','-C',str(work),'commit','-qm','change'],check=True)
+                tip=subprocess.check_output(['git','-C',str(work),'rev-parse','HEAD'],text=True).strip()
+                report=state/'result.json'; report.write_text(json.dumps({'member_id':'TASK-001','status':'completed','commit':tip})); d.update(status='completed',result_path=str(report)); mf.write_text(json.dumps(d))
+                result=self._teardown('--merge','--confirm','CONFIRM-SDD-MERGE')
+                self.assertEqual(result.returncode==0,success,result.stderr)
+                self.assertEqual(work.exists(),not success); self.assertEqual(mf.exists(),not success)
+                if success: self.assertEqual((self.repo/'verification.txt').read_text(),'verified')
+            self.tearDown(); self.setUp()
 
     def test_teardown_merge_conflict_aborts_and_preserves_state(self):
         state,mf,d,work=self._launched_member("completed"); (work/"src/app.py").write_text("branch\n")

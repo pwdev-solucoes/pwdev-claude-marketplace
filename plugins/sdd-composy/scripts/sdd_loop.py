@@ -177,8 +177,9 @@ def resume(root, loop_id):
             return {"loop_id": loop_id, "task_id": data["task_id"], "next_stage": LOOP_STAGES[index], "completed_stages": completed}
         if "artifact" not in record or "evidence" not in record or record.get("artifact_digest") != _digest(record["artifact"]) or record.get("evidence_digest") != _digest(record["evidence"]):
             raise LoopError("stale or unbound stage evidence")
-        if record["evidence"].get("status") not in SUCCESS_EVIDENCE:
+        if not isinstance(record["artifact"], dict) or not record["artifact"] or not isinstance(record["evidence"], dict) or record["evidence"].get("status") not in SUCCESS_EVIDENCE:
             raise LoopError("stage evidence is not successful")
+        _stamp(record.get("published_at"))
         completed.append(LOOP_STAGES[index])
     return {"loop_id": loop_id, "task_id": data["task_id"], "next_stage": None, "completed_stages": completed}
 
@@ -193,7 +194,11 @@ def continue_loop(root, loop_id, outcome="progress", now=None):
     if data["status"] != "running": raise LoopError("only running loops can continue")
     if outcome not in {"progress", "complete", "missing_progress", "scope_expansion", "architectural_ambiguity", "destructive_action", "external_authorization", "environment_failure", "destructive_request", "scope_drift", "new_architecture", "repeated_environment_failure", "third_rejection", "identical_diff", "identical_failure"}: raise LoopError("invalid loop outcome")
     stamp = now or _now(); data["updated_at"] = stamp
-    if outcome == "complete": data.update(status="completed", stop_reason="Completed", finished_at=stamp)
+    if outcome == "complete":
+        if resume(root, loop_id)["next_stage"] is not None:
+            raise LoopError("all canonical stages must be published before completion")
+        _verify_completion(root, data, stamp)
+        data.update(status="completed", stop_reason="Completed", finished_at=stamp)
     elif outcome != "progress":
         action = "inspect the recorded stop reason and obtain human direction"
         if outcome == "environment_failure": action = "inspect runtime environment and retry"
@@ -202,6 +207,38 @@ def continue_loop(root, loop_id, outcome="progress", now=None):
         data["iteration"] += 1
         if data["iteration"] >= data["max_iterations"]: data.update(status="iteration_cap", stop_reason="Iteration cap reached", finished_at=stamp)
     return _publish(_path(root, loop_id), data)
+
+def _verify_completion(root, data, now):
+    """Re-read the actual VERIFY command record, bound to this publication."""
+    evidence = data["stages"][-1]["evidence"]
+    reference = evidence.get("command_record")
+    if not isinstance(reference, dict): raise LoopError("VERIFY requires a command record")
+    if not isinstance(reference.get("path"), str): raise LoopError("invalid VERIFY command record path")
+    relative = Path(reference["path"])
+    if not relative.parts or relative.is_absolute() or ".." in relative.parts:
+        raise LoopError("invalid VERIFY command record path")
+    path = Path(root)
+    for part in relative.parts:
+        path = path / part
+        if path.is_symlink(): raise LoopError("VERIFY command record symlink is forbidden")
+    try:
+        raw = path.read_bytes()
+        record = json.loads(raw)
+    except (OSError, ValueError) as exc: raise LoopError("VERIFY command record unavailable") from exc
+    if hashlib.sha256(raw).hexdigest() != reference.get("sha256"):
+        raise LoopError("VERIFY command record changed")
+    if not isinstance(record, dict) or record.get("task_id") != data["task_id"] or record.get("loop_id") != data["id"]:
+        raise LoopError("VERIFY command record identity mismatch")
+    if record.get("status") != "passed" or type(record.get("exit_code")) is not int or record["exit_code"] != 0 or not record.get("command"):
+        raise LoopError("VERIFY command did not pass")
+    stdout, stderr = record.get("stdout"), record.get("stderr")
+    if not isinstance(stdout, str) or not isinstance(stderr, str) or record.get("sha256") != hashlib.sha256((stdout + "\n" + stderr).encode()).hexdigest():
+        raise LoopError("VERIFY command output is missing or changed")
+    started, ended = record.get("started_at"), record.get("ended_at")
+    baseline = dt.datetime.fromisoformat(data["stages"][-2]["published_at"].replace("Z", "+00:00")).timestamp()
+    deadline = dt.datetime.fromisoformat(now.replace("Z", "+00:00")).timestamp() + 1
+    if any(type(value) not in (int, float) for value in (started, ended)) or not baseline <= started <= ended < deadline:
+        raise LoopError("VERIFY command evidence is stale or future dated")
 
 def cancel(root, loop_id, reason="Cancelled by user", now=None):
     data = status(root, loop_id)
@@ -285,8 +322,27 @@ def main():
     s=sub.add_parser("start"); s.add_argument("task_id"); s.add_argument("--max-iterations", type=int, default=3); s.add_argument("--loop-id")
     for name in ("status", "cancel"): sub.add_parser(name).add_argument("loop_id")
     c=sub.add_parser("continue"); c.add_argument("loop_id"); c.add_argument("--outcome", default="progress")
+    for parser in (s, c):
+        parser.add_argument("--task-state", type=Path, required=True)
+        parser.add_argument("--human-approved", action="store_true")
     args=p.parse_args()
     try:
+        if args.op in {"start", "continue"}:
+            import sdd_tasks
+            if not args.human_approved: raise LoopError("human approval is required")
+            try:
+                task_data = sdd_tasks.load(args.task_state)
+                task_id = args.task_id if args.op == "start" else status(args.root, args.loop_id)["task_id"]
+                task = sdd_tasks._task(task_data, task_id)
+                if any(sdd_tasks._task(task_data, dep)["state"] != "complete" for dep in task["dependencies"]):
+                    raise LoopError("task dependencies are incomplete")
+                if args.op == "start" and task["state"] != "ready": raise LoopError("task is not ready")
+                if args.op == "continue" and args.outcome == "complete":
+                    if task["state"] not in {"verify_required", "complete"}: raise LoopError("task is not at completion gate")
+                    sdd_tasks._evidence_ok(task, dt.datetime.now(dt.timezone.utc))
+                elif args.op == "continue" and task["state"] in {"blocked", "skipped", "complete", "pending"}:
+                    raise LoopError("task cannot continue in current state")
+            except (sdd_tasks.TaskError, OSError, ValueError) as exc: raise LoopError(str(exc)) from exc
         result = start(args.root,args.task_id,args.max_iterations,args.loop_id) if args.op=="start" else status(args.root,args.loop_id) if args.op=="status" else continue_loop(args.root,args.loop_id,args.outcome) if args.op=="continue" else cancel(args.root,args.loop_id)
         print(json.dumps(result, sort_keys=True)); return 0
     except LoopError as exc: print(json.dumps({"error":str(exc)}, sort_keys=True)); return 2

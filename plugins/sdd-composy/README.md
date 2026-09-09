@@ -6,6 +6,20 @@ SDD Composy is an approval-gated workflow that runs on Claude Code and Codex fro
 
 Human-readable contracts live under `tasks/prd-<slug>/`. Operational state lives under `.planning/sdd-composy/`. Generated project Markdown targets OKF v0.2, requires a non-empty `type`, and permits unknown extension fields. Supported JSON and Markdown updates preserve unknown fields.
 
+## Artifact language
+
+Run `/sdd-composy:init` with `pt-BR` or `en-US` to select the language for human-facing
+artifacts. If the language is omitted, init asks you to choose and writes no artifacts
+until a choice is made. The selection is persisted in `.planning/sdd-composy/config.json`;
+all downstream skills consume it without asking again. Before initialization they return
+`{"status":"not_initialized","next_action":"run_init"}`.
+
+PRDs, stories, TechSpecs, task descriptions, QA/evidence reports, and status prose follow
+the selected language. Machine keys, IDs, schemas, filenames, lifecycle values, and command
+names remain English, preserving compatibility across Claude Code and Codex. Invalid
+language values fail without changing the existing configuration. See the full [language
+and workflow contract](./references/workflow.md).
+
 ## Runtime entry points
 
 Claude Code discovers `.claude-plugin/plugin.json` and exposes thin command adapters as `/sdd-composy:<name>`. Codex discovers `.codex-plugin/plugin.json` and its `skills` root, then exposes the shared skills as `$sdd-composy-<name>`.

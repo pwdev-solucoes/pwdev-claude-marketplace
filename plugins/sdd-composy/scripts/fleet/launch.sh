@@ -3,12 +3,15 @@ set -euo pipefail
 HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$HERE/common.sh"
 usage(){ echo "usage: launch.sh --root ROOT --fleet-id ID --base-branch BRANCH --task TASK.json [--task TASK.json ...] [--compose] [--ui auto|cmux|tmux|headless]" >&2; exit 2; }
-root= fleet_id= base_branch= compose=0; ui=auto; tasks=()
+root= fleet_id= base_branch= compose=0; ui=auto; tasks=(); prepare=0; runtime=
 while (($#)); do case "$1" in
   --root) root=${2:-}; shift 2;; --fleet-id) fleet_id=${2:-}; shift 2;;
+  --prepare-only) prepare=1; shift;; --runtime) runtime=${2:-}; shift 2;;
   --base-branch) base_branch=${2:-}; shift 2;; --task) tasks+=("${2:-}"); shift 2;; --compose) compose=1; shift;; --ui) ui=${2:-}; shift 2;; *) usage;; esac; done
 [[ -n "$root" && -n "$fleet_id" && -n "$base_branch" && ${#tasks[@]} -gt 0 ]] || usage
 root=$(fleet_abs "$root"); [[ -d "$root/.git" || -f "$root/.git" ]] || fleet_die "root is not a git repository"
+[[ $prepare == 1 || $runtime == codex || $runtime == claude ]] || fleet_die 'launch requires --runtime codex|claude or --prepare-only'
+[[ $prepare == 1 ]] || command -v "$runtime" >/dev/null || fleet_die 'runtime unavailable'
 ui=$(fleet_select_ui "$ui") || exit $?
 state=$(fleet_state_dir "$root" "$fleet_id"); mkdir -p "$state/members"
 export FLEET_ID="$fleet_id"
@@ -20,7 +23,7 @@ command -v git >/dev/null || fleet_die "git is required"
 git -C "$root" show-ref --verify --quiet "refs/heads/$base_branch" || fleet_die "unknown base branch"
 
 python3 - "$root" "$state" "$fleet_id" "$base_branch" "$ui" "${tasks[@]}" <<'PY'
-import json,sys,hashlib
+import json,sys,hashlib,re
 from pathlib import Path
 root,state=map(Path,sys.argv[1:3]); fleet_id=sys.argv[3]; base_branch=sys.argv[4]; ui=sys.argv[5]; files=[Path(x) for x in sys.argv[6:]]
 seen=[]; records=[]
@@ -33,6 +36,7 @@ for f in files:
     for task in entries:
       if not isinstance(task,dict): raise SystemExit('fleet: task must be an object')
       tid=str(task.get('id','')); paths=task.get('allowed_paths',[])
+      if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]*',tid) or any(oid==tid for _,oid in seen): raise SystemExit('fleet: invalid or duplicate task identity')
       if not tid or task.get('state') != 'ready': raise SystemExit(f'fleet: task {tid or "?"} is not ready')
       if task.get('dependencies_complete') is False or task.get('dependencies') not in (None,[]) and task.get('dependencies_complete') is not True:
           raise SystemExit(f'fleet: task {tid} has incomplete dependencies')
@@ -57,7 +61,7 @@ for f in files:
       contract=Path(str(task.get('contract_path', f)))
       if contract.is_symlink() or not contract.exists(): raise SystemExit(f'fleet: dirty contract {tid}')
       blob=contract.read_bytes(); h=hashlib.sha256(blob).hexdigest()
-      records.append({'id':tid,'contract_path':str(contract),'contract_sha256':h,'allowed_paths':norm,'state':'locked'})
+      records.append({'id':tid,'slug':tid.lower(),'contract_path':str(contract.absolute()),'contract_sha256':h,'allowed_paths':norm,'verification_commands':task['verification_commands'],'state':'locked'})
 out=state/'members'; out.mkdir(parents=True,exist_ok=True)
 if (state/'fleet.json').exists() or (state/'fleet.json').is_symlink(): raise SystemExit('fleet: fleet metadata already exists')
 destinations=[out/(r['id']+'.json') for r in records]
@@ -68,11 +72,12 @@ for r,destination in zip(records,destinations):
 (state/'fleet.json').write_text(json.dumps({'fleet_id':fleet_id,'base_branch':base_branch,'ui':ui,'members':[r['id'] for r in records]},sort_keys=True,indent=2)+'\n')
 PY
 
-created=(); port=; runtime_created=0; state_created=1; compose_created=0; compose_started=0; base="sdd-fleet/$fleet_id"; work="$root/../.sdd-fleet-$fleet_id-$(basename "$root")"; branch="$base"
+created=(); ports=(); port=; runtime_created=0; state_created=1; compose_created=0; compose_started=0; base="sdd-fleet/$fleet_id"
 cleanup(){ local rc=$?; if ((rc!=0)); then
   if ((compose_started)); then docker compose --project-name "sdd_fleet_$fleet_id" --env-file "$state/runtime.env" -f "$state/docker-compose.yml" down >/dev/null 2>&1 || true; fi
   if ((compose_created)); then rm -f "$state/docker-compose.yml"; fi
   [[ -n "$port" ]] && rm -f "$state/port-$port"
+  for allocated in "${ports[@]}"; do rm -f "$state/port-$allocated"; done
   if ((runtime_created)); then rm -f "$state/runtime.env"; fi
   if ((state_created)); then
     if ((fleet_preexisting == 0)); then
@@ -87,15 +92,26 @@ cleanup(){ local rc=$?; if ((rc!=0)); then
     fi
   fi
   for p in "${created[@]}"; do git -C "$root" worktree remove --force "$p" >/dev/null 2>&1 || true; done
+  git -C "$root" worktree prune >/dev/null 2>&1 || true
 fi; fleet_unlock "$lock"; exit "$rc"; }
 trap cleanup EXIT
+for member_file in "$state"/members/*.json; do
+member=$(fleet_json_string "$member_file" id)
+branch="$base/$member"; work="$root/../.sddcomposy-fleet-$fleet_id-$member-$(basename "$root")"
 git -C "$root" show-ref --verify --quiet "refs/heads/$branch" && fleet_die "branch collision: $branch"
 git -C "$root" worktree add -b "$branch" "$work" "$base_branch" >/dev/null
+work=$(cd "$work" && pwd -P)
 created+=("$work")
 [[ "${SDD_FLEET_FAIL_AFTER_WORKTREE:-}" == 1 ]] && fleet_die "injected post-worktree failure"
 port=$(fleet_allocate_port "$state" "${SDD_FLEET_PORT_START:-43000}" "${SDD_FLEET_PORT_END:-43100}")
-fleet_write_runtime_env "$state" "$port"
-runtime_created=1
+ports+=("$port")
+if ((runtime_created == 0)); then fleet_write_runtime_env "$state" "$port"; runtime_created=1; fi
+python3 - "$member_file" "$work" "$branch" "$port" "$runtime" <<'PY'
+import json,sys
+from pathlib import Path
+p=Path(sys.argv[1]); d=json.loads(p.read_text()); d.update(worktree=str(Path(sys.argv[2]).resolve()),branch=sys.argv[3],port=int(sys.argv[4]),runtime=sys.argv[5] or 'codex'); p.write_text(json.dumps(d,indent=2)+'\n')
+PY
+done
 if ((compose)); then
   command -v docker >/dev/null || fleet_die "docker is required for Compose startup"
   docker compose version >/dev/null 2>&1 || fleet_die "Docker Compose v2 is required"
@@ -105,12 +121,25 @@ if ((compose)); then
   docker compose --project-name "sdd_fleet_$fleet_id" --env-file "$state/runtime.env" -f "$state/docker-compose.yml" up -d >/dev/null || fleet_die "Compose startup failed"
   compose_started=1
 fi
-for f in "${tasks[@]}"; do :; done
-python3 - "$state" "$work" "$branch" "$port" <<'PY'
-import json,sys
-from pathlib import Path
-s=Path(sys.argv[1]); work=Path(sys.argv[2]); branch=sys.argv[3]; port=sys.argv[4]
-for p in (s/'members').glob('*.json'):
- d=json.loads(p.read_text()); d.update({'branch':branch,'worktree':str(work),'port':int(port)}); p.write_text(json.dumps(d,sort_keys=True,indent=2)+'\n')
-PY
+if ((prepare == 0)); then
+  . "$HERE/ui-$ui.sh"
+  # Validate every approved phase before starting any runner. Never manufacture approvals.
+  for member_file in "$state"/members/*.json; do
+    work=$(fleet_json_string "$member_file" worktree); slug=$(fleet_json_string "$member_file" slug)
+    for contract in spec decisions; do
+      file="$work/.planning/sdd-composy/phases/$slug/$contract.md"
+      fleet_require_regular "$file" || fleet_die "missing approved phase contract: $file"
+      [[ $(awk '/^Status: APPROVED$/ {n++} END {print n+0}' "$file") == 1 ]] || fleet_die 'phase requires existing approval'
+    done
+  done
+  # Once processes start, preserve all recovery resources on any dispatch failure.
+  trap 'fleet_unlock "$lock"' EXIT
+  for member_file in "$state"/members/*.json; do
+    work=$(fleet_json_string "$member_file" worktree); slug=$(fleet_json_string "$member_file" slug)
+    handle="$state/$slug.ui.json"
+    cmd=(env "SDD_FLEET_RUNTIME=$runtime" "SDD_FLEET_MEMBER_FILE=$member_file" "$HERE/run.sh" "$slug" "$work")
+    if [[ $ui == headless ]]; then fleet_ui_headless_start "$handle" "$work" "${cmd[@]}"
+    else "fleet_ui_${ui}_start" "$handle" "$work" "$fleet_id-$slug" "${cmd[@]}"; fi
+  done
+fi
 printf '%s\n' "$(cat "$state/fleet.json")"

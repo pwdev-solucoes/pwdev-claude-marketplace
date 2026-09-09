@@ -1,9 +1,36 @@
 #!/usr/bin/env python3
 """Fail-closed evidence manifest, HTML renderer, and optional PDF exporter."""
 from __future__ import annotations
-import argparse, hashlib, html, json, os, re
+import argparse, hashlib, html, json, os, re, tempfile
 import datetime as dt
 from pathlib import Path
+from sdd_language import resolve_language
+
+
+def _atomic_output(root, output, content):
+    raw_root = Path(root).absolute()
+    root = _evidence_root(root)
+    out = Path(output).absolute()
+    try:
+        relative = out.relative_to(raw_root)
+    except ValueError as exc:
+        try:
+            relative = out.relative_to(root)
+        except ValueError:
+            raise ValueError('output destination escapes root') from exc
+    out = _safe(root, relative.as_posix())
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix='.evidence-', dir=out.parent)
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, out)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+    return Path(output)
 
 RESULTS = {"passed", "failed", "not_applicable"}
 TYPES = {"test_output", "screenshot", "log", "report"}
@@ -46,7 +73,7 @@ def _safe(root, rel):
         if current.is_symlink():
             raise ValueError("evidence path contains symlink component")
     candidate = root.joinpath(*p.parts)
-    if candidate.exists() and (candidate.is_symlink() or not candidate.is_file()):
+    if candidate.is_symlink() or (candidate.exists() and not candidate.is_file()):
         raise ValueError("evidence path must be a regular non-symlink file")
     # resolve parent chains too, preventing links to files outside root
     if not str(candidate.resolve()).startswith(str(root) + os.sep):
@@ -89,13 +116,7 @@ def build(data, evidence_root, manifest_path=None, generated_by="sdd-composy", g
     meta["entries"] = sorted(entries, key=lambda x: (x["path"], x["criterion_id"], x["test_id"]))
     _validate(meta)
     if manifest_path:
-        out = Path(manifest_path)
-        if out.is_symlink(): raise ValueError("manifest destination cannot be symlink")
-        if not str(out.resolve()).startswith(str(root.resolve()) + os.sep): raise ValueError("manifest destination escapes root")
-        out.parent.mkdir(parents=True, exist_ok=True)
-        tmp = out.with_name(out.name + ".tmp")
-        tmp.write_text(json.dumps(meta, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        tmp.replace(out)
+        _atomic_output(root, manifest_path, json.dumps(meta, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
     return meta
 
 def verify(manifest, evidence_root):
@@ -122,38 +143,45 @@ def discover(evidence_root):
             found.append(str(path.relative_to(root)))
     return {"root": str(root), "files": found}
 
-def render_html(manifest, evidence_root=None):
+def render_html(manifest, evidence_root=None, *, language='en-US'):
     meta = _validate(manifest)
+    if language not in {'pt-BR', 'en-US'}:
+        raise ValueError('invalid language')
+    title = 'Relatório de evidências' if language == 'pt-BR' else 'Evidence report'
+    labels = ('Critério', 'Teste', 'Resultado', 'Tipo', 'Caminho', 'SHA-256') if language == 'pt-BR' else ('Criterion', 'Test', 'Result', 'Type', 'Path', 'SHA-256')
     rows = []
     for e in meta["entries"]:
         rows.append("<tr>" + "".join(f"<td>{html.escape(str(e.get(k, '')))}</td>" for k in ("criterion_id", "test_id", "result", "evidence_type", "path", "sha256")) + "</tr>")
-    return "<!doctype html><meta charset='utf-8'><title>Evidence report</title><h1>Evidence report</h1><table><thead><tr><th>Criterion</th><th>Test</th><th>Result</th><th>Type</th><th>Path</th><th>SHA-256</th></tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
+    return f"<!doctype html><html lang='{language}'><meta charset='utf-8'><title>{title}</title><h1>{title}</h1><table><thead><tr>" + ''.join(f'<th>{label}</th>' for label in labels) + '</tr></thead><tbody>' + ''.join(rows) + '</tbody></table></html>'
 
-def export(manifest, output, evidence_root=None, pdf=False):
+def export(manifest, output, evidence_root=None, pdf=False, *, workspace_root=None):
     """Write escaped HTML; PDF is optional and fails if expected images cannot load."""
     out = Path(output)
+    if evidence_root is None:
+        raise ValueError('evidence_root is required')
+    preference = resolve_language(workspace_root or evidence_root)
+    if 'language' not in preference:
+        raise ValueError('not_initialized: run_init')
     if pdf:
         for e in _validate(manifest)["entries"]:
             if e["evidence_type"] == "screenshot":
                 if evidence_root is None or not _safe(evidence_root, e["path"]).exists(): raise ValueError("expected image did not load")
         raise RuntimeError("PDF export unavailable without a verified PDF backend")
-    if out.is_symlink(): raise ValueError("output destination cannot be symlink")
-    if evidence_root is not None and not str(out.resolve()).startswith(str(Path(evidence_root).resolve()) + os.sep): raise ValueError("output destination escapes root")
-    out.parent.mkdir(parents=True, exist_ok=True); out.write_text(render_html(manifest, evidence_root), encoding="utf-8")
-    return out
+    return _atomic_output(evidence_root, out, render_html(manifest, evidence_root, language=preference['language']))
 
 def main():
     p=argparse.ArgumentParser(); sub=p.add_subparsers(dest="cmd", required=True)
     b=sub.add_parser("build"); b.add_argument("input"); b.add_argument("root"); b.add_argument("manifest"); b.add_argument("--generated-at")
     v=sub.add_parser("verify"); v.add_argument("manifest"); v.add_argument("root")
     e=sub.add_parser("export"); e.add_argument("manifest"); e.add_argument("root"); e.add_argument("output"); e.add_argument("--pdf", action="store_true")
+    e.add_argument('--workspace-root', help='workspace initialized by sdd-init; defaults to evidence root')
     d=sub.add_parser("discover"); d.add_argument("root")
     a=p.parse_args()
     try:
         if a.cmd == "build":
             result=build(json.loads(Path(a.input).read_text(encoding="utf-8")), a.root, a.manifest, generated_at=a.generated_at)
         elif a.cmd == "verify": result=verify(a.manifest,a.root)
-        elif a.cmd == "export": result={"output": str(export(json.loads(Path(a.manifest).read_text(encoding="utf-8")), a.output, a.root, a.pdf))}
+        elif a.cmd == "export": result={"output": str(export(json.loads(Path(a.manifest).read_text(encoding="utf-8")), a.output, a.root, a.pdf, workspace_root=a.workspace_root))}
         else: result=discover(a.root)
     except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
         print(json.dumps({"ok":False,"errors":[str(exc)]},ensure_ascii=False)); raise SystemExit(1)

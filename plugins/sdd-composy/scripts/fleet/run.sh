@@ -8,8 +8,9 @@ fail() { printf 'sdd-fleet-run: %s\n' "$*" >&2; exit 2; }
 SLUG=$1; WORKTREE_INPUT=$2
 EXPECTED_RUNTIME=${SDD_FLEET_RUNTIME:-codex}
 case "$EXPECTED_RUNTIME" in codex|claude) ;; *) fail "unsupported fleet runtime: $EXPECTED_RUNTIME";; esac
-[[ $SLUG =~ ^[a-z0-9][a-z0-9-]*$ && $SLUG == *[a-z]* && $SLUG != dashboard ]] || fail "invalid slug: $SLUG"
-if [[ $# -eq 3 ]]; then [[ $3 == danger-full-access ]] || fail 'permission mode must be danger-full-access'; fi
+[[ $SLUG =~ ^[A-Za-z0-9][A-Za-z0-9-]*$ && $SLUG != dashboard && $SLUG != DASHBOARD ]] || fail "invalid slug: $SLUG"
+SDD_FLEET_PERMISSION_MODE=safe
+if [[ $# -eq 3 ]]; then [[ $3 == danger-full-access ]] || fail 'permission mode must be danger-full-access'; SDD_FLEET_PERMISSION_MODE=danger-full-access; fi
 # $EXPECTED_RUNTIME is constrained to codex|claude above, so it names the provider binary.
 for binary in git jq "$EXPECTED_RUNTIME" shasum awk python3 sleep; do command -v "$binary" >/dev/null 2>&1 || fail "required binary unavailable: $binary"; done
 PYTHON3_BIN=$(command -v python3)
@@ -26,6 +27,14 @@ FLEET_DIR=$MAIN_ROOT/.planning/sdd-composy/fleet
 if [[ -d "$FLEET_DIR/$SLUG" ]]; then FLEET_DIR=$FLEET_DIR/$SLUG; fi
 MEMBER_FILE=$FLEET_DIR/members/$SLUG.json
 [[ -f $MEMBER_FILE ]] || MEMBER_FILE=$FLEET_DIR/$SLUG.json
+if [[ -n ${SDD_FLEET_MEMBER_FILE:-} ]]; then
+  MEMBER_FILE=$SDD_FLEET_MEMBER_FILE
+  MEMBER_FILE=$(cd -- "${MEMBER_FILE%/*}" 2>/dev/null && printf '%s/%s' "$PWD" "${MEMBER_FILE##*/}") || fail 'unsafe explicit member binding'
+  case "$MEMBER_FILE" in */.planning/sdd-composy/fleet/*/members/*.json) ;; *) fail 'unsafe explicit member binding';; esac
+  [[ -f $MEMBER_FILE && ! -L $MEMBER_FILE ]] || fail 'unsafe explicit member binding'
+  FLEET_DIR=${MEMBER_FILE%/members/*}
+  EXPECTED_BRANCH=$(jq -er '.branch' "$MEMBER_FILE") || fail 'missing registered branch'
+fi
 
 safe_dir_under() {
   local base=$1 relative=$2 create=${3:-false} current component next canonical old_ifs
@@ -110,8 +119,12 @@ ENGINE_ADAPTER=$SCRIPT_DIR/engine-$EXPECTED_RUNTIME.sh
 require_regular_nosymlink "$ENGINE_ADAPTER" || fail "missing runtime adapter: $ENGINE_ADAPTER"
 # shellcheck source=/dev/null
 source "$ENGINE_ADAPTER"
-PHASE_DIR=$WORKTREE/.planning/sdd-composy/phases/$SLUG
-safe_worktree_dir ".planning/sdd-composy/phases/$SLUG" false || fail "unsafe phase contract path for $SLUG"
+PHASE_SLUG=$SLUG
+if [[ ! -d "$WORKTREE/.planning/sdd-composy/phases/$PHASE_SLUG" ]]; then
+  PHASE_SLUG=$(jq -r '.id // .slug // empty' "$MEMBER_FILE" 2>/dev/null || true)
+fi
+PHASE_DIR=$WORKTREE/.planning/sdd-composy/phases/$PHASE_SLUG
+safe_worktree_dir ".planning/sdd-composy/phases/$PHASE_SLUG" false || fail "unsafe phase contract path for $SLUG"
 require_regular_nosymlink "$PHASE_DIR/spec.md" && require_regular_nosymlink "$PHASE_DIR/decisions.md" || fail "missing approved phase contracts for $SLUG"
 FLOW_DIR=$WORKTREE/.planning/sdd-composy; STATUS_FILE=$FLOW_DIR/fleet-status.json
 LOG_DIR=$FLOW_DIR/fleet-logs; RESULT_DIR=$FLOW_DIR/fleet-results
@@ -364,6 +377,7 @@ build_prompt() {
   printf -v STAGE_PROMPT '%s ' "FLOW_FLEET_SLUG=$SLUG" "FLOW_FLEET_STAGE=$stage" \
     "Invoke $skill for phase $SLUG and $instruction." \
     'This is an already-authorized autonomous fleet stage in an isolated worktree.' \
+    "Task contract: $(jq -r '.contract_path' "$MEMBER_FILE"); task identity: $(jq -r '.id' "$MEMBER_FILE")." \
     'Use best judgment at ordinary interactive approval gates, but obey destructive-action prohibitions, prerequisites, secret restrictions, and explicit stop conditions.' \
     "${suffix%% }"
   STAGE_PROMPT=${STAGE_PROMPT% }

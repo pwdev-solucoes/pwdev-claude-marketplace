@@ -18,6 +18,7 @@ import subprocess
 import sys
 import tempfile
 from typing import Any, Iterable
+from sdd_language import resolve_language
 
 
 OKF_VERSION = "0.2"
@@ -265,6 +266,13 @@ def _atomic_write_text(path: Path, content: str) -> None:
 
 def write_map(root: Path, data: dict[str, Any], output_dir: Path | None = None) -> Path:
     root, context = _validated_context(root, output_dir)
+    resolved = resolve_language(root)
+    # Keep the low-level writer usable for callers that already supplied a
+    # fully formed map; the CLI still requires init before generation.
+    if 'language' not in resolved:
+        if not data.get('files_observed'):
+            return resolved
+        resolved = {'language': 'en-US'}
     context.mkdir(parents=True, exist_ok=True)
     codebase = context / "codebase.json"
     serialized = json.dumps(data, indent=2, sort_keys=True) + "\n"
@@ -292,6 +300,22 @@ def write_map(root: Path, data: dict[str, Any], output_dir: Path | None = None) 
         "domain.md": _okf_doc("context-domain", "Domain evidence", f"Terms are file-path evidence only; confidence is deliberately low.\n\n{domain}\n", data["source_commit"]),
         "pitfalls.md": _okf_doc("context-pitfalls", "Observed map caveats", "The map is bounded by readable, non-secret files and must be refreshed when the source commit changes.\n", data["source_commit"]),
     })
+    if resolved['language'] == 'pt-BR':
+        replacements = {
+            'Project context': 'Contexto do projeto', 'Repository:': 'Repositório:',
+            'This is a read-only inventory; it records evidence and does not assert architecture.': 'Este inventário somente leitura registra evidências e não define a arquitetura.',
+            'Observed stack': 'Stack observada', 'Languages:': 'Linguagens:',
+            'Commands observed in manifests (not executed):': 'Comandos observados nos manifestos (não executados):',
+            '(from ': '(origem ', 'none observed': 'nenhum observado',
+            'Domain evidence': 'Evidências de domínio', 'no domain terms observed': 'nenhum termo de domínio observado',
+            'Terms are file-path evidence only; confidence is deliberately low.': 'Os termos são apenas evidências dos caminhos de arquivos; a confiança é deliberadamente baixa.',
+            'Observed map caveats': 'Limitações do mapa observado',
+            'The map is bounded by readable, non-secret files and must be refreshed when the source commit changes.': 'O mapa abrange arquivos legíveis e sem segredos e deve ser atualizado quando o commit de origem mudar.',
+        }
+        for name, content in documents.items():
+            for source, target in replacements.items():
+                content = content.replace(source, target)
+            documents[name] = content
     for name, content in documents.items():
         _atomic_write_text(context / name, content)
     return codebase
@@ -305,6 +329,10 @@ def main(argv: Iterable[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         root = args.repo_root.resolve()
+        resolved = resolve_language(root)
+        if 'language' not in resolved:
+            print(json.dumps(resolved, sort_keys=True))
+            return 2
         data = build_map(root, args.output_dir)
         if args.write:
             write_map(root, data, args.output_dir)

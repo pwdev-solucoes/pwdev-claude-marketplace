@@ -22,6 +22,11 @@ Read `references/runtime.md` for the adapter boundary and
   real directory.
 - Actor ID: ask when absent; it must use the `provider:name` form required by
   the helper (for example `agent:sdd-init` or `human:paulo`).
+- Language: pass `--lang pt-BR` or `--lang en-US` when selecting the workspace
+  artifact language. If omitted on the first init, present the helper's
+  `choices` result and ask the user to choose; do not generate artifacts yet.
+  Only the approved apply persists the preference in
+  `.planning/sdd-composy/config.json` and subsequent init runs reuse it.
 - Optional arguments: preserve and pass through the requested repository path,
   actor, and exact plan token.
 
@@ -39,7 +44,7 @@ templates and the helper's allow-listed repository metadata.
    `scripts/sdd_init.py` path from the installed plugin.
 
    ```sh
-   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/sdd_init.py" plan <repo> --actor <actor>
+   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/sdd_init.py" plan <repo> --actor <actor> [--lang pt-BR|en-US]
    ```
 
    The helper exposes this preview as `inspect|plan`; use `plan` for the
@@ -49,7 +54,7 @@ templates and the helper's allow-listed repository metadata.
    invent or shorten it. If the user approves applying that exact plan, run:
 
    ```sh
-   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/sdd_init.py" apply <repo> --actor <actor> --plan-token <plan_token>
+   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/sdd_init.py" apply <repo> --actor <actor> --plan-token <plan_token> --lang <selected-language>
    ```
 
    With no conflicts, apply may use the plan output directly. The helper is

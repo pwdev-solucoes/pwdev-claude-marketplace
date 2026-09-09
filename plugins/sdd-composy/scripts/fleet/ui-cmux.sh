@@ -53,6 +53,9 @@ fleet_ui_cmux_start(){
  # pre-existing or foreign workspace.
  fleet_cmux_call set-workspace-meta --workspace "$w" --owner sdd-composy --fleet-driver cmux --sdd-composy-fleet "$fleet_id" >/dev/null || { echo 'fleet cmux: cannot establish workspace ownership' >&2; return 1; }
  s=$(fleet_cmux_json_id "$(fleet_cmux_call new-split --json --workspace "$w" --cwd "$cwd")") || return 1
+ local command; printf -v command '%q ' "$@"
+ fleet_cmux_call send --workspace "$w" --surface "$s" "$command" >/dev/null || return 1
+ fleet_cmux_call send-key --workspace "$w" --surface "$s" enter >/dev/null || return 1
 python3 - "$h" "$w" "$s" "$fleet_id" "$cwd" <<'PY'
 import json,sys
 from pathlib import Path

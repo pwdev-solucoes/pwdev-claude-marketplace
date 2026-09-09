@@ -7,6 +7,16 @@ metadata:
 
 # SDD QA
 
+## Workspace language
+
+Before generating artifacts, run the bundled `scripts/sdd_language.py <repo-root>`.
+Consume only the persisted `.planning/sdd-composy/config.json` language. If the
+result is `not_initialized`, return it with `next_action: run_init`; do not ask
+for a language here. For `pt-BR`, write human narrative, summaries, descriptions,
+and labels in Brazilian Portuguese; for `en-US`, use English. Translate template
+placeholder prose when rendering, preserving IDs, schema keys, enum values,
+filenames, commands, and parser-required headings. Do not translate user evidence.
+
 This portable skill reads `references/quality.md` and renders
 `templates/qa.md` for a task currently in `qa_required`. Consume approved CA,
 SC, and test mappings; use browser capability when E2E applies. Record unit,

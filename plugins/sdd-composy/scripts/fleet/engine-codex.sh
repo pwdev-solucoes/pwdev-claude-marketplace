@@ -23,7 +23,9 @@ sdd_engine_codex_prompt_suffix() {
 sdd_engine_codex_stage_command() {
   FLOW_ENGINE_CWD=; SDD_ENGINE_CWD=
   FLOW_ENGINE_RESULT_FROM_STDOUT=false; SDD_ENGINE_RESULT_FROM_STDOUT=false
-  FLOW_ENGINE_COMMAND=(codex exec --dangerously-bypass-approvals-and-sandbox --ephemeral \
+  local permission=(--sandbox workspace-write)
+  [[ ${SDD_FLEET_PERMISSION_MODE:-safe} != danger-full-access ]] || permission=(--dangerously-bypass-approvals-and-sandbox)
+  FLOW_ENGINE_COMMAND=(codex exec "${permission[@]}" --ephemeral \
     --cd "$1" --output-schema "$2" --output-last-message "$3" "$4")
   SDD_ENGINE_COMMAND=("${FLOW_ENGINE_COMMAND[@]}")
 }

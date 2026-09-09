@@ -16,6 +16,8 @@ class EvidenceManifestContractTest(unittest.TestCase):
     def test_evidence_cli_build_verify_export_and_discover(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d); (root / "run.txt").write_text("ok")
+            import sdd_language
+            sdd_language.persist_language(root, 'en-US')
             source = root / "input.json"
             source.write_text(json.dumps({"prd_slug":"demo","task_id":"TASK-007","entries":[{"requirement_id":"RF-001","story_id":"US-001","scenario_id":"SC-001","criterion_id":"CA-001","test_id":"TEST-001","result":"passed","evidence_type":"log","path":"run.txt"}]}))
             manifest = root / "manifest.json"; report = root / "report.html"
@@ -115,6 +117,8 @@ class EvidenceManifestContractTest(unittest.TestCase):
             root=Path(d); (root/"run.txt").write_text("ok")
             entry={"requirement_id":"RF-001","story_id":"US-001","scenario_id":"SC-001","criterion_id":"CA-001","test_id":"TEST-001","result":"passed","evidence_type":"log","path":"run.txt"}
             manifest=sdd_evidence.build({"prd_slug":"demo","task_id":"TASK-007","entries":[entry]},root)
+            import sdd_language
+            sdd_language.persist_language(root, 'en-US')
             out=root/"report.html"; self.assertEqual(sdd_evidence.export(manifest,out,root),out); self.assertIn("Evidence report",out.read_text())
             with self.assertRaises(ValueError): sdd_evidence.export(manifest,root.parent/"escape.html",root)
 
@@ -312,6 +316,7 @@ class ExecutionContractTest(unittest.TestCase):
 
     def test_qa_persists_complete_report_and_can_reload_it(self):
         with tempfile.TemporaryDirectory() as d:
+            __import__('sdd_language').persist_language(d, 'en-US')
             root = Path(d); (root / "evidence").mkdir(); (root / "evidence/run.txt").write_text("ok")
             output = root / "qa.md"
             result = sdd_qa.assess(self.qa_input(), evidence_root=root, report_path=Path("qa.md"), allowed_root=root,
@@ -327,6 +332,7 @@ class ExecutionContractTest(unittest.TestCase):
 
     def test_qa_persists_and_reloads_rejection_without_secret_leak(self):
         with tempfile.TemporaryDirectory() as d:
+            __import__('sdd_language').persist_language(d, 'en-US')
             output = Path(d) / "qa.md"
             data = self.qa_input(); data["results"]["unit"]["status"] = "failed"
             data["secret"] = "token=private"
@@ -338,6 +344,7 @@ class ExecutionContractTest(unittest.TestCase):
 
     def test_rejected_qa_persists_sanitized_origin_context(self):
         with tempfile.TemporaryDirectory() as d:
+            __import__('sdd_language').persist_language(d, 'en-US')
             root = Path(d); output = root / "qa.md"
             data = self.qa_input()
             data.update({"task_id": "TASK-007", "source": "tasks/prd-demo/task.md",
@@ -357,6 +364,7 @@ class ExecutionContractTest(unittest.TestCase):
 
     def test_qa_rejects_symlink_report_path(self):
         with tempfile.TemporaryDirectory() as d:
+            __import__('sdd_language').persist_language(d, 'en-US')
             root = Path(d); target = root / "real.md"; target.write_text("keep")
             link = root / "link.md"; link.symlink_to(target)
             with self.assertRaises(ValueError): sdd_qa.assess(self.qa_input(), report_path=link, allowed_root=root)

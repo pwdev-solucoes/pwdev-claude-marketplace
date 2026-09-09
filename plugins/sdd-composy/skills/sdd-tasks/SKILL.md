@@ -7,6 +7,16 @@ metadata:
 
 # SDD Tasks
 
+## Workspace language
+
+Before generating artifacts, run the bundled `scripts/sdd_language.py <repo-root>`.
+Consume only the persisted `.planning/sdd-composy/config.json` language. If the
+result is `not_initialized`, return it with `next_action: run_init`; do not ask
+for a language here. For `pt-BR`, write human narrative, summaries, descriptions,
+and labels in Brazilian Portuguese; for `en-US`, use English. Translate template
+placeholder prose when rendering, preserving IDs, schema keys, enum values,
+filenames, commands, and parser-required headings. Do not translate user evidence.
+
 Manage the durable task projection for `tasks/prd-<slug>/`. Read
 `references/tasks.md`, `references/states.md`, `references/workflow.md`, and
 `references/safety.md` before acting. This skill is runtime-neutral and does

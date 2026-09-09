@@ -32,10 +32,17 @@ sdd_engine_claude_prompt_suffix() {
 # worktree and captures stdout separately from the log.
 # Arguments: <worktree> <schema> <result-file> <prompt>
 sdd_engine_claude_stage_command() {
-  FLOW_ENGINE_CWD=; SDD_ENGINE_CWD=$1
+  FLOW_ENGINE_CWD=$1; SDD_ENGINE_CWD=$1
   FLOW_ENGINE_RESULT_FROM_STDOUT=true; SDD_ENGINE_RESULT_FROM_STDOUT=true
-  FLOW_ENGINE_COMMAND=(claude -p --dangerously-skip-permissions --no-session-persistence \
-    --output-format json "$4")
+  local permission=()
+  [[ ${SDD_FLEET_PERMISSION_MODE:-safe} != danger-full-access ]] || permission=(--dangerously-skip-permissions)
+  if ((${#permission[@]})); then
+    FLOW_ENGINE_COMMAND=(claude -p "${permission[@]}" --no-session-persistence \
+      --output-format json "$4")
+  else
+    FLOW_ENGINE_COMMAND=(claude -p --no-session-persistence \
+      --output-format json "$4")
+  fi
   SDD_ENGINE_COMMAND=("${FLOW_ENGINE_COMMAND[@]}")
 }
 

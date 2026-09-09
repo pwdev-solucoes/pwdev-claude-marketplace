@@ -13,7 +13,8 @@ class FleetRunnerTest(unittest.TestCase):
         r = self.source("codex", 'sdd_engine_codex_stage_command /wt /schema /result PROMPT; printf "%s\\n" "${FLOW_ENGINE_COMMAND[@]}"')
         self.assertEqual(r.returncode, 0, r.stderr)
         args = r.stdout.splitlines()
-        self.assertEqual(args[:4], ["codex", "exec", "--dangerously-bypass-approvals-and-sandbox", "--ephemeral"])
+        self.assertEqual(args[:4], ["codex", "exec", "--sandbox", "workspace-write"])
+        self.assertNotIn('--dangerously-bypass-approvals-and-sandbox',args)
         self.assertIn("--output-schema", args); self.assertIn("--output-last-message", args)
         self.assertEqual(args[-1], "PROMPT")
 
@@ -21,7 +22,8 @@ class FleetRunnerTest(unittest.TestCase):
         r = self.source("claude", 'sdd_engine_claude_stage_command /wt /schema /result PROMPT; printf "%s\\n" "${FLOW_ENGINE_COMMAND[@]}"')
         self.assertEqual(r.returncode, 0, r.stderr)
         args = r.stdout.splitlines()
-        self.assertEqual(args[:4], ["claude", "-p", "--dangerously-skip-permissions", "--no-session-persistence"])
+        self.assertEqual(args[:3], ["claude", "-p", "--no-session-persistence"])
+        self.assertNotIn('--dangerously-skip-permissions',args)
         self.assertIn("--output-format", args)
 
     def test_claude_malformed_result_fails_closed(self):
@@ -45,11 +47,11 @@ class FleetRunnerTest(unittest.TestCase):
             (root / "README").write_text("x\n"); subprocess.run(["git", "-C", str(root), "add", "."], check=True); subprocess.run(["git", "-C", str(root), "commit", "-qm", "base"], check=True)
             contract = root / "contract.json"; contract.write_text(json.dumps({"id":"demo","state":"ready","dependencies":[],"acceptance_criteria":["ok"],"verification_commands":["true"],"allowed_paths":["README"],"contract_path":str(contract)}))
             launch = FLEET / "launch.sh"
-            launched = subprocess.run([str(launch), "--root", str(root), "--fleet-id", "demo", "--base-branch", "master", "--task", str(contract)], capture_output=True, text=True)
+            launched = subprocess.run([str(launch), "--prepare-only", "--root", str(root), "--fleet-id", "demo", "--base-branch", "master", "--task", str(contract)], capture_output=True, text=True)
             if launched.returncode != 0:
                 # git's initial branch may be named main in the host image.
                 base = subprocess.check_output(["git", "-C", str(root), "branch", "--show-current"], text=True).strip()
-                launched = subprocess.run([str(launch), "--root", str(root), "--fleet-id", "demo", "--base-branch", base, "--task", str(contract)], capture_output=True, text=True)
+                launched = subprocess.run([str(launch), "--prepare-only", "--root", str(root), "--fleet-id", "demo", "--base-branch", base, "--task", str(contract)], capture_output=True, text=True)
             self.assertEqual(launched.returncode, 0, launched.stderr)
             state = root / ".planning/sdd-composy/fleet/demo/members"; record = json.loads((state / "demo.json").read_text()); work = Path(record["worktree"])
             phase = work / ".planning/sdd-composy/phases/demo"; phase.mkdir(parents=True)
@@ -57,10 +59,10 @@ class FleetRunnerTest(unittest.TestCase):
             spec.write_text("Status: APPROVED\n"); decisions.write_text("Status: APPROVED\n")
             import hashlib
             record.update({"spec_sha256":hashlib.sha256(spec.read_bytes()).hexdigest(), "decisions_sha256":hashlib.sha256(decisions.read_bytes()).hexdigest()})
-            record.update({"id":"demo", "slug":"demo", "status":"ACTIVE", "runtime":"codex", "worktree":str(work), "worktree_path":str(work), "branch":"sdd-fleet/demo"}); (state / "demo.json").write_text(json.dumps(record))
+            record.update({"id":"demo", "slug":"demo", "status":"ACTIVE", "runtime":"codex", "worktree":str(work), "worktree_path":str(work)}); (state / "demo.json").write_text(json.dumps(record))
             fake = Path(d) / "bin"; fake.mkdir(); called = Path(d) / "called"; child = Path(d) / "child.pid"
             fake.joinpath("codex").write_text("#!/bin/sh\nprintf x > '%s'\nsleep 60 & echo $! > '%s'\nexit 7\n" % (called, child)); fake.joinpath("codex").chmod(0o755)
-            env = {**os.environ, "PATH": str(fake) + ":/usr/bin:/bin", "SDD_FLEET_RUNTIME":"codex"}
+            env = {**os.environ, "PATH": str(fake) + ":/usr/bin:/bin", "SDD_FLEET_RUNTIME":"codex", "SDD_FLEET_MEMBER_FILE":str(state/'demo.json')}
             result = subprocess.run([str(FLEET / "run.sh"), "demo", str(work)], env=env, capture_output=True, text=True)
             self.assertNotEqual(result.returncode, 0)
             self.assertTrue(called.exists(), result.stderr)

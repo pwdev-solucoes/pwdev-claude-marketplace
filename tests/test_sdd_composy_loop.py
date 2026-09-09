@@ -1,8 +1,9 @@
-import json, tempfile, unittest, sys
+import json, tempfile, unittest, sys, hashlib, subprocess
 import importlib.util
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1] / "plugins/sdd-composy/scripts"))
 import sdd_loop
+import sdd_execute
 
 def _adapter(name):
     path = Path(__file__).parents[1] / "plugins/sdd-composy/scripts" / name
@@ -12,6 +13,75 @@ def _adapter(name):
 class LoopTests(unittest.TestCase):
     def setUp(self): self.tmp=tempfile.TemporaryDirectory(); self.root=Path(self.tmp.name)
     def tearDown(self): self.tmp.cleanup()
+
+    def verification(self, task_id, loop_id):
+        record = sdd_execute.run_command([sys.executable, "-c", "assert 2 + 2 == 4; print('verification passed')"], cwd=self.root)
+        record.update(task_id=task_id, loop_id=loop_id)
+        raw = json.dumps(record).encode()
+        (self.root / "verify.json").write_bytes(raw)
+        return {"status": "passed", "command_record": {"path": "verify.json", "sha256": hashlib.sha256(raw).hexdigest()}}
+
+    def test_completion_checks_actual_verification_record(self):
+        loop = sdd_loop.start(self.root, "TASK-301")
+        for stage in sdd_loop.LOOP_STAGES:
+            evidence = self.verification("TASK-301", loop["id"]) if stage == "VERIFY" else {"status": "passed"}
+            sdd_loop.publish_stage(self.root, loop["id"], stage, artifact={"stage": stage}, evidence=evidence)
+        original = (self.root / "verify.json").read_bytes()
+        for payload in (b"{}", None):
+            if payload is None: (self.root / "verify.json").unlink()
+            else: (self.root / "verify.json").write_bytes(payload)
+            with self.assertRaises(sdd_loop.LoopError):
+                sdd_loop.continue_loop(self.root, loop["id"], outcome="complete")
+            self.assertEqual(sdd_loop.status(self.root, loop["id"])["status"], "running")
+            (self.root / "verify.json").write_bytes(original)
+        self.assertEqual(sdd_loop.continue_loop(self.root, loop["id"], outcome="complete")["status"], "completed")
+
+    def test_completion_rejects_bare_status_verification(self):
+        loop = sdd_loop.start(self.root, "TASK-302")
+        for stage in sdd_loop.LOOP_STAGES:
+            sdd_loop.publish_stage(self.root, loop["id"], stage, artifact={"stage": stage}, evidence={"status": "passed"})
+        with self.assertRaisesRegex(sdd_loop.LoopError, "command record"):
+            sdd_loop.continue_loop(self.root, loop["id"], outcome="complete")
+
+    def test_completion_rejects_stale_command_and_tampered_stage(self):
+        loop = sdd_loop.start(self.root, "TASK-303")
+        for stage in sdd_loop.LOOP_STAGES:
+            evidence = self.verification("TASK-303", loop["id"]) if stage == "VERIFY" else {"status":"passed"}
+            if stage == "VERIFY":
+                record = json.loads((self.root / "verify.json").read_text())
+                record.update(started_at=0, ended_at=1)
+                raw = json.dumps(record).encode(); (self.root / "verify.json").write_bytes(raw)
+                evidence["command_record"]["sha256"] = hashlib.sha256(raw).hexdigest()
+            sdd_loop.publish_stage(self.root, loop["id"], stage, artifact={"stage":stage}, evidence=evidence)
+        with self.assertRaisesRegex(sdd_loop.LoopError, "stale"):
+            sdd_loop.continue_loop(self.root, loop["id"], outcome="complete")
+        path = self.root / ".planning/sdd-composy/loops" / (loop["id"] + ".json")
+        state = json.loads(path.read_text()); state["stages"][0]["artifact"] = {"tampered":True}
+        path.write_text(json.dumps(state))
+        with self.assertRaisesRegex(sdd_loop.LoopError, "unbound"):
+            sdd_loop.continue_loop(self.root, loop["id"], outcome="complete")
+
+    def test_cli_requires_task_guard_before_start_and_continue(self):
+        command = [sys.executable, sdd_loop.__file__, "--root", str(self.root)]
+        for operation in (["start", "TASK-001"], ["continue", "loop-task-001", "--outcome", "complete"]):
+            result = subprocess.run(command + operation, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("--task-state", result.stderr)
+        state = {"schema_version":"1", "prd_slug":"test", "updated_at":"2026-01-01T00:00:00Z", "tasks":[{
+            "id":"TASK-001", "title":"Test", "state":"blocked", "dependencies":[],
+            "acceptance_criteria":["CA-001"], "verification_commands":["python3 -m unittest"],
+            "allowed_paths":["src"], "evidence_required":True}]}
+        path = self.root / "tasks.json"; path.write_text(json.dumps(state))
+        result = subprocess.run(command + ["start", "TASK-001", "--task-state", str(path), "--human-approved"], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("not ready", result.stdout)
+
+    def test_complete_rejects_pending_stages_without_mutation(self):
+        loop = sdd_loop.start(self.root, "TASK-001")
+        before = sdd_loop.status(self.root, loop["id"])
+        with self.assertRaises(sdd_loop.LoopError):
+            sdd_loop.continue_loop(self.root, loop["id"], outcome="complete")
+        self.assertEqual(before, sdd_loop.status(self.root, loop["id"]))
 
     def test_progress_fingerprint_is_stable_and_ignores_metadata(self):
         a = {"diff": {"files": ["a.py"]}, "failure": {"test": "x"}, "at": "one"}
@@ -139,7 +209,8 @@ class LoopTests(unittest.TestCase):
         seen, published = [], []
         def engine(contract):
             seen.append(contract["stage"])
-            return {"stage": contract["stage"], "status":"completed", "message":"ok", "verdict":"passed", "evidence":{"status":"passed"}}
+            evidence = self.verification("TASK-200", "loop-task-200") if contract["stage"] == "VERIFY" else {"status":"passed"}
+            return {"stage": contract["stage"], "status":"completed", "message":"ok", "verdict":"passed", "evidence":evidence}
         result = sdd_loop.orchestrate(self.root, "TASK-200", engine, human_approved=True,
                                       task_publish=published.append, trace_publish=published.append)
         self.assertEqual(result["status"], "completed")
@@ -158,7 +229,8 @@ class LoopTests(unittest.TestCase):
         seen=[]
         def engine(contract):
             seen.append(contract["stage"])
-            return {"stage":contract["stage"],"status":"completed","message":"ok","verdict":"passed","evidence":{"status":"passed"}}
+            evidence = self.verification("TASK-202", "resume-me") if contract["stage"] == "VERIFY" else {"status":"passed"}
+            return {"stage":contract["stage"],"status":"completed","message":"ok","verdict":"passed","evidence":evidence}
         result=sdd_loop.orchestrate(self.root,"TASK-202",engine,loop_id="resume-me",human_approved=True)
         self.assertEqual(result["status"],"completed"); self.assertEqual(seen,list(sdd_loop.LOOP_STAGES[1:]))
         cancelled=sdd_loop.start(self.root,"TASK-203",loop_id="cancel-me")

@@ -1,6 +1,6 @@
 ---
 description: Initialize or verify the shared SDD Composy workspace
-argument-hint: "[repository-root] [--actor provider:name] [--plan-token token]"
+argument-hint: "[repository-root] [--actor provider:name] [--lang pt-BR|en-US] [--plan-token token]"
 ---
 
 # /sdd-composy:init

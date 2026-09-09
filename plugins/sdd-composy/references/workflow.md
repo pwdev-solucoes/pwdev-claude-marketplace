@@ -2,6 +2,23 @@
 
 This is the portable workflow contract shared by every supported runtime. It defines artifact-driven behavior only; provider commands, tool selection, prompts, and orchestration belong to runtime adapters.
 
+## Language and artifact routing
+
+`/sdd-composy:init` is the only stage that asks for the artifact language. It accepts
+exactly `pt-BR` or `en-US` and persists the choice in
+`.planning/sdd-composy/config.json`. If no choice is supplied, init returns both choices
+and creates no artifacts. Every downstream stage reads that persisted `language` value and
+continues without prompting; before init it returns the machine response
+`{"status":"not_initialized","next_action":"run_init"}`.
+
+The selected language routes only human-facing artifact prose: PRDs, stories, TechSpecs,
+task descriptions, QA/evidence reports, status summaries, and other generated Markdown may
+be written in Portuguese (Brazil) or English (United States). Machine keys, IDs, schemas,
+filenames, lifecycle values, and command names remain in English in both routes. This keeps
+the same contracts portable between Claude Code and Codex while allowing the project team
+to read its artifacts in the language selected at initialization. Invalid language values
+fail without mutation.
+
 ## Canonical lifecycle
 
 ```text

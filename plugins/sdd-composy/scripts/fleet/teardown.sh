@@ -28,6 +28,8 @@ if [[ "$raw_worktree" = /* ]]; then worktree=$(fleet_abs "$raw_worktree"); else 
 worktree=$(cd "$worktree" 2>/dev/null && pwd -P) || fail 'member worktree is missing or unsafe'
 [[ "$worktree" != "$root" && "$worktree" != "$root"/* ]] || fail 'member worktree must be outside repository root'
 if [[ $merge == true ]]; then
+  fleet_verify_binding "$member_file" || fail 'refusing merge: task contract changed'
+  jq -e '.verification_commands | type == "array" and length > 0 and all(.[]; type == "string" and length > 0)' "$member_file" >/dev/null || fail 'refusing merge: verification commands missing'
   result=$(fleet_json_string "$member_file" result_path 2>/dev/null || true); [[ -n $result ]] || fail 'refusing merge: completed member has no result'
   [[ "$result" = /* ]] && result_path=$result || result_path=$root/$result
   fleet_require_regular "$result_path" || fail 'refusing merge: result is missing or unsafe'
@@ -55,5 +57,15 @@ if [[ -e "$lock" || -L "$lock" ]]; then [[ -d "$lock" && ! -L "$lock" ]] || fail
 if [[ $merge == false ]]; then rm -f -- "$member_file"; printf 'fleet-teardown: stopped %s; preserved branch and worktree\n' "$member"; exit 0; fi
 if ! git -C "$root" merge --no-ff "$branch"; then git -C "$root" merge --abort >/dev/null 2>&1 || true; fail "merge failed; recovery state preserved for $member"; fi
 git -C "$root" merge-base --is-ancestor "$branch" HEAD || fail 'post-merge verification failed; recovery state preserved'
+python3 - "$root" "$member_file" <<'PY' || fail 'post-merge tests failed; merged code, worktree and metadata preserved for recovery'
+import json,subprocess,sys
+from pathlib import Path
+root,record=map(Path,sys.argv[1:]); data=json.loads(record.read_text())
+contract=json.loads(Path(data['contract_path']).read_text())
+entries=contract.get('tasks',[contract]); task=next((t for t in entries if t.get('id')==data['id']),None)
+if not task or task.get('verification_commands')!=data['verification_commands']: raise SystemExit('verification commands do not match bound task')
+for command in task['verification_commands']:
+    if subprocess.run(command,shell=True,cwd=root,executable='/bin/bash').returncode: raise SystemExit(1)
+PY
 git -C "$root" worktree remove "$worktree" >/dev/null 2>&1 || fail 'worktree removal failed; merged branch and metadata preserved'
 rm -f -- "$member_file"; printf 'fleet-teardown: merged and removed worktree for %s\n' "$member"
