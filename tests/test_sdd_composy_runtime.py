@@ -96,6 +96,30 @@ class SddMapFixtureTests(unittest.TestCase):
             self.assertFalse(any(path.startswith(".worktrees/") for path in evidence))
             self.assertFalse(any(path.startswith(".planning/sdd-composy/context/") for path in evidence))
 
+    def test_remap_preserves_unknown_json_fields_and_refreshes_known_fields(self):
+        import sdd_map
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = Path(temporary)
+            self.initialize(repo)
+            (repo / "current.py").write_text("# current\n", encoding="utf-8")
+            context = repo / ".planning/sdd-composy/context"
+            context.mkdir(parents=True)
+            (context / "codebase.json").write_text(json.dumps({
+                "schema": "obsolete",
+                "files_observed": -1,
+                "future_field": {"keep": True},
+                "future_scalar": "unchanged",
+            }), encoding="utf-8")
+            remapped = sdd_map.build_map(repo)
+            self.assertEqual(remapped["schema"], "sdd-composy.codebase")
+            self.assertGreater(remapped["files_observed"], 0)
+            self.assertEqual(remapped.get("future_field"), {"keep": True})
+            self.assertEqual(remapped.get("future_scalar"), "unchanged")
+            sdd_map.write_map(repo, remapped)
+            published = json.loads((context / "codebase.json").read_text(encoding="utf-8"))
+            self.assertEqual(published["future_field"], {"keep": True})
+            self.assertEqual(published["future_scalar"], "unchanged")
+
     def test_map_refuses_symlink_output_and_ancestor_before_reading_or_writing(self):
         import sdd_map
         with tempfile.TemporaryDirectory() as temporary, tempfile.TemporaryDirectory() as outside:

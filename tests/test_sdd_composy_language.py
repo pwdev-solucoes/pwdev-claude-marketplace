@@ -194,6 +194,24 @@ class LanguageRoutingDocumentationTests(unittest.TestCase):
             self.assertIn("FLEET", text)
 
 class GeneratedLanguageTests(unittest.TestCase):
+    def test_pt_br_map_localizes_static_text_without_mutating_dynamic_evidence(self):
+        import sdd_map
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            init = load_init()
+            templates = ROOT / 'plugins/sdd-composy/templates'
+            init.apply(root, init.run_plan(root, 'human:test', templates, 'pt-BR'), templates)
+            manifest = root / 'none observed/package.json'
+            manifest.parent.mkdir()
+            manifest.write_text('{"scripts":{"test":"echo none observed"}}', encoding='utf-8')
+            data = sdd_map.build_map(root)
+            sdd_map.write_map(root, data)
+            stack = (root / '.planning/sdd-composy/context/stack.md').read_text(encoding='utf-8')
+            self.assertIn('# Stack observada', stack)
+            self.assertIn('`none observed/package.json`', stack)
+            self.assertIn('`npm run test`', stack)
+            self.assertNotIn('`nenhum observado/package.json`', stack)
+
     def test_map_requires_init_and_renders_persisted_language(self):
         import sdd_map
         with tempfile.TemporaryDirectory() as tmp:

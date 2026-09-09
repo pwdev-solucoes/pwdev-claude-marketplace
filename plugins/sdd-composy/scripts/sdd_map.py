@@ -234,15 +234,19 @@ def build_map(root: Path, output_dir: Path | None = None) -> dict[str, Any]:
     inventory = _inventory(root, context)
     previous_path = context / "codebase.json"
     _reject_symlink_path(previous_path, root)
+    previous: dict[str, Any] = {}
     previous_commit = None
     if previous_path.is_file() and not _sensitive(_safe_relative(previous_path, root)):
         try:
             previous = json.loads(previous_path.read_text(encoding="utf-8"))
+            if not isinstance(previous, dict):
+                previous = {}
             previous_commit = previous.get("source_commit")
         except (OSError, json.JSONDecodeError):
+            previous = {}
             previous_commit = None
     stale = bool(previous_commit and previous_commit != source_commit and source_commit != "UNKNOWN")
-    return {
+    current = {
         "schema": "sdd-composy.codebase",
         "schema_version": "0.2",
         "okf_version": OKF_VERSION,
@@ -254,6 +258,7 @@ def build_map(root: Path, output_dir: Path | None = None) -> dict[str, Any]:
         "confidence": "medium" if inventory["manifests"] or inventory["languages"] else "low",
         **inventory,
     }
+    return {**previous, **current}
 
 
 def _timestamp() -> str:
@@ -295,33 +300,52 @@ def write_map(root: Path, data: dict[str, Any], output_dir: Path | None = None) 
         _reject_symlink_path(context / name, root)
     context.mkdir(parents=True, exist_ok=True)
     serialized = json.dumps(data, indent=2, sort_keys=True) + "\n"
-    languages = ", ".join(f'{x["name"]} ({x["file_count"]})' for x in data["languages"]) or "none observed"
-    commands = "\n".join(f'- `{x["command"]}` (from `{x["source"]}`)' for x in data["commands"]) or "- none observed"
-    documents = {
-        "project.md": _okf_doc("context-project", "Project context", f"Repository: `{data['repository']}`.\n\nThis is a read-only inventory; it records evidence and does not assert architecture.\n", data["source_commit"]),
-        "stack.md": _okf_doc("context-stack", "Observed stack", f"Languages: {languages}.\n\nCommands observed in manifests (not executed):\n{commands}\n", data["source_commit"]),
-    }
-    domain = "\n".join(f'- `{x["term"]}` — {", ".join(x["evidence"][:5])}' for x in data["domain_evidence"]) or "- no domain terms observed"
-    documents.update({
-        "domain.md": _okf_doc("context-domain", "Domain evidence", f"Terms are file-path evidence only; confidence is deliberately low.\n\n{domain}\n", data["source_commit"]),
-        "pitfalls.md": _okf_doc("context-pitfalls", "Observed map caveats", "The map is bounded by readable, non-secret files and must be refreshed when the source commit changes.\n", data["source_commit"]),
-    })
     if resolved['language'] == 'pt-BR':
-        replacements = {
-            'Project context': 'Contexto do projeto', 'Repository:': 'Repositório:',
-            'This is a read-only inventory; it records evidence and does not assert architecture.': 'Este inventário somente leitura registra evidências e não define a arquitetura.',
-            'Observed stack': 'Stack observada', 'Languages:': 'Linguagens:',
-            'Commands observed in manifests (not executed):': 'Comandos observados nos manifestos (não executados):',
-            '(from ': '(origem ', 'none observed': 'nenhum observado',
-            'Domain evidence': 'Evidências de domínio', 'no domain terms observed': 'nenhum termo de domínio observado',
-            'Terms are file-path evidence only; confidence is deliberately low.': 'Os termos são apenas evidências dos caminhos de arquivos; a confiança é deliberadamente baixa.',
-            'Observed map caveats': 'Limitações do mapa observado',
-            'The map is bounded by readable, non-secret files and must be refreshed when the source commit changes.': 'O mapa abrange arquivos legíveis e sem segredos e deve ser atualizado quando o commit de origem mudar.',
+        static = {
+            "project_title": "Contexto do projeto",
+            "repository": "Repositório:",
+            "inventory": "Este inventário somente leitura registra evidências e não define a arquitetura.",
+            "stack_title": "Stack observada",
+            "languages": "Linguagens:",
+            "commands": "Comandos observados nos manifestos (não executados):",
+            "source": "origem",
+            "none": "nenhum observado",
+            "domain_title": "Evidências de domínio",
+            "domain_intro": "Os termos são apenas evidências dos caminhos de arquivos; a confiança é deliberadamente baixa.",
+            "no_domain": "nenhum termo de domínio observado",
+            "pitfalls_title": "Limitações do mapa observado",
+            "pitfalls": "O mapa abrange arquivos legíveis e sem segredos e deve ser atualizado quando o commit de origem mudar.",
         }
-        for name, content in documents.items():
-            for source, target in replacements.items():
-                content = content.replace(source, target)
-            documents[name] = content
+    else:
+        static = {
+            "project_title": "Project context",
+            "repository": "Repository:",
+            "inventory": "This is a read-only inventory; it records evidence and does not assert architecture.",
+            "stack_title": "Observed stack",
+            "languages": "Languages:",
+            "commands": "Commands observed in manifests (not executed):",
+            "source": "from",
+            "none": "none observed",
+            "domain_title": "Domain evidence",
+            "domain_intro": "Terms are file-path evidence only; confidence is deliberately low.",
+            "no_domain": "no domain terms observed",
+            "pitfalls_title": "Observed map caveats",
+            "pitfalls": "The map is bounded by readable, non-secret files and must be refreshed when the source commit changes.",
+        }
+    languages = ", ".join(f'{x["name"]} ({x["file_count"]})' for x in data["languages"]) or static["none"]
+    commands = "\n".join(
+        f'- `{x["command"]}` ({static["source"]} `{x["source"]}`)'
+        for x in data["commands"]
+    ) or f'- {static["none"]}'
+    documents = {
+        "project.md": _okf_doc("context-project", static["project_title"], f"{static['repository']} `{data['repository']}`.\n\n{static['inventory']}\n", data["source_commit"]),
+        "stack.md": _okf_doc("context-stack", static["stack_title"], f"{static['languages']} {languages}.\n\n{static['commands']}\n{commands}\n", data["source_commit"]),
+    }
+    domain = "\n".join(f'- `{x["term"]}` — {", ".join(x["evidence"][:5])}' for x in data["domain_evidence"]) or f'- {static["no_domain"]}'
+    documents.update({
+        "domain.md": _okf_doc("context-domain", static["domain_title"], f"{static['domain_intro']}\n\n{domain}\n", data["source_commit"]),
+        "pitfalls.md": _okf_doc("context-pitfalls", static["pitfalls_title"], f"{static['pitfalls']}\n", data["source_commit"]),
+    })
     publications = {codebase: serialized}
     publications.update({context / name: content for name, content in documents.items()})
     temporaries: dict[Path, str] = {}
