@@ -275,17 +275,34 @@ class FleetLaunchTest(unittest.TestCase):
     def test_teardown_rejects_nested_symlink_worktree_parent(self):
         state,mf,d,work=self._launched_member("running"); parent=Path(self.tmp.name)/"nested-target"; parent.mkdir(); link=Path(self.tmp.name)/"nested-link"; link.symlink_to(parent); d["worktree_path"]=str(link/"child"); mf.write_text(json.dumps(d)); r=self._teardown(); self.assertNotEqual(r.returncode,0); self.assertTrue(mf.exists())
 
-    def test_teardown_compose_failure_preserves_metadata_and_never_uses_volumes(self):
-        state,mf,d,work=self._launched_member("running"); compose=work/"compose.yml"; compose.write_text("services: {}\n"); d.update({"compose_file":"compose.yml","compose_project":"owned-project"}); d["resources"].update(compose_allocated=True,compose_file="compose.yml",compose_project="owned-project"); mf.write_text(json.dumps(d)); bind=Path(self.tmp.name)/"bin"; bind.mkdir(); log=Path(self.tmp.name)/"docker.log"; (bind/"docker").write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" >> '"+str(log)+"'\nexit 1\n"); (bind/"docker").chmod(0o755)
-        r=subprocess.run([str(ROOT/"plugins/sdd-composy/scripts/fleet/teardown.sh"),"--root",str(self.repo),"--fleet-id","demo","--member-id","TASK-001"],env={**os.environ,"PATH":str(bind)+":"+os.environ.get("PATH","")},capture_output=True,text=True); self.assertNotEqual(r.returncode,0); self.assertTrue(mf.exists()); self.assertTrue(work.exists()); self.assertNotIn("--volumes",log.read_text())
+    def test_teardown_uses_owned_central_compose_and_rejects_worktree_homonym(self):
+        state,mf,d,work=self._launched_member("running")
+        compose=state/"docker-compose.yml"; compose.write_text("services:\n  central: {}\n")
+        relative=".planning/sdd-composy/fleet/demo/docker-compose.yml"
+        homonym=work/relative; homonym.parent.mkdir(parents=True); homonym.write_text("services:\n  impostor: {}\n")
+        d["resources"].update(compose_allocated=True,compose_file=relative,compose_project="owned-project",compose_sha256=hashlib.sha256(compose.read_bytes()).hexdigest())
+        mf.write_text(json.dumps(d)); bind=Path(self.tmp.name)/"bin"; bind.mkdir(); log=Path(self.tmp.name)/"docker.log"
+        (bind/"docker").write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" >> '"+str(log)+"'\nexit 1\n"); (bind/"docker").chmod(0o755)
+        r=subprocess.run([str(ROOT/"plugins/sdd-composy/scripts/fleet/teardown.sh"),"--root",str(self.repo),"--fleet-id","demo","--member-id","TASK-001"],env={**os.environ,"PATH":str(bind)+":"+os.environ.get("PATH","")},capture_output=True,text=True)
+        self.assertNotEqual(r.returncode,0); self.assertTrue(mf.exists()); self.assertTrue(work.exists())
+        self.assertTrue(log.exists(),r.stderr); invocation=log.read_text(); self.assertIn("-f "+str(compose.resolve()),invocation); self.assertNotIn(str(homonym.resolve()),invocation); self.assertNotIn("--volumes",invocation)
 
     def test_teardown_legacy_compose_mirror_cannot_override_central_resource(self):
         state,mf,d,work=self._launched_member("running"); (work/"docker-compose.yml").write_text("services: {}\n"); (work/"other.yml").write_text("services: {}\n"); d["resources"].update(compose_allocated=True,compose_file="docker-compose.yml",compose_project=d["resources"].get("compose_project", "owned-project"))
         d["compose_file"]="other.yml"; mf.write_text(json.dumps(d)); bind=Path(self.tmp.name)/"bin"; bind.mkdir(); log=Path(self.tmp.name)/"docker.log"; (bind/"docker").write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" >> '"+str(log)+"'\nexit 1\n"); (bind/"docker").chmod(0o755)
-        r=subprocess.run([str(ROOT/"plugins/sdd-composy/scripts/fleet/teardown.sh"),"--root",str(self.repo),"--fleet-id","demo","--member-id","TASK-001"],env={**os.environ,"PATH":str(bind)+":"+os.environ.get("PATH","")},capture_output=True,text=True); self.assertNotEqual(r.returncode,0); self.assertIn("docker-compose.yml",log.read_text()); self.assertTrue(mf.exists())
+        r=subprocess.run([str(ROOT/"plugins/sdd-composy/scripts/fleet/teardown.sh"),"--root",str(self.repo),"--fleet-id","demo","--member-id","TASK-001"],env={**os.environ,"PATH":str(bind)+":"+os.environ.get("PATH","")},capture_output=True,text=True); self.assertNotEqual(r.returncode,0); self.assertFalse(log.exists()); self.assertTrue(mf.exists())
 
     def test_teardown_missing_central_compose_preserves_metadata(self):
         state,mf,d,work=self._launched_member("running"); d["resources"]["compose_allocated"]=True; mf.write_text(json.dumps(d)); r=self._teardown(); self.assertNotEqual(r.returncode,0); self.assertTrue(mf.exists()); self.assertTrue(work.exists())
+
+    def test_teardown_requires_explicit_compose_allocation_and_ignores_worktree_homonym(self):
+        state,mf,d,work=self._launched_member("running"); relative=".planning/sdd-composy/fleet/demo/docker-compose.yml"
+        homonym=work/relative; homonym.parent.mkdir(parents=True); homonym.write_text("services: {}\n")
+        d["resources"].update(compose_file=relative,compose_project="owned-project",compose_sha256=hashlib.sha256(homonym.read_bytes()).hexdigest()); del d["resources"]["compose_allocated"]
+        mf.write_text(json.dumps(d)); bind=Path(self.tmp.name)/"bin"; bind.mkdir(); log=Path(self.tmp.name)/"docker.log"
+        (bind/"docker").write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" >> '"+str(log)+"'\nexit 0\n"); (bind/"docker").chmod(0o755)
+        r=subprocess.run([str(ROOT/"plugins/sdd-composy/scripts/fleet/teardown.sh"),"--root",str(self.repo),"--fleet-id","demo","--member-id","TASK-001"],env={**os.environ,"PATH":str(bind)+":"+os.environ.get("PATH","")},capture_output=True,text=True)
+        self.assertNotEqual(r.returncode,0); self.assertTrue(mf.exists()); self.assertTrue(work.exists()); self.assertFalse(log.exists())
 
     def test_teardown_lock_release_failure_preserves_recovery_state(self):
         state,mf,d,work=self._launched_member("running"); lock=state/".TASK-001.runner.lock"; lock.mkdir(); (lock/"owner").write_text("keep"); r=self._teardown(); self.assertNotEqual(r.returncode,0); self.assertTrue(mf.exists()); self.assertTrue(work.exists()); self.assertTrue((lock/"owner").exists())

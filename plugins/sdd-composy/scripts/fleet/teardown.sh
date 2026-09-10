@@ -13,6 +13,7 @@ while (($#)); do case "$1" in
 [[ -n $root && -n $fleet && -n $member ]] || usage
 [[ $fleet =~ ^[A-Za-z0-9._-]+$ && $member =~ ^[A-Za-z0-9._-]+$ ]] || fail 'invalid fleet or member identity'
 root=$(fleet_abs "$root"); [[ -d "$root/.git" || -f "$root/.git" ]] || fail 'root is not a git repository'
+root=$(cd -- "$root" && pwd -P)
 state=$(fleet_state_dir "$root" "$fleet"); member_file="$state/members/$member.json"
 fleet_require_regular "$member_file" || fail 'member metadata is missing or unsafe'
 [[ $merge == false || $confirm == CONFIRM-SDD-MERGE ]] || fail 'merge requires explicit confirmation token CONFIRM-SDD-MERGE'
@@ -47,24 +48,23 @@ if [[ $merge == true ]]; then
 fi
 resources=$(jq -e '.resources | type == "object"' "$member_file" >/dev/null 2>&1 && echo yes || echo no)
 [[ $resources == yes ]] || fail 'member resources are missing; recovery state preserved'
-compose_file=$(jq -er '.resources.compose_file | select(type == "string" and length > 0)' "$member_file" 2>/dev/null || true)
-project=$(jq -er '.resources.compose_project | select(type == "string" and length > 0)' "$member_file" 2>/dev/null || true)
-compose_allocated=$(jq -r 'if (.resources | has("compose_allocated")) then .resources.compose_allocated else true end' "$member_file")
-[[ $compose_allocated == true || ( -n $compose_file && -n $project ) ]] || { [[ $compose_allocated == false ]] || fail 'owned Compose resources are missing; recovery state preserved'; }
-jq -e --arg branch "$branch" --arg worktree "$worktree" --arg file "$compose_file" --arg project "$project" \
-  '(.resources.branch == $branch) and (.resources.worktree_path == $worktree) and ((.resources.compose_file // "") == $file) and ((.resources.compose_project // "") == $project)' \
+jq -e '.resources.compose_allocated | type == "boolean"' "$member_file" >/dev/null 2>&1 || fail 'Compose allocation flag is missing or invalid; recovery state preserved'
+compose_allocated=$(jq -r '.resources.compose_allocated' "$member_file")
+jq -e --arg root "$root" --arg fleet "$fleet" --arg member "$member" --arg branch "$branch" --arg worktree "$worktree" \
+  '(.repository_root == $root) and (.owner.kind == "sdd-composy-fleet") and (.owner.fleet_id == $fleet) and (.owner.member_id == $member) and (.resources.branch == $branch) and (.resources.worktree_path == $worktree)' \
   "$member_file" >/dev/null || fail 'resource ownership does not match member identity; recovery state preserved'
-if [[ "$compose_file" == "" && "$compose_allocated" != false ]]; then
-  fail 'owned Compose resource is unspecified; recovery state preserved'
-fi
-if [[ ! -f "$worktree/$compose_file" || -L "$worktree/$compose_file" ]]; then
-  [[ "$compose_allocated" == false ]] || fail 'owned Compose file is missing or unsafe; recovery state preserved'
-else
-  fleet_no_symlink_components "$worktree/$compose_file" || fail 'recorded Compose path or parent is a symlink'
-  expected_compose=$(fleet_json_string "$member_file" resources.compose_sha256 2>/dev/null || true)
-  if [[ -n $expected_compose ]]; then [[ $(fleet_hash "$worktree/$compose_file") == "$expected_compose" ]] || fail 'Compose file ownership hash changed; recovery state preserved'; fi
+if [[ "$compose_allocated" == true ]]; then
+  compose_file=$(jq -er '.resources.compose_file | select(type == "string" and length > 0)' "$member_file" 2>/dev/null) || fail 'owned Compose file is unspecified; recovery state preserved'
+  project=$(jq -er '.resources.compose_project | select(type == "string" and length > 0)' "$member_file" 2>/dev/null) || fail 'owned Compose project is unspecified; recovery state preserved'
+  expected_compose=$(jq -er '.resources.compose_sha256 | select(type == "string" and test("^[a-f0-9]{64}$"))' "$member_file" 2>/dev/null) || fail 'Compose ownership hash is missing or invalid; recovery state preserved'
+  expected_file=".planning/sdd-composy/fleet/$fleet/docker-compose.yml"
+  [[ "$compose_file" == "$expected_file" ]] || fail 'Compose file is not the fleet-owned central resource; recovery state preserved'
+  compose_path="$root/$compose_file"
+  [[ -f "$compose_path" && ! -L "$compose_path" ]] || fail 'owned Compose file is missing or unsafe; recovery state preserved'
+  fleet_no_symlink_components "$compose_path" || fail 'recorded Compose path or parent is a symlink'
+  [[ $(fleet_hash "$compose_path") == "$expected_compose" ]] || fail 'Compose file ownership hash changed; recovery state preserved'
   command -v docker >/dev/null 2>&1 || fail 'docker is required to stop the recorded Compose project'
-  docker compose --project-name "$project" -f "$worktree/$compose_file" down >/dev/null || fail 'Compose shutdown failed; recovery state preserved'
+  docker compose --project-name "$project" -f "$compose_path" down >/dev/null || fail 'Compose shutdown failed; recovery state preserved'
 fi
 lock="$state/.$member.runner.lock"
 if [[ -e "$lock" || -L "$lock" ]]; then [[ -d "$lock" && ! -L "$lock" ]] || fail 'runner lock is unsafe'; rmdir "$lock" 2>/dev/null || fail 'runner lock could not be released; recovery state preserved'; fi

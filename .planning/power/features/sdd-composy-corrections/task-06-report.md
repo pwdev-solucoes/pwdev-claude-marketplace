@@ -26,3 +26,23 @@ locks, cancellation, evidence freshness/tampering, and canonical loop gates.
 The existing tests and planning files included pre-existing local changes; they
 were preserved. Only the five authorized implementation/test files are intended
 for the implementation commit.
+
+## Addendum — residual Compose recovery correction
+
+Teardown now resolves an allocated Compose resource exclusively from the
+canonical `repository_root` and requires the exact fleet-owned relative path
+`.planning/sdd-composy/fleet/<fleet-id>/docker-compose.yml`. It requires an
+explicit boolean `resources.compose_allocated`; for allocated resources it also
+requires the schema-form lowercase SHA-256, verifies the central regular file
+and all path components, validates repository/owner/member/resource ownership,
+and compares the digest before invoking Docker. Legacy top-level mirrors and a
+same-named file inside the member worktree cannot substitute for the central
+resource. Every rejection occurs before member metadata or the recoverable
+worktree is removed.
+
+TDD evidence: the two new subprocess regressions first failed against the old
+consumer because it invoked the worktree homonym and defaulted a missing
+allocation flag to true; they pass after the correction. Fresh verification:
+`python3 -m unittest tests.test_sdd_composy_fleet tests.test_sdd_composy_loop -v`
+passed 83 tests; `bash -n plugins/sdd-composy/scripts/fleet/teardown.sh` and
+`git diff --check` also passed.
