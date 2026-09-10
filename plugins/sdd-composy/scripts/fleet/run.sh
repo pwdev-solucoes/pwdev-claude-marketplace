@@ -7,7 +7,7 @@ fail() { printf 'sdd-fleet-run: %s\n' "$*" >&2; exit 2; }
 if [[ ${1:-} == --migrate-member ]]; then
   [[ $# -eq 4 && $3 == --root ]] || fail 'migration usage: run.sh --migrate-member MEMBER.json --root ROOT'
   python3 - "$2" "$4" <<'PY'
-import json, os, re, subprocess, sys, tempfile
+import hashlib, json, os, re, subprocess, sys, tempfile
 from pathlib import Path
 
 member_arg, root_arg = map(Path, sys.argv[1:3])
@@ -54,12 +54,27 @@ def safe_relative(value):
     return isinstance(value, str) and bool(value) and not Path(value).is_absolute() and '..' not in Path(value).parts
 if not safe_relative(data['compose_file']) or ('result_path' in data and not safe_relative(data['result_path'])):
     raise SystemExit('sdd-fleet-run: legacy evidence or Compose path is unsafe')
+expected_compose = Path('.planning') / 'sdd-composy' / 'fleet' / fleet_id / 'docker-compose.yml'
+if Path(data['compose_file']) != expected_compose:
+    raise SystemExit('sdd-fleet-run: legacy Compose file is not owned by this fleet')
 if not isinstance(data['port'], int) or isinstance(data['port'], bool) or not 1 <= data['port'] <= 65535:
     raise SystemExit('sdd-fleet-run: invalid legacy member port')
 if not isinstance(data['compose_allocated'], bool):
     raise SystemExit('sdd-fleet-run: invalid legacy Compose allocation')
-if data['compose_allocated'] and not isinstance(data.get('compose_sha256'), str):
-    raise SystemExit('sdd-fleet-run: allocated legacy Compose resource lacks digest')
+if data['compose_allocated']:
+    digest = data.get('compose_sha256')
+    if not isinstance(digest, str) or not re.fullmatch(r'[a-f0-9]{64}', digest):
+        raise SystemExit('sdd-fleet-run: allocated legacy Compose resource has invalid digest')
+    compose = root / expected_compose
+    cursor = root
+    unsafe_component = False
+    for component in expected_compose.parts:
+        cursor /= component
+        unsafe_component = unsafe_component or cursor.is_symlink()
+    if unsafe_component or compose.is_symlink() or not compose.is_file():
+        raise SystemExit('sdd-fleet-run: allocated legacy Compose file is unavailable or unsafe')
+    if hashlib.sha256(compose.read_bytes()).hexdigest() != digest:
+        raise SystemExit('sdd-fleet-run: allocated legacy Compose digest does not match the owned file')
 legacy_path = Path(data['worktree_path'])
 if legacy_path.is_absolute() or '..' in legacy_path.parts:
     raise SystemExit('sdd-fleet-run: legacy worktree path is not safely relative')

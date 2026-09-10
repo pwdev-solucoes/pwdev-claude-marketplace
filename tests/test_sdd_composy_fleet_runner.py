@@ -60,6 +60,12 @@ class FleetRunnerTest(unittest.TestCase):
             self.assertNotEqual(failed.returncode,0); self.assertEqual(json.loads(member.read_text()),unsafe)
             central={**legacy,"branch":base,"worktree_path":"."}; member.write_text(json.dumps(central)); failed=subprocess.run([str(FLEET/"run.sh"),"--migrate-member",str(member),"--root",str(root)],capture_output=True,text=True)
             self.assertNotEqual(failed.returncode,0); self.assertEqual(json.loads(member.read_text()),central)
+            compose=root/legacy["compose_file"]; compose.write_text("services: {}\n"); invalid_digest={**legacy,"compose_allocated":True,"compose_sha256":"x"}; member.write_text(json.dumps(invalid_digest)); before_inode=member.stat().st_ino
+            failed=subprocess.run([str(FLEET/"run.sh"),"--migrate-member",str(member),"--root",str(root)],capture_output=True,text=True)
+            self.assertNotEqual(failed.returncode,0); self.assertEqual(json.loads(member.read_text()),invalid_digest); self.assertEqual(member.stat().st_ino,before_inode)
+            digest=__import__("hashlib").sha256(compose.read_bytes()).hexdigest(); allocated={**legacy,"compose_allocated":True,"compose_sha256":digest}; member.write_text(json.dumps(allocated)); before_inode=member.stat().st_ino
+            migrated=subprocess.run([str(FLEET/"run.sh"),"--migrate-member",str(member),"--root",str(root)],capture_output=True,text=True); self.assertEqual(migrated.returncode,0,migrated.stderr)
+            value=json.loads(member.read_text()); assert_schema_valid(self,schema,value); self.assertNotEqual(member.stat().st_ino,before_inode); self.assertEqual(value["resources"]["compose_sha256"],digest); self.assertEqual((root/value["resources"]["compose_file"]).resolve(),compose.resolve()); self.assertEqual(value["x-owner-note"],{"keep":True})
             for terminal in ("completed","failed","blocked","cancelled"):
                 with self.subTest(status=terminal):
                     candidate={**legacy,"status":terminal}; member.write_text(json.dumps(candidate)); before_inode=member.stat().st_ino

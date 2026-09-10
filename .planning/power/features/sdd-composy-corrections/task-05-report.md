@@ -73,3 +73,17 @@ Status: IMPORTANT_FIXED; PRODUCER_CONTRACT_FIXED; DEFERRED_ITEMS_NOT_TREATED.
   recorded path is the exact file passed to Compose and validates the emitted member against v2.
 - Fresh focused + adapter + aggregate verification passed 121 tests. Both shell syntax checks and
   `git diff --check` passed. `teardown.sh` and the deferred Minor were not changed in this round.
+
+## Compose producer re-review fix
+
+Status: IMPORTANT_FIXED.
+
+- RED proved that `compose_allocated: true` with `compose_sha256: "x"` was migrated and published.
+- Migration now requires the exact lowercase 64-hex digest syntax, the fleet-owned central Compose
+  path, a regular path without symlink components, and equality with the actual file SHA-256 before
+  atomic publication.
+- The regression proves malformed digest rejection without inode/content replacement, then accepts
+  a valid allocated fixture and verifies schema validity, exact file ownership, digest, preserved
+  unknown fields, and atomic replacement.
+- Fresh focused + adapter + aggregate verification passed 121 tests; shell syntax and
+  `git diff --check` also passed. No deferred Critical/Minor scope was changed.
