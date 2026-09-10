@@ -24,6 +24,10 @@ Created: 2026-09-09T17:13:28Z
 - Task 05: fix round 2 — validador Draft 2020-12 completo e migração somente de worktree independente.
 - Task 05: complete (commits 02a1ad8..fe571e8, review accepted; Compose/teardown carried to Task 06 by ruling).
 - Task 06: fix round 1 — central resource precedence, missing Compose fail-closed e reconciliação da evidência de testes.
+- Task 06: complete (commits fe571e8..ef59026, review approved; traceability note 88→81 documented).
+- Task 07: review rejected — Compose ownership documentation exposed a cross-task implementation defect; Hermes mapping contradicted Kanban limitation.
+- Task 05/06 cross-contract: complete (commits 5999fa1, 49dc00a, 1ef7adb, 70d1228; producer and consumer reviews approved).
+- Task 07: complete (commits ef59026..3e491f8, review clean after fix round 1).
 
 ## Pre-flight scan
 
@@ -63,3 +67,5 @@ Ruling: o título da Tarefa 04 menciona os três runtimes, mas seu escopo implem
 Ruling: `evidence.md` da Tarefa 08 é artefato administrativo de execução sob a pasta do plano, não arquivo de implementação contado no limite. Se estiver errado, a Tarefa 08 excederia seu inventário declarado e deverá ser corrigida antes do commit final.
 Ruling: o consumo de `resources.compose_*` pelo teardown é load-bearing, mas `teardown.sh` pertence explicitamente à Tarefa 06; a Tarefa 05 deve publicar e testar o contrato v2, e o finding Critical será carregado como primeiro requisito da Tarefa 06. Se estiver errado, recursos Compose podem ficar órfãos entre as tarefas; por isso nenhuma aceitação real de fleet ocorrerá antes de 06 passar.
 Ruling: a evolução v2 tornou duas asserções agregadas obsoletas em `tests/test_sdd_composy.py`, arquivo omitido pelo plano; adicioná-lo excepcionalmente ao fix da Tarefa 05 é a menor correção para manter a suíte verde. Se estiver errado, o escopo da tarefa terá seis arquivos, mas sem essa exceção o gate de qualidade não pode ser satisfeito.
+Ruling: a revisão da Tarefa 07 provou que `launch.sh` e `teardown.sh` discordam sobre o Compose central; reabrir as Tarefas 05 e 06 sequencialmente é obrigatório antes de aprovar docs ou executar aceitação. Se estiver errado, haverá commits tardios em tarefas já revisadas; não reabrir custaria possível recurso Compose órfão.
+Ruling: `references/hermes-tools.md` pertence à Tarefa 08, mas contradiz agora a limitação Kanban obrigatória; adicioná-lo excepcionalmente ao fix documental da Tarefa 07 evita publicar uma referência incoerente. Se estiver errado, o escopo documental terá seis arquivos, mas a alternativa manteria promessa operacional falsa.

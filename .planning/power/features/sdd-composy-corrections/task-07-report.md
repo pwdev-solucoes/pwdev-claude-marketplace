@@ -43,3 +43,30 @@ Semantic inspection checked the documented commands and paths against `sdd_init.
 `sdd_status.py`, the three LOOP/fleet engine adapters, `launch.sh`, `run.sh`, and `teardown.sh`.
 Relative Markdown links are covered by the passing foundation test. Task 08 remains responsible
 for real-provider acceptance.
+
+## Fix round 1
+
+STATUS: DONE
+
+After Tasks 05 and 06 corrected the Compose contract, the six documentation files authorized
+by the ledger ruling were reconciled with the current launcher and teardown. They now identify
+the central repository-relative Compose file, exact project name, SHA-256 digest,
+`compose_allocated` true/false behavior, nested ownership checks, symlink refusal, and the exact
+`docker compose ... down` path. The obsolete member-worktree implication was removed.
+
+`references/hermes-tools.md` no longer advertises a Hermes task tracker or `hermes kanban`; it
+routes tracking through shared SDD Composy contracts/status and states that Hermes Kanban is
+not implemented or available. The status reference now documents lowercase lifecycle-stage
+results in addition to the overriding consolidated statuses, matching `sdd_status.py` without
+changing code.
+
+Fresh verification:
+
+- `python3 scripts/validate_readme_plugins.py` — PASS, 16 plugins, no warnings.
+- `python3 -m unittest tests.test_sdd_composy tests.test_readme_marketplace -v` — PASS,
+  58 tests; this includes relative-link validation.
+- `git diff --check` — PASS.
+
+Documentation commit: `3e491f8` (`docs(sdd-composy): reconcile compose ownership`). The report
+is an administrative update outside that six-document commit. Real-provider acceptance remains
+deferred to Task 08.
