@@ -39,13 +39,23 @@ The runtime vectors are `claude -p`, `codex exec`, and
 also requires proven isolation or specific user consent. Hermes Kanban is not implemented and
 is unavailable.
 
-With `--compose`, the launcher owns the Compose project and records its exact project, file,
-port, branch, and worktree in `resources`. Teardown trusts the validated nested ownership
-record, not legacy top-level mirrors; it runs `docker compose down` only for those recorded
-resources. A missing or mismatched resource, failed Compose shutdown, dirty merge target,
-invalid result, or failing post-merge verification stops cleanup and preserves branch,
-worktree, and metadata for recovery. Without `--merge --confirm CONFIRM-SDD-MERGE`, teardown
-preserves the branch and worktree.
+With `--compose`, the launcher copies the template to the single central path
+`.planning/sdd-composy/fleet/<fleet-id>/docker-compose.yml`, hashes that exact file, and starts
+it once with project name `sdd_fleet_<fleet-id>` and the fleet-owned `runtime.env`. Every
+member's nested `resources` records the repository-relative `compose_file`,
+`compose_project`, `compose_sha256`, and `compose_allocated: true`, alongside its port, branch,
+and worktree. Without `--compose`, the record explicitly contains `compose_allocated: false`;
+teardown then skips Compose and does not require a file or digest.
+
+For an allocated Compose resource, teardown requires the boolean flag, validates repository,
+fleet/member owner, branch/worktree, exact central path and project name, rejects symlinks, and
+compares the current central file with `compose_sha256`. Only then does it run
+`docker compose --project-name <project> -f <central-file> down`. It does not resolve the file
+inside a member worktree or trust legacy top-level mirrors. A missing flag, file, digest, or
+mismatched resource; failed Compose shutdown; dirty merge target; invalid result; or failing
+post-merge verification stops cleanup and preserves branch, worktree, and metadata for
+recovery. Without `--merge --confirm CONFIRM-SDD-MERGE`, teardown removes the member record
+after successful resource shutdown while preserving the branch and worktree.
 
 The adapters and lifecycle have offline regression coverage. That is installed support, not a
 claim that real Hermes, Codex, or Claude Code acceptance has passed; real-provider acceptance

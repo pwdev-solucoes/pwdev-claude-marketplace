@@ -46,6 +46,12 @@ result file, and Hermes uses `hermes -z ... --in`. The shared runner owns proces
 ordering, result validation, locks, durable state, and cleanup; adapters do not own lifecycle
 truth.
 
+Fleet Compose is likewise runtime-neutral. `--compose` starts the single central file
+`.planning/sdd-composy/fleet/<fleet-id>/docker-compose.yml`; member records bind its SHA-256,
+the exact `sdd_fleet_<fleet-id>` project, and `compose_allocated: true`. A member with
+`compose_allocated: false` owns no Compose shutdown. Teardown validates this central identity
+instead of resolving a same-named file in the provider worktree.
+
 ## State, language, and compatibility
 
 The current runtime may be recorded as provenance, but it cannot control readability or

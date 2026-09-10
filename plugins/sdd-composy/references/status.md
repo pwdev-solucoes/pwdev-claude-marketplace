@@ -25,8 +25,11 @@ their existence never overrides live JSON or proves approval.
 
 The action is intentionally conservative: malformed sources require manual repair; blocked,
 divergent, looping, and fleet states identify the gate that must be handled before normal
-execution resumes. Canonical statuses are `uninitialized`, `active`, `blocked`, `divergent`,
-`looping`, `fleet`, and `malformed`. Missing optional loop/fleet/trace sources are reported as
+execution resumes. Top-level `status` may be `uninitialized`, `active`, `blocked`,
+`divergent`, `looping`, `fleet`, or `malformed`. When valid global state exists and no task,
+loop, fleet, blocker, or divergence overrides it, the value is the lowercase lifecycle stage,
+for example `init`, `map`, `prd`, `stories`, `techspec`, `tasks`, `execute`, `qa`, `evidence`,
+`review`, `verify`, or `complete`. Missing optional loop/fleet/trace sources are reported as
 low-confidence `missing`, not silently fabricated.
 
 Unsafe symlink sources fail closed. Status never reconciles divergence, migrates fleet members,

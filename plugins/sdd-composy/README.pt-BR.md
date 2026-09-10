@@ -63,9 +63,12 @@ não simula aprovação. A verificação reproduz evidência nova. Os caminhos r
 delimitado `LOOP` e isolado `FLEET` mantêm os mesmos contratos duráveis e regras de segurança.
 O lançamento da fleet aceita apenas tarefas prontas, cria uma branch própria e uma Git worktree
 independente por membro, pode iniciar o provider selecionado via cmux, tmux ou modo headless e
-nunca faz merge automaticamente. Recursos Compose opcionais pertencem ao plugin e só são
-encerrados a partir do registro validado de ownership; falha de limpeza preserva o estado de
-recuperação.
+nunca faz merge automaticamente. Com `--compose`, o arquivo central
+`.planning/sdd-composy/fleet/<fleet-id>/docker-compose.yml` é iniciado uma vez para a fleet.
+Cada membro registra esse caminho relativo ao repositório, seu digest SHA-256, o projeto exato
+`sdd_fleet_<fleet-id>` e `compose_allocated: true` em `resources`. Sem `--compose`,
+`compose_allocated` é `false` e o teardown não executa ação Compose. O teardown aceita somente
+essa identidade central validada; falha de limpeza preserva o estado de recuperação.
 
 ## Estado, compatibilidade e recuperação
 

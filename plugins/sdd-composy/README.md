@@ -61,8 +61,12 @@ way to simulate approval. Verification reproduces fresh evidence. Reduced `QUICK
 `LOOP`, and isolated `FLEET` paths retain the same durable contracts and safety rules. Fleet
 launch accepts only ready tasks, creates an owned branch and independent Git worktree per
 member, can start the selected provider through cmux, tmux, or headless UI, and never merges
-automatically. Optional Compose resources are plugin-owned and are stopped only from the
-validated member ownership record; cleanup failure preserves recovery state.
+automatically. With `--compose`, the central file
+`.planning/sdd-composy/fleet/<fleet-id>/docker-compose.yml` is started once for the fleet.
+Each member records that repository-relative path, its SHA-256 digest, the exact
+`sdd_fleet_<fleet-id>` project, and `compose_allocated: true` under `resources`. Without
+`--compose`, `compose_allocated` is `false` and teardown performs no Compose action. Teardown
+accepts only this validated central identity; cleanup failure preserves recovery state.
 
 ## State, compatibility, and recovery
 
