@@ -22,8 +22,10 @@
     },
     "resources": {
       "type": "object",
-      "required": ["branch", "worktree_path", "port", "compose_project", "compose_file"],
-      "properties": {"branch": {"type": "string", "minLength": 1}, "worktree_path": {"$ref": "#/definitions/absolute_path"}, "port": {"type": "integer", "minimum": 1, "maximum": 65535}, "compose_project": {"type": "string", "minLength": 1}, "compose_file": {"$ref": "#/definitions/relative_path"}},
+      "required": ["branch", "worktree_path", "port", "compose_project", "compose_file", "compose_allocated"],
+      "properties": {"branch": {"type": "string", "minLength": 1}, "worktree_path": {"$ref": "#/definitions/absolute_path"}, "port": {"type": "integer", "minimum": 1, "maximum": 65535}, "compose_project": {"type": "string", "minLength": 1}, "compose_file": {"$ref": "#/definitions/relative_path"}, "compose_allocated": {"type": "boolean"}, "compose_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}},
+      "if": {"properties": {"compose_allocated": {"const": true}}, "required": ["compose_allocated"]},
+      "then": {"required": ["compose_sha256"]},
       "additionalProperties": true
     },
     "started_at": {"type": "string", "format": "date-time"},

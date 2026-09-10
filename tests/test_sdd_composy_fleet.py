@@ -73,6 +73,17 @@ class FleetLaunchTest(unittest.TestCase):
         self.assertEqual(record["owner"],{"kind":"sdd-composy-fleet","fleet_id":"demo","member_id":"TASK-001"})
         self.assertEqual(record["resources"]["port"],record["port"])
         self.assertEqual(record["resources"]["branch"],record["branch"])
+        self.assertFalse(record["resources"]["compose_allocated"])
+        self.assertEqual(record["resources"]["compose_file"],".planning/sdd-composy/fleet/demo/docker-compose.yml")
+
+    def test_compose_record_binds_the_actual_central_file_and_digest(self):
+        self.task(); fake=Path(self.tmp.name)/"bin"; fake.mkdir(); docker=fake/"docker"; docker.write_text("#!/bin/sh\nexit 0\n"); docker.chmod(0o755)
+        args=[str(LAUNCH),"--prepare-only","--runtime","codex","--compose","--root",str(self.repo),"--fleet-id","demo","--base-branch",self.base,"--task",str(self.contract)]
+        r=subprocess.run(args,capture_output=True,text=True,env={**os.environ,"PATH":str(fake)+":/usr/bin:/bin"}); self.assertEqual(r.returncode,0,r.stderr)
+        state=self.repo/".planning/sdd-composy/fleet/demo"; record=json.loads((state/"members/TASK-001.json").read_text()); resources=record["resources"]
+        actual=self.repo/resources["compose_file"]; self.assertEqual(actual.resolve(),(state/"docker-compose.yml").resolve()); self.assertTrue(resources["compose_allocated"])
+        self.assertEqual(resources["compose_sha256"],hashlib.sha256(actual.read_bytes()).hexdigest())
+        assert_schema_valid(self,json.loads((ROOT/"plugins/sdd-composy/schemas/fleet-member.schema.json").read_text()),record)
 
     def test_members_have_distinct_worktrees_branches_and_ports(self):
         self.task(); other=self.repo/'other.json'

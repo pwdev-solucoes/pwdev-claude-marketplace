@@ -54,3 +54,22 @@ Status: IMPORTANT_FIXED; CRITICAL_DEFERRED_BY_RULING; MINOR_NOT_TREATED.
   `tests.test_sdd_composy_runtime_adapters`, and `tests.test_sdd_composy`.
 - The Compose teardown Critical remains assigned to Task 06 by ledger ruling; `teardown.sh` was not
   changed. The stale-comment Minor was not treated.
+
+## Review round 2 and reopened Compose producer contract
+
+Status: IMPORTANT_FIXED; PRODUCER_CONTRACT_FIXED; DEFERRED_ITEMS_NOT_TREATED.
+
+- Dependency preflight found no installed `jsonschema`, `fastjsonschema`, `referencing`, AJV, or
+  schema-validation CLI. The existing validator now implements every validation keyword/type used
+  by the fleet-member schema, including nested `additionalProperties: false` and JSON integer
+  semantics that exclude booleans. Negative fixtures cover nested additional properties,
+  boolean-as-integer, `$ref`, patterns, and terminal `if/then`.
+- The v1 migration fixture now creates an independent registered worktree with `git worktree add`.
+  Migration rejects `repository_root` itself as a member, verifies the exact worktree/branch pair,
+  preserves unknown fields, and continues to prove same-directory atomic replacement.
+- A downstream ruling reopened the producer side of Compose ownership. Each member now records the
+  central Compose path relative to `repository_root`, an explicit `compose_allocated` boolean, and
+  the actual file SHA-256 when Compose is allocated. A fake Docker integration proves that the
+  recorded path is the exact file passed to Compose and validates the emitted member against v2.
+- Fresh focused + adapter + aggregate verification passed 121 tests. Both shell syntax checks and
+  `git diff --check` passed. `teardown.sh` and the deferred Minor were not changed in this round.

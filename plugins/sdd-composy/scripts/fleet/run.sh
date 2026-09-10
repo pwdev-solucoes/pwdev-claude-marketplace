@@ -38,7 +38,7 @@ try:
     data = json.loads(member.read_text())
 except Exception as exc:
     raise SystemExit(f'sdd-fleet-run: malformed legacy member: {exc}')
-required = ('id','task_id','status','runtime','ui','branch','worktree_path','started_at','updated_at','port','compose_project','compose_file')
+required = ('id','task_id','status','runtime','ui','branch','worktree_path','started_at','updated_at','port','compose_project','compose_file','compose_allocated')
 if not isinstance(data, dict) or data.get('schema_version') != '1' or any(key not in data for key in required):
     raise SystemExit('sdd-fleet-run: v1 migration requires a complete legacy member')
 if data['runtime'] not in ('claude-code','codex') or data['ui'] not in ('cmux','tmux','headless'):
@@ -56,6 +56,10 @@ if not safe_relative(data['compose_file']) or ('result_path' in data and not saf
     raise SystemExit('sdd-fleet-run: legacy evidence or Compose path is unsafe')
 if not isinstance(data['port'], int) or isinstance(data['port'], bool) or not 1 <= data['port'] <= 65535:
     raise SystemExit('sdd-fleet-run: invalid legacy member port')
+if not isinstance(data['compose_allocated'], bool):
+    raise SystemExit('sdd-fleet-run: invalid legacy Compose allocation')
+if data['compose_allocated'] and not isinstance(data.get('compose_sha256'), str):
+    raise SystemExit('sdd-fleet-run: allocated legacy Compose resource lacks digest')
 legacy_path = Path(data['worktree_path'])
 if legacy_path.is_absolute() or '..' in legacy_path.parts:
     raise SystemExit('sdd-fleet-run: legacy worktree path is not safely relative')
@@ -79,7 +83,8 @@ data.update({
     'schema_version':'2', 'worktree_path':str(worktree), 'repository_root':str(root),
     'owner':{'kind':'sdd-composy-fleet','fleet_id':fleet_id,'member_id':data['id']},
     'resources':{'branch':data['branch'],'worktree_path':str(worktree),'port':data['port'],
-                 'compose_project':data['compose_project'],'compose_file':data['compose_file']},
+                 'compose_project':data['compose_project'],'compose_file':data['compose_file'],
+                 'compose_allocated':data['compose_allocated'], **({'compose_sha256':data['compose_sha256']} if data['compose_allocated'] else {})},
 })
 fd, temporary = tempfile.mkstemp(prefix='.' + member.name + '.', dir=member.parent)
 try:

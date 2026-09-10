@@ -120,12 +120,12 @@ branches+=("$branch")
 port=$(fleet_allocate_port "$state" "${SDD_FLEET_PORT_START:-43000}" "${SDD_FLEET_PORT_END:-43100}")
 ports+=("$port")
 if ((runtime_created == 0)); then fleet_write_runtime_env "$state" "$port"; runtime_created=1; fi
-python3 - "$member_file" "$work" "$branch" "$port" "$record_runtime" "$fleet_id" <<'PY'
+python3 - "$member_file" "$work" "$branch" "$port" "$record_runtime" "$fleet_id" "$compose" <<'PY'
 import json,sys,os,tempfile
 from datetime import datetime,timezone
 from pathlib import Path
-p=Path(sys.argv[1]); d=json.loads(p.read_text()); work=str(Path(sys.argv[2]).resolve()); branch=sys.argv[3]; port=int(sys.argv[4]); now=datetime.now(timezone.utc).isoformat().replace('+00:00','Z'); compose_project='sdd_fleet_'+sys.argv[6]
-d.update(worktree=work,worktree_path=work,branch=branch,port=port,runtime=sys.argv[5],started_at=now,updated_at=now,resources={'branch':branch,'worktree_path':work,'port':port,'compose_project':compose_project,'compose_file':'docker-compose.yml'})
+p=Path(sys.argv[1]); d=json.loads(p.read_text()); work=str(Path(sys.argv[2]).resolve()); branch=sys.argv[3]; port=int(sys.argv[4]); now=datetime.now(timezone.utc).isoformat().replace('+00:00','Z'); fleet_id=sys.argv[6]; compose_project='sdd_fleet_'+fleet_id
+d.update(worktree=work,worktree_path=work,branch=branch,port=port,runtime=sys.argv[5],started_at=now,updated_at=now,resources={'branch':branch,'worktree_path':work,'port':port,'compose_project':compose_project,'compose_file':'.planning/sdd-composy/fleet/'+fleet_id+'/docker-compose.yml','compose_allocated':sys.argv[7]=='1'})
 fd,tmp=tempfile.mkstemp(prefix='.'+p.name+'.',dir=p.parent)
 with os.fdopen(fd,'w') as stream: json.dump(d,stream,sort_keys=True,indent=2); stream.write('\n')
 os.replace(tmp,p)
@@ -137,6 +137,17 @@ if ((compose)); then
   [[ ! -e "$state/docker-compose.yml" && ! -L "$state/docker-compose.yml" ]] || fleet_die "Compose file already exists"
   cp "$HERE/../../templates/docker-compose.sdd-fleet.yml" "$state/docker-compose.yml"
   compose_created=1
+  compose_sha256=$(fleet_hash "$state/docker-compose.yml")
+  for member_file in "$state"/members/*.json; do
+    python3 - "$member_file" "$compose_sha256" <<'PY'
+import json,os,sys,tempfile
+from pathlib import Path
+p=Path(sys.argv[1]); d=json.loads(p.read_text()); d['resources']['compose_sha256']=sys.argv[2]
+fd,tmp=tempfile.mkstemp(prefix='.'+p.name+'.',dir=p.parent)
+with os.fdopen(fd,'w') as stream: json.dump(d,stream,sort_keys=True,indent=2); stream.write('\n')
+os.replace(tmp,p)
+PY
+  done
   docker compose --project-name "sdd_fleet_$fleet_id" --env-file "$state/runtime.env" -f "$state/docker-compose.yml" up -d >/dev/null || fleet_die "Compose startup failed"
   compose_started=1
 fi
