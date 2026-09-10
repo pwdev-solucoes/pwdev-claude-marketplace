@@ -9,36 +9,46 @@ implementada por [Rodrigo Branas](https://github.com/rodrigobranas) e
 [Pedro Nauck](https://github.com/pedronauck). Ele foi adaptado ao fluxo de trabalho
 PWDEV e é destinado ao uso com o [Compozy](https://github.com/compozy/compozy).
 
-## Hermes Agent
+SDD Composy é um fluxo com portões de aprovação empacotado para Claude Code, Codex e Hermes
+Agent. Os três runtimes usam o mesmo ciclo de vida, schemas, skills, referências, scripts e
+templates; um fluxo pode mudar de host sem mudar de significado. Suporte empacotado e testes
+offline dos adaptadores não equivalem à aceitação com providers reais. A aceitação real dos
+três runtimes depende do harness de aceitação; execuções indisponíveis, não autorizadas ou sem
+orçamento devem ser registradas como `BLOCKED` ou `NOT_RUN`, nunca como `PASS`.
 
-O SDD Composy também possui um adaptador explícito para o Hermes Agent. O Hermes registra as
-mesmas skills por `.hermes-plugin`, carrega o mapeamento de ferramentas no primeiro turno e usa
-`hermes run` para membros da fleet. Não há fallback silencioso para Claude Code ou Codex. A
-integração real com Hermes, Kanban e cmux deve ser validada em um ambiente que possua essas ferramentas.
-
-SDD Composy é um fluxo com portões de aprovação que roda no Claude Code e no Codex a partir de um único pacote portátil. Os dois runtimes usam o mesmo ciclo de vida, schemas, skills, referências, scripts e templates; um fluxo pode mudar de host sem mudar de significado.
-
-Contratos legíveis por pessoas ficam em `tasks/prd-<slug>/`. O estado operacional fica em `.planning/sdd-composy/`. O Markdown gerado para o projeto segue OKF v0.2, exige `type` não vazio e permite campos de extensão desconhecidos. Atualizações suportadas de JSON e Markdown preservam campos desconhecidos.
+Contratos legíveis por pessoas ficam em `tasks/prd-<slug>/`. O estado operacional fica em
+`.planning/sdd-composy/`. O Markdown gerado segue OKF v0.2, exige `type` não vazio e permite
+campos de extensão desconhecidos. Atualizações suportadas de JSON e Markdown preservam campos
+desconhecidos.
 
 ## Idioma dos artefatos
 
 Execute `/sdd-composy:init` com `pt-BR` ou `en-US` para escolher o idioma dos artefatos
 legíveis por pessoas. Se o idioma não for informado, o init pergunta qual opção usar e não
-cria artefatos até a escolha ser feita. A escolha é persistida em
-`.planning/sdd-composy/config.json`; todas as skills seguintes a utilizam sem perguntar
-novamente. Antes do init, elas retornam `{"status":"not_initialized","next_action":"run_init"}`.
+cria artefatos até a escolha. Ela é persistida em `.planning/sdd-composy/config.json`; todas as
+skills seguintes a utilizam sem perguntar novamente. Antes do init, elas retornam
+`{"status":"not_initialized","next_action":"run_init"}`.
 
 PRDs, histórias, TechSpecs, descrições de tarefas, relatórios de QA/evidências e textos de
-status seguem o idioma escolhido. Chaves de máquina, IDs, schemas, nomes de arquivos,
-valores de ciclo de vida e nomes de comandos permanecem em inglês, preservando a
-compatibilidade entre Claude Code e Codex. Valores de idioma inválidos falham sem alterar a
-configuração existente. Consulte o [contrato completo de idioma e fluxo](./references/workflow.md).
+status seguem o idioma escolhido. Chaves de máquina, IDs, schemas, nomes de arquivos, valores
+de ciclo de vida, nomes de comandos e evidências do usuário permanecem inalterados. Valores de
+idioma inválidos falham sem alterar a configuração. Consulte o
+[contrato completo de idioma e fluxo](./references/workflow.md).
 
 ## Pontos de entrada por runtime
 
-O Claude Code descobre `.claude-plugin/plugin.json` e expõe adaptadores finos de comando como `/sdd-composy:<name>`. O Codex descobre `.codex-plugin/plugin.json` e sua raiz de `skills`, expondo então as skills compartilhadas como `$sdd-composy-<name>`.
+O Claude Code descobre `.claude-plugin/plugin.json` e expõe adaptadores finos como
+`/sdd-composy:<name>`. O Codex descobre `.codex-plugin/plugin.json` e sua raiz de `skills`,
+expondo as skills compartilhadas como `$sdd-composy-<name>`. O Hermes descobre
+`.hermes-plugin/plugin.yaml`; o bootstrap registra as mesmas skills e carrega o mapeamento de
+ferramentas documentado no primeiro turno.
 
-Os comandos Claude não contêm política própria de workflow. Eles selecionam a skill portátil correspondente, repassam argumentos e contexto e mapeiam os nomes das ferramentas do host. O núcleo compartilhado continua sendo a autoridade para ciclo de vida, portões, artefatos, transições de estado, segurança e orquestração. Consulte o [contrato de runtime](./references/runtime.md) exato.
+A automação Hermes de LOOP/fleet usa `hermes -z <prompt> --in <worktree>` somente após
+comprovar isolamento independente ou obter consentimento específico do usuário. Não existe
+fallback para Claude Code ou Codex. A integração Kanban do Hermes não está implementada e está
+indisponível nesta versão. O núcleo compartilhado permanece como autoridade para ciclo de vida,
+portões, artefatos, transições de estado, segurança e orquestração. Consulte o
+[contrato de runtime](./references/runtime.md).
 
 ## Fluxo
 
@@ -48,11 +58,39 @@ INIT -> MAP -> PRD -> STORIES -> TECHSPEC -> TASKS
                               EXECUTE -> QA -> EVIDENCE -> REVIEW -> VERIFY -> COMPLETE
 ```
 
-Os portões de produto e execução exigem aprovação humana explícita. A verificação reproduz evidência nova. Os caminhos reduzido `QUICK`, delimitado `LOOP` e isolado `FLEET` mantêm os mesmos contratos duráveis e regras de segurança. O lançamento da fleet aceita apenas tarefas prontas, preserva branches recuperáveis, usa cmux para apresentação quando disponível e nunca faz merge automaticamente.
+Os portões de produto e execução exigem aprovação humana explícita; editar o JSON operacional
+não simula aprovação. A verificação reproduz evidência nova. Os caminhos reduzido `QUICK`,
+delimitado `LOOP` e isolado `FLEET` mantêm os mesmos contratos duráveis e regras de segurança.
+O lançamento da fleet aceita apenas tarefas prontas, cria uma branch própria e uma Git worktree
+independente por membro, pode iniciar o provider selecionado via cmux, tmux ou modo headless e
+nunca faz merge automaticamente. Recursos Compose opcionais pertencem ao plugin e só são
+encerrados a partir do registro validado de ownership; falha de limpeza preserva o estado de
+recuperação.
+
+## Estado, compatibilidade e recuperação
+
+A intenção humana e os registros de aprovação ficam no Markdown em `tasks/prd-<slug>/`; o JSON
+validado em `.planning/sdd-composy/` é a autoridade do estado operacional atual. Bundles
+operacionais de tarefas são objetos com um array `tasks`, não objetos de tarefa planos. A
+sincronização relata divergência Markdown/JSON e exige escolha explícita de autoridade. O
+schema v1 legado de membro de fleet é diagnosticado e recusado durante a execução normal;
+registros elegíveis são migrados explicitamente com
+`scripts/fleet/run.sh --migrate-member MEMBER.json --root ROOT`.
+
+O init nunca substitui uma `.claude` existente. Um link compatível `.claude -> .agents` é
+reportado como `claude_compatibility: "symlink"`; um diretório real existente é preservado e
+recebe o arquivo regular de ponte `.claude/AGENTS.md`, sendo reportado como
+`"existing_directory"`. Outros links ou colisões são conflitos. A inspeção de status é
+read-only: ela não cria nem modifica arquivos do projeto. Logs nativos do provider, quando um
+provider é invocado fora dessa inspeção, são contabilizados separadamente dessa garantia.
+Consulte [status](./references/status.md), [fleet](./references/fleet.md) e o
+[contrato de runtime](./references/runtime.md).
 
 ## Independência e segurança
 
-SDD Composy não tem dependência de runtime em `pwdev-flow` nem `pwdev-feat`. Ele nunca presume aprovação, lê segredos ou arquivos de ambiente de frota, nem mescla branches de frota automaticamente. Os contratos completos estão em [`references/`](./references/).
+SDD Composy não tem dependência de runtime em `pwdev-flow` nem `pwdev-feat`. Ele nunca presume
+aprovação, lê segredos ou arquivos de ambiente de frota, nem mescla branches de frota
+automaticamente. Os contratos completos estão em [`references/`](./references/).
 
 ## Licença
 
