@@ -8,8 +8,15 @@ Status: DONE_WITH_CONCERNS
 - Orçamento rígido por runtime (máximo 28), timeout padrão de 300 segundos e nenhuma repetição
   automática.
 - Fixture Git exclusiva com cópia local do plugin, exclusão de estado operacional/secrets e
-  cleanup pelo caminho exato criado.
+  certificados/chaves, recusa de symlinks e cleanup pelo caminho exato criado.
 - Sanitização, publicação JSON atômica, statuses fechados e uso indisponível como `null`.
+- Cenários comportamentais por fixture: status/sentinelas; init→map→import→next; LOOP de cinco
+  estágios; fleet com dois membros e mismatch; handoff durável; evidência negativa/divergência;
+  Compose, cmux e merge.
+- Registros preservam duração, exit code, result hash, runtime/version, task, worktree, comando e
+  recursos mensuráveis; falha de `os.replace` preserva bytes anteriores.
+- CLI real expõe `--provider-entry-point production` e `--acknowledge-real-fleet`, mantendo
+  `BLOCKED` sem acknowledgement e `NOT_RUN` enquanto o adapter real não for habilitado.
 - Fleet real bloqueada sem acknowledgement externo explícito.
 - Baseline Hermes substituído por registro/discovery comportamental das 17 skills, `Path` nativo
   e falha diagnóstica do bootstrap.
@@ -18,9 +25,10 @@ Status: DONE_WITH_CONCERNS
 ## TDD e verificação
 
 - RED inicial: ausência de `scripts/sdd_runtime_smoke.py` falhou como esperado.
-- RED contratual: 5 falhas/3 erros nos stubs iniciais; GREEN: 9/9 testes do harness.
-- Hermes focado: 5/5 testes.
-- Suíte offline completa: 362/362 testes.
+- Fix round 1 RED: cenário sem recursos/medidas falhou; testes adversariais cobriram symlinks,
+  secrets, publicação atômica, preservação de launcher e gate da CLI real.
+- GREEN focado: 18/18 testes de harness + Hermes.
+- Suíte offline completa: 367/367 testes.
 - README/marketplace: 16 plugins e 1/1 teste.
 - Shell syntax e `git diff --check`: PASS.
 
