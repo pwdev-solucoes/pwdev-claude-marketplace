@@ -46,3 +46,19 @@ allocation flag to true; they pass after the correction. Fresh verification:
 `python3 -m unittest tests.test_sdd_composy_fleet tests.test_sdd_composy_loop -v`
 passed 83 tests; `bash -n plugins/sdd-composy/scripts/fleet/teardown.sh` and
 `git diff --check` also passed.
+
+## Addendum — Compose project ownership binding
+
+Teardown now derives the only accepted allocated Compose project from the fleet
+identity (`sdd_fleet_<fleet-id>`) and rejects any other recorded project before
+Docker is invoked. The behavioral subprocess regression uses an otherwise valid
+central file, digest, owner, member, branch, and worktree while changing only
+`resources.compose_project` to `foreign-project`; it proves no Docker call occurs
+and that member metadata and the recoverable worktree remain present.
+
+The regression failed against the prior consumer because teardown returned
+success and called Docker for the foreign project, then passed after the binding
+check. Fresh verification passed 84 tests with
+`python3 -m unittest tests.test_sdd_composy_fleet tests.test_sdd_composy_loop -v`;
+`bash -n plugins/sdd-composy/scripts/fleet/teardown.sh` and `git diff --check`
+also passed.

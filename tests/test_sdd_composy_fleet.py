@@ -280,12 +280,20 @@ class FleetLaunchTest(unittest.TestCase):
         compose=state/"docker-compose.yml"; compose.write_text("services:\n  central: {}\n")
         relative=".planning/sdd-composy/fleet/demo/docker-compose.yml"
         homonym=work/relative; homonym.parent.mkdir(parents=True); homonym.write_text("services:\n  impostor: {}\n")
-        d["resources"].update(compose_allocated=True,compose_file=relative,compose_project="owned-project",compose_sha256=hashlib.sha256(compose.read_bytes()).hexdigest())
+        d["resources"].update(compose_allocated=True,compose_file=relative,compose_project="sdd_fleet_demo",compose_sha256=hashlib.sha256(compose.read_bytes()).hexdigest())
         mf.write_text(json.dumps(d)); bind=Path(self.tmp.name)/"bin"; bind.mkdir(); log=Path(self.tmp.name)/"docker.log"
         (bind/"docker").write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" >> '"+str(log)+"'\nexit 1\n"); (bind/"docker").chmod(0o755)
         r=subprocess.run([str(ROOT/"plugins/sdd-composy/scripts/fleet/teardown.sh"),"--root",str(self.repo),"--fleet-id","demo","--member-id","TASK-001"],env={**os.environ,"PATH":str(bind)+":"+os.environ.get("PATH","")},capture_output=True,text=True)
         self.assertNotEqual(r.returncode,0); self.assertTrue(mf.exists()); self.assertTrue(work.exists())
         self.assertTrue(log.exists(),r.stderr); invocation=log.read_text(); self.assertIn("-f "+str(compose.resolve()),invocation); self.assertNotIn(str(homonym.resolve()),invocation); self.assertNotIn("--volumes",invocation)
+
+    def test_teardown_rejects_foreign_compose_project_before_docker_and_preserves_recovery(self):
+        state,mf,d,work=self._launched_member("running"); compose=state/"docker-compose.yml"; compose.write_text("services: {}\n")
+        d["resources"].update(compose_allocated=True,compose_file=".planning/sdd-composy/fleet/demo/docker-compose.yml",compose_project="foreign-project",compose_sha256=hashlib.sha256(compose.read_bytes()).hexdigest())
+        mf.write_text(json.dumps(d)); bind=Path(self.tmp.name)/"bin"; bind.mkdir(); log=Path(self.tmp.name)/"docker.log"
+        (bind/"docker").write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" >> '"+str(log)+"'\nexit 0\n"); (bind/"docker").chmod(0o755)
+        r=subprocess.run([str(ROOT/"plugins/sdd-composy/scripts/fleet/teardown.sh"),"--root",str(self.repo),"--fleet-id","demo","--member-id","TASK-001"],env={**os.environ,"PATH":str(bind)+":"+os.environ.get("PATH","")},capture_output=True,text=True)
+        self.assertNotEqual(r.returncode,0); self.assertFalse(log.exists()); self.assertTrue(mf.exists()); self.assertTrue(work.exists())
 
     def test_teardown_legacy_compose_mirror_cannot_override_central_resource(self):
         state,mf,d,work=self._launched_member("running"); (work/"docker-compose.yml").write_text("services: {}\n"); (work/"other.yml").write_text("services: {}\n"); d["resources"].update(compose_allocated=True,compose_file="docker-compose.yml",compose_project=d["resources"].get("compose_project", "owned-project"))

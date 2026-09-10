@@ -56,6 +56,8 @@ jq -e --arg root "$root" --arg fleet "$fleet" --arg member "$member" --arg branc
 if [[ "$compose_allocated" == true ]]; then
   compose_file=$(jq -er '.resources.compose_file | select(type == "string" and length > 0)' "$member_file" 2>/dev/null) || fail 'owned Compose file is unspecified; recovery state preserved'
   project=$(jq -er '.resources.compose_project | select(type == "string" and length > 0)' "$member_file" 2>/dev/null) || fail 'owned Compose project is unspecified; recovery state preserved'
+  expected_project="sdd_fleet_$fleet"
+  [[ "$project" == "$expected_project" ]] || fail 'Compose project does not match fleet ownership; recovery state preserved'
   expected_compose=$(jq -er '.resources.compose_sha256 | select(type == "string" and test("^[a-f0-9]{64}$"))' "$member_file" 2>/dev/null) || fail 'Compose ownership hash is missing or invalid; recovery state preserved'
   expected_file=".planning/sdd-composy/fleet/$fleet/docker-compose.yml"
   [[ "$compose_file" == "$expected_file" ]] || fail 'Compose file is not the fleet-owned central resource; recovery state preserved'
