@@ -1,9 +1,98 @@
-import hashlib, json, os, subprocess, tempfile, unittest
+import hashlib, importlib.util, json, os, subprocess, tempfile, unittest
 from pathlib import Path
 from tests.test_sdd_composy import assert_schema_valid
 
 ROOT = Path(__file__).parents[1]
 LAUNCH = ROOT / "plugins/sdd-composy/scripts/fleet/launch.sh"
+INTERACTIVE_STATE_PATH = ROOT / "plugins/sdd-composy/scripts/fleet/interactive_state.py"
+
+def _load_interactive_state():
+    spec = importlib.util.spec_from_file_location("sdd_fleet_interactive_state", INTERACTIVE_STATE_PATH)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+class FleetInteractiveStateTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.path = Path(self.tmp.name) / "member.json"
+        self.member = {
+            "schema_version": "2", "id": "TASK-001", "task_id": "TASK-001",
+            "owner": {"kind": "sdd-composy-fleet", "fleet_id": "demo", "member_id": "TASK-001"},
+            "interaction": {
+                "state": "starting", "started_at": "2026-09-11T12:00:00Z",
+                "updated_at": "2026-09-11T12:00:00Z"
+            },
+            "extension": {"preserve": True}
+        }
+        self.path.write_text(json.dumps(self.member))
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_load_rejects_missing_interaction_fields_and_symlink(self):
+        state = _load_interactive_state()
+        for missing in ("state", "started_at", "updated_at"):
+            with self.subTest(missing=missing):
+                broken = json.loads(json.dumps(self.member)); del broken["interaction"][missing]
+                self.path.write_text(json.dumps(broken))
+                with self.assertRaises(state.InteractiveStateError): state.load_member(self.path)
+        real = Path(self.tmp.name) / "real.json"; real.write_text(json.dumps(self.member))
+        self.path.unlink(); self.path.symlink_to(real)
+        with self.assertRaises(state.InteractiveStateError): state.load_member(self.path)
+
+    def test_load_rejects_symlinked_ancestor(self):
+        state = _load_interactive_state()
+        real = Path(self.tmp.name) / "real"; real.mkdir()
+        member = real / "member.json"; member.write_text(json.dumps(self.member))
+        linked = Path(self.tmp.name) / "linked"; linked.symlink_to(real, target_is_directory=True)
+        with self.assertRaises(state.InteractiveStateError): state.load_member(linked / "member.json")
+
+    def test_schema_accepts_interaction_contract_and_rejects_missing_state(self):
+        schema = json.loads((ROOT / "plugins/sdd-composy/schemas/fleet-member.schema.json").read_text())
+        # Existing v2 records remain compatible; interaction is additive.
+        legacy = json.loads(json.dumps(self.member)); legacy.pop("interaction")
+        legacy.update({
+            "status": "running", "runtime": "codex", "ui": "headless", "branch": "fleet/task-001",
+            "worktree_path": "/tmp/task-001", "repository_root": "/tmp/repo",
+            "started_at": "2026-09-11T12:00:00Z", "updated_at": "2026-09-11T12:00:00Z",
+            "resources": {"branch": "fleet/task-001", "worktree_path": "/tmp/task-001", "port": 43001,
+                          "compose_project": "fleet-demo", "compose_file": "fleet/docker-compose.yml",
+                          "compose_allocated": False}
+        })
+        assert_schema_valid(self, schema, legacy)
+        current = json.loads(json.dumps(legacy)); current["interaction"] = self.member["interaction"]
+        assert_schema_valid(self, schema, current)
+        del current["interaction"]["state"]
+        with self.assertRaises(AssertionError): assert_schema_valid(self, schema, current)
+
+    def test_transition_rejects_invalid_edge_and_preserves_unknown_fields(self):
+        state = _load_interactive_state()
+        with self.assertRaises(state.InteractiveStateError):
+            state.transition(self.path, "starting", "completed", {}, "2026-09-11T12:01:00Z")
+        result = state.transition(
+            self.path, "starting", "running", {"handle": {"driver": "tmux", "id": "pane-1"}},
+            "2026-09-11T12:01:00Z")
+        self.assertEqual(result["extension"], {"preserve": True})
+        self.assertEqual(result["interaction"]["handle"]["id"], "pane-1")
+        self.assertEqual(json.loads(self.path.read_text()), result)
+
+    def test_transition_is_compare_and_set(self):
+        state = _load_interactive_state()
+        with self.assertRaises(state.InteractiveStateError):
+            state.transition(self.path, "running", "awaiting_human", {}, "2026-09-11T12:01:00Z")
+        self.assertEqual(json.loads(self.path.read_text()), self.member)
+
+    def test_bind_loop_is_immutable_and_rejects_task_divergence(self):
+        state = _load_interactive_state()
+        with self.assertRaises(state.InteractiveStateError):
+            state.bind_loop(self.path, "loop-task-001", "TASK-002", "2026-09-11T12:01:00Z")
+        bound = state.bind_loop(self.path, "loop-task-001", "TASK-001", "2026-09-11T12:01:00Z")
+        self.assertEqual(bound["interaction"]["loop"], {"id": "loop-task-001", "task_id": "TASK-001"})
+        self.assertEqual(bound["extension"], {"preserve": True})
+        with self.assertRaises(state.InteractiveStateError):
+            state.bind_loop(self.path, "loop-second", "TASK-001", "2026-09-11T12:02:00Z")
+        self.assertEqual(json.loads(self.path.read_text()), bound)
 
 class FleetLaunchTest(unittest.TestCase):
     def setUp(self):
