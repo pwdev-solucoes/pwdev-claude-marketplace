@@ -1,4 +1,4 @@
-import hashlib, importlib.util, json, os, subprocess, tempfile, unittest
+import fcntl, hashlib, importlib.util, json, os, subprocess, tempfile, time, unittest
 from pathlib import Path
 from tests.test_sdd_composy import assert_schema_valid
 
@@ -15,10 +15,17 @@ def _load_interactive_state():
 class FleetInteractiveStateTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.path = Path(self.tmp.name) / "member.json"
+        self.path = Path(self.tmp.name).resolve() / "member.json"
         self.member = {
             "schema_version": "2", "id": "TASK-001", "task_id": "TASK-001",
+            "status": "running", "runtime": "codex", "ui": "headless",
+            "branch": "fleet/task-001", "worktree_path": "/tmp/task-001",
+            "repository_root": "/tmp/repo", "started_at": "2026-09-11T12:00:00Z",
+            "updated_at": "2026-09-11T12:00:00Z",
             "owner": {"kind": "sdd-composy-fleet", "fleet_id": "demo", "member_id": "TASK-001"},
+            "resources": {"branch": "fleet/task-001", "worktree_path": "/tmp/task-001", "port": 43001,
+                          "compose_project": "fleet-demo", "compose_file": "fleet/docker-compose.yml",
+                          "compose_allocated": False},
             "interaction": {
                 "state": "starting", "started_at": "2026-09-11T12:00:00Z",
                 "updated_at": "2026-09-11T12:00:00Z"
@@ -47,6 +54,27 @@ class FleetInteractiveStateTest(unittest.TestCase):
         member = real / "member.json"; member.write_text(json.dumps(self.member))
         linked = Path(self.tmp.name) / "linked"; linked.symlink_to(real, target_is_directory=True)
         with self.assertRaises(state.InteractiveStateError): state.load_member(linked / "member.json")
+
+    def test_load_rejects_non_immediate_symlinked_ancestor(self):
+        state = _load_interactive_state()
+        real = Path(self.tmp.name) / "real"; nested = real / "nested"; nested.mkdir(parents=True)
+        member = nested / "member.json"; member.write_text(json.dumps(self.member))
+        linked = Path(self.tmp.name) / "linked"; linked.symlink_to(real, target_is_directory=True)
+        with self.assertRaises(state.InteractiveStateError): state.load_member(linked / "nested" / "member.json")
+
+    def test_load_rejects_member_invalid_against_complete_v2_contract(self):
+        state = _load_interactive_state()
+        for missing in ("status", "runtime", "ui", "resources"):
+            with self.subTest(missing=missing):
+                broken = json.loads(json.dumps(self.member)); del broken[missing]
+                self.path.write_text(json.dumps(broken))
+                with self.assertRaises(state.InteractiveStateError): state.load_member(self.path)
+        for mutate in (
+            lambda value: value.__setitem__("runtime", []),
+            lambda value: value["resources"].__setitem__("compose_sha256", "not-a-digest"),
+        ):
+            broken = json.loads(json.dumps(self.member)); mutate(broken); self.path.write_text(json.dumps(broken))
+            with self.assertRaises(state.InteractiveStateError): state.load_member(self.path)
 
     def test_schema_accepts_interaction_contract_and_rejects_missing_state(self):
         schema = json.loads((ROOT / "plugins/sdd-composy/schemas/fleet-member.schema.json").read_text())
@@ -82,6 +110,31 @@ class FleetInteractiveStateTest(unittest.TestCase):
         with self.assertRaises(state.InteractiveStateError):
             state.transition(self.path, "running", "awaiting_human", {}, "2026-09-11T12:01:00Z")
         self.assertEqual(json.loads(self.path.read_text()), self.member)
+
+    def test_concurrent_compare_and_set_allows_exactly_one_writer(self):
+        lock_path = self.path.with_name(f".{self.path.name}.lock")
+        lock = open(lock_path, "a+")
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        script = """
+import importlib.util, sys
+spec=importlib.util.spec_from_file_location('state',sys.argv[1]); state=importlib.util.module_from_spec(spec); spec.loader.exec_module(state)
+try:
+ state.transition(sys.argv[2], 'starting', sys.argv[3], {}, '2026-09-11T12:01:00Z'); print('ok')
+except state.InteractiveStateError:
+ print('lost'); raise SystemExit(3)
+"""
+        writers = [subprocess.Popen(
+            ["python3", "-c", script, str(INTERACTIVE_STATE_PATH), str(self.path), target],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            for target in ("running", "blocked")]
+        try:
+            time.sleep(.2)
+            blocked = all(process.poll() is None for process in writers)
+        finally:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_UN); lock.close()
+        results = [process.communicate(timeout=5) for process in writers]
+        self.assertTrue(blocked, "writers must wait on the member lock")
+        self.assertEqual(sorted(process.returncode for process in writers), [0, 3], results)
 
     def test_bind_loop_is_immutable_and_rejects_task_divergence(self):
         state = _load_interactive_state()
