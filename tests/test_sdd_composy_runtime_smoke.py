@@ -25,6 +25,108 @@ SMOKE = load_module()
 
 
 class RuntimeSmokeContractTests(unittest.TestCase):
+    def _real_fake(self, runtime, behavior="success", consent=True):
+        with tempfile.TemporaryDirectory() as directory:
+            binary = Path(directory) / runtime
+            binary.write_text(f"#!{sys.executable}\n" + '''import hashlib,json,os,subprocess,sys
+from pathlib import Path
+args=sys.argv[1:]
+if '--version' in args:
+    print('fake-native 1.0'); raise SystemExit(0)
+runtime=Path(sys.argv[0]).name
+if runtime=='codex':
+    assert args[args.index('--sandbox')+1]=='read-only'
+    request=json.loads(args[-1])
+elif runtime=='claude':
+    assert '--plugin-dir' in args and '--dangerously-skip-permissions' not in args
+    request=json.loads(args[args.index('-p')+1])
+else:
+    prompt=args[args.index('-z')+1]; request=json.loads(prompt[prompt.index('{'):])
+status=json.loads(subprocess.check_output(request['helper_command'],text=True))
+loaded={p:hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in request['resource_paths']}
+result={'stage':'READ_ONLY','status':'completed','message':'Local status inspected',
+        'verdict':'passed','evidence':{'status':status,'loaded_resources':loaded}}
+''' + f"behavior={behavior!r}\n" + '''if behavior=='mutate': Path('project.sentinel').write_text('changed')
+if behavior=='symlink': Path('new-link').symlink_to('README.md')
+if behavior=='error': print('permission denied',file=sys.stderr); raise SystemExit(3)
+if behavior=='lie': result['evidence']['loaded_resources']={}
+if runtime=='codex':
+    Path(args[args.index('--output-last-message')+1]).write_text(json.dumps(result))
+    print(json.dumps({'type':'thread.started','thread_id':'fixture'}))
+    if behavior!='no-witness': print(json.dumps({'type':'item.completed','item':{
+        'type':'command_execution','command':' '.join(request['helper_command']),
+        'exit_code':0,'aggregated_output':json.dumps(status)}}))
+    print(json.dumps({'type':'turn.completed','usage':{'input_tokens':12}}))
+elif runtime=='claude':
+    print(json.dumps({'type':'system','subtype':'init','extra':'allowed'}))
+    if behavior!='no-witness':
+        print(json.dumps({'type':'assistant','message':{'content':[{'type':'tool_use',
+          'id':'tool-1','name':'Bash','input':{'command':' '.join(request['helper_command'])}}]}}))
+        print(json.dumps({'type':'user','message':{'content':[{'type':'tool_result',
+          'tool_use_id':'tool-1','content':json.dumps(status),'is_error':False}]}}))
+    print(json.dumps({'type':'result','subtype':'success','is_error':False,
+       'result':json.dumps(result),'usage':{'input_tokens':12},'modelUsage':{},'permission_denials':[]}))
+else: print(json.dumps(result))
+''')
+            binary.chmod(0o755)
+            with patch.dict(os.environ, {"PATH": directory + os.pathsep + os.environ["PATH"]}):
+                return SMOKE.run_acceptance(mode="real", runtime=runtime, language="en-US",
+                    scenario="read-only", output=Path(directory)/"output",
+                    plugin_root=ROOT/"plugins/sdd-composy",
+                    provider_launcher=SMOKE.production_provider_launcher,
+                    hermes_automation_acknowledged=consent)
+
+    def test_real_entry_uses_actual_native_executable_for_all_three_runtimes(self):
+        for runtime in SMOKE.RUNTIMES:
+            with self.subTest(runtime=runtime):
+                summary=self._real_fake(runtime)
+                row=summary['scenarios'][0]
+                self.assertEqual(row['status'], 'NOT_RUN' if runtime=='hermes' else 'PASS', row['reason'])
+                self.assertEqual(summary['provider_calls'][runtime], 1)
+                self.assertEqual(row['snapshot_before'], row['snapshot_after'])
+                self.assertEqual(row['version'], 'fake-native 1.0')
+                self.assertEqual(len(row['loaded_resources']), 3)
+                self.assertTrue(row['result_sha256'])
+                self.assertNotIn('instructions', str(row['command']))
+
+    def test_native_final_claim_without_command_witness_is_inconclusive(self):
+        for runtime in ('codex', 'claude'):
+            summary=self._real_fake(runtime, 'no-witness')
+            self.assertEqual(summary['scenarios'][0]['status'], 'NOT_RUN')
+            self.assertIn('witness', summary['scenarios'][0]['reason'])
+            self.assertEqual(summary['provider_calls'][runtime], 1)
+
+    def test_real_entry_rejects_mutation_symlink_false_hashes_and_provider_error(self):
+        for behavior in ('mutate', 'symlink', 'lie', 'error'):
+            with self.subTest(behavior=behavior):
+                summary=self._real_fake('codex', behavior)
+                row=summary['scenarios'][0]
+                self.assertEqual(row['status'], 'FAIL')
+                self.assertEqual(summary['provider_calls']['codex'], 1)
+                if behavior=='error': self.assertIn('permission denied', row['stderr'])
+
+    def test_hermes_without_consent_blocks_without_spending_invocation(self):
+        summary=self._real_fake('hermes', consent=False)
+        self.assertEqual(summary['scenarios'][0]['status'], 'BLOCKED')
+        self.assertEqual(summary['provider_calls']['hermes'], 0)
+
+    def test_production_unimplemented_scenarios_do_not_spend_budget(self):
+        budget=SMOKE.InvocationBudget(1)
+        result=SMOKE.production_provider_launcher(runtime='codex', language='en-US',
+            scenario='lifecycle', plugin_root=ROOT/'plugins/sdd-composy', budget=budget)
+        self.assertEqual(result['status'], 'NOT_RUN')
+        self.assertEqual(budget.counts['codex'], 0)
+
+    def test_witness_rejects_wrong_helper_and_failed_command(self):
+        expected={'read_only':True}
+        item={'type':'command_execution','command':'python /local/sdd_status.py',
+              'exit_code':0,'aggregated_output':json.dumps(expected)}
+        event={'type':'item.completed','item':item}
+        self.assertTrue(SMOKE._helper_witness('codex',[event],Path('/local/sdd_status.py'),expected))
+        self.assertFalse(SMOKE._helper_witness('codex',[event],Path('/corrected/sdd_status.py'),expected))
+        item['exit_code']=1
+        self.assertFalse(SMOKE._helper_witness('codex',[event],Path('/local/sdd_status.py'),expected))
+
     def test_runtime_smoke_cli_exists(self):
         self.assertTrue((ROOT / "scripts" / "sdd_runtime_smoke.py").is_file())
 

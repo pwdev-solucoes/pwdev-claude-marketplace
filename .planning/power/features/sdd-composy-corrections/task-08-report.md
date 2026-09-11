@@ -62,9 +62,39 @@ Status: DONE_WITH_CONCERNS
 - Zero inferência real. Task 08 permanece INCOMPLETE; revisão independente e os
   gates humanos aplicáveis não são concedidos por este relatório.
 
-## Limite da fase real
+## Entrada real limitada a READ_ONLY
 
-A fase real não foi executada e não pode ser chamada de aceita. A implementação desta entrega
-para no gate anterior à inferência; `evidence.md` registra os cenários reais como `NOT_RUN` e a
-fleet como `BLOCKED`. É necessário acknowledgement humano externo das formas de comando e do
-orçamento antes de implementar/acionar os launchers reais.
+A entrada de produção agora cria uma fixture Git com a cópia local corrigida, inicializa o
+idioma pelo helper e solicita ao provider a leitura da skill e execução de status. Usa os
+vetores dos adapters locais: Codex troca somente o sandbox para `read-only`; Claude mantém
+permissões padrão e carrega `--plugin-dir` local, capturando `stream-json --verbose`;
+Hermes exige `--acknowledge-hermes-automation` para seu `-z`, que implicitamente dispensa
+aprovações. Diretório temporário não é declarado sandbox.
+
+O resultado compara JSON do helper, hashes dos recursos locais e snapshots antes/depois
+incluindo Git, permissões, diretórios e symlinks. PASS também exige testemunho nativo de
+execução do helper: evento Codex de comando concluído ou par Claude Bash/tool_result.
+Somente resposta final ou hashes narrados não bastam. Hermes `-z` não expõe esse testemunho
+no stdout documentado; mesmo uma resposta correta fica `NOT_RUN`/inconclusiva, com a
+invocação contabilizada. Falhas preservam stdout/stderr sanitizados e hash no sumário.
+
+Versão usa somente `--version`; autenticação e configuração nativas não são lidas nem
+alteradas pelo harness. Uso não disponível permanece null. Outros cenários reais continuam
+NOT_RUN e fleet sem acknowledgement continua BLOCKED. Orçamento é consumido imediatamente
+antes do processo de inferência; cenário indisponível ou consentimento ausente não gasta chamada.
+
+Comando serial para um idioma (três invocações no máximo, sem retry):
+
+```bash
+python3 scripts/sdd_runtime_smoke.py --mode real --runtime all --language pt-BR --scenario read-only --provider-entry-point production --acknowledge-hermes-automation --max-calls-per-runtime 1 --output .planning/power/features/sdd-composy-corrections/runs/real-read-only
+```
+
+Nenhuma inferência real foi executada nesta implementação. Autenticação/rede/permissões
+continuam dependentes do ambiente de execução. Este incremento não aprova a Task 08 nem
+amplia o escopo para lifecycle/fleet.
+
+Verificação local: suíte focada smoke/adapters/Hermes, 36 testes PASS em 73.977s;
+após o endurecimento final do parser, três testes focados PASS em 3.000s, incluindo o
+novo controle de witness com caminho incorreto/comando falho. `git diff --check`: PASS.
+Os executáveis dos testes são fakes locais que de fato executam o helper copiado;
+isso é regressão da entrada real, não evidência de inferência remota.

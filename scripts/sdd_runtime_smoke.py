@@ -185,10 +185,17 @@ def _load_local(scripts: Path, filename: str, tag: str):
     return module
 
 
-def _snapshot(root: Path) -> Dict[str, Any]:
+def _snapshot(root: Path, *, include_git: bool = False) -> Dict[str, Any]:
     result = {}
     for path in sorted(root.rglob("*")):
-        if ".git" in path.parts or path.is_symlink() or not path.is_file():
+        if ".git" in path.parts and not include_git:
+            continue
+        if path.is_symlink():
+            result[path.relative_to(root).as_posix()] = ["symlink", os.readlink(path)]
+            continue
+        if not path.is_file():
+            if path.is_dir():
+                result[path.relative_to(root).as_posix()] = ["directory", path.stat().st_mode & 0o777]
             continue
         result[path.relative_to(root).as_posix()] = [sha256_path(path), path.stat().st_mode & 0o777]
     return result
@@ -516,7 +523,8 @@ def _record(runtime: str, language: str, scenario: str, status: str,
             "command": None, "resources": [], "usage": None, "task_id": "TASK-008",
             "worktree": None}
     for key in ("version", "provider", "model", "duration_seconds", "result_sha256",
-                "command", "resources", "usage", "task_id", "worktree"):
+                "command", "resources", "usage", "task_id", "worktree", "stdout", "stderr",
+                "snapshot_before", "snapshot_after", "loaded_resources", "native_events"):
         if key in measurements:
             record[key] = measurements[key]
     return record
@@ -546,7 +554,8 @@ def run_acceptance(*, mode: str, runtime: str, language: str, scenario: str,
                    output: Path, plugin_root: Path,
                    provider_launcher: Optional[Callable[..., Dict[str, Any]]] = None,
                    max_calls_per_runtime: int = DEFAULT_MAX_CALLS,
-                   fleet_acknowledged: bool = False) -> Dict[str, Any]:
+                   fleet_acknowledged: bool = False,
+                   hermes_automation_acknowledged: bool = False) -> Dict[str, Any]:
     runtimes = _selection(runtime, "all", RUNTIMES)
     languages = _selection(language, "both", LANGUAGES)
     scenarios = OFFLINE_SCENARIOS if scenario == "all" else (scenario,)
@@ -568,11 +577,20 @@ def run_acceptance(*, mode: str, runtime: str, language: str, scenario: str,
                     outcome = {"status": "NOT_RUN",
                                "reason": "real provider launcher is unavailable in this phase"}
                 else:
-                    budget.consume(selected_runtime)
-                    outcome = provider_launcher(runtime=selected_runtime,
+                    try:
+                        if provider_launcher is production_provider_launcher:
+                            outcome = provider_launcher(runtime=selected_runtime,
+                                language=selected_language, scenario=selected_scenario,
+                                timeout=DEFAULT_TIMEOUT, plugin_root=plugin_root, budget=budget,
+                                hermes_automation_acknowledged=hermes_automation_acknowledged)
+                        else:
+                            budget.consume(selected_runtime)
+                            outcome = provider_launcher(runtime=selected_runtime,
                                                 language=selected_language,
                                                 scenario=selected_scenario,
                                                 timeout=DEFAULT_TIMEOUT)
+                    except (SmokeBlocked, OSError) as exc:
+                        outcome = {"status": "BLOCKED", "reason": sanitize(str(exc))}
                 records.append(_record(selected_runtime, selected_language, selected_scenario,
                                        outcome["status"], started_at, outcome.get("reason"),
                                        plugin_hash, outcome.get("exit_code"),
@@ -599,18 +617,160 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument("--max-calls-per-runtime", type=int, default=DEFAULT_MAX_CALLS)
     parser.add_argument("--provider-entry-point", choices=("production",))
     parser.add_argument("--acknowledge-real-fleet", action="store_true")
+    parser.add_argument("--acknowledge-hermes-automation", action="store_true",
+                        help="Consent to Hermes -z implicit command approval bypass; not fleet consent")
     return parser.parse_args(argv)
 
 
-def production_provider_launcher(**_request: Any) -> Dict[str, Any]:
-    """Explicit real entry point; callers reach it only after the external gate.
+def _native_result(runtime: str, stdout: str, final_path: Path) -> tuple:
+    """Keep native envelopes extensible; validate the actual final payload separately."""
+    events = []
+    if runtime == "hermes":
+        return json.loads(stdout), events, None
+    events = [json.loads(line) for line in stdout.splitlines() if line.strip()]
+    if not all(isinstance(row, dict) for row in events):
+        raise ValueError("native events must be JSON objects")
+    if runtime == "codex":
+        if final_path.is_symlink():
+            raise ValueError("native final result may not be a symlink")
+        usage = next((row.get("usage") for row in reversed(events)
+                      if row.get("type") == "turn.completed"), None)
+        return json.loads(final_path.read_text()), events, usage
+    envelope = next(row for row in reversed(events) if row.get("type") == "result")
+    if envelope.get("is_error") is not False or envelope.get("subtype") != "success":
+        raise SmokeBlocked("Claude reported a runtime error")
+    payload = envelope["result"]
+    return (json.loads(payload) if isinstance(payload, str) else payload), events, envelope.get("usage")
 
-    Provider-specific invocation is deliberately a separately reviewed phase. Until that phase
-    installs the validated adapter request, this entry point records NOT_RUN rather than guessing.
+
+def _helper_witness(runtime: str, events: list, helper: Path, expected: dict) -> bool:
+    """Require a successful native command result, never a model's execution claim."""
+    def matches(output):
+        try:
+            return json.loads(output) == expected
+        except (TypeError, ValueError):
+            return False
+    if runtime == "codex":
+        return any(row.get("type") == "item.completed"
+            and row.get("item", {}).get("type") == "command_execution"
+            and row["item"].get("exit_code") == 0
+            and str(helper) in row["item"].get("command", "")
+            and matches(row["item"].get("aggregated_output")) for row in events)
+    if runtime == "claude":
+        calls = set()
+        for row in events:
+            blocks = row.get("message", {}).get("content", [])
+            if not isinstance(blocks, list):
+                continue
+            for block in blocks:
+                if (row.get("type") == "assistant" and block.get("type") == "tool_use"
+                        and block.get("name") == "Bash"
+                        and str(helper) in block.get("input", {}).get("command", "")):
+                    calls.add(block.get("id"))
+                if (row.get("type") == "user" and block.get("type") == "tool_result"
+                        and block.get("tool_use_id") in calls and not block.get("is_error", False)):
+                    content = block.get("content")
+                    if isinstance(content, list):
+                        content = "\n".join(part.get("text", "") for part in content if part.get("type") == "text")
+                    if matches(content):
+                        return True
+    return False
+
+
+def production_provider_launcher(*, runtime: str, language: str, scenario: str,
+                                 timeout: float = DEFAULT_TIMEOUT, plugin_root: Path,
+                                 budget: InvocationBudget,
+                                 hermes_automation_acknowledged: bool = False) -> Dict[str, Any]:
+    """One real status invocation, using the corrected local adapter command contract.
+
+    A temporary Git repository is a fixture, not an operating system sandbox.
+    No global runtime installation, authentication or configuration is changed.
     """
-    return {"status": "NOT_RUN", "reason": "production provider adapter is not enabled",
-            "exit_code": None, "duration_seconds": 0.0, "result_sha256": None,
-            "resources": [], "command": None}
+    if scenario != "read-only":
+        return {"status": "NOT_RUN", "reason": "only the read-only production entry is implemented"}
+    if runtime == "hermes" and not hermes_automation_acknowledged:
+        raise SmokeBlocked("Hermes -z requires --acknowledge-hermes-automation: approvals are implicitly bypassed")
+    executable = shutil.which(runtime)
+    if not executable:
+        raise SmokeBlocked(f"runtime unavailable: {runtime}")
+    version = _runtime_version(runtime)
+    with isolated_fixture(plugin_root) as root, tempfile.TemporaryDirectory(prefix="sdd-smoke-result-") as directory:
+        plugin = root / "plugin"
+        scripts = plugin / "scripts"
+        init = _load_local(scripts, "sdd_init.py", "real_init")
+        plan = init.run_plan(root, "agent:sdd-runtime-smoke", plugin / "templates", language)
+        init.apply(root, plan, plugin / "templates")
+        skill = plugin / "skills/sdd-status/SKILL.md"
+        helper = scripts / "sdd_status.py"
+        language_helper = scripts / "sdd_language.py"
+        for name in ("project.sentinel", "ui.sentinel"):
+            (root / name).write_text(f"{name}: {os.urandom(16).hex()}\n")
+        # Execute helpers with -B to avoid fixture mutations caused by bytecode caches.
+        helper_command = [sys.executable, "-B", str(helper), str(root), "--tasks", "--fleet", "--json"]
+        baseline = run_process(helper_command, root)
+        if baseline["status"] != "PASS":
+            raise SmokeBlocked("local status helper preflight failed: " + baseline["stderr"])
+        expected = json.loads(baseline["stdout"])
+        loaded = {str(path.relative_to(root)): sha256_path(path)
+                  for path in (skill, helper, language_helper)}
+        adapter = _load_local(scripts, f"loop-engine-{runtime}.py", "real_adapter")
+        request = {"stage": "READ_ONLY", "task_id": "TASK-008",
+            "automation_consent": hermes_automation_acknowledged,
+            "instructions": (f"Read the complete local skill at {skill}. This exact corrected local bundle "
+                "is authoritative; do not substitute installed or cached skills. Run the language helper "
+                f"using {sys.executable} -B {language_helper} {root}. Then execute helper_command exactly. "
+                "Do not create, edit, delete, commit or change any project file, UI resource, global "
+                "configuration or authentication. Do not run lifecycle or fleet. Return exactly one JSON "
+                "object with stage,status,message,verdict,evidence. stage=READ_ONLY; status=completed "
+                "and verdict=passed only if successful; evidence.status must be the unchanged JSON "
+                "from the status helper; evidence.loaded_resources maps the three provided relative "
+                "resource paths to their SHA-256 hashes, computed after reading the local files. "
+                f"Write the message in {language}. Report permission failures as blocked."),
+            "helper_command": helper_command, "resource_paths": list(loaded)}
+        final_path = Path(directory) / "final.json"
+        if runtime == "codex":
+            command = adapter.build_command(request, root, final_path)
+            command[command.index("--sandbox") + 1] = "read-only"
+        else:
+            command = adapter.build_command(request, root)
+            if runtime == "claude":
+                command[command.index("--output-format") + 1] = "stream-json"
+                command += ["--verbose", "--plugin-dir", str(plugin)]
+        command[0] = executable
+        before = _snapshot(root, include_git=True)
+        budget.consume(runtime)
+        outcome = run_process(command, root, timeout=timeout)
+        after = _snapshot(root, include_git=True)
+        outcome.update(version=version, provider=None, model=None, usage=None,
+                       worktree=str(root), resources=["project.sentinel", "ui.sentinel"],
+                       loaded_resources=loaded, snapshot_before=before, snapshot_after=after)
+        # Prompts may occur in the middle of Claude/Hermes vectors.
+        outcome["command"] = ["[status request]" if "\"instructions\":" in part else sanitize(part)
+                              for part in command]
+        outcome["result_sha256"] = hashlib.sha256(
+            (outcome["stdout"] + "\n" + outcome["stderr"]).encode()).hexdigest()
+        if after != before:
+            outcome.update(status="FAIL", reason="read-only fixture bytes, paths or permissions changed")
+        elif outcome["status"] == "PASS":
+            try:
+                result, events, usage = _native_result(runtime, outcome["stdout"], final_path)
+                result = adapter.validate_result(result)
+                outcome.update(native_events=events, usage=usage)
+                if result["stage"] != "READ_ONLY":
+                    raise ValueError("wrong requested stage")
+                if result["status"] in {"blocked", "needs_human"}:
+                    raise SmokeBlocked(result["message"])
+                if (result["status"] != "completed" or result["verdict"] != "passed"
+                        or result["evidence"].get("status") != expected
+                        or result["evidence"].get("loaded_resources") != loaded):
+                    raise ValueError("result differs from local helper output or corrected resource hashes")
+                if not _helper_witness(runtime, events, helper, expected):
+                    outcome.update(status="NOT_RUN", reason="inconclusive: native output lacks successful local status helper execution witness")
+            except SmokeBlocked as exc:
+                outcome.update(status="BLOCKED", reason=sanitize(str(exc)))
+            except (ValueError, KeyError, OSError, StopIteration, TypeError, AttributeError) as exc:
+                outcome.update(status="FAIL", reason="invalid native read-only result: " + sanitize(str(exc)))
+        return outcome
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
@@ -622,7 +782,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                              plugin_root=root / "plugins/sdd-composy",
                              provider_launcher=launcher,
                              max_calls_per_runtime=args.max_calls_per_runtime,
-                             fleet_acknowledged=args.acknowledge_real_fleet)
+                             fleet_acknowledged=args.acknowledge_real_fleet,
+                             hermes_automation_acknowledged=args.acknowledge_hermes_automation)
     print(json.dumps({"verdict": summary["verdict"],
                       "output": str(args.output / "summary.json")}))
     return 0 if summary["verdict"] == "PASS" else 2
