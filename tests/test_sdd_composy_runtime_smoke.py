@@ -110,6 +110,48 @@ class RuntimeSmokeContractTests(unittest.TestCase):
                 self.assertFalse((copied / "credentials.json").exists())
                 self.assertFalse((copied / ".planning").exists())
 
+    def test_fixture_excludes_modern_auth_key_and_keystore_families_but_keeps_samples(self):
+        sensitive = ("token.json", "auth.json", "id_ed25519", "id_ecdsa.pub",
+                     "keystore.jks", "client.ckey", "truststore.p12", "private-keys.json",
+                     "service-credentials.yaml", "server.cert")
+        documented = ("token.example.json", "auth.sample.json", "credentials.example.yaml",
+                      "keystore.sample.jks", "private-key.example.pem")
+        with tempfile.TemporaryDirectory() as source_dir, tempfile.TemporaryDirectory() as parent_dir:
+            source = Path(source_dir); (source / "skills").mkdir()
+            (source / "skills/public.txt").write_text("ok")
+            for name in sensitive + documented:
+                (source / name).write_text(name)
+            with SMOKE.isolated_fixture(source, base_dir=Path(parent_dir)) as fixture:
+                copied = fixture / "plugin"
+                self.assertTrue(all(not (copied / name).exists() for name in sensitive))
+                self.assertTrue(all((copied / name).is_file() for name in documented))
+
+    def test_handoff_uses_each_runtime_adapter_and_rejects_unscoped_approval(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with SMOKE.isolated_fixture(ROOT / "plugins/sdd-composy",
+                                        base_dir=Path(directory)) as fixture:
+                outcome = SMOKE._offline_handoff(fixture, fixture / "plugin")
+                self.assertTrue(outcome["passed"])
+                self.assertEqual(outcome["adapters"], ["hermes", "codex", "claude", "hermes"])
+                artifacts = [json.loads((fixture / resource).read_text())
+                             for resource in outcome["resources"]]
+                contracts = [item["result"]["evidence"]["handoff"] for item in artifacts]
+                self.assertTrue(all(value["task_id"] == "TASK-008" for value in contracts))
+                self.assertTrue(all(value["gate"] == "APPROVED" for value in contracts))
+                self.assertTrue(all(value["approval"]["synthetic"] is True for value in contracts))
+                with self.assertRaisesRegex(SMOKE.SmokeBlocked, "invented approval"):
+                    SMOKE._offline_handoff(fixture, fixture / "plugin",
+                                           approval={"status": "APPROVED"})
+
+    def test_fleet_mismatch_uses_canonical_runtime_and_exact_diagnostic(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with SMOKE.isolated_fixture(ROOT / "plugins/sdd-composy",
+                                        base_dir=Path(directory)) as fixture:
+                outcome = SMOKE._offline_fleet(fixture, fixture / "plugin", "codex")
+        self.assertTrue(outcome["passed"])
+        self.assertEqual(outcome["mismatch_requested_runtime"], "hermes")
+        self.assertIn("runtime mismatch", outcome["mismatch_diagnostic"])
+
     def test_sanitizer_redacts_secrets_and_sensitive_absolute_paths(self):
         raw = "token=secret-value Authorization: Bearer abc123 /Users/person/project"
         sanitized = SMOKE.sanitize(raw)

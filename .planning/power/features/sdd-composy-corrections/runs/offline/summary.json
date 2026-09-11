@@ -1,5 +1,5 @@
 {
-  "ended_at": "2026-09-10T19:36:53.667778Z",
+  "ended_at": "2026-09-11T07:44:44.924835Z",
   "max_calls_per_runtime": 28,
   "mode": "offline",
   "plugin_sha256": "d101d5fb9b03048a1342a104c9786b0e210e329c190239b6f805e52282d0b9e3",
@@ -15,8 +15,8 @@
         "--tasks",
         "--fleet"
       ],
-      "duration_seconds": 0.025264,
-      "ended_at": "2026-09-10T19:36:32.634075Z",
+      "duration_seconds": 0.026231,
+      "ended_at": "2026-09-11T07:44:23.780897Z",
       "exit_code": 0,
       "language": "pt-BR",
       "model": null,
@@ -30,12 +30,12 @@
       "result_sha256": "8c4921e682ac007660bde454cf08f958e7e35f22cbbd608649cfc776c2385905",
       "runtime": "hermes",
       "scenario": "read-only",
-      "started_at": "2026-09-10T19:36:32.320913Z",
+      "started_at": "2026-09-11T07:44:23.356952Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "Hermes Agent v0.21.1 (2026.9.7) \u00b7 upstream 564aef29",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-z41fg5i6"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-o7m4ukz3"
     },
     {
       "command": [
@@ -44,8 +44,8 @@
         "sdd-tasks import/next",
         "sdd-loop"
       ],
-      "duration_seconds": 0.056213,
-      "ended_at": "2026-09-10T19:36:32.946022Z",
+      "duration_seconds": 0.061924,
+      "ended_at": "2026-09-11T07:44:24.178630Z",
       "exit_code": 0,
       "language": "pt-BR",
       "model": null,
@@ -60,32 +60,32 @@
       "result_sha256": "cdc88d3c7ff39f26dca9f16acf77b262121b1b00ba9ee69afc4414d8a83f1d78",
       "runtime": "hermes",
       "scenario": "lifecycle",
-      "started_at": "2026-09-10T19:36:32.634089Z",
+      "started_at": "2026-09-11T07:44:23.780912Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "Hermes Agent v0.21.1 (2026.9.7) \u00b7 upstream 564aef29",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-s3sgv9c9"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-dhdjwclp"
     },
     {
       "command": [
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-d6wgfhb2/plugin/scripts/fleet/launch.sh",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-yeoen5uq/plugin/scripts/fleet/launch.sh",
         "--prepare-only",
         "--runtime",
         "hermes",
         "--root",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-d6wgfhb2",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-yeoen5uq",
         "--fleet-id",
         "smoke",
         "--base-branch",
         "main",
         "--task",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-d6wgfhb2/TASK-ADD.json",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-yeoen5uq/TASK-ADD.json",
         "--task",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-d6wgfhb2/TASK-SUB.json"
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-yeoen5uq/TASK-SUB.json"
       ],
-      "duration_seconds": 0.868294,
-      "ended_at": "2026-09-10T19:36:34.081223Z",
+      "duration_seconds": 0.838535,
+      "ended_at": "2026-09-11T07:44:25.324475Z",
       "exit_code": 0,
       "language": "pt-BR",
       "model": null,
@@ -93,25 +93,25 @@
       "provider": "offline-fixture",
       "reason": null,
       "resources": [
-        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-ADD-sdd-runtime-smoke-d6wgfhb2",
-        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-SUB-sdd-runtime-smoke-d6wgfhb2"
+        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-ADD-sdd-runtime-smoke-yeoen5uq",
+        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-SUB-sdd-runtime-smoke-yeoen5uq"
       ],
-      "result_sha256": "c13e8e483c0ffae75dd7baa6134c6a1f445eb1eea7160c0fae60e4bc390c5992",
+      "result_sha256": "681ec94f975c67be49514df462b2f91693e937d046e121a709ba82035b88b65d",
       "runtime": "hermes",
       "scenario": "fleet",
-      "started_at": "2026-09-10T19:36:32.946034Z",
+      "started_at": "2026-09-11T07:44:24.178648Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "Hermes Agent v0.21.1 (2026.9.7) \u00b7 upstream 564aef29",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-d6wgfhb2"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-yeoen5uq"
     },
     {
       "command": [
         "durable-handoff"
       ],
-      "duration_seconds": 0.000711,
-      "ended_at": "2026-09-10T19:36:34.353098Z",
+      "duration_seconds": 0.000736,
+      "ended_at": "2026-09-11T07:44:25.620633Z",
       "exit_code": 0,
       "language": "pt-BR",
       "model": null,
@@ -123,23 +123,23 @@
         ".planning/sdd-composy/handoff/2-codex-to-claude.json",
         ".planning/sdd-composy/handoff/3-claude-to-hermes.json"
       ],
-      "result_sha256": "035712dde3fef7ca54f627223821c125f12218f27e1d740e87f34220a0c08658",
+      "result_sha256": "01f77eeb712f79f092bda5f6cf4dade65159058fb3fad76865e70175bfaf169a",
       "runtime": "hermes",
       "scenario": "handoff",
-      "started_at": "2026-09-10T19:36:34.081237Z",
+      "started_at": "2026-09-11T07:44:25.324490Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "Hermes Agent v0.21.1 (2026.9.7) \u00b7 upstream 564aef29",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-swenja4k"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-27k8thhs"
     },
     {
       "command": [
         "sdd-evidence build/verify",
         "sdd-trace/status divergence"
       ],
-      "duration_seconds": 0.006528,
-      "ended_at": "2026-09-10T19:36:34.666963Z",
+      "duration_seconds": 0.007072,
+      "ended_at": "2026-09-11T07:44:25.942645Z",
       "exit_code": 0,
       "language": "pt-BR",
       "model": null,
@@ -154,31 +154,31 @@
       "result_sha256": "621eec6d97cedf06f60bf9afa9eaf860a68a99cdfc99c291fb370d3848a8b645",
       "runtime": "hermes",
       "scenario": "evidence",
-      "started_at": "2026-09-10T19:36:34.353113Z",
+      "started_at": "2026-09-11T07:44:25.620648Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "Hermes Agent v0.21.1 (2026.9.7) \u00b7 upstream 564aef29",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-kqh2i5pj"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-vt8j29um"
     },
     {
       "command": [
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-lqrftrgn/plugin/scripts/fleet/launch.sh",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-aavmp1lt/plugin/scripts/fleet/launch.sh",
         "--prepare-only",
         "--runtime",
         "codex",
         "--compose",
         "--root",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-lqrftrgn",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-aavmp1lt",
         "--fleet-id",
         "compose-smoke",
         "--base-branch",
         "main",
         "--task",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-lqrftrgn/compose-task.json"
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-aavmp1lt/compose-task.json"
       ],
-      "duration_seconds": 1.235335,
-      "ended_at": "2026-09-10T19:36:36.181895Z",
+      "duration_seconds": 1.203689,
+      "ended_at": "2026-09-11T07:44:27.456021Z",
       "exit_code": 0,
       "language": "pt-BR",
       "model": null,
@@ -189,15 +189,15 @@
         ".planning/sdd-composy/fleet/compose-smoke/docker-compose.yml",
         "cmux:w-smoke"
       ],
-      "result_sha256": "f945e3b764d55334276e06989a2ed2c93972525658531af2302cc170966789ad",
+      "result_sha256": "ddc32b9bf8cf243b010f888eacb05b0c9e090ea68632c819cd7a70020f33ddb3",
       "runtime": "hermes",
       "scenario": "compose",
-      "started_at": "2026-09-10T19:36:34.666977Z",
+      "started_at": "2026-09-11T07:44:25.942661Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "Hermes Agent v0.21.1 (2026.9.7) \u00b7 upstream 564aef29",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-lqrftrgn"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-aavmp1lt"
     },
     {
       "command": [
@@ -205,8 +205,8 @@
         "--tasks",
         "--fleet"
       ],
-      "duration_seconds": 0.023968,
-      "ended_at": "2026-09-10T19:36:36.461562Z",
+      "duration_seconds": 0.02394,
+      "ended_at": "2026-09-11T07:44:27.773408Z",
       "exit_code": 0,
       "language": "en-US",
       "model": null,
@@ -220,12 +220,12 @@
       "result_sha256": "8c4921e682ac007660bde454cf08f958e7e35f22cbbd608649cfc776c2385905",
       "runtime": "hermes",
       "scenario": "read-only",
-      "started_at": "2026-09-10T19:36:36.181909Z",
+      "started_at": "2026-09-11T07:44:27.456037Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "Hermes Agent v0.21.1 (2026.9.7) \u00b7 upstream 564aef29",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-u2uis078"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-4t1cz97t"
     },
     {
       "command": [
@@ -234,8 +234,8 @@
         "sdd-tasks import/next",
         "sdd-loop"
       ],
-      "duration_seconds": 0.050688,
-      "ended_at": "2026-09-10T19:36:36.766097Z",
+      "duration_seconds": 0.052616,
+      "ended_at": "2026-09-11T07:44:28.122236Z",
       "exit_code": 0,
       "language": "en-US",
       "model": null,
@@ -250,32 +250,32 @@
       "result_sha256": "cdc88d3c7ff39f26dca9f16acf77b262121b1b00ba9ee69afc4414d8a83f1d78",
       "runtime": "hermes",
       "scenario": "lifecycle",
-      "started_at": "2026-09-10T19:36:36.461573Z",
+      "started_at": "2026-09-11T07:44:27.773422Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "Hermes Agent v0.21.1 (2026.9.7) \u00b7 upstream 564aef29",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-t3kjadnu"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-er1ocx9j"
     },
     {
       "command": [
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-bgtoqhvh/plugin/scripts/fleet/launch.sh",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-bxec0sdi/plugin/scripts/fleet/launch.sh",
         "--prepare-only",
         "--runtime",
         "hermes",
         "--root",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-bgtoqhvh",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-bxec0sdi",
         "--fleet-id",
         "smoke",
         "--base-branch",
         "main",
         "--task",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-bgtoqhvh/TASK-ADD.json",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-bxec0sdi/TASK-ADD.json",
         "--task",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-bgtoqhvh/TASK-SUB.json"
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-bxec0sdi/TASK-SUB.json"
       ],
-      "duration_seconds": 0.86641,
-      "ended_at": "2026-09-10T19:36:37.888331Z",
+      "duration_seconds": 0.978584,
+      "ended_at": "2026-09-11T07:44:29.393371Z",
       "exit_code": 0,
       "language": "en-US",
       "model": null,
@@ -283,25 +283,25 @@
       "provider": "offline-fixture",
       "reason": null,
       "resources": [
-        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-ADD-sdd-runtime-smoke-bgtoqhvh",
-        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-SUB-sdd-runtime-smoke-bgtoqhvh"
+        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-ADD-sdd-runtime-smoke-bxec0sdi",
+        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-SUB-sdd-runtime-smoke-bxec0sdi"
       ],
-      "result_sha256": "7391e3316ef9057bf5cfd74b17900257e6af8f709c63e2ffe0376f3399ad9fe1",
+      "result_sha256": "2611af3f4e00002bed48e8e1e1d3b0be4471cf22af1059321831489748c45984",
       "runtime": "hermes",
       "scenario": "fleet",
-      "started_at": "2026-09-10T19:36:36.766110Z",
+      "started_at": "2026-09-11T07:44:28.122251Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "Hermes Agent v0.21.1 (2026.9.7) \u00b7 upstream 564aef29",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-bgtoqhvh"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-bxec0sdi"
     },
     {
       "command": [
         "durable-handoff"
       ],
-      "duration_seconds": 0.000587,
-      "ended_at": "2026-09-10T19:36:38.157969Z",
+      "duration_seconds": 0.001199,
+      "ended_at": "2026-09-11T07:44:29.686742Z",
       "exit_code": 0,
       "language": "en-US",
       "model": null,
@@ -313,23 +313,23 @@
         ".planning/sdd-composy/handoff/2-codex-to-claude.json",
         ".planning/sdd-composy/handoff/3-claude-to-hermes.json"
       ],
-      "result_sha256": "035712dde3fef7ca54f627223821c125f12218f27e1d740e87f34220a0c08658",
+      "result_sha256": "01f77eeb712f79f092bda5f6cf4dade65159058fb3fad76865e70175bfaf169a",
       "runtime": "hermes",
       "scenario": "handoff",
-      "started_at": "2026-09-10T19:36:37.888348Z",
+      "started_at": "2026-09-11T07:44:29.393385Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "Hermes Agent v0.21.1 (2026.9.7) \u00b7 upstream 564aef29",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-yd1vv4yd"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-_b67zctv"
     },
     {
       "command": [
         "sdd-evidence build/verify",
         "sdd-trace/status divergence"
       ],
-      "duration_seconds": 0.005387,
-      "ended_at": "2026-09-10T19:36:38.417099Z",
+      "duration_seconds": 0.005415,
+      "ended_at": "2026-09-11T07:44:29.994076Z",
       "exit_code": 0,
       "language": "en-US",
       "model": null,
@@ -344,31 +344,31 @@
       "result_sha256": "621eec6d97cedf06f60bf9afa9eaf860a68a99cdfc99c291fb370d3848a8b645",
       "runtime": "hermes",
       "scenario": "evidence",
-      "started_at": "2026-09-10T19:36:38.157981Z",
+      "started_at": "2026-09-11T07:44:29.686756Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "Hermes Agent v0.21.1 (2026.9.7) \u00b7 upstream 564aef29",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-fwtavwyb"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-avvtahn9"
     },
     {
       "command": [
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-909wc3v7/plugin/scripts/fleet/launch.sh",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-ebqg5wfb/plugin/scripts/fleet/launch.sh",
         "--prepare-only",
         "--runtime",
         "codex",
         "--compose",
         "--root",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-909wc3v7",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-ebqg5wfb",
         "--fleet-id",
         "compose-smoke",
         "--base-branch",
         "main",
         "--task",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-909wc3v7/compose-task.json"
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-ebqg5wfb/compose-task.json"
       ],
-      "duration_seconds": 1.254883,
-      "ended_at": "2026-09-10T19:36:39.925732Z",
+      "duration_seconds": 1.227049,
+      "ended_at": "2026-09-11T07:44:31.521295Z",
       "exit_code": 0,
       "language": "en-US",
       "model": null,
@@ -379,15 +379,15 @@
         ".planning/sdd-composy/fleet/compose-smoke/docker-compose.yml",
         "cmux:w-smoke"
       ],
-      "result_sha256": "2b7fe099f93e7cb4d74b8c802f9610d13c472601625e6419bb85918a81b472c2",
+      "result_sha256": "d211bc6f38c463860dc193f0ca746486cdaa408bc96a085d8d2e81ae4a4ab9a2",
       "runtime": "hermes",
       "scenario": "compose",
-      "started_at": "2026-09-10T19:36:38.417111Z",
+      "started_at": "2026-09-11T07:44:29.994091Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "Hermes Agent v0.21.1 (2026.9.7) \u00b7 upstream 564aef29",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-909wc3v7"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-ebqg5wfb"
     },
     {
       "command": [
@@ -395,8 +395,8 @@
         "--tasks",
         "--fleet"
       ],
-      "duration_seconds": 0.023557,
-      "ended_at": "2026-09-10T19:36:40.158172Z",
+      "duration_seconds": 0.024045,
+      "ended_at": "2026-09-11T07:44:31.782812Z",
       "exit_code": 0,
       "language": "pt-BR",
       "model": null,
@@ -410,12 +410,12 @@
       "result_sha256": "8c4921e682ac007660bde454cf08f958e7e35f22cbbd608649cfc776c2385905",
       "runtime": "codex",
       "scenario": "read-only",
-      "started_at": "2026-09-10T19:36:39.925748Z",
+      "started_at": "2026-09-11T07:44:31.521311Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "codex-cli 0.153.4",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-tu98bkq7"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-qgxs8td4"
     },
     {
       "command": [
@@ -424,8 +424,8 @@
         "sdd-tasks import/next",
         "sdd-loop"
       ],
-      "duration_seconds": 0.050462,
-      "ended_at": "2026-09-10T19:36:40.386913Z",
+      "duration_seconds": 0.052731,
+      "ended_at": "2026-09-11T07:44:32.025929Z",
       "exit_code": 0,
       "language": "pt-BR",
       "model": null,
@@ -440,32 +440,32 @@
       "result_sha256": "cdc88d3c7ff39f26dca9f16acf77b262121b1b00ba9ee69afc4414d8a83f1d78",
       "runtime": "codex",
       "scenario": "lifecycle",
-      "started_at": "2026-09-10T19:36:40.158182Z",
+      "started_at": "2026-09-11T07:44:31.782824Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "codex-cli 0.153.4",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-9bvafjzs"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-u_ayqf_q"
     },
     {
       "command": [
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-gsenio8l/plugin/scripts/fleet/launch.sh",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-p8gw39ko/plugin/scripts/fleet/launch.sh",
         "--prepare-only",
         "--runtime",
         "codex",
         "--root",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-gsenio8l",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-p8gw39ko",
         "--fleet-id",
         "smoke",
         "--base-branch",
         "main",
         "--task",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-gsenio8l/TASK-ADD.json",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-p8gw39ko/TASK-ADD.json",
         "--task",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-gsenio8l/TASK-SUB.json"
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-p8gw39ko/TASK-SUB.json"
       ],
-      "duration_seconds": 0.876229,
-      "ended_at": "2026-09-10T19:36:41.458583Z",
+      "duration_seconds": 0.866941,
+      "ended_at": "2026-09-11T07:44:33.071677Z",
       "exit_code": 0,
       "language": "pt-BR",
       "model": null,
@@ -473,25 +473,25 @@
       "provider": "offline-fixture",
       "reason": null,
       "resources": [
-        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-ADD-sdd-runtime-smoke-gsenio8l",
-        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-SUB-sdd-runtime-smoke-gsenio8l"
+        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-ADD-sdd-runtime-smoke-p8gw39ko",
+        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-SUB-sdd-runtime-smoke-p8gw39ko"
       ],
-      "result_sha256": "579946d0d19813001e95cec726a7a55daae3f95fa0a56a9e5ffdc44fa5e0faac",
+      "result_sha256": "897f867d5dc3154b2acd0e02f10be43d6c6ca043f3516a34eea028b66835b928",
       "runtime": "codex",
       "scenario": "fleet",
-      "started_at": "2026-09-10T19:36:40.386924Z",
+      "started_at": "2026-09-11T07:44:32.025941Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "codex-cli 0.153.4",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-gsenio8l"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-p8gw39ko"
     },
     {
       "command": [
         "durable-handoff"
       ],
-      "duration_seconds": 0.000688,
-      "ended_at": "2026-09-10T19:36:41.633893Z",
+      "duration_seconds": 0.00073,
+      "ended_at": "2026-09-11T07:44:33.253662Z",
       "exit_code": 0,
       "language": "pt-BR",
       "model": null,
@@ -503,23 +503,23 @@
         ".planning/sdd-composy/handoff/2-codex-to-claude.json",
         ".planning/sdd-composy/handoff/3-claude-to-hermes.json"
       ],
-      "result_sha256": "035712dde3fef7ca54f627223821c125f12218f27e1d740e87f34220a0c08658",
+      "result_sha256": "01f77eeb712f79f092bda5f6cf4dade65159058fb3fad76865e70175bfaf169a",
       "runtime": "codex",
       "scenario": "handoff",
-      "started_at": "2026-09-10T19:36:41.458595Z",
+      "started_at": "2026-09-11T07:44:33.071691Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "codex-cli 0.153.4",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-ztq1hhfe"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-scc172pd"
     },
     {
       "command": [
         "sdd-evidence build/verify",
         "sdd-trace/status divergence"
       ],
-      "duration_seconds": 0.005376,
-      "ended_at": "2026-09-10T19:36:41.814721Z",
+      "duration_seconds": 0.005759,
+      "ended_at": "2026-09-11T07:44:33.437942Z",
       "exit_code": 0,
       "language": "pt-BR",
       "model": null,
@@ -534,31 +534,31 @@
       "result_sha256": "621eec6d97cedf06f60bf9afa9eaf860a68a99cdfc99c291fb370d3848a8b645",
       "runtime": "codex",
       "scenario": "evidence",
-      "started_at": "2026-09-10T19:36:41.633907Z",
+      "started_at": "2026-09-11T07:44:33.253676Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "codex-cli 0.153.4",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-zh4uo4_0"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-6lx_a_u6"
     },
     {
       "command": [
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-x7ll1mv3/plugin/scripts/fleet/launch.sh",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-rgabhvlh/plugin/scripts/fleet/launch.sh",
         "--prepare-only",
         "--runtime",
         "codex",
         "--compose",
         "--root",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-x7ll1mv3",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-rgabhvlh",
         "--fleet-id",
         "compose-smoke",
         "--base-branch",
         "main",
         "--task",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-x7ll1mv3/compose-task.json"
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-rgabhvlh/compose-task.json"
       ],
-      "duration_seconds": 1.255342,
-      "ended_at": "2026-09-10T19:36:43.243784Z",
+      "duration_seconds": 1.210199,
+      "ended_at": "2026-09-11T07:44:34.831675Z",
       "exit_code": 0,
       "language": "pt-BR",
       "model": null,
@@ -569,15 +569,15 @@
         ".planning/sdd-composy/fleet/compose-smoke/docker-compose.yml",
         "cmux:w-smoke"
       ],
-      "result_sha256": "2a88e73014b8ef8e5da23d1ab2ef663ffeb8163a1753700b32286514cb192082",
+      "result_sha256": "9632e1632184f12a8ed1f833b45902d322c6c71fc02021a143c5c90443239f3b",
       "runtime": "codex",
       "scenario": "compose",
-      "started_at": "2026-09-10T19:36:41.814734Z",
+      "started_at": "2026-09-11T07:44:33.437955Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "codex-cli 0.153.4",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-x7ll1mv3"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-rgabhvlh"
     },
     {
       "command": [
@@ -585,8 +585,8 @@
         "--tasks",
         "--fleet"
       ],
-      "duration_seconds": 0.024017,
-      "ended_at": "2026-09-10T19:36:43.443718Z",
+      "duration_seconds": 0.024113,
+      "ended_at": "2026-09-11T07:44:35.034383Z",
       "exit_code": 0,
       "language": "en-US",
       "model": null,
@@ -600,12 +600,12 @@
       "result_sha256": "8c4921e682ac007660bde454cf08f958e7e35f22cbbd608649cfc776c2385905",
       "runtime": "codex",
       "scenario": "read-only",
-      "started_at": "2026-09-10T19:36:43.243797Z",
+      "started_at": "2026-09-11T07:44:34.831691Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "codex-cli 0.153.4",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-bkpvwfma"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-rgxc9jwf"
     },
     {
       "command": [
@@ -614,8 +614,8 @@
         "sdd-tasks import/next",
         "sdd-loop"
       ],
-      "duration_seconds": 0.050653,
-      "ended_at": "2026-09-10T19:36:43.675353Z",
+      "duration_seconds": 0.052031,
+      "ended_at": "2026-09-11T07:44:35.265271Z",
       "exit_code": 0,
       "language": "en-US",
       "model": null,
@@ -630,32 +630,32 @@
       "result_sha256": "cdc88d3c7ff39f26dca9f16acf77b262121b1b00ba9ee69afc4414d8a83f1d78",
       "runtime": "codex",
       "scenario": "lifecycle",
-      "started_at": "2026-09-10T19:36:43.443728Z",
+      "started_at": "2026-09-11T07:44:35.034394Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "codex-cli 0.153.4",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-xkoxd8um"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-51eaws8l"
     },
     {
       "command": [
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-jfylvis4/plugin/scripts/fleet/launch.sh",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-2pnvdr8s/plugin/scripts/fleet/launch.sh",
         "--prepare-only",
         "--runtime",
         "codex",
         "--root",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-jfylvis4",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-2pnvdr8s",
         "--fleet-id",
         "smoke",
         "--base-branch",
         "main",
         "--task",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-jfylvis4/TASK-ADD.json",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-2pnvdr8s/TASK-ADD.json",
         "--task",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-jfylvis4/TASK-SUB.json"
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-2pnvdr8s/TASK-SUB.json"
       ],
-      "duration_seconds": 1.371612,
-      "ended_at": "2026-09-10T19:36:45.223932Z",
+      "duration_seconds": 1.026794,
+      "ended_at": "2026-09-11T07:44:36.473690Z",
       "exit_code": 0,
       "language": "en-US",
       "model": null,
@@ -663,25 +663,25 @@
       "provider": "offline-fixture",
       "reason": null,
       "resources": [
-        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-ADD-sdd-runtime-smoke-jfylvis4",
-        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-SUB-sdd-runtime-smoke-jfylvis4"
+        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-ADD-sdd-runtime-smoke-2pnvdr8s",
+        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-SUB-sdd-runtime-smoke-2pnvdr8s"
       ],
-      "result_sha256": "c49964103aad8eaac48a5164e3409c888eb41b2bfc02e399b01ae35d762f14b0",
+      "result_sha256": "d55104100aa964cb534b67dcf3a60bd025adcbf1a7a9fbfe63d8e8a6de0d978d",
       "runtime": "codex",
       "scenario": "fleet",
-      "started_at": "2026-09-10T19:36:43.675364Z",
+      "started_at": "2026-09-11T07:44:35.265286Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "codex-cli 0.153.4",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-jfylvis4"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-2pnvdr8s"
     },
     {
       "command": [
         "durable-handoff"
       ],
-      "duration_seconds": 0.000652,
-      "ended_at": "2026-09-10T19:36:45.418124Z",
+      "duration_seconds": 0.000695,
+      "ended_at": "2026-09-11T07:44:36.674558Z",
       "exit_code": 0,
       "language": "en-US",
       "model": null,
@@ -693,23 +693,23 @@
         ".planning/sdd-composy/handoff/2-codex-to-claude.json",
         ".planning/sdd-composy/handoff/3-claude-to-hermes.json"
       ],
-      "result_sha256": "035712dde3fef7ca54f627223821c125f12218f27e1d740e87f34220a0c08658",
+      "result_sha256": "01f77eeb712f79f092bda5f6cf4dade65159058fb3fad76865e70175bfaf169a",
       "runtime": "codex",
       "scenario": "handoff",
-      "started_at": "2026-09-10T19:36:45.223945Z",
+      "started_at": "2026-09-11T07:44:36.473710Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "codex-cli 0.153.4",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-lj_x9r5m"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-mhev5n6i"
     },
     {
       "command": [
         "sdd-evidence build/verify",
         "sdd-trace/status divergence"
       ],
-      "duration_seconds": 0.005335,
-      "ended_at": "2026-09-10T19:36:45.595767Z",
+      "duration_seconds": 0.005535,
+      "ended_at": "2026-09-11T07:44:36.860933Z",
       "exit_code": 0,
       "language": "en-US",
       "model": null,
@@ -724,31 +724,31 @@
       "result_sha256": "621eec6d97cedf06f60bf9afa9eaf860a68a99cdfc99c291fb370d3848a8b645",
       "runtime": "codex",
       "scenario": "evidence",
-      "started_at": "2026-09-10T19:36:45.418137Z",
+      "started_at": "2026-09-11T07:44:36.674572Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "codex-cli 0.153.4",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-tm4odtuq"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-5n9kdnr5"
     },
     {
       "command": [
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-i4ne0vdz/plugin/scripts/fleet/launch.sh",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-j94lxqt2/plugin/scripts/fleet/launch.sh",
         "--prepare-only",
         "--runtime",
         "codex",
         "--compose",
         "--root",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-i4ne0vdz",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-j94lxqt2",
         "--fleet-id",
         "compose-smoke",
         "--base-branch",
         "main",
         "--task",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-i4ne0vdz/compose-task.json"
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-j94lxqt2/compose-task.json"
       ],
-      "duration_seconds": 1.236816,
-      "ended_at": "2026-09-10T19:36:47.006259Z",
+      "duration_seconds": 1.204249,
+      "ended_at": "2026-09-11T07:44:38.246148Z",
       "exit_code": 0,
       "language": "en-US",
       "model": null,
@@ -759,15 +759,15 @@
         ".planning/sdd-composy/fleet/compose-smoke/docker-compose.yml",
         "cmux:w-smoke"
       ],
-      "result_sha256": "f9f2967f4de8d48cea4a33542887471db346650b6c611e0f95fe2b806e78a50b",
+      "result_sha256": "24c3a4a80cc11628f8a7ee7da5bdc015e8945ccaccc884433dcdf0fafc532532",
       "runtime": "codex",
       "scenario": "compose",
-      "started_at": "2026-09-10T19:36:45.595778Z",
+      "started_at": "2026-09-11T07:44:36.860945Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "codex-cli 0.153.4",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-i4ne0vdz"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-j94lxqt2"
     },
     {
       "command": [
@@ -775,8 +775,8 @@
         "--tasks",
         "--fleet"
       ],
-      "duration_seconds": 0.025844,
-      "ended_at": "2026-09-10T19:36:47.284484Z",
+      "duration_seconds": 0.024313,
+      "ended_at": "2026-09-11T07:44:38.527759Z",
       "exit_code": 0,
       "language": "pt-BR",
       "model": null,
@@ -790,12 +790,12 @@
       "result_sha256": "8c4921e682ac007660bde454cf08f958e7e35f22cbbd608649cfc776c2385905",
       "runtime": "claude",
       "scenario": "read-only",
-      "started_at": "2026-09-10T19:36:47.006273Z",
+      "started_at": "2026-09-11T07:44:38.246163Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "2.1.267 (Claude Code)",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-o9_57yp_"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-msi_y_rp"
     },
     {
       "command": [
@@ -804,8 +804,8 @@
         "sdd-tasks import/next",
         "sdd-loop"
       ],
-      "duration_seconds": 0.049907,
-      "ended_at": "2026-09-10T19:36:47.515358Z",
+      "duration_seconds": 0.052362,
+      "ended_at": "2026-09-11T07:44:38.766296Z",
       "exit_code": 0,
       "language": "pt-BR",
       "model": null,
@@ -820,32 +820,32 @@
       "result_sha256": "cdc88d3c7ff39f26dca9f16acf77b262121b1b00ba9ee69afc4414d8a83f1d78",
       "runtime": "claude",
       "scenario": "lifecycle",
-      "started_at": "2026-09-10T19:36:47.284496Z",
+      "started_at": "2026-09-11T07:44:38.527775Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "2.1.267 (Claude Code)",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-jswua8wv"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-ngoz04mc"
     },
     {
       "command": [
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-c9i3v95f/plugin/scripts/fleet/launch.sh",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-ilc5ukgr/plugin/scripts/fleet/launch.sh",
         "--prepare-only",
         "--runtime",
         "claude",
         "--root",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-c9i3v95f",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-ilc5ukgr",
         "--fleet-id",
         "smoke",
         "--base-branch",
         "main",
         "--task",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-c9i3v95f/TASK-ADD.json",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-ilc5ukgr/TASK-ADD.json",
         "--task",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-c9i3v95f/TASK-SUB.json"
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-ilc5ukgr/TASK-SUB.json"
       ],
-      "duration_seconds": 0.879896,
-      "ended_at": "2026-09-10T19:36:48.570241Z",
+      "duration_seconds": 0.895029,
+      "ended_at": "2026-09-11T07:44:39.842631Z",
       "exit_code": 0,
       "language": "pt-BR",
       "model": null,
@@ -853,25 +853,25 @@
       "provider": "offline-fixture",
       "reason": null,
       "resources": [
-        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-ADD-sdd-runtime-smoke-c9i3v95f",
-        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-SUB-sdd-runtime-smoke-c9i3v95f"
+        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-ADD-sdd-runtime-smoke-ilc5ukgr",
+        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-SUB-sdd-runtime-smoke-ilc5ukgr"
       ],
-      "result_sha256": "15b8f83e62e20109bf81da23cb77187acdc74233258ba5cffbcef232708e8812",
+      "result_sha256": "20e2815c65383a650907ae6d5e78e41726bf29870c9cc0354c27228e6b5385f9",
       "runtime": "claude",
       "scenario": "fleet",
-      "started_at": "2026-09-10T19:36:47.515371Z",
+      "started_at": "2026-09-11T07:44:38.766307Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "2.1.267 (Claude Code)",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-c9i3v95f"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-ilc5ukgr"
     },
     {
       "command": [
         "durable-handoff"
       ],
-      "duration_seconds": 0.000664,
-      "ended_at": "2026-09-10T19:36:48.744965Z",
+      "duration_seconds": 0.000714,
+      "ended_at": "2026-09-11T07:44:40.022358Z",
       "exit_code": 0,
       "language": "pt-BR",
       "model": null,
@@ -883,23 +883,23 @@
         ".planning/sdd-composy/handoff/2-codex-to-claude.json",
         ".planning/sdd-composy/handoff/3-claude-to-hermes.json"
       ],
-      "result_sha256": "035712dde3fef7ca54f627223821c125f12218f27e1d740e87f34220a0c08658",
+      "result_sha256": "01f77eeb712f79f092bda5f6cf4dade65159058fb3fad76865e70175bfaf169a",
       "runtime": "claude",
       "scenario": "handoff",
-      "started_at": "2026-09-10T19:36:48.570255Z",
+      "started_at": "2026-09-11T07:44:39.842645Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "2.1.267 (Claude Code)",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-dgczsowk"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-sku5bcb9"
     },
     {
       "command": [
         "sdd-evidence build/verify",
         "sdd-trace/status divergence"
       ],
-      "duration_seconds": 0.005458,
-      "ended_at": "2026-09-10T19:36:48.925806Z",
+      "duration_seconds": 0.005565,
+      "ended_at": "2026-09-11T07:44:40.206892Z",
       "exit_code": 0,
       "language": "pt-BR",
       "model": null,
@@ -914,31 +914,31 @@
       "result_sha256": "621eec6d97cedf06f60bf9afa9eaf860a68a99cdfc99c291fb370d3848a8b645",
       "runtime": "claude",
       "scenario": "evidence",
-      "started_at": "2026-09-10T19:36:48.744977Z",
+      "started_at": "2026-09-11T07:44:40.022371Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "2.1.267 (Claude Code)",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-i5znmo6c"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-nacqeulv"
     },
     {
       "command": [
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-jk3v3mvs/plugin/scripts/fleet/launch.sh",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-zu9b4mrq/plugin/scripts/fleet/launch.sh",
         "--prepare-only",
         "--runtime",
         "codex",
         "--compose",
         "--root",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-jk3v3mvs",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-zu9b4mrq",
         "--fleet-id",
         "compose-smoke",
         "--base-branch",
         "main",
         "--task",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-jk3v3mvs/compose-task.json"
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-zu9b4mrq/compose-task.json"
       ],
-      "duration_seconds": 1.288254,
-      "ended_at": "2026-09-10T19:36:50.391349Z",
+      "duration_seconds": 1.284425,
+      "ended_at": "2026-09-11T07:44:41.676195Z",
       "exit_code": 0,
       "language": "pt-BR",
       "model": null,
@@ -949,15 +949,15 @@
         ".planning/sdd-composy/fleet/compose-smoke/docker-compose.yml",
         "cmux:w-smoke"
       ],
-      "result_sha256": "ae98d4c3f96ea12d4da6b3e2b7322a340e69ff5bd09dda4b1160d094fe1cd0d3",
+      "result_sha256": "a7a66093ffbd8e4dd270885e4e9721dc10e1fb970593b759fb5c445e062ce7a6",
       "runtime": "claude",
       "scenario": "compose",
-      "started_at": "2026-09-10T19:36:48.925818Z",
+      "started_at": "2026-09-11T07:44:40.206902Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "2.1.267 (Claude Code)",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-jk3v3mvs"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-zu9b4mrq"
     },
     {
       "command": [
@@ -965,8 +965,8 @@
         "--tasks",
         "--fleet"
       ],
-      "duration_seconds": 0.023438,
-      "ended_at": "2026-09-10T19:36:50.593316Z",
+      "duration_seconds": 0.023982,
+      "ended_at": "2026-09-11T07:44:41.885477Z",
       "exit_code": 0,
       "language": "en-US",
       "model": null,
@@ -980,12 +980,12 @@
       "result_sha256": "8c4921e682ac007660bde454cf08f958e7e35f22cbbd608649cfc776c2385905",
       "runtime": "claude",
       "scenario": "read-only",
-      "started_at": "2026-09-10T19:36:50.391362Z",
+      "started_at": "2026-09-11T07:44:41.676211Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "2.1.267 (Claude Code)",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-hk5x8lam"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-uo3bl4io"
     },
     {
       "command": [
@@ -994,8 +994,8 @@
         "sdd-tasks import/next",
         "sdd-loop"
       ],
-      "duration_seconds": 0.050583,
-      "ended_at": "2026-09-10T19:36:50.816988Z",
+      "duration_seconds": 0.052962,
+      "ended_at": "2026-09-11T07:44:42.115674Z",
       "exit_code": 0,
       "language": "en-US",
       "model": null,
@@ -1010,32 +1010,32 @@
       "result_sha256": "cdc88d3c7ff39f26dca9f16acf77b262121b1b00ba9ee69afc4414d8a83f1d78",
       "runtime": "claude",
       "scenario": "lifecycle",
-      "started_at": "2026-09-10T19:36:50.593329Z",
+      "started_at": "2026-09-11T07:44:41.885489Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "2.1.267 (Claude Code)",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-ifvhdhey"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-zrg307af"
     },
     {
       "command": [
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-onnwt4h0/plugin/scripts/fleet/launch.sh",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-peppr96b/plugin/scripts/fleet/launch.sh",
         "--prepare-only",
         "--runtime",
         "claude",
         "--root",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-onnwt4h0",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-peppr96b",
         "--fleet-id",
         "smoke",
         "--base-branch",
         "main",
         "--task",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-onnwt4h0/TASK-ADD.json",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-peppr96b/TASK-ADD.json",
         "--task",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-onnwt4h0/TASK-SUB.json"
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-peppr96b/TASK-SUB.json"
       ],
-      "duration_seconds": 0.870876,
-      "ended_at": "2026-09-10T19:36:51.871528Z",
+      "duration_seconds": 0.881559,
+      "ended_at": "2026-09-11T07:44:43.174645Z",
       "exit_code": 0,
       "language": "en-US",
       "model": null,
@@ -1043,25 +1043,25 @@
       "provider": "offline-fixture",
       "reason": null,
       "resources": [
-        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-ADD-sdd-runtime-smoke-onnwt4h0",
-        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-SUB-sdd-runtime-smoke-onnwt4h0"
+        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-ADD-sdd-runtime-smoke-peppr96b",
+        "/private/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/.sddcomposy-fleet-smoke-TASK-SUB-sdd-runtime-smoke-peppr96b"
       ],
-      "result_sha256": "1d169c5f8a861adb2f97c9a4612eb5926de44708fb37e22f2ff1e81f6a746faf",
+      "result_sha256": "490c8c0b5e882e8d43412c0797e2fbf82d0029355e3f7d5567167b1aad3fdb41",
       "runtime": "claude",
       "scenario": "fleet",
-      "started_at": "2026-09-10T19:36:50.817002Z",
+      "started_at": "2026-09-11T07:44:42.115689Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "2.1.267 (Claude Code)",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-onnwt4h0"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-peppr96b"
     },
     {
       "command": [
         "durable-handoff"
       ],
-      "duration_seconds": 0.000651,
-      "ended_at": "2026-09-10T19:36:52.046807Z",
+      "duration_seconds": 0.001314,
+      "ended_at": "2026-09-11T07:44:43.359427Z",
       "exit_code": 0,
       "language": "en-US",
       "model": null,
@@ -1073,23 +1073,23 @@
         ".planning/sdd-composy/handoff/2-codex-to-claude.json",
         ".planning/sdd-composy/handoff/3-claude-to-hermes.json"
       ],
-      "result_sha256": "035712dde3fef7ca54f627223821c125f12218f27e1d740e87f34220a0c08658",
+      "result_sha256": "01f77eeb712f79f092bda5f6cf4dade65159058fb3fad76865e70175bfaf169a",
       "runtime": "claude",
       "scenario": "handoff",
-      "started_at": "2026-09-10T19:36:51.871540Z",
+      "started_at": "2026-09-11T07:44:43.174660Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "2.1.267 (Claude Code)",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-o4bgj33g"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-ppdv5ck7"
     },
     {
       "command": [
         "sdd-evidence build/verify",
         "sdd-trace/status divergence"
       ],
-      "duration_seconds": 0.005438,
-      "ended_at": "2026-09-10T19:36:52.227407Z",
+      "duration_seconds": 0.005419,
+      "ended_at": "2026-09-11T07:44:43.546287Z",
       "exit_code": 0,
       "language": "en-US",
       "model": null,
@@ -1104,31 +1104,31 @@
       "result_sha256": "621eec6d97cedf06f60bf9afa9eaf860a68a99cdfc99c291fb370d3848a8b645",
       "runtime": "claude",
       "scenario": "evidence",
-      "started_at": "2026-09-10T19:36:52.046821Z",
+      "started_at": "2026-09-11T07:44:43.359442Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "2.1.267 (Claude Code)",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-ajaa1ut4"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-f4y6vmty"
     },
     {
       "command": [
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-5ioss2si/plugin/scripts/fleet/launch.sh",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-ec3oaqvt/plugin/scripts/fleet/launch.sh",
         "--prepare-only",
         "--runtime",
         "codex",
         "--compose",
         "--root",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-5ioss2si",
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-ec3oaqvt",
         "--fleet-id",
         "compose-smoke",
         "--base-branch",
         "main",
         "--task",
-        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-5ioss2si/compose-task.json"
+        "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-ec3oaqvt/compose-task.json"
       ],
-      "duration_seconds": 1.257325,
-      "ended_at": "2026-09-10T19:36:53.667753Z",
+      "duration_seconds": 1.194575,
+      "ended_at": "2026-09-11T07:44:44.924718Z",
       "exit_code": 0,
       "language": "en-US",
       "model": null,
@@ -1139,19 +1139,19 @@
         ".planning/sdd-composy/fleet/compose-smoke/docker-compose.yml",
         "cmux:w-smoke"
       ],
-      "result_sha256": "1dedbabef4da354390b251540671e4f54d8a1a99651edbef038f87e9bb85bae3",
+      "result_sha256": "e785ca47e435a6be39d194d0c0d2b51e870ce277cdd2f6ee253efe0b5df01af7",
       "runtime": "claude",
       "scenario": "compose",
-      "started_at": "2026-09-10T19:36:52.227417Z",
+      "started_at": "2026-09-11T07:44:43.546300Z",
       "status": "PASS",
       "task_id": "TASK-008",
       "usage": null,
       "version": "2.1.267 (Claude Code)",
-      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-5ioss2si"
+      "worktree": "/var/folders/x4/4yj1qqy90139znmwp50zshk00000gn/T/sdd-runtime-smoke-ec3oaqvt"
     }
   ],
   "schema_version": 1,
-  "started_at": "2026-09-10T19:36:32.320913Z",
+  "started_at": "2026-09-11T07:44:23.356952Z",
   "timeout_seconds": 300,
   "usage": null,
   "verdict": "PASS"

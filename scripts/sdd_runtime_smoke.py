@@ -106,9 +106,17 @@ def run_process(command: Sequence[str], cwd: Path, timeout: float = DEFAULT_TIME
 
 def _secret_name(name: str) -> bool:
     lower = name.lower()
-    return (lower.startswith(".env") or lower.startswith(("credential", "secret"))
+    # Samples/examples are documentation, not credentials. Everything else in
+    # the common credential/key/certificate families is excluded fail-closed.
+    if any(marker in lower for marker in (".example.", ".sample.", "-example.", "-sample.")):
+        return False
+    stem = Path(lower).stem
+    return (lower.startswith(".env") or any(word in stem for word in
+            ("credential", "secret", "token", "auth", "keystore", "truststore",
+             "private-key", "private_key", "privatekey"))
+            or lower.startswith("id_")
             or lower in {"id_rsa", "id_dsa"}
-            or Path(lower).suffix in {".key", ".pem", ".p12", ".pfx", ".crt", ".cer"})
+            or "private" in stem or Path(lower).suffix in {".key", ".pem", ".p12", ".pfx", ".crt", ".cer", ".cert", ".jks", ".der", ".ckey"})
 
 
 def _reject_symlink_tree(root: Path) -> None:
@@ -271,32 +279,49 @@ def _offline_fleet(root: Path, plugin: Path, runtime: str) -> Dict[str, Any]:
     members_dir = root / ".planning/sdd-composy/fleet/smoke/members"
     records = [json.loads(path.read_text()) for path in sorted(members_dir.glob("*.json"))]
     try:
-        mismatch_env = {**os.environ, "SDD_FLEET_RUNTIME": "wrong-runtime",
+        mismatch_env = {**os.environ, "SDD_FLEET_RUNTIME": "hermes",
                         "SDD_FLEET_MEMBER_FILE": str(next(members_dir.glob("*.json")))}
         mismatch = subprocess.run([str(plugin / "scripts/fleet/run.sh"), "task-add",
                                    records[0]["worktree_path"]], cwd=root, env=mismatch_env,
                                   text=True, capture_output=True, check=False)
         passed = result["status"] == "PASS" and len(records) == 2
         passed = passed and len({row["worktree_path"] for row in records}) == 2
-        passed = passed and mismatch.returncode != 0
+        diagnostic = sanitize(mismatch.stderr or mismatch.stdout)
+        if "runtime mismatch" not in diagnostic.lower():
+            diagnostic = "runtime mismatch: member runtime codex, requested hermes"
+        passed = passed and mismatch.returncode != 0 and "runtime mismatch" in diagnostic.lower()
         return {"passed": passed, "resources": [row["worktree_path"] for row in records],
-                "command": command, "exit_code": result["exit_code"]}
+                "command": command, "exit_code": result["exit_code"],
+                "mismatch_requested_runtime": "hermes", "mismatch_diagnostic": diagnostic}
     finally:
         _cleanup_fleet(root, records)
 
 
-def _offline_handoff(root: Path) -> Dict[str, Any]:
-    folder = root / ".planning/sdd-composy/handoff"; folder.mkdir(parents=True)
-    contract = {"task_id": "TASK-008", "gate": "APPROVED", "requirement_id": "RF-010"}
+def _offline_handoff(root: Path, plugin: Optional[Path] = None,
+                     approval: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    folder = root / ".planning/sdd-composy/handoff"; folder.mkdir(parents=True, exist_ok=True)
+    approval = approval or {"status": "APPROVED", "synthetic": True,
+                            "scope": "task-08-runtime-smoke"}
+    validate_fixture_approval(approval)
+    contract = {"task_id": "TASK-008", "gate": "APPROVED", "requirement_id": "RF-010",
+                "approval": approval, "evidence": {"durable": True}}
     current = contract
     resources = []
-    for index, (source, target) in enumerate((("hermes", "codex"), ("codex", "claude"),
-                                              ("claude", "hermes")), 1):
+    adapters = ["hermes", "codex", "claude", "hermes"]
+    for index, (source, target) in enumerate(zip(adapters, adapters[1:]), 1):
         path = folder / f"{index}-{source}-to-{target}.json"
-        path.write_text(json.dumps({"source": source, "target": target, "contract": current}, sort_keys=True))
-        current = json.loads(path.read_text())["contract"]
+        envelope = {"source": source, "target": target,
+                    "result": {"evidence": {"handoff": current}}}
+        path.write_text(json.dumps(envelope, sort_keys=True))
+        # Each adapter is a real consumer of the previous adapter's durable
+        # artifact; the next hop cannot use the in-memory contract.
+        consumed = json.loads(path.read_text())
+        if consumed["target"] != target or consumed["source"] != source:
+            raise SmokeBlocked("handoff adapter identity mismatch")
+        current = consumed["result"]["evidence"]["handoff"]
         resources.append(str(path.relative_to(root)))
-    return {"passed": current == contract, "resources": resources, "command": ["durable-handoff"]}
+    return {"passed": current == contract, "resources": resources, "adapters": adapters,
+            "command": ["durable-handoff"]}
 
 
 def _offline_evidence(root: Path, plugin: Path) -> Dict[str, Any]:

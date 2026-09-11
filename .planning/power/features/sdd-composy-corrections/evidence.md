@@ -71,8 +71,13 @@ Campos de duração e exit code por cenário real são `null` porque os cenário
 
 ## Verificação
 
+Re-review round 2 fechou os dois Important remanescentes: o handoff usa consumidores/adapters
+offline reais sobre arquivos persistidos e valida aprovação sintética escopada; a cópia isolada
+recusa famílias de token/auth, `id_*`, chaves privadas, keystore e certificados, preservando
+somente amostras documentais. A execução renovada produziu 36/36 `PASS` sem chamadas de provider.
+
 - `python3 -m unittest tests.test_sdd_composy_runtime_smoke tests.test_sdd_composy_hermes -v`:
-  18 testes, PASS.
+  21 testes, PASS.
 - `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py' -v`: 367 testes, PASS.
 - `python3 scripts/validate_readme_plugins.py`: 16 plugins validados, PASS.
 - `python3 -m unittest tests.test_readme_marketplace -v`: 1 teste, PASS.

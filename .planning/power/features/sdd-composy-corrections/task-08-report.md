@@ -18,6 +18,11 @@ Status: DONE_WITH_CONCERNS
 - CLI real expõe `--provider-entry-point production` e `--acknowledge-real-fleet`, mantendo
   `BLOCKED` sem acknowledgement e `NOT_RUN` enquanto o adapter real não for habilitado.
 - Fleet real bloqueada sem acknowledgement externo explícito.
+- Re-review: handoff offline agora consome artefatos duráveis por adapters Hermes→Codex→Claude→Hermes,
+  preservando IDs/gates/evidence e recusando aprovação não sintética ou fora do escopo; mismatch de
+  runtime usa diagnóstico canônico.
+- Re-review: cópia isolada falha fechada para token/auth, `id_*`, chaves privadas, keystores,
+  credenciais e certificados, mantendo somente arquivos explicitamente `.sample`/`.example`.
 - Baseline Hermes substituído por registro/discovery comportamental das 17 skills, `Path` nativo
   e falha diagnóstica do bootstrap.
 - Referência Hermes alinhada com o vetor nativo e Kanban indisponível.
@@ -28,6 +33,7 @@ Status: DONE_WITH_CONCERNS
 - Fix round 1 RED: cenário sem recursos/medidas falhou; testes adversariais cobriram symlinks,
   secrets, publicação atômica, preservação de launcher e gate da CLI real.
 - GREEN focado: 18/18 testes de harness + Hermes.
+- Re-review GREEN focado: 21/21 testes de harness + Hermes; execução offline 36/36 PASS.
 - Suíte offline completa: 367/367 testes.
 - README/marketplace: 16 plugins e 1/1 teste.
 - Shell syntax e `git diff --check`: PASS.
