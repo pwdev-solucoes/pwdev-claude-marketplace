@@ -133,12 +133,23 @@ class RuntimeSmokeContractTests(unittest.TestCase):
                 outcome = SMOKE._offline_handoff(fixture, fixture / "plugin")
                 self.assertTrue(outcome["passed"])
                 self.assertEqual(outcome["adapters"], ["hermes", "codex", "claude", "hermes"])
+                self.assertEqual(len(outcome["invocations"]), 4)
+                for invocation in outcome["invocations"]:
+                    self.assertEqual(Path(invocation["cwd"]).resolve(), fixture.resolve())
+                    self.assertTrue(invocation["argv"])
+                self.assertEqual([item["runtime"] for item in outcome["invocations"]], outcome["adapters"])
+                for index, invocation in enumerate(outcome["invocations"][1:]):
+                    self.assertEqual(Path(invocation["consumed"]), fixture / outcome["resources"][index])
+                self.assertIn("--output-last-message", outcome["invocations"][1]["argv"])
+                self.assertIn("--output-format", outcome["invocations"][2]["argv"])
                 artifacts = [json.loads((fixture / resource).read_text())
                              for resource in outcome["resources"]]
                 contracts = [item["result"]["evidence"]["handoff"] for item in artifacts]
                 self.assertTrue(all(value["task_id"] == "TASK-008" for value in contracts))
                 self.assertTrue(all(value["gate"] == "APPROVED" for value in contracts))
                 self.assertTrue(all(value["approval"]["synthetic"] is True for value in contracts))
+                self.assertTrue(all(value["requirement_id"] == "RF-010" for value in contracts))
+                self.assertTrue(all(value["evidence"] == {"durable": True} for value in contracts))
                 with self.assertRaisesRegex(SMOKE.SmokeBlocked, "invented approval"):
                     SMOKE._offline_handoff(fixture, fixture / "plugin",
                                            approval={"status": "APPROVED"})
@@ -150,7 +161,38 @@ class RuntimeSmokeContractTests(unittest.TestCase):
                 outcome = SMOKE._offline_fleet(fixture, fixture / "plugin", "codex")
         self.assertTrue(outcome["passed"])
         self.assertEqual(outcome["mismatch_requested_runtime"], "hermes")
-        self.assertIn("runtime mismatch", outcome["mismatch_diagnostic"])
+        self.assertIn("canonical Git worktree registration", outcome["mismatch_diagnostic"])
+        self.assertNotIn("canonical Git worktree registration", outcome["matching_stderr"])
+        self.assertFalse(outcome["mismatch_provider_invoked"])
+        self.assertEqual(outcome["mismatch_diagnostic"], outcome["mismatch_stderr"])
+
+    def test_handoff_cannot_pass_when_an_actual_adapter_run_is_skipped(self):
+        original = SMOKE._load_local
+        for skipped in range(4):
+            loaded = []
+            def load(scripts, filename, tag):
+                module = original(scripts, filename, tag)
+                loaded.append(filename)
+                if len(loaded) - 1 == skipped:
+                    module.run = lambda *args, **kwargs: {}
+                return module
+            with tempfile.TemporaryDirectory() as directory:
+                with patch.object(SMOKE, "_load_local", side_effect=load):
+                    with self.assertRaises((SMOKE.SmokeBlocked, KeyError, FileNotFoundError)):
+                        SMOKE._offline_handoff(Path(directory), ROOT / "plugins/sdd-composy")
+
+    def test_fleet_rejects_unrelated_runner_stderr_without_rewriting_it(self):
+        original = subprocess.run
+        diagnostic = "sdd-fleet-run: registered fleet member does not match canonical Git worktree registration\n"
+        def run(command, *args, **kwargs):
+            if str(command[0]).endswith("/fleet/run.sh"):
+                return subprocess.CompletedProcess(command, 2, "", diagnostic)
+            return original(command, *args, **kwargs)
+        with SMOKE.isolated_fixture(ROOT / "plugins/sdd-composy") as fixture:
+            with patch.object(SMOKE.subprocess, "run", side_effect=run):
+                outcome = SMOKE._offline_fleet(fixture, fixture / "plugin", "codex")
+        self.assertFalse(outcome["passed"])
+        self.assertEqual(outcome["mismatch_diagnostic"], diagnostic)
 
     def test_sanitizer_redacts_secrets_and_sensitive_absolute_paths(self):
         raw = "token=secret-value Authorization: Bearer abc123 /Users/person/project"

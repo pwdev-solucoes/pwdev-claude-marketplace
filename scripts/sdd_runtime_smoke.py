@@ -277,27 +277,44 @@ def _offline_fleet(root: Path, plugin: Path, runtime: str) -> Dict[str, Any]:
         command += ["--task", str(contract)]
     result = run_process(command, root)
     members_dir = root / ".planning/sdd-composy/fleet/smoke/members"
-    records = [json.loads(path.read_text()) for path in sorted(members_dir.glob("*.json"))]
+    member_paths = sorted(members_dir.glob("*.json"))
+    records = [json.loads(path.read_text()) for path in member_paths]
     try:
-        mismatch_env = {**os.environ, "SDD_FLEET_RUNTIME": "hermes",
-                        "SDD_FLEET_MEMBER_FILE": str(next(members_dir.glob("*.json")))}
-        mismatch = subprocess.run([str(plugin / "scripts/fleet/run.sh"), "task-add",
-                                   records[0]["worktree_path"]], cwd=root, env=mismatch_env,
+        actual = records[0]["runtime"]
+        requested = "codex" if actual == "hermes" else "hermes"
+        fake = root / "mismatch-bin"; fake.mkdir()
+        marker = fake / "invoked"
+        for name in RUNTIMES:
+            binary = fake / name
+            binary.write_text(f"#!{sys.executable}\nfrom pathlib import Path\nPath({str(marker)!r}).touch()\nraise SystemExit(91)\n")
+            binary.chmod(0o755)
+        runner_env = {**os.environ, "PATH": str(fake) + os.pathsep + os.environ.get("PATH", ""),
+                      "SDD_FLEET_MEMBER_FILE": str(member_paths[0])}
+        runner = [str(plugin / "scripts/fleet/run.sh"), records[0]["slug"], records[0]["worktree_path"]]
+        mismatch = subprocess.run(runner, cwd=root, env={**runner_env, "SDD_FLEET_RUNTIME": requested},
+                                  text=True, capture_output=True, check=False)
+        mismatch_invoked = marker.exists()
+        matching = subprocess.run(runner, cwd=root, env={**runner_env, "SDD_FLEET_RUNTIME": actual},
                                   text=True, capture_output=True, check=False)
         passed = result["status"] == "PASS" and len(records) == 2
         passed = passed and len({row["worktree_path"] for row in records}) == 2
-        diagnostic = sanitize(mismatch.stderr or mismatch.stdout)
-        if "runtime mismatch" not in diagnostic.lower():
-            diagnostic = "runtime mismatch: member runtime codex, requested hermes"
-        passed = passed and mismatch.returncode != 0 and "runtime mismatch" in diagnostic.lower()
+        diagnostic = mismatch.stderr
+        canonical = "sdd-fleet-run: registered fleet member does not match canonical Git worktree registration\n"
+        passed = (passed and mismatch.returncode == 2 and diagnostic == canonical
+                  and not mismatch_invoked and canonical not in matching.stderr
+                  and matching.returncode == 2
+                  and matching.stderr == f"sdd-fleet-run: unsafe phase contract path for {records[0]['slug']}\n"
+                  and not marker.exists())
         return {"passed": passed, "resources": [row["worktree_path"] for row in records],
                 "command": command, "exit_code": result["exit_code"],
-                "mismatch_requested_runtime": "hermes", "mismatch_diagnostic": diagnostic}
+                "mismatch_requested_runtime": requested, "member_runtime": actual,
+                "mismatch_diagnostic": diagnostic, "mismatch_stderr": mismatch.stderr,
+                "matching_stderr": matching.stderr, "mismatch_provider_invoked": mismatch_invoked}
     finally:
         _cleanup_fleet(root, records)
 
 
-def _offline_handoff(root: Path, plugin: Optional[Path] = None,
+def _offline_handoff(root: Path, plugin: Path,
                      approval: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     folder = root / ".planning/sdd-composy/handoff"; folder.mkdir(parents=True, exist_ok=True)
     approval = approval or {"status": "APPROVED", "synthetic": True,
@@ -305,23 +322,57 @@ def _offline_handoff(root: Path, plugin: Optional[Path] = None,
     validate_fixture_approval(approval)
     contract = {"task_id": "TASK-008", "gate": "APPROVED", "requirement_id": "RF-010",
                 "approval": approval, "evidence": {"durable": True}}
-    current = contract
+    previous = folder / "seed.json"
+    previous.write_text(json.dumps({"result": {"evidence": {"handoff": contract}}}))
     resources = []
+    invocations = []
     adapters = ["hermes", "codex", "claude", "hermes"]
-    for index, (source, target) in enumerate(zip(adapters, adapters[1:]), 1):
-        path = folder / f"{index}-{source}-to-{target}.json"
-        envelope = {"source": source, "target": target,
-                    "result": {"evidence": {"handoff": current}}}
-        path.write_text(json.dumps(envelope, sort_keys=True))
-        # Each adapter is a real consumer of the previous adapter's durable
-        # artifact; the next hop cannot use the in-memory contract.
-        consumed = json.loads(path.read_text())
-        if consumed["target"] != target or consumed["source"] != source:
-            raise SmokeBlocked("handoff adapter identity mismatch")
-        current = consumed["result"]["evidence"]["handoff"]
+    for index, runtime in enumerate(adapters, 1):
+        path = folder / f"{index}-{runtime}.json"
+        capture = folder / f"{index}-invocation.json"
+        executable = folder / f"{index}-{runtime}-fake"
+        executable.write_text(f"#!{sys.executable}\n" + '''import json, os, sys
+from pathlib import Path
+runtime = Path(sys.argv[0]).name.split('-')[1]
+args = sys.argv[1:]
+if runtime == 'hermes':
+    prompt = args[args.index('-z') + 1]
+    request = json.loads(prompt[prompt.index('{'):])
+elif runtime == 'codex':
+    request = json.loads(args[-1])
+else:
+    request = json.loads(args[args.index('-p') + 1])
+previous = Path(request['previous'])
+value = json.loads(previous.read_text())['result']['evidence']['handoff']
+result = {'stage': request['stage'], 'status': 'completed', 'message': 'offline durable consumer',
+          'verdict': 'passed', 'evidence': {'handoff': value}}
+Path(request['capture']).write_text(json.dumps({'argv': args, 'cwd': os.getcwd(),
+    'runtime': runtime, 'consumed': str(previous)}))
+if runtime == 'codex':
+    Path(args[args.index('--output-last-message') + 1]).write_text(json.dumps(result))
+    print(json.dumps({'type': 'thread.started'}))
+elif runtime == 'claude':
+    print(json.dumps({'type': 'result', 'subtype': 'success', 'is_error': False,
+                      'result': json.dumps(result)}))
+else:
+    print(json.dumps(result))
+''')
+        executable.chmod(0o755)
+        adapter = _load_local(plugin / "scripts", f"loop-engine-{runtime}.py", runtime)
+        result = adapter.run({"stage": "EVIDENCE", "task_id": contract["task_id"],
+                              "isolation_confirmed": True, "previous": str(previous),
+                              "capture": str(capture)}, root, executable=str(executable))
+        invocation = json.loads(capture.read_text())
+        if (invocation["runtime"] != runtime or Path(invocation["cwd"]).resolve() != root.resolve()
+                or invocation["consumed"] != str(previous)
+                or result["evidence"]["handoff"] != contract):
+            raise SmokeBlocked("handoff adapter consumption mismatch")
+        path.write_text(json.dumps({"runtime": runtime, "result": result}, sort_keys=True))
+        previous = path
+        invocations.append(invocation)
         resources.append(str(path.relative_to(root)))
-    return {"passed": current == contract, "resources": resources, "adapters": adapters,
-            "command": ["durable-handoff"]}
+    return {"passed": True, "resources": resources, "adapters": adapters,
+            "invocations": invocations, "command": ["loop-engine run", *adapters]}
 
 
 def _offline_evidence(root: Path, plugin: Path) -> Dict[str, Any]:
@@ -435,7 +486,7 @@ def _offline_check(root: Path, plugin_root: Path, runtime: str, language: str,
     elif scenario == "fleet":
         outcome = _offline_fleet(root, plugin_root, runtime)
     elif scenario == "handoff":
-        outcome = _offline_handoff(root)
+        outcome = _offline_handoff(root, plugin_root)
     elif scenario == "evidence":
         outcome = _offline_evidence(root, plugin_root)
     elif scenario == "compose":

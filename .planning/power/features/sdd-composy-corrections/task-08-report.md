@@ -38,7 +38,31 @@ Status: DONE_WITH_CONCERNS
 - README/marketplace: 16 plugins e 1/1 teste.
 - Shell syntax e `git diff --check`: PASS.
 
-## Preocupação deliberada
+## Correção após re-review offline 2
+
+- `_offline_handoff` agora chama `run()` dos adapters reais em quatro invocações:
+  Hermes → Codex → Claude → Hermes. Executáveis fake temporários recebem os vetores
+  nativos, leem o artefato durável anterior e emitem JSON Hermes, arquivo final Codex
+  ou envelope Claude. Capturas preservam argv/cwd e a origem consumida; os resultados
+  validados preservam task/requirement IDs, gate, evidence e aprovação sintética.
+- A fixture fleet associa o mesmo member, slug e worktree nas duas execuções.
+  Alterar somente o runtime solicitado produz o stderr real
+  `sdd-fleet-run: registered fleet member does not match canonical Git worktree registration`.
+  O controle com runtime correto passa esse gate e chega ao gate posterior
+  `sdd-fleet-run: unsafe phase contract path for task-add`. O runner agrupa identidade
+  runtime no gate de registro; não existe mensagem literal `runtime mismatch` nele.
+  Nenhum diagnóstico é substituído e nenhum fake provider é invocado nesse teste.
+- RED: três regressões novas falharam antes da correção (2 failures, 1 error):
+  ausência de capturas, adapter ignorado e stderr fabricado aceito.
+- GREEN: `python3 -m unittest tests.test_sdd_composy_runtime_smoke
+  tests.test_sdd_composy_runtime_adapters tests.test_sdd_composy_hermes -v`:
+  31 testes PASS em 65.771s, incluindo a matriz offline 36/36 e a execução da CLI.
+  Os testes detectam a omissão de qualquer uma das quatro chamadas e recusam um
+  erro de registro idêntico nos dois lados do controle diferencial.
+- Zero inferência real. Task 08 permanece INCOMPLETE; revisão independente e os
+  gates humanos aplicáveis não são concedidos por este relatório.
+
+## Limite da fase real
 
 A fase real não foi executada e não pode ser chamada de aceita. A implementação desta entrega
 para no gate anterior à inferência; `evidence.md` registra os cenários reais como `NOT_RUN` e a
