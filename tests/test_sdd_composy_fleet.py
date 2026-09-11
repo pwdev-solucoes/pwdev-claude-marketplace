@@ -469,16 +469,30 @@ class FleetLaunchTest(unittest.TestCase):
             self.assertEqual(subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_teardown "$1"',"",str(handle)]).returncode,0)
             self.assertFalse(handle.exists())
 
-    def test_ui_tmux_collision_and_missing_tool_are_explicit(self):
+    def test_ui_tmux_creates_once_records_real_pane_and_inspects_exit(self):
         ui=ROOT/"plugins/sdd-composy/scripts/fleet/ui-tmux.sh"
         with tempfile.TemporaryDirectory() as tmp:
             tmp=Path(tmp); fake=tmp/"tmux"; log=tmp/"log"
-            fake.write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$UI_LOG\"\ncase $1 in has-session) exit ${UI_COLLISION:-1};; esac\n") ; fake.chmod(0o755)
+            fake.write_text("""#!/bin/sh
+printf '%s\n' "$*" >> "$UI_LOG"
+case "$1" in
+ has-session) exit ${UI_COLLISION:-1};;
+ new-session) printf 'fleet-demo|%%17\n';;
+ set-option) exit 0;;
+ display-message) printf 'sdd-composy-fleet|demo|TASK-001|1|23\n';;
+ kill-pane) exit 0;;
+esac
+""") ; fake.chmod(0o755)
             env={**os.environ,"PATH":str(tmp)+":"+os.environ["PATH"],"UI_LOG":str(log)}
             h=tmp/"h.json"
-            r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_start "$1" "$2" "$3" "$4"',"",str(h),str(tmp),"fleet-demo","printf hi"],capture_output=True,text=True,env=env)
-            self.assertEqual(r.returncode,0,r.stderr); self.assertIn("new-session",log.read_text()); self.assertEqual(json.loads(h.read_text())["driver"],"tmux")
-            r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_start "$1" "$2" "$3" "$4"',"",str(tmp/"x.json"),str(tmp),"fleet-demo","printf hi"],capture_output=True,text=True,env={**env,"UI_COLLISION":"0"})
+            r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_start "$1" "$2" "$3" "$4" "$5" "$6"',"",str(h),str(tmp),"demo","TASK-001","printf","a b"],capture_output=True,text=True,env=env)
+            self.assertEqual(r.returncode,0,r.stderr)
+            calls=log.read_text().splitlines(); creates=[x for x in calls if x.startswith("new-session ")]
+            self.assertEqual(len(creates),1); self.assertIn("-- printf a b",creates[0])
+            d=json.loads(h.read_text()); self.assertEqual(d["pane_id"],"%17"); self.assertEqual(d["fleet_id"],"demo"); self.assertEqual(d["member_id"],"TASK-001")
+            inspected=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_inspect "$1"',"",str(h)],capture_output=True,text=True,env=env)
+            self.assertEqual(inspected.returncode,0,inspected.stderr); self.assertEqual(json.loads(inspected.stdout)["exit_status"],23)
+            r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_start "$1" "$2" "$3" "$4" "$5"',"",str(tmp/"x.json"),str(tmp),"demo","TASK-001","true"],capture_output=True,text=True,env={**env,"UI_COLLISION":"0"})
             self.assertNotEqual(r.returncode,0); self.assertIn("collision",r.stderr)
 
     def test_ui_selection_matrix_and_missing_tool_fallback(self):
@@ -507,15 +521,20 @@ class FleetLaunchTest(unittest.TestCase):
             self.assertEqual(subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_teardown "$1"',"",str(h)]).returncode,0)
             self.assertFalse(h.exists()); self.assertNotEqual(subprocess.run(["kill","-0",str(pid)]).returncode,0)
 
-    def test_tmux_teardown_removes_session_and_handle(self):
+    def test_tmux_foreign_ownership_and_dead_pane_preserve_handle(self):
         ui=ROOT/"plugins/sdd-composy/scripts/fleet/ui-tmux.sh"
         with tempfile.TemporaryDirectory() as tmp:
-            tmp=Path(tmp); fake=tmp/"tmux"; state=tmp/"session"; log=tmp/"log"
-            fake.write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$UI_LOG\"\ncase $1 in has-session) test -f \"$UI_STATE\";; new-session) touch \"$UI_STATE\";; kill-session) rm -f \"$UI_STATE\";; esac\n") ; fake.chmod(0o755)
-            env={**os.environ,"PATH":str(tmp)+":/usr/bin:/bin","UI_LOG":str(log),"UI_STATE":str(state)}; h=tmp/"h.json"
-            self.assertEqual(subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_start "$1" "$2" "$3" "$4"',"",str(h),str(tmp),"fleet-demo","printf hi"],env=env,capture_output=True,text=True).returncode,0)
-            self.assertEqual(subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_teardown "$1"',"",str(h)],env=env,capture_output=True,text=True).returncode,0)
-            self.assertFalse(state.exists()); self.assertFalse(h.exists()); self.assertIn("kill-session",log.read_text())
+            tmp=Path(tmp); fake=tmp/"tmux"; log=tmp/"log"
+            fake.write_text("""#!/bin/sh
+printf '%s\n' "$*" >> "$UI_LOG"
+ case "$1" in display-message) [ "${UI_DEAD:-0}" = 1 ] && exit 1; printf 'foreign|demo|TASK-001|0|\n';; esac
+"""); fake.chmod(0o755)
+            env={**os.environ,"PATH":str(tmp)+":/usr/bin:/bin","UI_LOG":str(log)}; h=tmp/"h.json"
+            h.write_text(json.dumps({"driver":"tmux","session_name":"fleet-demo","pane_id":"%17","fleet_id":"demo","member_id":"TASK-001","cwd":str(tmp)}))
+            for extra in ({},{"UI_DEAD":"1"}):
+                r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_teardown "$1"',"",str(h)],env={**env,**extra},capture_output=True,text=True)
+                self.assertNotEqual(r.returncode,0); self.assertTrue(h.exists())
+            self.assertNotIn("kill-pane",log.read_text())
 
     def test_launch_persists_selected_ui_without_changing_member_lifecycle(self):
         self.task(); env={**os.environ,"PATH":"/usr/bin:/bin","SDD_FLEET_PORT_START":"43400","SDD_FLEET_PORT_END":"43400"}
@@ -532,18 +551,23 @@ class FleetLaunchTest(unittest.TestCase):
 import json, os, sys
 log=os.environ['CMUX_LOG']; a=sys.argv[1:]
 with open(log,'a') as f: f.write(json.dumps(a)+'\\n')
-if a[:1]==['new-workspace']: print(json.dumps({'id':'ws-1'}))
-elif a[:1]==['new-split']: print(json.dumps({'surface_id':'surf-1'}))
-elif a[:1]==['list-workspaces']:
- print(json.dumps({'workspaces':[{'id':'ws-1','owner':'sdd-composy','sdd_composy_fleet':'demo'}]}))
-elif a[:1] in (['set-workspace-meta'],['set-status'],['flash'],['close-surface']): print('{}')
-else: print('{}')
+if 'new-workspace' in a:
+ open(os.environ['CMUX_STATE'],'w').write('created')
+ print('workspace 11111111-1111-1111-1111-111111111111')
+elif 'list-pane-surfaces' in a: print('* 22222222-2222-2222-2222-222222222222 terminal')
+elif 'list-workspaces' in a and os.path.exists(os.environ['CMUX_STATE']): print('* 11111111-1111-1111-1111-111111111111 sdd-composy:demo:TASK-001')
+elif 'list-status' in a: print('sdd-composy-owner sdd-composy-fleet\\nsdd-composy-fleet demo\\nsdd-composy-member TASK-001')
+else: print('ok')
 """); fake.chmod(0o755)
-            env={**os.environ,"SDD_CMUX_BIN":str(fake),"CMUX_LOG":str(log)}; h=td/"handle.json"
-            r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_cmux_start "$1" "$2" demo echo hi',"",str(h),str(td)],env=env,capture_output=True,text=True)
-            self.assertEqual(r.returncode,0,r.stderr); d=json.loads(h.read_text()); self.assertEqual(d["workspace_id"],"ws-1"); self.assertEqual(d["surface_id"],"surf-1")
+            env={**os.environ,"SDD_CMUX_BIN":str(fake),"CMUX_LOG":str(log),"CMUX_STATE":str(td/"state")}; h=td/"handle.json"
+            r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_cmux_start "$1" "$2" demo TASK-001 echo "a b"',"",str(h),str(td)],env=env,capture_output=True,text=True)
+            self.assertEqual(r.returncode,0,r.stderr); d=json.loads(h.read_text()); self.assertEqual(d["workspace_id"],"11111111-1111-1111-1111-111111111111"); self.assertEqual(d["surface_id"],"22222222-2222-2222-2222-222222222222")
+            create=[x for x in map(json.loads,log.read_text().splitlines()) if 'new-workspace' in x]
+            self.assertEqual(len(create),1); self.assertIn('--command',create[0]); self.assertFalse(any(x in ('send','send-key') for row in map(json.loads,log.read_text().splitlines()) for x in row))
+            inspected=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_cmux_inspect "$1"',"",str(h)],env=env,capture_output=True,text=True)
+            self.assertEqual(inspected.returncode,0,inspected.stderr); self.assertTrue(json.loads(inspected.stdout)["alive"])
             self.assertEqual(subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_cmux_status "$1" ok green; fleet_ui_cmux_flash "$1"; fleet_ui_cmux_teardown "$1"',"",str(h)],env=env,capture_output=True,text=True).returncode,0)
-            calls=''.join(log.read_text().splitlines()); self.assertIn('set-workspace-meta',calls); self.assertIn('set-status',calls); self.assertIn('flash',calls); self.assertIn('close-surface',calls); self.assertFalse(h.exists())
+            calls=''.join(log.read_text().splitlines()); self.assertIn('set-status',calls); self.assertIn('trigger-flash',calls); self.assertIn('close-surface',calls); self.assertFalse(h.exists())
             h.write_text(json.dumps({'driver':'cmux','workspace_id':'foreign','surface_id':'s'}))
             self.assertNotEqual(subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_cmux_flash "$1"',"",str(h)],env=env,capture_output=True,text=True).returncode,0)
             before=log.read_text(); self.assertNotEqual(subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_cmux_teardown "$1"',"",str(h)],env=env,capture_output=True,text=True).returncode,0); after=log.read_text(); self.assertEqual([x for x in after.splitlines() if 'close-surface' in x],[x for x in before.splitlines() if 'close-surface' in x])
