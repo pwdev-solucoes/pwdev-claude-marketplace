@@ -30,6 +30,13 @@ sdd_engine_codex_stage_command() {
   SDD_ENGINE_COMMAND=("${FLOW_ENGINE_COMMAND[@]}")
 }
 
+sdd_engine_codex_interactive_command() {
+  local prompt
+  prompt=$(<"$2")
+  SDD_ENGINE_CWD=
+  SDD_ENGINE_COMMAND=(codex --cd "$1" --sandbox workspace-write "$prompt")
+}
+
 # Codex writes the structured result itself; nothing to publish.
 # Arguments: <raw-stdout-file> <result-file>
 sdd_engine_codex_publish_result() { return 0; }

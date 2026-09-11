@@ -17,6 +17,10 @@ sdd_engine_hermes_stage_command() {
   FLOW_ENGINE_COMMAND=(hermes -z "$4" --in "$1")
   SDD_ENGINE_COMMAND=("${FLOW_ENGINE_COMMAND[@]}")
 }
+sdd_engine_hermes_interactive_command() {
+  SDD_ENGINE_CWD=
+  SDD_ENGINE_COMMAND=(hermes chat --query-file "$2" --cli --in "$1")
+}
 sdd_engine_hermes_publish_result() {
   local raw=$1 result=$2
   jq -e 'if type != "object" then error("result is not object") else . end' "$raw" >"$result"

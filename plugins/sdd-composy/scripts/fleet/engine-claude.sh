@@ -46,6 +46,13 @@ sdd_engine_claude_stage_command() {
   SDD_ENGINE_COMMAND=("${FLOW_ENGINE_COMMAND[@]}")
 }
 
+sdd_engine_claude_interactive_command() {
+  local prompt
+  prompt=$(<"$2")
+  SDD_ENGINE_CWD=
+  SDD_ENGINE_COMMAND=(claude --add-dir "$1" --plugin-dir "$3" "$prompt")
+}
+
 # Turns the `claude -p --output-format json` envelope into the structured stage
 # result the runner validates. Fails closed: any missing field, provider-reported
 # error, or non-JSON final message leaves an empty result the runner rejects.
