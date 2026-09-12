@@ -231,6 +231,26 @@ ENGINE_ADAPTER=$SCRIPT_DIR/engine-$CLI_RUNTIME.sh
 require_regular_nosymlink "$ENGINE_ADAPTER" || fail "missing runtime adapter: $ENGINE_ADAPTER"
 # shellcheck source=/dev/null
 source "$ENGINE_ADAPTER"
+if [[ -n $BOUND_LOOP_ID ]]; then
+  BOUND_TASK_ID=$(jq -er '.task_id' "$MEMBER_FILE") || fail 'bound headless member has no task identity'
+  BOUND_LOOP_TASK=$(jq -er '.interaction.loop.task_id' "$MEMBER_FILE") || fail 'bound headless member has no LOOP task identity'
+  [[ $BOUND_LOOP_TASK == "$BOUND_TASK_ID" ]] || fail 'bound headless LOOP task identity diverges'
+  # A bound member uses the canonical LOOP orchestrator. The legacy fleet
+  # stage machine below remains only for pre-interactive v2 records.
+  python3 - "$SCRIPT_DIR/../sdd_loop.py" "$SCRIPT_DIR/../loop-engine-$CLI_RUNTIME.py" "$MAIN_ROOT" "$WORKTREE" "$BOUND_TASK_ID" "$BOUND_LOOP_ID" <<'PY'
+import importlib.util,json,sys
+def load(name,path):
+    spec=importlib.util.spec_from_file_location(name,path); module=importlib.util.module_from_spec(spec)
+    assert spec.loader; spec.loader.exec_module(module); return module
+loops=load("sdd_fleet_headless_loop",sys.argv[1]); engine_module=load("sdd_fleet_headless_engine",sys.argv[2])
+record=loops.status(sys.argv[3],sys.argv[6])
+if record["id"] != sys.argv[6] or record["task_id"] != sys.argv[5]: raise SystemExit(2)
+result=loops.orchestrate(sys.argv[3],sys.argv[5],lambda contract: engine_module.run(contract,sys.argv[4]),loop_id=sys.argv[6],max_iterations=record["max_iterations"],human_approved=True)
+print(json.dumps(result,sort_keys=True))
+raise SystemExit(0 if result["status"] == "completed" else 1)
+PY
+  exit $?
+fi
 PHASE_SLUG=$SLUG
 if [[ ! -d "$WORKTREE/.planning/sdd-composy/phases/$PHASE_SLUG" ]]; then
   PHASE_SLUG=$(jq -r '.id // .slug // empty' "$MEMBER_FILE" 2>/dev/null || true)

@@ -15,7 +15,7 @@ LOOP_MODULE=$SCRIPT_DIR/../sdd_loop.py
 
 state_action() {
   python3 - "$STATE" "$LOOP_MODULE" "$MEMBER_FILE" "$WORKTREE" "$1" "${2:-}" <<'PY'
-import importlib.util, json, sys
+import hashlib, importlib.util, json, sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -24,6 +24,8 @@ def load(name, path):
     spec=importlib.util.spec_from_file_location(name,path); module=importlib.util.module_from_spec(spec)
     assert spec.loader; spec.loader.exec_module(module); return module
 state=load("sdd_fleet_interactive_state",state_path); loops=load("sdd_fleet_bound_loop",loop_path)
+sys.path.insert(0,str(Path(loop_path).parent))
+import sdd_tasks
 now=lambda: datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00","Z")
 member=state.load_member(member_path)
 def move(expected,target,message):
@@ -36,9 +38,24 @@ if action == "preflight":
         loop=loops.status(member["repository_root"],binding["id"])
         if loop["id"] != binding["id"] or loop["task_id"] != member["task_id"] or binding["task_id"] != member["task_id"]:
             raise ValueError("LOOP binding mismatch")
+        root=Path(member["repository_root"]).resolve(strict=True)
         contract=Path(member.get("contract_path", ""))
-        task=json.loads(contract.read_text())
-        if task.get("id") != member["task_id"] or task.get("state") != "ready": raise ValueError("task is not approved and ready")
+        if not contract.is_absolute(): contract=root/contract
+        expected=root/".planning"/"sdd-composy"/"tasks"
+        if contract.is_symlink(): raise ValueError("task contract path has a symlink")
+        contract=contract.resolve(strict=True)
+        relative=contract.relative_to(expected)
+        forbidden={".env","env","credentials","credential","secret","secrets","token","tokens","key","keys","certificate","certificates","cert","certs"}
+        if len(relative.parts) != 1 or relative.suffix != ".json" or any(part.lower() in forbidden for part in contract.parts): raise ValueError("task contract path is not canonical")
+        cursor=expected
+        for part in relative.parts:
+            cursor=cursor/part
+            if cursor.is_symlink(): raise ValueError("task contract path has a symlink")
+        if not contract.is_file(): raise ValueError("task contract is not a regular file")
+        raw=contract.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != member.get("contract_sha256"): raise ValueError("task contract digest mismatch")
+        tasks=sdd_tasks.load(contract); task=sdd_tasks._task(tasks,member["task_id"])
+        if task["state"] != "ready" or any(sdd_tasks._task(tasks,dep)["state"] != "complete" for dep in task["dependencies"]): raise ValueError("task is not approved and ready")
         if member["interaction"]["state"] != "starting": raise ValueError("member is not startable")
     except Exception as exc:
         if member["interaction"]["state"] == "starting": move("starting","blocked",str(exc))
@@ -74,6 +91,13 @@ source "$ADAPTER"
 PROMPT_FILE=$(mktemp "${MEMBER_FILE%/*}/.interactive-prompt.XXXXXX")
 cleanup_prompt() { rm -f -- "$PROMPT_FILE"; }
 trap cleanup_prompt EXIT
+# Signals deliberately publish no terminal state and remove no owned recovery
+# resource. Branch, worktree, UI transport/handle, LOOP, and evidence remain in
+# their authoritative records for explicit resume or teardown.
+preserve_interruption() { local code=$1; trap - HUP INT TERM; exit "$code"; }
+trap 'preserve_interruption 129' HUP
+trap 'preserve_interruption 130' INT
+trap 'preserve_interruption 143' TERM
 python3 - "$PREFLIGHT" "$WORKTREE" >"$PROMPT_FILE" <<'PY'
 import json,sys
 v=json.loads(sys.argv[1])
