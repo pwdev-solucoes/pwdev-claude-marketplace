@@ -1,0 +1,12 @@
+{
+  "name": "pwdev-excalidraw",
+  "displayName": "PWDEV Excalidraw — Planejamento Visual",
+  "version": "0.1.0",
+  "description": "Planejamento visual com diagramas Excalidraw via servidor MCP oficial — arquitetura, fluxos, dependências, decisões e roadmaps editáveis.",
+  "author": { "name": "Paulo Soares", "url": "https://github.com/soarescbm" },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": ["claude-code", "claude-plugin", "excalidraw", "diagram", "planning", "architecture", "mcp", "pt-br"],
+  "mcpServers": "./.mcp.json"
+}

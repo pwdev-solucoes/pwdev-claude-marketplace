@@ -21,6 +21,7 @@ Reinicie o runtime após a instalação. Consulte o README de cada plugin para s
 | Código e delegação | [pwdev-code](./plugins/pwdev-code/), [pwdev-feat](./plugins/pwdev-feat/) |
 | Requisitos e UI/UX | [pwdev-prd](./plugins/pwdev-prd/), [pwdev-uiux](./plugins/pwdev-uiux/) |
 | Copy e conteúdo social | [pwdev-copy](./plugins/pwdev-copy/), [pwdev-social-media](./plugins/pwdev-social-media/) |
+| Planejamento visual | [pwdev-excalidraw](./plugins/pwdev-excalidraw/) |
 | DevOps e operações | [pwdev-devops](./plugins/pwdev-devops/) |
 | Conhecimento e integrações | [pwdev-brain](./plugins/pwdev-brain/), [pwdev-glpi](./plugins/pwdev-glpi/), [pwdev-obsidian](./plugins/pwdev-obsidian/), [pwdev-postgres](./plugins/pwdev-postgres/), [pwdev-youtrack](./plugins/pwdev-youtrack/) |
 | Suporte ao terminal | [pwdev-statusline](./plugins/pwdev-statusline/) |
@@ -33,6 +34,7 @@ Reinicie o runtime após a instalação. Consulte o README de cada plugin para s
 | [pwdev-code](./plugins/pwdev-code/) | 2.4.0 | Código orientado a especificações e delegação |
 | [pwdev-copy](./plugins/pwdev-copy/) | 1.1.0 | Copywriting treinável |
 | [pwdev-devops](./plugins/pwdev-devops/) | 1.0.0 | Plataforma, operações e incidentes |
+| [pwdev-excalidraw](./plugins/pwdev-excalidraw/) | 0.1.0 | Planejamento visual com Excalidraw |
 | [pwdev-feat](./plugins/pwdev-feat/) | 2.1.1 | Planejamento rápido de features |
 | [pwdev-flow](./plugins/pwdev-flow/) | 0.6.0 | Fluxo portátil de desenvolvimento |
 | [pwdev-glpi](./plugins/pwdev-glpi/) | 1.0.5 | GLPI ITSM |
@@ -45,6 +47,10 @@ Reinicie o runtime após a instalação. Consulte o README de cada plugin para s
 | [pwdev-uiux](./plugins/pwdev-uiux/) | 2.0.1 | UI/UX e acessibilidade |
 | [pwdev-youtrack](./plugins/pwdev-youtrack/) | 1.0.0 | Gestão do YouTrack |
 | [sdd-composy](./plugins/sdd-composy/) | 0.1.0 | SDD portátil com OKF e rastreabilidade |
+
+### pwdev-excalidraw
+
+Planejamento visual com o servidor MCP oficial do Excalidraw. Instale com `claude plugin install pwdev-excalidraw@pwdev-claude-marketplace`. Consulte a [documentação do plugin](./plugins/pwdev-excalidraw/).
 
 ## Primeiro uso
 

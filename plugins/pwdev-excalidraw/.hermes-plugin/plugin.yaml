@@ -1,0 +1,6 @@
+name: pwdev-excalidraw
+version: 0.1.0
+description: Visual planning with Excalidraw through a configured MCP server for Hermes Agent
+author: Paulo Soares
+provides_hooks:
+  - pre_llm_call
