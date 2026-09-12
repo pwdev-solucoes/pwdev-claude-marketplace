@@ -1,4 +1,7 @@
-# PWDEV GLPI — Tickets, Triagem e Fila ITSM
+# PWDEV GLPI — Tickets, Triagem e Fila ITSM (Claude Code, Codex, Hermes)
+
+A skill compartilhada `glpi` funciona em Claude Code, Codex e Hermes. O setup
+por runtime está em [`references/runtime.md`](./references/runtime.md).
 
 > [English version](./README.md)
 
@@ -29,7 +32,15 @@ MCP próprio (stdio, iniciado via `npx`) que expõe 20 tools, 2 prompts e
 
 ## Setup
 
-Rode `/pwdev-glpi:init` e siga os passos. Em resumo:
+No Claude Code, rode `/pwdev-glpi:init`. Codex usa o manifesto portátil e `$glpi`;
+Hermes usa a skill compartilhada e registra o MCP manualmente:
+
+```sh
+hermes mcp add glpi -- npx -y @soarescbm/mcp-glpi@0.4.0
+```
+
+Em qualquer runtime, forneça as variáveis documentadas e reinicie a sessão após
+alterações. Não edite configurações pessoais do runtime.
 
 ```sh
 # ~/.zshrc
