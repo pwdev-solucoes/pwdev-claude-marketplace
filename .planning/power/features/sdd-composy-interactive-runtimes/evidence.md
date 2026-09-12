@@ -192,3 +192,23 @@ Status: INCOMPLETE
   177.987s. The detached run excluded all unrelated dirty files and both preserved Hermes lines.
 - No real provider, UI session, lifecycle approval, credential, or protected file was used.
   Real acceptance remains INCOMPLETE/NOT_RUN.
+
+## Task 09 review fix round 2
+
+- RED: two focused regressions failed: the canonical projection lacked the complete public UI,
+  operational JSON publication, and isolated-loop implementation-boundary clauses; the round-one
+  digest still reached the fake provider boundary.
+- GREEN: 7 focused contract/materialization tests passed in 2.148s. The complete runtime-smoke
+  module passed 49 tests in 141.858s.
+- The hash now binds `--ui auto|cmux|tmux|headless`, default `auto`, resolution order usable cmux
+  then usable tmux then headless before mutation/provider budget, and the separate rule that real
+  execution requires a concrete non-auto UI plus exact runtime:UI authorization.
+- It also binds operational JSON preservation/validation/same-directory-temporary/atomic-replace
+  rules and the explicit fleet-only boundary: no `loop-engine-*.py` change and no public isolated
+  `sdd-loop` behavior change. Recursive leaf mutation still changes the digest, and the prior
+  round-one hash is rejected before output, budget, provider, or UI effects.
+- Fresh clean committed-head verification from detached `59de30c`:
+  `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 441 tests passed in
+  189.521s. Unrelated dirty files and the preserved Hermes lines were excluded.
+- No real provider/UI, privileged execution, or automated lifecycle approval occurred. Real
+  acceptance remains INCOMPLETE/NOT_RUN.

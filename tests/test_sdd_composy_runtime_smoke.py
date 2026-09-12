@@ -463,6 +463,21 @@ else: print(json.dumps(result))
         self.assertEqual(projection["interruption_preserves"],
                          ["worktree", "branch", "session", "handle", "LOOP", "evidence"])
         self.assertEqual(projection["privileged_flags"], [])
+        self.assertEqual(projection["public_ui_interface"], {
+            "argument": "--ui", "choices": ["auto", "cmux", "tmux", "headless"],
+            "default": "auto", "auto_resolution_order": ["cmux-if-usable", "tmux-if-usable",
+                                                               "headless"],
+            "resolution_before": ["mutation", "provider-budget"],
+            "real_mode": {"requires_concrete_ui": True, "auto_allowed": False,
+                          "authorization": "separate-exact-runtime:UI"}})
+        self.assertEqual(projection["operational_json_publication"], {
+            "preserve_unknown_fields": True, "validate_before_publication": True,
+            "temporary_file": "same-directory", "replacement": "atomic"})
+        self.assertEqual(projection["implementation_boundary"], {
+            "interactivity": "fleet-only", "command": "sdd-fleet",
+            "loop_engine_internals_changed": False,
+            "public_isolated_sdd_loop_behavior_changed": False,
+            "forbidden_change_paths": ["loop-engine-*.py"]})
 
         def leaf_paths(value, prefix=()):
             if isinstance(value, dict):
@@ -502,6 +517,19 @@ else: print(json.dumps(result))
                 plugin_root=ROOT / "plugins/sdd-composy",
                 provider_launcher=lambda **_kwargs: self.fail("provider called"),
                 authorized_runtime_uis={"codex:cmux"}, approved_task_008_sha256=old_hash)
+            self.assertEqual(summary["provider_calls"]["codex"], 0)
+            self.assertFalse(output.exists())
+
+    def test_round_one_contract_hash_is_rejected_before_any_effect(self):
+        round_one_hash = "412688285f2e488a996c229ba297e220a60b97c830a220fcfba191d3ee827a58"
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "run"
+            summary = SMOKE.run_acceptance(mode="real", runtime="codex", language="pt-BR",
+                scenario="fleet-interactive", ui="cmux", output=output,
+                plugin_root=ROOT / "plugins/sdd-composy",
+                provider_launcher=lambda **_kwargs: self.fail("provider called"),
+                authorized_runtime_uis={"codex:cmux"},
+                approved_task_008_sha256=round_one_hash)
             self.assertEqual(summary["provider_calls"]["codex"], 0)
             self.assertFalse(output.exists())
 

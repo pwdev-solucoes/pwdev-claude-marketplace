@@ -24,6 +24,11 @@ Status: DONE
 - Review-fix focused: 6 tests passed in 2.279s; smoke module: 48 tests in 143.129s.
 - Final clean detached `5f6e407` suite: 440 tests passed in 177.987s using the exact recorded
   discovery command.
+- Review-fix round 2 RED: omitted public UI, JSON publication, and implementation-boundary
+  clauses; the prior digest still reached the fake provider.
+- Review-fix round 2 focused: 7 tests passed in 2.148s; smoke module: 49 tests in 141.858s.
+- Final clean detached `59de30c` suite: 441 tests passed in 189.521s using the exact recorded
+  discovery command.
 
 ## Scope
 
