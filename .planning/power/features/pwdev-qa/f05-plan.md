@@ -51,7 +51,7 @@ Python PDF disponível nesta sessão: /Users/paulosoares/.cache/codex-runtimes/c
 - tests/test_qa_scenarios.py
 - plugins/pwdev-qa/references/acceptance-scenarios.md
 
-## Task 01 — Manifests e registro Hermes
+## Task 22 — Manifests e registro Hermes
 Complexity: high
 Files:
 - plugins/pwdev-qa/.claude-plugin/plugin.json
@@ -72,7 +72,7 @@ Steps:
 - [ ] Executar `python3 -m unittest tests.test_qa_packaging` novamente; registrar resultado e limitações sem tratar falha de ambiente como aprovação.
 - [ ] Revisar diff e contrato; registrar evidência na execução Power e encaminhar findings para correção antes da tarefa seguinte.
 
-## Task 02 — Documentação e catálogos
+## Task 23 — Documentação e catálogos
 Complexity: medium
 Files:
 - plugins/pwdev-qa/README.md
@@ -93,7 +93,7 @@ Steps:
 - [ ] Executar `python3 -m unittest tests.test_qa_catalog` novamente; registrar resultado e limitações sem tratar falha de ambiente como aprovação.
 - [ ] Revisar diff e contrato; registrar evidência na execução Power e encaminhar findings para correção antes da tarefa seguinte.
 
-## Task 03 — Integração documental e smoke real
+## Task 24 — Integração documental e smoke real
 Complexity: high
 Files:
 - README.md

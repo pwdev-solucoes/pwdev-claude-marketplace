@@ -26,27 +26,27 @@ nem autorizada implicitamente. Não reduzir o escopo da v1 para fechar uma fase.
 | F01-01 | Roteador e contratos comuns | medium | 5 | [arquivos, interfaces e testes](f01-plan.md#task-01--roteador-e-contratos-comuns) |
 | F01-02 | Skill de recomendação e catálogo de ferramentas | medium | 3 | [arquivos, interfaces e testes](f01-plan.md#task-02--skill-de-recomendacao-e-catalogo-de-ferramentas) |
 | F01-03 | Mapeamentos dos três runtimes | medium | 4 | [arquivos, interfaces e testes](f01-plan.md#task-03--mapeamentos-dos-tres-runtimes) |
-| F02-01 | Estratégia, requisitos e funcional | medium | 4 | [arquivos, interfaces e testes](f02-plan.md#task-01--estrategia-requisitos-e-funcional) |
-| F02-02 | Web, API e mobile | medium | 4 | [arquivos, interfaces e testes](f02-plan.md#task-02--web-api-e-mobile) |
-| F02-03 | Dados, acessibilidade e performance | medium | 4 | [arquivos, interfaces e testes](f02-plan.md#task-03--dados-acessibilidade-e-performance) |
-| F02-04 | Segurança, automação e CI | medium | 4 | [arquivos, interfaces e testes](f02-plan.md#task-04--seguranca-automacao-e-ci) |
-| F02-05 | Regressão, defeitos e produção | medium | 4 | [arquivos, interfaces e testes](f02-plan.md#task-05--regressao-defeitos-e-producao) |
-| F02-06 | Métricas e prontidão | medium | 3 | [arquivos, interfaces e testes](f02-plan.md#task-06--metricas-e-prontidao) |
-| F03-01 | Schema e validação de entrada | high | 3 | [arquivos, interfaces e testes](f03-plan.md#task-01--schema-e-validacao-de-entrada) |
-| F03-02 | Integridade e sanitização de evidências | high | 3 | [arquivos, interfaces e testes](f03-plan.md#task-02--integridade-e-sanitizacao-de-evidencias) |
-| F03-03 | Consolidação determinística do parecer | high | 2 | [arquivos, interfaces e testes](f03-plan.md#task-03--consolidacao-deterministica-do-parecer) |
-| F03-04 | Relatório HTML offline | medium | 2 | [arquivos, interfaces e testes](f03-plan.md#task-04--relatorio-html-offline) |
-| F03-05 | PDF paginado e dependências | high | 3 | [arquivos, interfaces e testes](f03-plan.md#task-05--pdf-paginado-e-dependencias) |
-| F03-06 | CLI e publicação do pacote | high | 3 | [arquivos, interfaces e testes](f03-plan.md#task-06--cli-e-publicacao-do-pacote) |
-| F03-07 | Teste integrado, fixture e inspeção visual | high | 3 | [arquivos, interfaces e testes](f03-plan.md#task-07--teste-integrado-fixture-e-inspecao-visual) |
-| F04-01 | Workflows init / strategy | medium | 5 | [arquivos, interfaces e testes](f04-plan.md#task-01--workflows-init--strategy) |
-| F04-02 | Workflows test / explore | medium | 5 | [arquivos, interfaces e testes](f04-plan.md#task-02--workflows-test--explore) |
-| F04-03 | Workflows regression / bug | medium | 5 | [arquivos, interfaces e testes](f04-plan.md#task-03--workflows-regression--bug) |
-| F04-04 | Workflows review / release | medium | 5 | [arquivos, interfaces e testes](f04-plan.md#task-04--workflows-review--release) |
-| F04-05 | Workflows report / status | medium | 5 | [arquivos, interfaces e testes](f04-plan.md#task-05--workflows-report--status) |
-| F05-01 | Manifests e registro Hermes | high | 5 | [arquivos, interfaces e testes](f05-plan.md#task-01--manifests-e-registro-hermes) |
-| F05-02 | Documentação e catálogos | medium | 5 | [arquivos, interfaces e testes](f05-plan.md#task-02--documentacao-e-catalogos) |
-| F05-03 | Integração documental e smoke real | high | 5 | [arquivos, interfaces e testes](f05-plan.md#task-03--integracao-documental-e-smoke-real) |
+| F02-04 | Estratégia, requisitos e funcional | medium | 4 | [arquivos, interfaces e testes](f02-plan.md#task-04--estrategia-requisitos-e-funcional) |
+| F02-05 | Web, API e mobile | medium | 4 | [arquivos, interfaces e testes](f02-plan.md#task-05--web-api-e-mobile) |
+| F02-09 | Dados, acessibilidade e performance | medium | 4 | [arquivos, interfaces e testes](f02-plan.md#task-09--dados-acessibilidade-e-performance) |
+| F02-07 | Segurança, automação e CI | medium | 4 | [arquivos, interfaces e testes](f02-plan.md#task-07--seguranca-automacao-e-ci) |
+| F02-08 | Regressão, defeitos e produção | medium | 4 | [arquivos, interfaces e testes](f02-plan.md#task-08--regressao-defeitos-e-producao) |
+| F02-09 | Métricas e prontidão | medium | 3 | [arquivos, interfaces e testes](f02-plan.md#task-09--metricas-e-prontidao) |
+| F03-10 | Schema e validação de entrada | high | 3 | [arquivos, interfaces e testes](f03-plan.md#task-10--schema-e-validacao-de-entrada) |
+| F03-11 | Integridade e sanitização de evidências | high | 3 | [arquivos, interfaces e testes](f03-plan.md#task-11--integridade-e-sanitizacao-de-evidencias) |
+| F03-12 | Consolidação determinística do parecer | high | 2 | [arquivos, interfaces e testes](f03-plan.md#task-12--consolidacao-deterministica-do-parecer) |
+| F03-13 | Relatório HTML offline | medium | 2 | [arquivos, interfaces e testes](f03-plan.md#task-13--relatorio-html-offline) |
+| F03-14 | PDF paginado e dependências | high | 3 | [arquivos, interfaces e testes](f03-plan.md#task-14--pdf-paginado-e-dependencias) |
+| F03-15 | CLI e publicação do pacote | high | 3 | [arquivos, interfaces e testes](f03-plan.md#task-15--cli-e-publicacao-do-pacote) |
+| F03-16 | Teste integrado, fixture e inspeção visual | high | 3 | [arquivos, interfaces e testes](f03-plan.md#task-16--teste-integrado-fixture-e-inspecao-visual) |
+| F04-17 | Workflows init / strategy | medium | 5 | [arquivos, interfaces e testes](f04-plan.md#task-17--workflows-init--strategy) |
+| F04-18 | Workflows test / explore | medium | 5 | [arquivos, interfaces e testes](f04-plan.md#task-18--workflows-test--explore) |
+| F04-19 | Workflows regression / bug | medium | 5 | [arquivos, interfaces e testes](f04-plan.md#task-19--workflows-regression--bug) |
+| F04-20 | Workflows review / release | medium | 5 | [arquivos, interfaces e testes](f04-plan.md#task-20--workflows-review--release) |
+| F04-21 | Workflows report / status | medium | 5 | [arquivos, interfaces e testes](f04-plan.md#task-21--workflows-report--status) |
+| F05-22 | Manifests e registro Hermes | high | 5 | [arquivos, interfaces e testes](f05-plan.md#task-22--manifests-e-registro-hermes) |
+| F05-23 | Documentação e catálogos | medium | 5 | [arquivos, interfaces e testes](f05-plan.md#task-23--documentacao-e-catalogos) |
+| F05-24 | Integração documental e smoke real | high | 5 | [arquivos, interfaces e testes](f05-plan.md#task-24--integracao-documental-e-smoke-real) |
 
 Cada contrato lista todos os caminhos exatos. Total: 24 tarefas.
 Há arquivos de teste incrementais usados em mais de uma tarefa; a execução sequencial

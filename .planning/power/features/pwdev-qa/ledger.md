@@ -6,6 +6,7 @@ Created: 2026-09-12T09:34:19Z
 
 Task F01-01: complete (commits 5294a06..6f9fe9a, review clean after fix round 1)
 Task F01-02: complete (commits 6f9fe9a..5ff4f0d, review clean after fix round 1)
+Task F01-03: complete (commits e4e111c..cc9429a, review clean)
 
 Baseline 2026-09-12: `python3 -m unittest discover -s tests` executou 670 testes em 404.209s; 7 falhas preexistentes antes de qualquer código PWDEV QA.
 - 2 falhas `test_flow_claude_compat`: READMEs raiz não contêm `claude -p`.
@@ -33,6 +34,7 @@ Critério de baseline: testes `test_qa_*` devem ficar verdes; regressões novas 
 Ruling: o baseline completo já está vermelho por 7 falhas fora do PWDEV QA; conclusão exigirá ausência de novas falhas e registro separado dessas 7. Se estiver errado, uma regressão preexistente poderá permanecer fora do escopo da branch.
 Ruling: planos por feature usam IDs locais; briefs e ledger sempre qualificam `Fxx-NN`. Se estiver errado, um status sem prefixo pode ser associado à tarefa incorreta.
 Ruling: para `playwright-cli`, a documentação primária consultada em 2026-09-12 substitui o fallback desatualizado da skill local: detectar a instalação local com `npx --no-install playwright --version` e invocar via `npx playwright cli`. Se estiver errado, instalações antigas que expõem outro binário precisarão permanecer `unverified` e usar a alternativa global.
+Ruling: IDs locais repetidos entre os cinco planos colidem nos nomes `task-NN-{brief,report,review}.md`; renumerar tarefas globalmente de 01 a 24, preservando ordem, conteúdo e rastreabilidade. Se estiver errado, referências externas aos IDs locais F02-01..F05-03 precisarão ser atualizadas para os IDs globais.
 Ruling: sanitização `pending` deve gerar diagnóstico explícito além de impedir cópia e PASS, porque a Global Constraint lista as três consequências. Se estiver errado, o relatório poderá ser mais estrito que o desejado, mas continuará seguro.
 Ruling: nesta tarefa de skills Markdown, testes determinísticos devem interpretar a tabela de rotas em fixtures temporárias e comprovar resolução/recusa e ausência de mutação; avaliação do comportamento do modelo permanece no smoke real F05. Se estiver errado, F01 poderá oferecer confiança estrutural insuficiente antes do smoke final.
 

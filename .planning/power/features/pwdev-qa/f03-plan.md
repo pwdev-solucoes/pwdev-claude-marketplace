@@ -55,7 +55,7 @@ Python PDF disponível nesta sessão: /Users/paulosoares/.cache/codex-runtimes/c
 - plugins/pwdev-qa/scripts/qa_demo.py
 - plugins/pwdev-qa/requirements-dev.txt
 
-## Task 01 — Schema e validação de entrada
+## Task 10 — Schema e validação de entrada
 Complexity: high
 Files:
 - plugins/pwdev-qa/schemas/report.schema.json
@@ -74,7 +74,7 @@ Steps:
 - [ ] Executar `python3 -m unittest tests.test_qa_contract` novamente; registrar resultado e limitações sem tratar falha de ambiente como aprovação.
 - [ ] Revisar diff e contrato; registrar evidência na execução Power e encaminhar findings para correção antes da tarefa seguinte.
 
-## Task 02 — Integridade e sanitização de evidências
+## Task 11 — Integridade e sanitização de evidências
 Complexity: high
 Files:
 - plugins/pwdev-qa/scripts/qa_evidence.py
@@ -93,7 +93,7 @@ Steps:
 - [ ] Executar `python3 -m unittest tests.test_qa_evidence` novamente; registrar resultado e limitações sem tratar falha de ambiente como aprovação.
 - [ ] Revisar diff e contrato; registrar evidência na execução Power e encaminhar findings para correção antes da tarefa seguinte.
 
-## Task 03 — Consolidação determinística do parecer
+## Task 12 — Consolidação determinística do parecer
 Complexity: high
 Files:
 - plugins/pwdev-qa/scripts/qa_verdict.py
@@ -111,7 +111,7 @@ Steps:
 - [ ] Executar `python3 -m unittest tests.test_qa_verdict` novamente; registrar resultado e limitações sem tratar falha de ambiente como aprovação.
 - [ ] Revisar diff e contrato; registrar evidência na execução Power e encaminhar findings para correção antes da tarefa seguinte.
 
-## Task 04 — Relatório HTML offline
+## Task 13 — Relatório HTML offline
 Complexity: medium
 Files:
 - plugins/pwdev-qa/scripts/qa_html.py
@@ -129,7 +129,7 @@ Steps:
 - [ ] Executar `python3 -m unittest tests.test_qa_html` novamente; registrar resultado e limitações sem tratar falha de ambiente como aprovação.
 - [ ] Revisar diff e contrato; registrar evidência na execução Power e encaminhar findings para correção antes da tarefa seguinte.
 
-## Task 05 — PDF paginado e dependências
+## Task 14 — PDF paginado e dependências
 Complexity: high
 Files:
 - plugins/pwdev-qa/scripts/qa_pdf.py
@@ -148,7 +148,7 @@ Steps:
 - [ ] Executar `python3 -m unittest tests.test_qa_pdf` novamente; registrar resultado e limitações sem tratar falha de ambiente como aprovação.
 - [ ] Revisar diff e contrato; registrar evidência na execução Power e encaminhar findings para correção antes da tarefa seguinte.
 
-## Task 06 — CLI e publicação do pacote
+## Task 15 — CLI e publicação do pacote
 Complexity: high
 Files:
 - plugins/pwdev-qa/scripts/qa_report.py
@@ -167,7 +167,7 @@ Steps:
 - [ ] Executar `python3 -m unittest tests.test_qa_report_cli` novamente; registrar resultado e limitações sem tratar falha de ambiente como aprovação.
 - [ ] Revisar diff e contrato; registrar evidência na execução Power e encaminhar findings para correção antes da tarefa seguinte.
 
-## Task 07 — Teste integrado, fixture e inspeção visual
+## Task 16 — Teste integrado, fixture e inspeção visual
 Complexity: high
 Files:
 - tests/test_qa_reports_e2e.py
