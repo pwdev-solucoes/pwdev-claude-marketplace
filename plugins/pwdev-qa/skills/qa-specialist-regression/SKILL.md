@@ -61,14 +61,23 @@ workflow. It is not execution evidence, a case result, or a global verdict.
 
 ## Reference scenarios
 
-| scenario | change_impact | traceability | selection | rationale | outcome |
-|---|---|---|---|---|---|
-| impact-selected | authentication and session boundaries | changes to risks criteria and prior defects | login logout expiry and denied-role checks | high impact and reachable regression paths | READY |
-| convenience-only | not assessed | missing | fastest available checks | execution convenience only | BLOCKED |
+| scenario | change_id | impact_id | risk_id | criterion_id | defect_id | selected_case_ids | excluded_case_ids | relations | outcome |
+|---|---|---|---|---|---|---|---|---|---|
+| impact-selected | CHG-AUTH-017 | IMP-SESSION-01 | RISK-AUTH-04 | AC-LOGIN-01 | DEF-SESSION-09 | TC-LOGIN TC-LOGOUT TC-EXPIRY TC-DENIED-ROLE | TC-PROFILE | change to impact risk criterion defect selected and excluded cases | READY |
+| missing-change | missing | IMP-SESSION-01 | RISK-AUTH-04 | AC-LOGIN-01 | DEF-SESSION-09 | TC-LOGIN | TC-PROFILE | incomplete | BLOCKED |
+| missing-impact | CHG-AUTH-017 | missing | RISK-AUTH-04 | AC-LOGIN-01 | DEF-SESSION-09 | TC-LOGIN | TC-PROFILE | incomplete | BLOCKED |
+| missing-risk | CHG-AUTH-017 | IMP-SESSION-01 | missing | AC-LOGIN-01 | DEF-SESSION-09 | TC-LOGIN | TC-PROFILE | incomplete | BLOCKED |
+| missing-criterion | CHG-AUTH-017 | IMP-SESSION-01 | RISK-AUTH-04 | missing | DEF-SESSION-09 | TC-LOGIN | TC-PROFILE | incomplete | BLOCKED |
+| missing-defect | CHG-AUTH-017 | IMP-SESSION-01 | RISK-AUTH-04 | AC-LOGIN-01 | missing | TC-LOGIN | TC-PROFILE | incomplete | BLOCKED |
+| missing-selected-case | CHG-AUTH-017 | IMP-SESSION-01 | RISK-AUTH-04 | AC-LOGIN-01 | DEF-SESSION-09 | missing | TC-PROFILE | incomplete | BLOCKED |
+| missing-excluded-case | CHG-AUTH-017 | IMP-SESSION-01 | RISK-AUTH-04 | AC-LOGIN-01 | DEF-SESSION-09 | TC-LOGIN | missing | incomplete | BLOCKED |
+| missing-relation | CHG-AUTH-017 | IMP-SESSION-01 | RISK-AUTH-04 | AC-LOGIN-01 | DEF-SESSION-09 | TC-LOGIN | TC-PROFILE | missing | BLOCKED |
+| convenience-only | CHG-AUTH-017 | IMP-SESSION-01 | RISK-AUTH-04 | AC-LOGIN-01 | DEF-SESSION-09 | fastest available checks | none recorded | convenience only | BLOCKED |
 
-The successful scenario selects direct, boundary, and authorization paths because the change can
-reach them and preserves why each check is included. The limited scenario is blocked because a
-fast suite without impact analysis and traceability cannot establish adequate regression coverage.
+The successful scenario resolves each concrete ID into a chain from `CHG-AUTH-017` through its
+impact, risk, criterion, and prior defect to selected and explicitly excluded stable case IDs.
+Every missing-relation scenario proves that omitting any node or edge blocks readiness. The
+convenience-only scenario remains blocked because speed does not establish regression coverage.
 
 ## Failure modes
 

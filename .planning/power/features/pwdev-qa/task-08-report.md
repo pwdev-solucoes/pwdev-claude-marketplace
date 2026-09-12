@@ -31,3 +31,23 @@ Date: 2026-09-12
 - These specialist contracts are advisory. They execute no workflow, test, production query,
   remediation, deployment, message, or other external effect and grant no authorization.
 - Agent-based reference-scenario evaluation remains assigned to F05-24, as required by the brief.
+
+## Review correction — round 1
+
+- Regression now materializes concrete change, impact, risk, criterion, defect, selected-case, and
+  excluded-case IDs plus their relations; every missing node or relation is `BLOCKED`.
+- Defect resolution now produces `defect_current=false`, not automatic `PASS`. Global `PASS`
+  requires an explicit complete all-`PASS` applicable-criteria catalog and an explicit absence of
+  other current defects; missing inventories are `BLOCKED` and another proven defect is `FAIL`.
+- Production authorization now exposes target, telemetry sources, identity/role, read-only
+  boundary, fields, window, owner, data rules, stop conditions, and retention independently;
+  omitting any one keeps observation `NOT_RUN` and outcome `BLOCKED`.
+- The production success scenario names an evidence-supported cause and a deterministic preventive
+  case with criterion/risk, stable case ID, oracle, environment, and prerequisites. Hypothetical
+  cause and generic prevention scenarios are `BLOCKED`.
+- RED: focused suite ran 35 tests with 8 expected contract failures before the correction.
+- GREEN: focused suite passed 35 tests after the correction.
+- Regression proof: temporarily reversing the three skill corrections reproduced the same 8
+  failures; restoring them returned the focused suite to 35 passing tests.
+- F01/F02 regression: 56 tests passed across core, tooling, runtime contracts, and specialists.
+- Diff hygiene: `git diff --check` and staged diff check passed before commit.

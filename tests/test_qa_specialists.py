@@ -838,10 +838,14 @@ class QaSpecialistContractTest(unittest.TestCase):
             text,
             (
                 "scenario",
-                "change_impact",
-                "traceability",
-                "selection",
-                "rationale",
+                "change_id",
+                "impact_id",
+                "risk_id",
+                "criterion_id",
+                "defect_id",
+                "selected_case_ids",
+                "excluded_case_ids",
+                "relations",
                 "outcome",
             ),
         )
@@ -850,33 +854,54 @@ class QaSpecialistContractTest(unittest.TestCase):
             selected,
             {
                 "scenario": "impact-selected",
-                "change_impact": "authentication and session boundaries",
-                "traceability": "changes to risks criteria and prior defects",
-                "selection": "login logout expiry and denied-role checks",
-                "rationale": "high impact and reachable regression paths",
+                "change_id": "CHG-AUTH-017",
+                "impact_id": "IMP-SESSION-01",
+                "risk_id": "RISK-AUTH-04",
+                "criterion_id": "AC-LOGIN-01",
+                "defect_id": "DEF-SESSION-09",
+                "selected_case_ids": "TC-LOGIN TC-LOGOUT TC-EXPIRY TC-DENIED-ROLE",
+                "excluded_case_ids": "TC-PROFILE",
+                "relations": "change to impact risk criterion defect selected and excluded cases",
                 "outcome": "READY",
             },
         )
-        self.assertRegex(text, r"(?is)impact.*traceab.*select")
+        self.assertRegex(text, r"(?is)stable case ID")
         self.assertRegex(text, r"(?is)(?:not|never).*convenience")
 
-    def test_regression_convenience_only_selection_is_blocked(self) -> None:
+    def test_regression_missing_any_traceability_relation_is_blocked(self) -> None:
         rows = parse_scenarios(
             read_required(SPECIALISTS["qa-specialist-regression"]),
             (
                 "scenario",
-                "change_impact",
-                "traceability",
-                "selection",
-                "rationale",
+                "change_id",
+                "impact_id",
+                "risk_id",
+                "criterion_id",
+                "defect_id",
+                "selected_case_ids",
+                "excluded_case_ids",
+                "relations",
                 "outcome",
             ),
         )
-        limited = next(row for row in rows if row["scenario"] == "convenience-only")
-        self.assertEqual(limited["change_impact"], "not assessed")
-        self.assertEqual(limited["traceability"], "missing")
-        self.assertEqual(limited["selection"], "fastest available checks")
-        self.assertEqual(limited["outcome"], "BLOCKED")
+        omissions = {
+            "missing-change": "change_id",
+            "missing-impact": "impact_id",
+            "missing-risk": "risk_id",
+            "missing-criterion": "criterion_id",
+            "missing-defect": "defect_id",
+            "missing-selected-case": "selected_case_ids",
+            "missing-excluded-case": "excluded_case_ids",
+            "missing-relation": "relations",
+        }
+        for scenario, field in omissions.items():
+            with self.subTest(scenario=scenario):
+                limited = next(row for row in rows if row["scenario"] == scenario)
+                self.assertEqual(limited[field], "missing")
+                self.assertEqual(limited["outcome"], "BLOCKED")
+        convenient = next(row for row in rows if row["scenario"] == "convenience-only")
+        self.assertEqual(convenient["relations"], "convenience only")
+        self.assertEqual(convenient["outcome"], "BLOCKED")
 
     def test_defects_separate_severity_priority_and_preserve_retest_history(self) -> None:
         text = read_required(SPECIALISTS["qa-specialist-defects"])
@@ -890,6 +915,9 @@ class QaSpecialistContractTest(unittest.TestCase):
                 "history",
                 "retest",
                 "evidence",
+                "defect_current",
+                "applicable_criteria",
+                "other_current_defects",
                 "verdict",
             ),
         )
@@ -900,9 +928,48 @@ class QaSpecialistContractTest(unittest.TestCase):
         self.assertEqual(resolved["history"], "original failure and all attempts preserved")
         self.assertEqual(resolved["retest"], "terminal PASS attempt")
         self.assertEqual(resolved["evidence"], "valid original and retest evidence")
-        self.assertEqual(resolved["verdict"], "PASS")
+        self.assertEqual(resolved["defect_current"], "false")
+        self.assertEqual(resolved["applicable_criteria"], "not evaluated by defect resolution")
+        self.assertEqual(resolved["other_current_defects"], "not evaluated")
+        self.assertEqual(resolved["verdict"], "BLOCKED")
         self.assertRegex(text, r"(?is)severity.*product impact.*priority.*delivery")
         self.assertRegex(text, r"(?is)retest.*history")
+
+    def test_defects_pass_requires_explicit_all_pass_catalog_and_no_current_defects(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-defects"]),
+            (
+                "scenario",
+                "severity",
+                "priority",
+                "status",
+                "history",
+                "retest",
+                "evidence",
+                "defect_current",
+                "applicable_criteria",
+                "other_current_defects",
+                "verdict",
+            ),
+        )
+        passed = next(row for row in rows if row["scenario"] == "all-applicable-pass")
+        self.assertEqual(passed["defect_current"], "false")
+        self.assertEqual(
+            passed["applicable_criteria"],
+            "explicit complete catalog AC-LOGIN-01=PASS AC-SESSION-02=PASS",
+        )
+        self.assertEqual(passed["other_current_defects"], "none")
+        self.assertEqual(passed["verdict"], "PASS")
+
+        missing = next(row for row in rows if row["scenario"] == "missing-criteria-catalog")
+        self.assertEqual(missing["applicable_criteria"], "missing")
+        self.assertEqual(missing["verdict"], "BLOCKED")
+        inventory = next(row for row in rows if row["scenario"] == "missing-defect-inventory")
+        self.assertEqual(inventory["other_current_defects"], "not evaluated")
+        self.assertEqual(inventory["verdict"], "BLOCKED")
+        current = next(row for row in rows if row["scenario"] == "other-current-defect")
+        self.assertEqual(current["other_current_defects"], "DEF-OTHER-02 proven current")
+        self.assertEqual(current["verdict"], "FAIL")
 
     def test_proven_current_unlinked_defect_forces_fail(self) -> None:
         rows = parse_scenarios(
@@ -915,6 +982,9 @@ class QaSpecialistContractTest(unittest.TestCase):
                 "history",
                 "retest",
                 "evidence",
+                "defect_current",
+                "applicable_criteria",
+                "other_current_defects",
                 "verdict",
             ),
         )
@@ -923,6 +993,7 @@ class QaSpecialistContractTest(unittest.TestCase):
         self.assertEqual(current["history"], "original failure preserved")
         self.assertEqual(current["retest"], "NOT_RUN")
         self.assertEqual(current["evidence"], "valid in-scope failure evidence")
+        self.assertEqual(current["defect_current"], "true")
         self.assertEqual(current["verdict"], "FAIL")
 
     def test_production_observation_is_authorized_read_only_and_preventive(self) -> None:
@@ -932,47 +1003,137 @@ class QaSpecialistContractTest(unittest.TestCase):
             (
                 "scenario",
                 "authorization",
-                "boundary",
+                "target",
+                "telemetry_sources",
+                "identity_role",
+                "read_only_boundary",
+                "fields",
+                "window",
+                "owner",
+                "data_rules",
+                "stop_conditions",
+                "retention",
                 "observation",
                 "external_effects",
                 "cause",
                 "evidence",
-                "preventive_regression",
+                "criterion_risk_or_unlinked",
+                "stable_case_id",
+                "oracle",
+                "environment",
+                "prerequisites",
                 "outcome",
             ),
         )
         ready = next(row for row in rows if row["scenario"] == "authorized-observation")
         self.assertEqual(ready["authorization"], "explicit read-only production grant")
-        self.assertEqual(ready["boundary"], "named service metrics and time window")
+        self.assertEqual(ready["target"], "prod-api/session-service")
+        self.assertEqual(ready["telemetry_sources"], "existing metrics auth_failures and latency")
+        self.assertEqual(ready["identity_role"], "qa-observer read-only")
+        self.assertEqual(ready["read_only_boundary"], "metrics query only")
+        self.assertEqual(ready["fields"], "timestamp route status latency_ms")
+        self.assertEqual(ready["window"], "2026-09-12T10:00Z to 2026-09-12T11:00Z")
+        self.assertEqual(ready["owner"], "production-owner")
+        self.assertEqual(ready["data_rules"], "aggregate only no personal data")
+        self.assertEqual(ready["stop_conditions"], "unexpected sensitive field or access error")
+        self.assertEqual(ready["retention"], "reviewed aggregate evidence for 30 days")
         self.assertEqual(ready["observation"], "approved existing telemetry only")
         self.assertEqual(ready["external_effects"], "none")
-        self.assertEqual(ready["cause"], "supported by EV-PROD-001")
+        self.assertEqual(ready["cause"], "session cache expiry race with contrary evidence addressed")
         self.assertEqual(ready["evidence"], "EV-PROD-001 reviewed and target-bound")
-        self.assertEqual(ready["preventive_regression"], "linked to cause and EV-PROD-001")
+        self.assertEqual(ready["criterion_risk_or_unlinked"], "AC-SESSION-02 and RISK-AUTH-04")
+        self.assertEqual(ready["stable_case_id"], "TC-SESSION-EXPIRY-RACE")
+        self.assertEqual(ready["oracle"], "one refresh and no authentication failure at expiry")
+        self.assertEqual(ready["environment"], "staging with production-equivalent cache timing")
+        self.assertEqual(ready["prerequisites"], "synthetic account and controllable clock")
         self.assertEqual(ready["outcome"], "READY")
         self.assertRegex(text, r"(?is)explicit authorization.*read-only")
         self.assertRegex(text, r"(?is)prevent.*recurrence.*cause.*evidence")
 
-    def test_production_missing_authorization_observes_nothing(self) -> None:
+    def test_production_missing_any_authorization_boundary_observes_nothing(self) -> None:
         rows = parse_scenarios(
             read_required(SPECIALISTS["qa-specialist-production"]),
             (
                 "scenario",
                 "authorization",
-                "boundary",
+                "target",
+                "telemetry_sources",
+                "identity_role",
+                "read_only_boundary",
+                "fields",
+                "window",
+                "owner",
+                "data_rules",
+                "stop_conditions",
+                "retention",
                 "observation",
                 "external_effects",
                 "cause",
                 "evidence",
-                "preventive_regression",
+                "criterion_risk_or_unlinked",
+                "stable_case_id",
+                "oracle",
+                "environment",
+                "prerequisites",
                 "outcome",
             ),
         )
-        blocked = next(row for row in rows if row["scenario"] == "missing-authorization")
-        self.assertEqual(blocked["authorization"], "missing")
-        self.assertEqual(blocked["observation"], "NOT_RUN")
-        self.assertEqual(blocked["external_effects"], "none")
-        self.assertEqual(blocked["outcome"], "BLOCKED")
+        omissions = {
+            "missing-authorization": "authorization",
+            "missing-target": "target",
+            "missing-telemetry-sources": "telemetry_sources",
+            "missing-identity-role": "identity_role",
+            "missing-read-only-boundary": "read_only_boundary",
+            "missing-fields": "fields",
+            "missing-window": "window",
+            "missing-owner": "owner",
+            "missing-data-rules": "data_rules",
+            "missing-stop-conditions": "stop_conditions",
+            "missing-retention": "retention",
+        }
+        for scenario, field in omissions.items():
+            with self.subTest(scenario=scenario):
+                blocked = next(row for row in rows if row["scenario"] == scenario)
+                self.assertEqual(blocked[field], "missing")
+                self.assertEqual(blocked["observation"], "NOT_RUN")
+                self.assertEqual(blocked["external_effects"], "none")
+                self.assertEqual(blocked["outcome"], "BLOCKED")
+
+    def test_production_hypothetical_cause_or_generic_prevention_is_blocked(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-production"]),
+            (
+                "scenario",
+                "authorization",
+                "target",
+                "telemetry_sources",
+                "identity_role",
+                "read_only_boundary",
+                "fields",
+                "window",
+                "owner",
+                "data_rules",
+                "stop_conditions",
+                "retention",
+                "observation",
+                "external_effects",
+                "cause",
+                "evidence",
+                "criterion_risk_or_unlinked",
+                "stable_case_id",
+                "oracle",
+                "environment",
+                "prerequisites",
+                "outcome",
+            ),
+        )
+        hypothetical = next(row for row in rows if row["scenario"] == "hypothetical-cause")
+        self.assertEqual(hypothetical["cause"], "hypothesis only")
+        self.assertEqual(hypothetical["outcome"], "BLOCKED")
+        generic = next(row for row in rows if row["scenario"] == "generic-prevention")
+        self.assertEqual(generic["stable_case_id"], "missing")
+        self.assertEqual(generic["oracle"], "missing")
+        self.assertEqual(generic["outcome"], "BLOCKED")
 
 
 if __name__ == "__main__":

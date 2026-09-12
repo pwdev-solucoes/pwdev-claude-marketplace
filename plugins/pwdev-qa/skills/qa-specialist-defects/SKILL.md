@@ -58,14 +58,19 @@ Return:
 
 ## Reference scenarios
 
-| scenario | severity | priority | status | history | retest | evidence | verdict |
-|---|---|---|---|---|---|---|---|
-| verified-resolution | critical product impact | P1 delivery order | resolved | original failure and all attempts preserved | terminal PASS attempt | valid original and retest evidence | PASS |
-| proven-unlinked-current | major product impact | P2 delivery order | open | original failure preserved | NOT_RUN | valid in-scope failure evidence | FAIL |
+| scenario | severity | priority | status | history | retest | evidence | defect_current | applicable_criteria | other_current_defects | verdict |
+|---|---|---|---|---|---|---|---|---|---|---|
+| verified-resolution | critical product impact | P1 delivery order | resolved | original failure and all attempts preserved | terminal PASS attempt | valid original and retest evidence | false | not evaluated by defect resolution | not evaluated | BLOCKED |
+| all-applicable-pass | critical product impact | P1 delivery order | resolved | original failure and all attempts preserved | terminal PASS attempt | valid original and retest evidence | false | explicit complete catalog AC-LOGIN-01=PASS AC-SESSION-02=PASS | none | PASS |
+| missing-criteria-catalog | critical product impact | P1 delivery order | resolved | original failure and all attempts preserved | terminal PASS attempt | valid original and retest evidence | false | missing | none | BLOCKED |
+| missing-defect-inventory | critical product impact | P1 delivery order | resolved | original failure and all attempts preserved | terminal PASS attempt | valid original and retest evidence | false | explicit complete catalog AC-LOGIN-01=PASS AC-SESSION-02=PASS | not evaluated | BLOCKED |
+| other-current-defect | critical product impact | P1 delivery order | resolved | original failure and all attempts preserved | terminal PASS attempt | valid original and retest evidence | false | explicit complete catalog AC-LOGIN-01=PASS AC-SESSION-02=PASS | DEF-OTHER-02 proven current | FAIL |
+| proven-unlinked-current | major product impact | P2 delivery order | open | original failure preserved | NOT_RUN | valid in-scope failure evidence | true | no criterion associated | none | FAIL |
 
-The successful scenario resolves the defect only through a terminal passing retest with valid
-evidence while retaining the original failure. The failure scenario has no criterion association,
-yet its proven current in-scope failure still forces `FAIL`.
+Resolution produces the verdict input `defect_current=false`; it does not produce global `PASS`.
+Only `all-applicable-pass` has an explicit complete catalog with every applicable criterion
+`PASS` and an explicit empty current-defect inventory. Missing either inventory is `BLOCKED`;
+another proven current defect is `FAIL`. The unlinked current failure also forces `FAIL`.
 
 ## Failure modes
 
