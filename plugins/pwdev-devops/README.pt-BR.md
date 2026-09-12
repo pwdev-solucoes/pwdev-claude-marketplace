@@ -12,3 +12,6 @@ Instalação:
 
 O `init` é obrigatório. Leia o README principal para a postura de execução segura, comandos,
 skills, subagentes e ferramentas disponíveis.
+
+Quality gates determinísticos: `quality-gates`, `quality-gates-php`, `quality-gates-vue`,
+`quality-gates-node` e `quality-gates-postgres`.

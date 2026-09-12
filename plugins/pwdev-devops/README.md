@@ -1,6 +1,6 @@
 # PWDEV DevOps — Plataforma, Operação e Incidente
 
-Framework de DevOps para Claude Code. **19 skills, 4 subagentes, 7 comandos.**
+Framework de DevOps para Claude Code. **24 skills, 4 subagentes, 7 comandos.**
 
 Postura de execução: **leitura livre, mutação sob confirmação, destrutivo bloqueado.**
 
@@ -83,6 +83,9 @@ produção.
 **Aplicação e IA:** `laravel-platform`, `ai-infra`
 
 **Documentação:** `platform-docs`
+
+**Quality gates:** `quality-gates`, `quality-gates-php`, `quality-gates-vue`,
+`quality-gates-node`, `quality-gates-postgres`
 
 ---
 
