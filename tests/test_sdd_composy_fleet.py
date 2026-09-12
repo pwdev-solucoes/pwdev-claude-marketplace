@@ -194,6 +194,25 @@ class FleetLaunchTest(unittest.TestCase):
             r=subprocess.run(args,capture_output=True,text=True)
             self.assertNotEqual(r.returncode,0); self.assertFalse((self.repo/".planning").exists())
 
+    def test_prepare_only_records_resolved_ui_and_starting_interaction(self):
+        self.task()
+        fake=Path(self.tmp.name)/"ui-bin"; fake.mkdir()
+        cmux=fake/"cmux"; cmux.write_text("#!/bin/sh\nexit 0\n"); cmux.chmod(0o755)
+        r=self.invoke(self.contract,extra={"PATH":str(fake)+":/usr/bin:/bin","SDD_CMUX_BIN":str(cmux)})
+        self.assertEqual(r.returncode,0,r.stderr)
+        member=json.loads((self.repo/".planning/sdd-composy/fleet/demo/members/TASK-001.json").read_text())
+        self.assertEqual(member["ui"],"cmux")
+        self.assertEqual(member["interaction"]["state"],"starting")
+        self.assertNotIn("loop",member["interaction"])
+
+    def test_launch_source_creates_one_bound_loop_then_selects_runner(self):
+        launch=LAUNCH.read_text()
+        self.assertIn("sdd_loop.start(root, task_id, max_iterations=3, loop_id=loop_id)",launch)
+        self.assertIn("interactive_state.bind_loop(member_path, loop_id, task_id, now)",launch)
+        self.assertIn('"$HERE/interactive-run.sh" "$member_file" "$work"',launch)
+        self.assertIn('"$HERE/run.sh" "$slug" "$work"',launch)
+        self.assertLess(launch.index("fleet_select_ui"),launch.index("mkdir -p \"$state/members\""))
+
     def test_symlinked_state_ancestor_is_rejected_without_external_write(self):
         self.task(); outside=Path(self.tmp.name+"-outside"); outside.mkdir(); (self.repo/".planning").symlink_to(outside,target_is_directory=True)
         r=self.invoke(self.contract); self.assertNotEqual(r.returncode,0); self.assertEqual(list(outside.iterdir()),[])
@@ -248,14 +267,16 @@ class FleetLaunchTest(unittest.TestCase):
         self.assertEqual(result.returncode,0,result.stderr)
         state=self.repo/'.planning/sdd-composy/fleet/demo'; member=json.loads((state/'members/TASK-001.json').read_text()); work=Path(member['worktree'])
         deadline=time.monotonic()+10
-        while time.monotonic()<deadline:
-            status=work/'.planning/sdd-composy/fleet-status.json'
-            if status.exists() and json.loads(status.read_text()).get('status')=='NEEDS_HUMAN': break
-            time.sleep(.05)
+        while time.monotonic()<deadline and not called.exists(): time.sleep(.05)
         self.assertTrue(called.exists())
-        args=called.read_text(); self.assertIn('TASK-001',args); self.assertIn(str(self.contract),args)
+        args=called.read_text(); self.assertIn('TASK-001',args)
         self.assertNotIn('--dangerously-bypass',args)
-        self.assertEqual(json.loads(status.read_text())['status'],'NEEDS_HUMAN')
+        self.assertEqual(member['interaction']['loop']['task_id'],'TASK-001')
+        loop=self.repo/'.planning/sdd-composy/loops'/(member['interaction']['loop']['id']+'.json')
+        self.assertTrue(loop.is_file())
+        deadline=time.monotonic()+10
+        while time.monotonic()<deadline and json.loads(loop.read_text())['status']=='running': time.sleep(.05)
+        self.assertEqual(json.loads(loop.read_text())['status'],'environment_failure')
     def test_eligibility_and_required_contract_fields(self):
         for key,val in (("state","pending"),("acceptance_criteria",[]),("verification_commands",[]),("dependencies_complete",False)):
             self.task(**{key:val}); self.assertNotEqual(self.invoke(self.contract).returncode,0)
@@ -573,7 +594,7 @@ case "$*" in *show-options*) printf 'foreign-owner\n';; *has-session*) exit 0;; 
                 return subprocess.run(["bash","-c",f'source "{common}"; fleet_select_ui "$1"',"",requested],capture_output=True,text=True,env=env)
             self.assertEqual(select("headless").stdout.strip(),"headless")
             self.assertEqual(select("cmux",("cmux",)).stdout.strip(),"cmux")
-            self.assertEqual(select("cmux").stdout.strip(),"headless")
+            explicit=select("cmux"); self.assertNotEqual(explicit.returncode,0); self.assertIn("cmux unavailable",explicit.stderr)
             self.assertEqual(select("auto").stdout.strip(),"headless")
             self.assertNotEqual(select("tmux").returncode,0)
 

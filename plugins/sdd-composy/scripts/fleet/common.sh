@@ -51,7 +51,7 @@ fleet_select_ui() {
   case "$requested" in
     headless) printf 'headless\n' ;;
     tmux) command -v tmux >/dev/null 2>&1 || { echo 'fleet: tmux unavailable' >&2; return 1; }; printf 'tmux\n' ;;
-    cmux) if command -v "$cmux_bin" >/dev/null 2>&1; then printf 'cmux\n'; elif command -v tmux >/dev/null 2>&1; then printf 'tmux\n'; else printf 'headless\n'; fi ;;
+    cmux) command -v "$cmux_bin" >/dev/null 2>&1 || { echo 'fleet: cmux unavailable' >&2; return 1; }; printf 'cmux\n' ;;
     auto) if command -v "$cmux_bin" >/dev/null 2>&1; then printf 'cmux\n'; elif command -v tmux >/dev/null 2>&1; then printf 'tmux\n'; else printf 'headless\n'; fi ;;
     *) echo "fleet: unsupported UI driver: $requested" >&2; return 2 ;;
   esac
