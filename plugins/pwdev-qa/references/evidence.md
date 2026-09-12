@@ -16,11 +16,12 @@ For every manifest evidence record, the inspector:
 3. safely opens the file without following a final symlink and confirms file identity;
 4. rechecks actual individual and aggregate byte limits, declared size, and SHA-256;
 5. verifies the declared media type from inert bytes: UTF-8 text, parsed inert JSON, a complete
-   CRC-checked PNG chunk stream and compressed image payload, or a complete JPEG marker/scan
-   stream ending in `EOI`;
+   CRC-checked PNG chunk stream, palette constraints, and compressed image payload, or a complete
+   JPEG marker/scan stream ending in `EOI`;
 6. refuses images over 20 megapixels and requires a recorded visual review for every image;
-7. checks text for bounded known credential patterns and recursively checks decoded JSON keys and
-   string values, including Unicode-escaped spellings, without claiming universal detection.
+7. checks text for bounded known credential patterns and recursively checks every decoded JSON
+   object pair, key, and string value—including duplicate and Unicode-escaped keys before any
+   overwrite—without claiming universal detection.
 
 Unsafe paths, formats, file kinds, or exceeded limits raise `EvidenceError` and the caller must
 refuse export. Missing, changed, target-incompatible, credential-bearing, or pending-review

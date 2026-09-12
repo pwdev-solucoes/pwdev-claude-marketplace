@@ -96,3 +96,22 @@ patterns in log and JSON; and a pending visual review. Fixtures contain no real 
   passed after restoration.
 - No ledger, review artifact, brief, plugin used as reference, dependency, personal configuration,
   publication, push, or merge was changed.
+
+## Review correction — round 2
+
+- PNG `PLTE` validation now permits only one palette, preserves the existing placement/length and
+  color-type rules, and limits indexed-color entries to `2^bit_depth`. Synthetic probes reject a
+  1-bit image with three entries and an image with duplicate palettes while admitting a complete
+  1-bit image with exactly two entries.
+- JSON parsing now retains every decoded object pair instead of materializing a last-write-wins
+  dictionary. Credential inspection visits all keys and string values, so an escaped first
+  `api_key` occurrence cannot be erased by a later duplicate. The result remains a neutral
+  `BLOCKED` projection without path, content, credential name, or matched fragment.
+- RED: the two targeted correction tests produced 3 failures: both malformed indexed PNG variants
+  were admitted and the overwritten Unicode-escaped credential returned `VERIFIED`.
+- GREEN: the same two targeted tests passed after the minimal parser changes.
+- Regression proof: with corrected tests retained and only the round-2 production patch reversed,
+  the two targeted methods reproduced all 3 failures. Restoring the staged implementation returned
+  both methods to green, including the valid indexed-PNG boundary case.
+- Final verification: `tests.test_qa_evidence` passed 10 tests; the complete `test_qa_*` regression
+  passed 86 tests; Python compilation and staged `git diff --check` passed.

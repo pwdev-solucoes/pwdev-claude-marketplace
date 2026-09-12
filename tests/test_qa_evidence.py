@@ -67,6 +67,17 @@ def png_with_pixels(width: int, height: int, pixels: bytes) -> bytes:
     )
 
 
+def indexed_png(*palettes: bytes) -> bytes:
+    header = struct.pack(">IIBBBBB", 1, 1, 1, 3, 0, 0, 0)
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", header)
+        + b"".join(png_chunk(b"PLTE", palette) for palette in palettes)
+        + png_chunk(b"IDAT", zlib.compress(b"\x00\x00"))
+        + png_chunk(b"IEND", b"")
+    )
+
+
 def jpeg_image() -> bytes:
     return base64.b64decode(
         "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRof"
@@ -317,6 +328,30 @@ class QaEvidenceTest(unittest.TestCase):
             with self.assertRaisesRegex(evidence.EvidenceError, "20 megapixels"):
                 evidence.inspect_evidence(root, manifest)
 
+    def test_rejects_indexed_png_with_excess_or_duplicate_palette(self) -> None:
+        evidence = load_evidence_module()
+        malformed = (
+            indexed_png(b"\x00\x00\x00" * 3),
+            indexed_png(b"\x00\x00\x00", b"\xff\xff\xff"),
+        )
+        for number, raw in enumerate(malformed):
+            with self.subTest(number=number), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                root.joinpath("indexed.png").write_bytes(raw)
+                manifest = self.manifest_for("indexed.png", raw, "image/png")
+                manifest["evidence"][0]["sanitization"]["status"] = "reviewed"
+
+                with self.assertRaisesRegex(evidence.EvidenceError, "PNG palette"):
+                    evidence.inspect_evidence(root, manifest)
+
+        valid = indexed_png(b"\x00\x00\x00\xff\xff\xff")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            root.joinpath("indexed.png").write_bytes(valid)
+            manifest = self.manifest_for("indexed.png", valid, "image/png")
+            manifest["evidence"][0]["sanitization"]["status"] = "reviewed"
+            self.assertEqual(self.inspect_one(root, manifest)["status"], "VERIFIED")
+
     def test_synthetic_credentials_in_log_and_json_are_never_exposed(self) -> None:
         fixtures = (
             ("result.log", b"Authorization: Bearer synthetic-secret-token\n", "text/plain"),
@@ -324,6 +359,11 @@ class QaEvidenceTest(unittest.TestCase):
             (
                 "escaped.json",
                 b'{"api\\u005fkey":"synthetic-secret-token"}',
+                "application/json",
+            ),
+            (
+                "duplicate-escaped.json",
+                b'{"api\\u005fkey":"synthetic-secret-token","api_key":""}',
                 "application/json",
             ),
         )

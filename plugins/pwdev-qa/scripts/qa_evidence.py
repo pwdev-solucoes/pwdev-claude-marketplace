@@ -45,6 +45,10 @@ class EvidenceError(ValueError):
     """Raised when evidence violates a safety boundary and export must stop."""
 
 
+class _JsonObjectPairs(list):
+    """Preserve every decoded JSON object pair, including duplicate keys."""
+
+
 def _error(identifier: str, message: str) -> None:
     raise EvidenceError(f"evidence {identifier!r}: {message}")
 
@@ -255,7 +259,15 @@ def _png_dimensions(raw: bytes, identifier: str) -> Tuple[int, int]:
         elif kind == b"IHDR":
             _error(identifier, "PNG contains multiple IHDR chunks")
         elif kind == b"PLTE":
-            if compressed or length == 0 or length % 3 != 0 or length > 768:
+            entries = length // 3
+            if (
+                saw_palette
+                or compressed
+                or length == 0
+                or length % 3 != 0
+                or length > 768
+                or (color_type == 3 and entries > 1 << bit_depth)
+            ):
                 _error(identifier, "PNG palette is invalid")
             saw_palette = True
         elif kind not in {b"IDAT", b"IEND"} and kind[0] & 0x20 == 0:
@@ -412,8 +424,14 @@ def _known_credential_text(text: str) -> bool:
 
 
 def _json_contains_credential(value: Any) -> bool:
-    if isinstance(value, dict):
-        for key, child in value.items():
+    if isinstance(value, _JsonObjectPairs):
+        pairs = value
+    elif isinstance(value, dict):
+        pairs = value.items()
+    else:
+        pairs = None
+    if pairs is not None:
+        for key, child in pairs:
             if _known_credential_text(key):
                 return True
             if _CREDENTIAL_KEYS.fullmatch(key) and isinstance(child, str) and bool(child):
@@ -445,7 +463,7 @@ def _text_has_credential(raw: bytes, identifier: str, media_type: str) -> bool:
             _error(identifier, "actual media type does not match text/plain")
     if media_type == "application/json":
         try:
-            parsed = json.loads(text)
+            parsed = json.loads(text, object_pairs_hook=_JsonObjectPairs)
         except (json.JSONDecodeError, RecursionError) as error:
             raise EvidenceError(
                 f"evidence {identifier!r}: actual media type does not match application/json"
