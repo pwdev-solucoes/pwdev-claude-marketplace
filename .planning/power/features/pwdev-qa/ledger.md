@@ -7,6 +7,11 @@ Created: 2026-09-12T09:34:19Z
 Task F01-01: complete (commits 5294a06..6f9fe9a, review clean after fix round 1)
 Task F01-02: complete (commits 6f9fe9a..5ff4f0d, review clean after fix round 1)
 Task F01-03: complete (commits e4e111c..cc9429a, review clean)
+Task F02-04: complete (commits 135985c..99fcc6b, review clean)
+Task F02-05: fix round 1 — finding Important confirmado; cenários mobile `READY` omitem pré-requisitos obrigatórios de host, build/signing e ADB/conectividade.
+Task F02-05: complete (commits 3846a91..8db1e6b, review clean after fix round 1)
+Task F02-06: fix round 1 — dois findings Important confirmados; cenários `READY` de dados e performance registram observações que exigem autorização sem carregar o escopo autorizativo completo.
+Task F02-06: complete (commits 8db1e6b..ec76425, review clean after fix round 1)
 
 Baseline 2026-09-12: `python3 -m unittest discover -s tests` executou 670 testes em 404.209s; 7 falhas preexistentes antes de qualquer código PWDEV QA.
 - 2 falhas `test_flow_claude_compat`: READMEs raiz não contêm `claude -p`.
@@ -37,5 +42,7 @@ Ruling: para `playwright-cli`, a documentação primária consultada em 2026-09-
 Ruling: IDs locais repetidos entre os cinco planos colidem nos nomes `task-NN-{brief,report,review}.md`; renumerar tarefas globalmente de 01 a 24, preservando ordem, conteúdo e rastreabilidade. Se estiver errado, referências externas aos IDs locais F02-01..F05-03 precisarão ser atualizadas para os IDs globais.
 Ruling: sanitização `pending` deve gerar diagnóstico explícito além de impedir cópia e PASS, porque a Global Constraint lista as três consequências. Se estiver errado, o relatório poderá ser mais estrito que o desejado, mas continuará seguro.
 Ruling: nesta tarefa de skills Markdown, testes determinísticos devem interpretar a tabela de rotas em fixtures temporárias e comprovar resolução/recusa e ausência de mutação; avaliação do comportamento do modelo permanece no smoke real F05. Se estiver errado, F01 poderá oferecer confiança estrutural insuficiente antes do smoke final.
+Ruling: prontidão mobile `READY` exige probe positivo separado para todas as dimensões da plataforma — host, SDK/toolchain, ADB/conectividade quando aplicável, driver, build/signing, device e service; ausência ou probe não executado resulta em `BLOCKED` ou `unverified`, nunca `READY`. Se estiver errado, a referência poderá bloquear uma exploração consultiva parcial, mas não alegará capacidade de execução inexistente.
+Ruling: cenários de referência que exibem mutação ou carga observada só podem ser `READY` quando a própria linha carrega autorização rastreável e completa; para dados, alvo/dataset/limite de escrita/evidência, e para performance, alvo/limites/ambiente/janela. Se estiver errado, as tabelas ficarão mais verbosas, mas impedirão que autorização genérica seja confundida com permissão de execução.
 
 ## Rulings
