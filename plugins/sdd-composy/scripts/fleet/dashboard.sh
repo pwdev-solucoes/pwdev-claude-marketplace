@@ -19,6 +19,18 @@ def clean(value, limit=160):
         return None
     text=''.join(' ' if ord(char) < 32 or ord(char) == 127 else char for char in str(value))
     return ' '.join(text.split())[:limit]
+def sanitized(value, depth=0):
+    if depth > 16: return None
+    if isinstance(value,str): return clean(value)
+    if value is None or isinstance(value,(bool,int,float)): return value
+    if isinstance(value,list): return [sanitized(item,depth+1) for item in value]
+    if isinstance(value,dict):
+        result={}
+        for key,item in value.items():
+            safe_key=clean(key) if isinstance(key,str) else clean(str(key))
+            if safe_key: result[safe_key]=sanitized(item,depth+1)
+        return result
+    return clean(value)
 for path in sorted(members_dir.glob('*.json')):
     if path.is_symlink(): errors.append(f"malformed member: {path.name} (symlink)"); continue
     try: value=json.loads(path.read_text(encoding='utf-8'))
@@ -37,10 +49,7 @@ for path in sorted(members_dir.glob('*.json')):
             if loop_id: record['loop']=loop_id
         handle=interaction.get('handle')
         if isinstance(handle,dict):
-            projected_handle={}
-            for key in ('driver','state','workspace_id','surface_id','session_name','pane_id','pid'):
-                cleaned=clean(handle.get(key))
-                if cleaned: projected_handle[key]=cleaned
+            projected_handle=sanitized(handle)
             if projected_handle: record['handle']=projected_handle
         state_value=clean(interaction.get('state'))
         if state_value: record['state']=state_value.lower()
@@ -55,14 +64,14 @@ for path in sorted(members_dir.glob('*.json')):
         records.append(record)
         continue
     ident=clean(value.get('id') or value.get('task_id') or path.stem) or path.stem
-    status=str(value.get('status') or value.get('state') or 'unknown').lower()
+    status=(clean(value.get('status') or value.get('state') or 'unknown') or 'unknown').lower()
     if status == 'locked': status='pending'
     raw=value.get('worktree_path') or value.get('worktree')
     rel=''
     if isinstance(raw,str) and raw and not os.path.isabs(raw) and '..' not in Path(raw).parts:
         try: rel=Path(raw).relative_to(root).as_posix()
         except ValueError: rel=''
-    msg=' '.join(str(value.get('message') or '').split())[:160]
+    msg=clean(value.get('message') or '') or ''
     records.append({'id':ident,'status':status,'message':msg,'worktree':rel,
                     'attention': status in {'failed','blocked','cancelled'} or value.get('attention') is True,
                     'transition': value.get('previous_status') not in (None,status)})
@@ -74,7 +83,7 @@ for r in records:
     counts[status]=counts.get(status,0)+1
 attention=any(r.get('_attention',False) or r.get('attention',False) or r.get('transition',False) for r in records)
 for r in records: r.pop('_attention',None)
-print(json.dumps({'schema':'sdd-composy.fleet-dashboard','fleet_id':fleet_id,'counts':counts,
+print(json.dumps({'schema':'sdd-composy.fleet-dashboard','fleet_id':clean(fleet_id) or '', 'counts':counts,
                   'attention':attention,'members':records},ensure_ascii=False,sort_keys=True))
 PY
 ) || { echo 'fleet dashboard: malformed member data' >&2; exit 1; }
@@ -86,9 +95,11 @@ if d.get('error'): raise SystemExit(d['error'])
 print(f"fleet {d['fleet_id']}: " + ', '.join(f"{k}={v}" for k,v in sorted(d['counts'].items())))
 for m in d['members']:
     if 'member' in m:
-        details=[f"runtime={m.get('runtime','')}",f"ui={m.get('ui','')}",f"task={m.get('task','')}",
-                 f"loop={m.get('loop','')}",f"state={m.get('state','')}"]
-        if m.get('next_action'): details.append(f"next_action={m['next_action']}")
+        details=[]
+        for key in ('runtime','ui','task','loop','state'):
+            if key in m: details.append(f"{key}={m[key]}")
+        if 'handle' in m: details.append('handle='+json.dumps(m['handle'],ensure_ascii=False,sort_keys=True,separators=(',',':')))
+        if 'next_action' in m: details.append(f"next_action={m['next_action']}")
         print(f"{m['member']}: " + ' '.join(details))
     else:
         suffix=f" — {m['message']}" if m['message'] else ''
@@ -97,8 +108,4 @@ PY
 fi
 if [[ -n "$handle" ]]; then
   [[ ! -L "$handle" && -f "$handle" ]] || { echo 'fleet dashboard: unsafe UI handle' >&2; exit 1; }
-  here=$(dirname -- "$0")
-  color=blue; case "$payload" in *attention*true*) color=red;; esac
-  . "$here/ui-cmux.sh"; fleet_ui_cmux_status "$handle" "sdd fleet $fleet_id" "$color" || true
-  if [ "$color" = red ]; then fleet_ui_cmux_flash "$handle" || true; fi
 fi

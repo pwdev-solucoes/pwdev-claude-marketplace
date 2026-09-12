@@ -39,10 +39,12 @@ it must not own process lifecycle truth, and cmux operations stay inside the
 workspace created by this fleet. Prefer cmux when available, with tmux or
 headless as explicit fallbacks.
 
-`status` is read-only. Project runtime, UI, member, task, bound LOOP ID, handle,
-interaction state, recorded timestamps, and `next_action` from authoritative
-member JSON without filling in missing optional fields. Sanitize every displayed
-value. Terminal capture is diagnostic only: it never satisfies witness,
+`status` is read-only. Project runtime, UI, member, task, bound LOOP ID, the
+complete recorded handle (including unknown fields), interaction state, timestamps,
+and `next_action` from authoritative member JSON without filling in missing optional
+fields. Sanitize every displayed value recursively. Even with `--handle`, status
+does not call UI status, flash, or other presentation mutations. Terminal capture
+is diagnostic only: it never satisfies witness,
 evidence, review, verification, or an approval gate.
 
 Before launch, report the selected tasks, runtime, UI adapter, branch/worktree

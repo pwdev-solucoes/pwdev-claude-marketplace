@@ -20,10 +20,11 @@ non-interactive outside fleet; neither a cmux/tmux pane nor a headless process c
 LOOP or changes its identity.
 
 `dashboard.sh` is read-only. For an interactive member it projects runtime, UI, member ID,
-task ID, bound LOOP ID, recorded handle, interaction state, timestamps, and `next_action` directly from
-the authoritative member JSON. Missing optional fields remain absent instead of being inferred,
-and displayed values are sanitized. Terminal capture is diagnostic only and never satisfies a
-witness, evidence, review, verification, or approval gate.
+task ID, bound LOOP ID, the complete recorded handle including unknown fields, interaction state,
+timestamps, and `next_action` directly from authoritative member JSON. Missing optional fields
+remain absent and displayed values are sanitized recursively. Status does not call UI status,
+flash, or other presentation mutations, even with `--handle`. Terminal capture is diagnostic only
+and never satisfies a witness, evidence, review, verification, or approval gate.
 
 Launch may create only the selected presentation resource for the already-bound LOOP. Status
 may observe it without mutation. Finalization remains governed by recorded JSON and evidence;

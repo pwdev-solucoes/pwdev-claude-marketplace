@@ -886,6 +886,10 @@ class SddComposyFleetAdapterTest(unittest.TestCase):
         self.assertIn("runtime", reference)
         self.assertIn("handle", reference)
         self.assertIn("next_action", reference)
+        for content in (skill, reference):
+            self.assertIn("does not call", content)
+            self.assertIn("complete recorded handle", content)
+            self.assertIn("unknown fields", content)
 
     def test_full_plugin_catalogue_has_seventeen_skills_and_commands(self):
         self.assertEqual(len(list((PLUGIN / "skills").glob("*/SKILL.md"))), 17)
