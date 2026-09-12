@@ -1,0 +1,5 @@
+name: pwdev-glpi
+version: 1.2.0
+description: GLPI tickets and ITSM integration
+hooks:
+  - pre_llm_call
