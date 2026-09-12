@@ -138,10 +138,34 @@ if [ -n "$BASE" ] && [ -n "$TOKEN" ]; then
           curl -sS -m 15 -o /dev/null -H "Session-Token: $ST" \
             "$BASE/killSession" 2>/dev/null || true
         fi
-        VERSION=$(printf '%s' "$CONFIG" | sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-        case "$VERSION" in
-          10.*) printf '%-22s %-12s %s\n' "GLPI generation" "ok" "10.x (Legacy V1)" ;;
-          11.*) printf '%-22s %-12s %s\n' "GLPI generation" "ok" "11.x (Legacy V1)" ;;
+        VERSION_INFO=$(printf '%s' "$CONFIG" | node -e '
+          let input = "";
+          process.stdin.setEncoding("utf8");
+          process.stdin.on("data", chunk => { input += chunk; });
+          process.stdin.on("end", () => {
+            try {
+              const payload = JSON.parse(input);
+              const version = payload && typeof payload === "object" && !Array.isArray(payload)
+                && payload.cfg_glpi && typeof payload.cfg_glpi === "object"
+                && !Array.isArray(payload.cfg_glpi) ? payload.cfg_glpi.version : undefined;
+              const match = typeof version === "string"
+                ? /^(\d+)\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.exec(version)
+                : null;
+              if (!match) return process.stdout.write("unknown:");
+              const major = Number(match[1]);
+              const generation = major === 10 ? "10" : major === 11 ? "11" : "unsupported";
+              process.stdout.write(`${generation}:${major}`);
+            } catch {
+              process.stdout.write("unknown:");
+            }
+          });
+        ' 2>/dev/null || printf 'unknown:')
+        case "$VERSION_INFO" in
+          10:10) printf '%-22s %-12s %s\n' "GLPI generation" "ok" "10.x (Legacy V1)" ;;
+          11:11) printf '%-22s %-12s %s\n' "GLPI generation" "ok" "11.x (Legacy V1)" ;;
+          unsupported:*)
+            MAJOR=${VERSION_INFO#unsupported:}
+            printf '%-22s %-12s %s\n' "GLPI generation" "AVISO" "unsupported major $MAJOR; tools continuam disponíveis" ;;
           *) printf '%-22s %-12s %s\n' "GLPI generation" "desconhecida" "Legacy V1 disponível; versão não identificada" ;;
         esac
       fi
