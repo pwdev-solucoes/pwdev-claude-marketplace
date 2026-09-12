@@ -22,6 +22,18 @@ Status: DONE
   passed.
 - Contract check: `git diff --check` — passed.
 
+### Fix round 1
+
+- RED: expanded focused suite — 6 failures against the previous catalog/probe schema
+  and divergent local fallback.
+- GREEN: expanded focused suite — 7 tests passed.
+- Regression reversions: each restored defect failed its focused scenario before the
+  fix was reapplied: absent probe became false `missing`; Appium source/date was absent
+  from the final seven-field row; divergent `npx --no-install playwright-cli --version`
+  replaced the documented fallback.
+- Final regression: `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest
+  tests.test_qa_tooling tests.test_qa_core` — 16 tests passed.
+
 ## Official sources verified
 
 - playwright-cli requirements and interactive/session behavior:
@@ -37,3 +49,6 @@ Status: DONE
   verified in the local environment.
 - No tool was installed or executed, and no external state or personal configuration
   was changed.
+- Availability now requires explicit `state/result/evidence` probes: the tool and all
+  purpose-specific prerequisites must be positive for `available`; only an explicit
+  negative tool probe yields `missing`; absent or incomplete probes yield `unverified`.

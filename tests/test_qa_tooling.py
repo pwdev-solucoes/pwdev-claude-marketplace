@@ -28,7 +28,7 @@ def read_required(path: Path) -> str:
 def parse_rules(text: str) -> list[dict[str, str]]:
     match = re.search(
         r"(?ms)^## Recommendation rules\n\n"
-        r"\| tool \| surface \| platform \| executable \| purpose \| prerequisites \| alternative \| reason \|\n"
+        r"\| tool \| surface \| platform \| tool probe \| required probes \| purpose \| prerequisites \| alternative \| reason \|\n"
         r"\|[- |]+\|\n(?P<rows>(?:\|[^\n]*\|\n)+)",
         text,
     )
@@ -37,10 +37,13 @@ def parse_rules(text: str) -> list[dict[str, str]]:
     rules = []
     for line in match.group("rows").splitlines():
         values = [cell.strip() for cell in line.strip("|").split("|")]
-        if len(values) != 8:
-            raise AssertionError(f"recommendation rule has {len(values)} fields, expected 8")
+        if len(values) != 9:
+            raise AssertionError(f"recommendation rule has {len(values)} fields, expected 9")
         rules.append(dict(zip(
-            ("tool", "surface", "platform", "executable", "purpose", "prerequisites", "alternative", "reason"),
+            (
+                "tool", "surface", "platform", "tool_probe", "required_probes",
+                "purpose", "prerequisites", "alternative", "reason",
+            ),
             values,
         )))
     return rules
@@ -51,19 +54,40 @@ def recommend(
     *,
     surface: str,
     platform: str,
-    executables: dict[str, str],
+    probes: dict[str, dict[str, str]],
 ) -> list[dict[str, str]]:
     output = []
     for rule in parse_rules(catalog):
         if rule["surface"] != surface or rule["platform"] not in ("any", platform):
             continue
-        executable = rule["executable"]
-        detected = executables.get(executable)
+        required = [name.strip() for name in rule["required_probes"].split(",")]
+        observed = {name: probes[name] for name in required if name in probes}
+        for name, probe in observed.items():
+            if set(probe) != {"state", "result", "evidence"}:
+                raise ValueError(f"probe {name} must contain state/result/evidence")
+            if probe["state"] not in {"positive", "negative", "not_run"}:
+                raise ValueError(f"probe {name} has invalid state")
+
+        tool_probe = probes.get(rule["tool_probe"])
+        if tool_probe and tool_probe["state"] == "negative":
+            availability = "missing"
+        elif all(
+            name in probes and probes[name]["state"] == "positive"
+            for name in required
+        ):
+            availability = "available"
+        else:
+            availability = "unverified"
+
+        evidence = "; ".join(
+            probes[name]["evidence"] if name in probes else f"probe {name} -> not provided"
+            for name in required
+        )
         output.append({
             "tool": rule["tool"],
             "purpose": rule["purpose"],
-            "availability": "available" if detected else "missing",
-            "evidence": f"command -v {executable} -> {detected or 'not found'}",
+            "availability": availability,
+            "evidence": evidence,
             "prerequisites": rule["prerequisites"],
             "alternative": rule["alternative"],
             "reason": rule["reason"],
@@ -77,7 +101,13 @@ class QaToolingBehaviourTest(unittest.TestCase):
             read_required(CATALOG),
             surface="web",
             platform="linux",
-            executables={"playwright-cli": "/opt/bin/playwright-cli", "npx": "/usr/bin/npx"},
+            probes={
+                "playwright-cli": {"state": "positive", "result": "1.2.3", "evidence": "playwright-cli --version -> 1.2.3"},
+                "node": {"state": "positive", "result": "20.1", "evidence": "node --version -> 20.1"},
+                "browser": {"state": "positive", "result": "chromium", "evidence": "configured browser -> chromium"},
+                "playwright-test": {"state": "positive", "result": "1.2.3", "evidence": "npx --no-install playwright --version -> 1.2.3"},
+                "browsers": {"state": "positive", "result": "chromium", "evidence": "project browsers -> chromium"},
+            },
         )
         by_tool = {row["tool"]: row for row in rows}
         self.assertEqual(set(by_tool), {"playwright-cli", "Playwright Test"})
@@ -92,30 +122,62 @@ class QaToolingBehaviourTest(unittest.TestCase):
             read_required(CATALOG),
             surface="mobile",
             platform="android",
-            executables={"appium": "/usr/local/bin/appium"},
+            probes={
+                "appium": {"state": "positive", "result": "present", "evidence": "appium --version -> present"},
+                "uiautomator2-driver": {"state": "positive", "result": "installed", "evidence": "appium driver list -> uiautomator2 installed"},
+                "android-sdk": {"state": "positive", "result": "configured", "evidence": "Android SDK -> configured"},
+                "adb": {"state": "positive", "result": "/opt/adb", "evidence": "command -v adb -> /opt/adb"},
+                "android-device": {"state": "positive", "result": "emulator-5554", "evidence": "adb devices -> emulator-5554"},
+            },
         )
         self.assertEqual([row["tool"] for row in rows], ["Appium UiAutomator2"])
         self.assertEqual(rows[0]["availability"], "available")
         self.assertIn("Android", rows[0]["prerequisites"])
 
-    def test_missing_cli_is_reported_without_installation_or_fictitious_execution(self) -> None:
+    def test_missing_cli_requires_an_explicit_negative_probe(self) -> None:
         before = set(ROOT.rglob("*"))
         rows = recommend(
             read_required(CATALOG),
             surface="web",
             platform="linux",
-            executables={"npx": "/usr/bin/npx"},
+            probes={
+                "playwright-cli": {
+                    "state": "negative",
+                    "result": "not found",
+                    "evidence": "playwright-cli --version -> command not found",
+                },
+            },
         )
         after = set(ROOT.rglob("*"))
         cli = next(row for row in rows if row["tool"] == "playwright-cli")
         self.assertEqual(cli["availability"], "missing")
-        self.assertEqual(cli["evidence"], "command -v playwright-cli -> not found")
+        self.assertIn("playwright-cli --version -> command not found", cli["evidence"])
         self.assertTrue(cli["alternative"])
         self.assertEqual(before, after)
 
         skill = read_required(SKILL)
         self.assertRegex(skill, r"(?is)never install.*automatically")
         self.assertNotRegex(skill, r"(?m)^\s*(?:npm|npx|pip|brew|apt)\s+install\b")
+
+    def test_absent_probe_is_unverified_and_partial_prerequisites_never_mean_available(self) -> None:
+        catalog = read_required(CATALOG)
+        web = recommend(catalog, surface="web", platform="linux", probes={})
+        cli = next(row for row in web if row["tool"] == "playwright-cli")
+        self.assertEqual(cli["availability"], "unverified")
+        self.assertIn("probe playwright-cli -> not provided", cli["evidence"])
+        self.assertNotIn("command not found", cli["evidence"])
+
+        mobile = recommend(
+            catalog,
+            surface="mobile",
+            platform="android",
+            probes={
+                "appium": {"state": "positive", "result": "present", "evidence": "appium --version -> present"},
+            },
+        )
+        self.assertEqual(mobile[0]["availability"], "unverified")
+        for missing_prerequisite in ("uiautomator2-driver", "android-sdk", "adb", "android-device"):
+            self.assertIn(f"probe {missing_prerequisite} -> not provided", mobile[0]["evidence"])
 
     def test_current_claims_require_official_source_and_date_or_unverified(self) -> None:
         catalog = read_required(CATALOG)
@@ -125,14 +187,36 @@ class QaToolingBehaviourTest(unittest.TestCase):
             catalog,
         )
         self.assertTrue(claims)
+        rules_by_tool = {rule["tool"]: rule for rule in parse_rules(catalog)}
         for tool, kind, status, source, checked_at in claims:
-            with self.subTest(tool=tool.strip(), kind=kind):
+            tool = tool.strip()
+            source = source.strip()
+            checked_at = checked_at.strip()
+            with self.subTest(tool=tool, kind=kind):
                 if status == "verified":
                     self.assertRegex(source, r"https://(?:playwright\.dev|github\.com/microsoft|appium\.io)/")
-                    self.assertRegex(checked_at, r"^\d{4}-\d{2}-\d{2}\s*$")
+                    self.assertRegex(checked_at, r"^\d{4}-\d{2}-\d{2}$")
+                    self.assertIn(source, rules_by_tool[tool]["prerequisites"])
+                    self.assertIn(f"checked {checked_at}", rules_by_tool[tool]["prerequisites"])
                 else:
-                    self.assertEqual(source.strip(), "unverified")
-                    self.assertEqual(checked_at.strip(), "unverified")
+                    self.assertEqual(source, "unverified")
+                    self.assertEqual(checked_at, "unverified")
+
+        rows = recommend(
+            catalog,
+            surface="mobile",
+            platform="android",
+            probes={},
+        )
+        self.assertEqual(tuple(rows[0]), OUTPUT_FIELDS)
+        self.assertIn("https://appium.io/docs/en/latest/intro/drivers/", rows[0]["prerequisites"])
+        self.assertIn("checked 2026-09-12", rows[0]["prerequisites"])
+
+    def test_documented_local_playwright_fallback_does_not_install(self) -> None:
+        skill = read_required(SKILL)
+        self.assertIn("npx --no-install playwright --version", skill)
+        self.assertIn("npx playwright cli", skill)
+        self.assertNotIn("npx --no-install playwright-cli --version", skill)
 
     def test_skill_contract_and_catalog_cover_all_qa_surfaces(self) -> None:
         skill = read_required(SKILL)

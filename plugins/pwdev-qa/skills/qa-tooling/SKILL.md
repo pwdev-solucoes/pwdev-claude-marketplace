@@ -14,13 +14,13 @@ recommendation.
 
 - Observed stack and the surface or objective to test.
 - Runtime and operating system, including the mobile target platform when applicable.
-- A complete list of executables already detected, with the command and observed path
-  or output used as evidence.
+- A probe inventory keyed by executable or prerequisite. Every supplied probe has
+  `state` (`positive`, `negative`, or `not_run`), `result`, and `evidence` containing
+  the exact command/check and its observed output.
 - CI environment, available devices/browsers, budget, data restrictions, and explicit
   authorization boundaries.
 
-If executable detection was not attempted, say so. An absent value is not evidence
-that a tool is installed.
+An absent probe means `unverified`; it is never rewritten as a negative result.
 
 ## Procedure
 
@@ -28,9 +28,11 @@ that a tool is installed.
    catalog. Do not return platform-incompatible mobile entries.
 2. Prefer an existing tool. Recommend migration only when a concrete coverage,
    reliability, or evidence benefit outweighs its adoption cost.
-3. Assign `available` only from successful detection evidence, `missing` only from an
-   explicit failed probe in the supplied inventory, and `unverified` when no reliable
-   probe was made. Never turn `missing` into a simulated execution.
+3. Assign `available` only when the tool probe and every required probe in the catalog
+   are `positive`. Assign `missing` only when the tool's own supplied probe is
+   `negative`. Assign `unverified` when a probe is absent, `not_run`, or when a required
+   prerequisite is negative. Preserve every supplied `result` and `evidence`; never
+   synthesize a command result from an absent key.
 4. For Web/UI exploration, distinguish `playwright-cli` from Playwright Test:
    `playwright-cli` operates an isolated interactive session using observed refs,
    snapshots, actions, and screenshots; Playwright Test owns repeatable suites and CI.
@@ -42,8 +44,10 @@ that a tool is installed.
    alternative and a context-specific reason. State limitations rather than widening
    scope or authorization.
 
-The allowed detection probes for the Web/UI CLI are `playwright-cli --version` and
-`npx --no-install playwright-cli --version`. If an already available CLI is explicitly
+The documented detection probes for the Web/UI CLI are `playwright-cli --version` and,
+for a project-local package, `npx --no-install playwright --version`; the documented
+local entry is `npx playwright cli`. These commands were reconciled with the official
+publisher documentation on 2026-09-12. If an already available CLI is explicitly
 authorized for exploration, the supported isolated-session sequence is
 `playwright-cli -s=qa-report open`, `playwright-cli -s=qa-report snapshot`,
 `playwright-cli -s=qa-report screenshot --filename=report.png`, and
@@ -64,9 +68,9 @@ dates next to any verified current claim inside `prerequisites` or `evidence`.
 
 - Missing stack, surface, platform, or constraints: return candidates as `unverified`
   and identify the missing input in `evidence` and `reason`.
-- Detected executable without a usable device, browser, service, credential, or
-  authorization: preserve the executable evidence but explain that the full tool is
-  `unverified`.
+- Positive tool probe without a positive required device, browser, driver, SDK,
+  service, credential, or authorization probe: preserve the supplied evidence but
+  report the full tool as `unverified`.
 - Unsupported platform: do not recommend the incompatible tool; return the compatible
   alternative or explain why none was verified.
 - No suitable tool: return a row with `tool` set to `none verified`, availability

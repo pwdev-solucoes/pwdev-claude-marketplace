@@ -2,19 +2,21 @@
 
 This is a recommendation catalog, not an installer. Match observed context against the
 rules, preserve detection evidence, and keep unsupported or unprobed facts explicit.
-`available` means the required executable was observed, `missing` means a supplied
-probe reported it absent, and `unverified` means the relevant probe or prerequisite
-was not established. Executable availability alone does not prove that browsers,
-devices, credentials, services, or authorization are ready.
+Each supplied probe carries `state`, `result`, and `evidence`. `available` means the
+tool probe and all purpose-specific required probes are positive. `missing` means the
+tool probe explicitly reported the tool absent. `unverified` means a probe was absent,
+not run, or a prerequisite was not established. Tool availability alone does not prove
+that browsers, drivers, SDKs, devices, credentials, services, or authorization are
+ready. Never turn an absent inventory key into fabricated negative evidence.
 
 ## Recommendation rules
 
-| tool | surface | platform | executable | purpose | prerequisites | alternative | reason |
-|---|---|---|---|---|---|---|---|
-| playwright-cli | web | any | playwright-cli | Exploratory Web/UI navigation, observed-ref actions, snapshots, and screenshots in a task-owned session | Node.js 18 or newer; isolated qa-report session; browser access; screenshot review | Manual browser exploration with timestamped notes and reviewed screenshots | Fast interactive investigation with concise observed page state; it does not replace a repeatable suite |
-| Playwright Test | web | any | npx | Repeatable suite execution across configured browsers and CI | Project Playwright dependency and browser binaries already provisioned | Existing repository Web/UI test runner | Deterministic assertions, retries, projects, and CI execution belong in the test suite |
-| Appium UiAutomator2 | mobile | android | appium | Android native, hybrid, or Web UI automation through the UiAutomator2 driver | Android SDK, ADB, compatible device or emulator, and project driver configuration | AndroidX Test or an authorized manual device run | Appium lists UiAutomator2 for Android native, hybrid, and Web modes |
-| Appium XCUITest | mobile | ios | appium | iOS native, hybrid, or Web UI automation through the XCUITest driver | macOS host, Xcode tooling, compatible simulator or device, and project driver configuration | XCUITest in the existing Apple project or an authorized manual device run | Appium maps its iOS driver to Apple XCUITest technology |
+| tool | surface | platform | tool probe | required probes | purpose | prerequisites | alternative | reason |
+|---|---|---|---|---|---|---|---|---|
+| playwright-cli | web | any | playwright-cli | playwright-cli,node,browser | Exploratory Web/UI navigation, observed-ref actions, snapshots, and screenshots in a task-owned session | Node.js 18+ compatibility: https://github.com/microsoft/playwright-cli (checked 2026-09-12); isolated qa-report session; browser access; screenshot review; version, cost, and license unverified | Manual browser exploration with timestamped notes and reviewed screenshots | Fast interactive investigation with concise observed page state; it does not replace a repeatable suite |
+| Playwright Test | web | any | playwright-test | playwright-test,browsers | Repeatable suite execution across configured browsers and CI | Project dependency and browser binaries; CI compatibility: https://playwright.dev/docs/ci (checked 2026-09-12); version, cost, and license unverified | Existing repository Web/UI test runner | Deterministic assertions, retries, projects, and CI execution belong in the test suite |
+| Appium UiAutomator2 | mobile | android | appium | appium,uiautomator2-driver,android-sdk,adb,android-device | Android native, hybrid, or Web UI automation through the UiAutomator2 driver | Android modes compatibility: https://appium.io/docs/en/latest/intro/drivers/ (checked 2026-09-12); Android SDK, ADB, device or emulator, and configured UiAutomator2 driver; version, cost, and license unverified | AndroidX Test or an authorized manual device run | Appium lists UiAutomator2 for Android native, hybrid, and Web modes |
+| Appium XCUITest | mobile | ios | appium | appium,xcuitest-driver,macos,xcode,ios-device | iOS native, hybrid, or Web UI automation through the XCUITest driver | iOS technology compatibility: https://appium.io/docs/en/latest/intro/drivers/ (checked 2026-09-12); macOS, Xcode, device or simulator, and configured XCUITest driver; version, cost, and license unverified | XCUITest in the existing Apple project or an authorized manual device run | Appium maps its iOS driver to Apple XCUITest technology |
 
 ## Broader surface guide
 
@@ -65,7 +67,9 @@ not proof of pixels or semantics. A screenshot needs recorded visual sanitizatio
 review before attachment. Do not attach traces or videos in v1. Never reuse a personal
 browser profile or export its cookies/storage.
 
-For every candidate, the recommendation table still has exactly
+For every candidate, the final recommendation table still has exactly
 `tool/purpose/availability/evidence/prerequisites/alternative/reason`. Record an absent
-CLI as `missing`, cite its failed probe, keep the alternative, and stop; never install
-or fabricate execution evidence.
+CLI as `missing` only after an explicit negative tool probe. With no probe, record
+`unverified` and `probe <name> -> not provided`; never install or fabricate execution
+evidence. Verified current claims carry their official URL and check date in the final
+`prerequisites` cell; unverified version, cost, and license facts are labeled there too.
