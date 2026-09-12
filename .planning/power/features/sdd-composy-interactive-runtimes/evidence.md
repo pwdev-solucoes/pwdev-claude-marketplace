@@ -53,3 +53,13 @@ Status: INCOMPLETE
 - `invocation-budget.json` is atomically published in the run output before the fake external call. A fake failure consumed `codex:cmux`; a second run returned `NOT_RUN` without retry, and the separately authorized `codex:tmux` fallback was not invoked.
 - Final suite: `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 424 tests passed in 179.986s.
 - No real provider, cmux session, tmux session, credentials, or protected file was used. All real runtime/UI combinations remain `INCOMPLETE`/`NOT_RUN` pending exact human authorization for each combination.
+
+## Task 08 review fix round 1
+
+- RED: the three focused review regressions failed: production rejected the injected interactive path parameter, a stale budget instance reused `codex:cmux`, and a symlinked budget was read.
+- GREEN: six focused gate/budget tests pass in 0.129s using fake launchers only.
+- Production now receives an exact reservation consumed by `run_acceptance` before its injected eventual external launch; retry and cross-UI fallback remain impossible.
+- Reservation uses an exclusive sibling lock, re-reads and validates under lock, preserves unknown fields, atomically replaces and fsyncs both file and containing directory. Stale and spawned cross-process contenders produce exactly one consumption.
+- Budget and lock paths, including ancestors, are rejected if symlinked before budget contents are read. Malformed state remains fail-closed and no launcher is called.
+- All real combinations remain INCOMPLETE/NOT_RUN; no provider or real UI session was executed.
+- Final suite: `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 427 tests passed in 175.120s.

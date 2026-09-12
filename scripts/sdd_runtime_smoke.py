@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 from contextlib import contextmanager
 from datetime import datetime, timezone
+import fcntl
 import hashlib
 import importlib.util
 import json
@@ -36,6 +37,10 @@ class SmokeBlocked(RuntimeError):
     """A prerequisite is absent; this is not evidence of a passing scenario."""
 
 
+class InvocationAlreadyConsumed(SmokeBlocked):
+    """The exact external-call reservation was already spent."""
+
+
 class InvocationBudget:
     def __init__(self, limit: int = DEFAULT_MAX_CALLS, output: Optional[Path] = None):
         if not 1 <= limit <= DEFAULT_MAX_CALLS:
@@ -43,32 +48,74 @@ class InvocationBudget:
         self.limit = limit
         self.counts = {runtime: 0 for runtime in RUNTIMES}
         self.path = output / "invocation-budget.json" if output is not None else None
+        self.lock_path = output / ".invocation-budget.lock" if output is not None else None
         self.consumed = set()
         self.data = {"schema_version": 1}
-        if self.path is not None and self.path.exists():
-            data = json.loads(self.path.read_text(encoding="utf-8"))
-            if data.get("schema_version") != 1 or not isinstance(data.get("consumed"), list):
+        if self.path is not None:
+            _reject_symlink_ancestors(output)
+            output.mkdir(parents=True, exist_ok=True)
+            _reject_symlink_ancestors(self.path)
+            _reject_symlink_ancestors(self.lock_path)
+            if self.path.exists():
+                self._load(self.path.read_text(encoding="utf-8"))
+
+    def _load(self, raw: str) -> None:
+        try:
+            data = json.loads(raw)
+        except (json.JSONDecodeError, TypeError) as exc:
+            raise SmokeBlocked("invalid durable invocation budget") from exc
+        if (not isinstance(data, dict) or data.get("schema_version") != 1
+                or not isinstance(data.get("consumed"), list)
+                or not all(isinstance(key, str) for key in data["consumed"])):
+            raise SmokeBlocked("invalid durable invocation budget")
+        consumed = set(data["consumed"])
+        if len(consumed) != len(data["consumed"]):
+            raise SmokeBlocked("invalid durable invocation budget")
+        counts = {runtime: 0 for runtime in RUNTIMES}
+        for key in consumed:
+            runtime = key.split(":", 1)[0]
+            if runtime not in counts:
                 raise SmokeBlocked("invalid durable invocation budget")
-            self.data = data
-            self.consumed = set(data["consumed"])
-            for key in self.consumed:
-                runtime = key.split(":", 1)[0]
-                if runtime in self.counts:
-                    self.counts[runtime] += 1
+            counts[runtime] += 1
+        self.data, self.consumed, self.counts = data, consumed, counts
 
     def consume(self, runtime: str, ui: Optional[str] = None) -> None:
         if runtime not in self.counts:
             raise ValueError(f"unknown runtime: {runtime}")
-        if self.counts[runtime] >= self.limit:
-            raise SmokeBlocked(f"{runtime} call budget of {self.limit} reached")
         key = f"{runtime}:{ui}" if ui is not None else f"{runtime}:call-{self.counts[runtime] + 1}"
-        if key in self.consumed:
-            raise SmokeBlocked(f"invocation budget already consumed for {key}")
-        self.consumed.add(key)
-        self.counts[runtime] += 1
-        if self.path is not None:
+        if self.path is None:
+            if self.counts[runtime] >= self.limit:
+                raise SmokeBlocked(f"{runtime} call budget of {self.limit} reached")
+            if key in self.consumed:
+                raise InvocationAlreadyConsumed(f"invocation budget already consumed for {key}")
+            self.consumed.add(key)
+            self.counts[runtime] += 1
+            return
+        _reject_symlink_ancestors(self.lock_path)
+        flags = os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            lock_fd = os.open(self.lock_path, flags, 0o600)
+        except OSError as exc:
+            raise SmokeBlocked("unable to lock durable invocation budget") from exc
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            _reject_symlink_ancestors(self.path)
+            if self.path.exists():
+                self._load(self.path.read_text(encoding="utf-8"))
+            else:
+                self.data, self.consumed = {"schema_version": 1}, set()
+                self.counts = {name: 0 for name in RUNTIMES}
+            if self.counts[runtime] >= self.limit:
+                raise SmokeBlocked(f"{runtime} call budget of {self.limit} reached")
+            if key in self.consumed:
+                raise InvocationAlreadyConsumed(f"invocation budget already consumed for {key}")
+            self.consumed.add(key)
+            self.counts[runtime] += 1
             self.data.update(consumed=sorted(self.consumed), counts=self.counts)
             write_atomic_json(self.path, self.data)
+        finally:
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            os.close(lock_fd)
 
     def was_consumed(self, runtime: str, ui: str) -> bool:
         return f"{runtime}:{ui}" in self.consumed
@@ -838,6 +885,11 @@ def write_atomic_json(target: Path, value: Dict[str, Any]) -> None:
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temporary, target)
+        directory_fd = os.open(target.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
     finally:
         if temporary.exists():
             temporary.unlink()
@@ -854,6 +906,7 @@ def run_acceptance(*, mode: str, runtime: str, language: str, scenario: str,
                    fleet_acknowledged: bool = False,
                    hermes_automation_acknowledged: bool = False,
                    authorized_runtime_uis: Optional[set[str]] = None,
+                   production_interactive_launcher: Optional[Callable[..., Dict[str, Any]]] = None,
                    ui: str = "all") -> Dict[str, Any]:
     runtimes = _selection(runtime, "all", RUNTIMES)
     languages = _selection(language, "both", LANGUAGES)
@@ -886,12 +939,24 @@ def run_acceptance(*, mode: str, runtime: str, language: str, scenario: str,
                     elif provider_launcher is None:
                         outcome = {"status": "NOT_RUN",
                                    "reason": "real provider launcher is unavailable in this phase"}
+                    elif (selected_scenario == "fleet-interactive"
+                          and provider_launcher is production_provider_launcher
+                          and production_interactive_launcher is None):
+                        outcome = {"status": "NOT_RUN",
+                                   "reason": "interactive production launcher is unavailable"}
                     else:
                         try:
                             if provider_launcher is production_provider_launcher:
+                                reservation = None
+                                if selected_scenario == "fleet-interactive":
+                                    budget.consume(selected_runtime, selected_ui)
+                                    reservation = f"{selected_runtime}:{selected_ui}"
                                 outcome = provider_launcher(runtime=selected_runtime,
                                     language=selected_language, scenario=selected_scenario,
-                                    timeout=DEFAULT_TIMEOUT, plugin_root=plugin_root, budget=budget,
+                                    ui=selected_ui, timeout=DEFAULT_TIMEOUT,
+                                    plugin_root=plugin_root, budget=budget,
+                                    reservation=reservation,
+                                    interactive_launcher=production_interactive_launcher,
                                     hermes_automation_acknowledged=hermes_automation_acknowledged)
                             else:
                                 budget.consume(selected_runtime, selected_ui)
@@ -900,6 +965,8 @@ def run_acceptance(*, mode: str, runtime: str, language: str, scenario: str,
                                                     scenario=selected_scenario,
                                                     ui=selected_ui,
                                                     timeout=DEFAULT_TIMEOUT)
+                        except InvocationAlreadyConsumed as exc:
+                            outcome = {"status": "NOT_RUN", "reason": sanitize(str(exc))}
                         except (SmokeBlocked, OSError) as exc:
                             outcome = {"status": "BLOCKED", "reason": sanitize(str(exc))}
                     if selected_scenario == "fleet-interactive":
@@ -998,12 +1065,24 @@ def _helper_witness(runtime: str, events: list, helper: Path, expected: dict) ->
 def production_provider_launcher(*, runtime: str, language: str, scenario: str,
                                  timeout: float = DEFAULT_TIMEOUT, plugin_root: Path,
                                  budget: InvocationBudget,
+                                 ui: Optional[str] = None,
+                                 reservation: Optional[str] = None,
+                                 interactive_launcher: Optional[Callable[..., Dict[str, Any]]] = None,
                                  hermes_automation_acknowledged: bool = False) -> Dict[str, Any]:
     """One real status invocation, using the corrected local adapter command contract.
 
     A temporary Git repository is a fixture, not an operating system sandbox.
     No global runtime installation, authentication or configuration is changed.
     """
+    if scenario == "fleet-interactive":
+        if ui not in (*INTERACTIVE_UIS, "headless"):
+            return {"status": "NOT_RUN", "reason": "exact resolved UI is required"}
+        if interactive_launcher is None:
+            return {"status": "NOT_RUN", "reason": "interactive production launcher is unavailable"}
+        if reservation != f"{runtime}:{ui}" or not budget.was_consumed(runtime, ui):
+            raise SmokeBlocked("exact runtime+UI reservation was not consumed")
+        return interactive_launcher(runtime=runtime, language=language, scenario=scenario,
+                                    ui=ui, timeout=timeout, plugin_root=plugin_root)
     if scenario != "read-only":
         return {"status": "NOT_RUN", "reason": "only the read-only production entry is implemented"}
     if runtime == "hermes" and not hermes_automation_acknowledged:

@@ -21,3 +21,11 @@ Status: DONE
 ## Real-run status
 
 No real provider, cmux, or tmux session was executed. Every real runtime/UI combination remains INCOMPLETE/NOT_RUN and requires separate exact human authorization.
+
+## Review fix round 1
+
+- The production identity branch now carries the exact, already-consumed reservation into an injected interactive launch path.
+- Durable reservation is serialized with an exclusive lock and a fresh under-lock read; publication preserves unknown fields and fsyncs the file and directory.
+- Symlinked budget/lock paths and ancestors are rejected before reading durable budget content.
+- Focused result: six gate/budget tests passed in 0.129s. Only fake launchers were used.
+- Full result: 427 tests passed in 175.120s.

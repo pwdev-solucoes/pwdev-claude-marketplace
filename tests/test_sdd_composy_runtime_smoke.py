@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import multiprocessing
 import os
 import subprocess
 import sys
@@ -22,6 +23,17 @@ def load_module():
 
 
 SMOKE = load_module()
+
+
+def _consume_budget_process(output, ready, start, results):
+    budget = SMOKE.InvocationBudget(28, Path(output))
+    ready.put(True)
+    start.wait()
+    try:
+        budget.consume("codex", "cmux")
+        results.put("consumed")
+    except SMOKE.SmokeBlocked:
+        results.put("rejected")
 
 
 class RuntimeSmokeContractTests(unittest.TestCase):
@@ -302,6 +314,82 @@ else: print(json.dumps(result))
         self.assertEqual(first["scenarios"][0]["status"], "BLOCKED")
         self.assertEqual(second["scenarios"][0]["status"], "NOT_RUN")
         self.assertIn("already consumed", second["scenarios"][0]["reason"])
+
+    def test_production_interactive_branch_reserves_exact_key_before_injected_launch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "run"
+            calls = []
+            def injected(**kwargs):
+                durable = json.loads((output / "invocation-budget.json").read_text())
+                self.assertEqual(durable["consumed"], ["codex:cmux"])
+                calls.append((kwargs["runtime"], kwargs["ui"]))
+                raise OSError("injected failure")
+            first = SMOKE.run_acceptance(
+                mode="real", runtime="codex", language="en-US",
+                scenario="fleet-interactive", ui="cmux", output=output,
+                plugin_root=ROOT / "plugins/sdd-composy",
+                provider_launcher=SMOKE.production_provider_launcher,
+                production_interactive_launcher=injected,
+                authorized_runtime_uis={"codex:cmux", "codex:tmux"},
+            )
+            retry = SMOKE.run_acceptance(
+                mode="real", runtime="codex", language="en-US",
+                scenario="fleet-interactive", ui="cmux", output=output,
+                plugin_root=ROOT / "plugins/sdd-composy",
+                provider_launcher=SMOKE.production_provider_launcher,
+                production_interactive_launcher=injected,
+                authorized_runtime_uis={"codex:cmux", "codex:tmux"},
+            )
+        self.assertEqual(calls, [("codex", "cmux")])
+        self.assertEqual(first["scenarios"][0]["status"], "BLOCKED")
+        self.assertEqual(retry["scenarios"][0]["status"], "NOT_RUN")
+
+    def test_stale_and_cross_process_budget_instances_cannot_both_reserve(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            (output / "invocation-budget.json").write_text(json.dumps({
+                "schema_version": 1, "consumed": [], "future": {"kept": True}}))
+            first = SMOKE.InvocationBudget(28, output)
+            stale = SMOKE.InvocationBudget(28, output)
+            first.consume("codex", "cmux")
+            with self.assertRaisesRegex(SMOKE.SmokeBlocked, "already consumed"):
+                stale.consume("codex", "cmux")
+            self.assertEqual(json.loads((output / "invocation-budget.json").read_text())["future"],
+                             {"kept": True})
+
+        with tempfile.TemporaryDirectory() as directory:
+            context = multiprocessing.get_context("spawn")
+            ready, results, start = context.Queue(), context.Queue(), context.Event()
+            processes = [context.Process(target=_consume_budget_process,
+                args=(directory, ready, start, results)) for _ in range(2)]
+            for process in processes: process.start()
+            ready.get(timeout=10); ready.get(timeout=10); start.set()
+            outcomes = sorted(results.get(timeout=10) for _ in processes)
+            for process in processes: process.join(10)
+            self.assertEqual(outcomes, ["consumed", "rejected"])
+            self.assertTrue(all(process.exitcode == 0 for process in processes))
+
+    def test_budget_symlink_is_rejected_before_read_or_launcher(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "run"; output.mkdir()
+            target = Path(directory) / "benign.json"
+            target.write_text('{"schema_version":1,"consumed":[]}')
+            budget_path = output / "invocation-budget.json"
+            budget_path.symlink_to(target)
+            called = []
+            original = Path.read_text
+            def guarded(path, *args, **kwargs):
+                if path == budget_path:
+                    raise AssertionError("symlink budget was read")
+                return original(path, *args, **kwargs)
+            with patch.object(Path, "read_text", guarded):
+                with self.assertRaisesRegex(SMOKE.SmokeBlocked, "symlink"):
+                    SMOKE.run_acceptance(mode="real", runtime="codex", language="en-US",
+                        scenario="fleet-interactive", ui="cmux", output=output,
+                        plugin_root=ROOT / "plugins/sdd-composy",
+                        provider_launcher=lambda **kwargs: called.append(kwargs),
+                        authorized_runtime_uis={"codex:cmux"})
+            self.assertEqual(called, [])
 
     def test_controlled_process_timeout_terminates_child_and_reports_timeout(self):
         with tempfile.TemporaryDirectory() as directory:
