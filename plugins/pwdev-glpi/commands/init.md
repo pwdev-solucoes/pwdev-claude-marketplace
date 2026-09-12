@@ -10,8 +10,9 @@ argument-hint: "[url-do-glpi]"
 
 ## STEP 1 — URL da API
 Pergunte a URL do GLPI (aceite de `$ARGUMENTS`). Normalize para terminar em
-`/apirest.php` (se vier a raiz, anexe). Requisito: **GLPI 10.x** com API REST
-habilitada (Setup → General → API). Valide https quando não for localhost.
+`/apirest.php` (se vier a raiz, anexe). Requisito: **GLPI 10.x ou 11.x** com
+a API REST Legacy V1 habilitada (Setup → General → API). O endpoint deve
+terminar em `/apirest.php`; valide https quando não for localhost.
 
 ## STEP 2 — PAT (nunca no chat)
 Instrua a criação: **Preferências do usuário → Chaves de acesso remoto →
