@@ -28,7 +28,7 @@ nem autorizada implicitamente. Não reduzir o escopo da v1 para fechar uma fase.
 | F01-03 | Mapeamentos dos três runtimes | medium | 4 | [arquivos, interfaces e testes](f01-plan.md#task-03--mapeamentos-dos-tres-runtimes) |
 | F02-04 | Estratégia, requisitos e funcional | medium | 4 | [arquivos, interfaces e testes](f02-plan.md#task-04--estrategia-requisitos-e-funcional) |
 | F02-05 | Web, API e mobile | medium | 4 | [arquivos, interfaces e testes](f02-plan.md#task-05--web-api-e-mobile) |
-| F02-09 | Dados, acessibilidade e performance | medium | 4 | [arquivos, interfaces e testes](f02-plan.md#task-09--dados-acessibilidade-e-performance) |
+| F02-06 | Dados, acessibilidade e performance | medium | 4 | [arquivos, interfaces e testes](f02-plan.md#task-06--dados-acessibilidade-e-performance) |
 | F02-07 | Segurança, automação e CI | medium | 4 | [arquivos, interfaces e testes](f02-plan.md#task-07--seguranca-automacao-e-ci) |
 | F02-08 | Regressão, defeitos e produção | medium | 4 | [arquivos, interfaces e testes](f02-plan.md#task-08--regressao-defeitos-e-producao) |
 | F02-09 | Métricas e prontidão | medium | 3 | [arquivos, interfaces e testes](f02-plan.md#task-09--metricas-e-prontidao) |
