@@ -37,18 +37,41 @@ class SmokeBlocked(RuntimeError):
 
 
 class InvocationBudget:
-    def __init__(self, limit: int = DEFAULT_MAX_CALLS):
+    def __init__(self, limit: int = DEFAULT_MAX_CALLS, output: Optional[Path] = None):
         if not 1 <= limit <= DEFAULT_MAX_CALLS:
             raise ValueError("max calls per runtime must be between 1 and 28")
         self.limit = limit
         self.counts = {runtime: 0 for runtime in RUNTIMES}
+        self.path = output / "invocation-budget.json" if output is not None else None
+        self.consumed = set()
+        self.data = {"schema_version": 1}
+        if self.path is not None and self.path.exists():
+            data = json.loads(self.path.read_text(encoding="utf-8"))
+            if data.get("schema_version") != 1 or not isinstance(data.get("consumed"), list):
+                raise SmokeBlocked("invalid durable invocation budget")
+            self.data = data
+            self.consumed = set(data["consumed"])
+            for key in self.consumed:
+                runtime = key.split(":", 1)[0]
+                if runtime in self.counts:
+                    self.counts[runtime] += 1
 
-    def consume(self, runtime: str) -> None:
+    def consume(self, runtime: str, ui: Optional[str] = None) -> None:
         if runtime not in self.counts:
             raise ValueError(f"unknown runtime: {runtime}")
         if self.counts[runtime] >= self.limit:
             raise SmokeBlocked(f"{runtime} call budget of {self.limit} reached")
+        key = f"{runtime}:{ui}" if ui is not None else f"{runtime}:call-{self.counts[runtime] + 1}"
+        if key in self.consumed:
+            raise SmokeBlocked(f"invocation budget already consumed for {key}")
+        self.consumed.add(key)
         self.counts[runtime] += 1
+        if self.path is not None:
+            self.data.update(consumed=sorted(self.consumed), counts=self.counts)
+            write_atomic_json(self.path, self.data)
+
+    def was_consumed(self, runtime: str, ui: str) -> bool:
+        return f"{runtime}:{ui}" in self.consumed
 
 
 def utc_now() -> str:
@@ -800,17 +823,17 @@ def _record(runtime: str, language: str, scenario: str, status: str,
     return record
 
 
-def write_summary(output: Path, summary: Dict[str, Any]) -> None:
-    _reject_symlink_ancestors(output)
-    output.mkdir(parents=True, exist_ok=True)
-    if output.is_symlink():
-        raise SmokeBlocked("output directory may not be a symlink")
-    target = output / "summary.json"
-    handle, temporary_name = tempfile.mkstemp(prefix=".summary.", suffix=".tmp", dir=output)
+def write_atomic_json(target: Path, value: Dict[str, Any]) -> None:
+    _reject_symlink_ancestors(target.parent)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.parent.is_symlink() or target.is_symlink():
+        raise SmokeBlocked("output path may not be a symlink")
+    handle, temporary_name = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp",
+                                               dir=target.parent)
     temporary = Path(temporary_name)
     try:
         with os.fdopen(handle, "w", encoding="utf-8") as stream:
-            json.dump(summary, stream, indent=2, sort_keys=True)
+            json.dump(value, stream, indent=2, sort_keys=True)
             stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
@@ -820,17 +843,23 @@ def write_summary(output: Path, summary: Dict[str, Any]) -> None:
             temporary.unlink()
 
 
+def write_summary(output: Path, summary: Dict[str, Any]) -> None:
+    write_atomic_json(output / "summary.json", summary)
+
+
 def run_acceptance(*, mode: str, runtime: str, language: str, scenario: str,
                    output: Path, plugin_root: Path,
                    provider_launcher: Optional[Callable[..., Dict[str, Any]]] = None,
                    max_calls_per_runtime: int = DEFAULT_MAX_CALLS,
                    fleet_acknowledged: bool = False,
                    hermes_automation_acknowledged: bool = False,
+                   authorized_runtime_uis: Optional[set[str]] = None,
                    ui: str = "all") -> Dict[str, Any]:
     runtimes = _selection(runtime, "all", RUNTIMES)
     languages = _selection(language, "both", LANGUAGES)
     scenarios = OFFLINE_SCENARIOS if scenario == "all" else (scenario,)
-    budget = InvocationBudget(max_calls_per_runtime)
+    budget = InvocationBudget(max_calls_per_runtime, output if mode == "real" else None)
+    authorizations = authorized_runtime_uis or set()
     plugin_hash = tree_fingerprint(plugin_root)
     records = []
     for selected_runtime in runtimes:
@@ -844,7 +873,14 @@ def run_acceptance(*, mode: str, runtime: str, language: str, scenario: str,
                         with isolated_fixture(plugin_root) as fixture:
                             outcome = _offline_check(fixture, fixture / "plugin", selected_runtime,
                                                      selected_language, selected_scenario, selected_ui)
-                    elif selected_scenario in {"fleet", "fleet-interactive"} and not fleet_acknowledged:
+                    elif selected_scenario == "fleet-interactive" and f"{selected_runtime}:{selected_ui}" not in authorizations:
+                        outcome = {"status": "NOT_RUN",
+                                   "reason": "exact runtime+UI authorization is required"}
+                    elif (selected_scenario == "fleet-interactive"
+                          and budget.was_consumed(selected_runtime, selected_ui)):
+                        outcome = {"status": "NOT_RUN",
+                                   "reason": f"invocation budget already consumed for {selected_runtime}:{selected_ui}"}
+                    elif selected_scenario == "fleet" and not fleet_acknowledged:
                         outcome = {"status": "BLOCKED",
                                    "reason": "external fleet acknowledgement is required"}
                     elif provider_launcher is None:
@@ -858,13 +894,16 @@ def run_acceptance(*, mode: str, runtime: str, language: str, scenario: str,
                                     timeout=DEFAULT_TIMEOUT, plugin_root=plugin_root, budget=budget,
                                     hermes_automation_acknowledged=hermes_automation_acknowledged)
                             else:
-                                budget.consume(selected_runtime)
+                                budget.consume(selected_runtime, selected_ui)
                                 outcome = provider_launcher(runtime=selected_runtime,
                                                     language=selected_language,
                                                     scenario=selected_scenario,
+                                                    ui=selected_ui,
                                                     timeout=DEFAULT_TIMEOUT)
                         except (SmokeBlocked, OSError) as exc:
                             outcome = {"status": "BLOCKED", "reason": sanitize(str(exc))}
+                    if selected_scenario == "fleet-interactive":
+                        outcome.setdefault("ui", selected_ui)
                     records.append(_record(selected_runtime, selected_language, selected_scenario,
                                            outcome["status"], started_at, outcome.get("reason"),
                                            plugin_hash, outcome.get("exit_code"),
@@ -892,6 +931,10 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument("--max-calls-per-runtime", type=int, default=DEFAULT_MAX_CALLS)
     parser.add_argument("--provider-entry-point", choices=("production",))
     parser.add_argument("--acknowledge-real-fleet", action="store_true")
+    parser.add_argument("--authorize-runtime-ui", action="append", default=[],
+                        choices=tuple(f"{runtime}:{ui}" for runtime in RUNTIMES
+                                      for ui in (*INTERACTIVE_UIS, "headless")),
+                        help="Authorize exactly one real runtime+UI combination")
     parser.add_argument("--acknowledge-hermes-automation", action="store_true",
                         help="Consent to Hermes -z implicit command approval bypass; not fleet consent")
     return parser.parse_args(argv)
@@ -1059,6 +1102,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                              ui=args.ui,
                              max_calls_per_runtime=args.max_calls_per_runtime,
                              fleet_acknowledged=args.acknowledge_real_fleet,
+                             authorized_runtime_uis=set(args.authorize_runtime_ui),
                              hermes_automation_acknowledged=args.acknowledge_hermes_automation)
     print(json.dumps({"verdict": summary["verdict"],
                       "output": str(args.output / "summary.json")}))

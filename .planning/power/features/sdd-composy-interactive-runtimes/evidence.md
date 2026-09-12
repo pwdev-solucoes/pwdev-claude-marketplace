@@ -42,3 +42,14 @@ credential, protected file, real terminal session, or approval was used as evide
 - Fresh matrix: 6/6 PASS, zero provider calls.
 - Markdown/terminal JSON now PASS only when the captured production run reaches durable `awaiting_human`, invokes the fake provider, leaves LOOP bytes/status/stages unchanged, and advances no evidence. Divergent LOOP now PASS only on nonzero, pre-provider `blocked` rejection with the original LOOP preserved.
 - Regression injections for `completed`, advanced stages, zero exit, and provider invocation on divergence all produce FAIL. Real tests remain INCOMPLETE.
+
+## Task 08 gate and one-attempt budget
+
+Status: INCOMPLETE
+
+- RED: the two focused gate tests errored because `run_acceptance` had no exact runtime+UI authorization input and no durable invocation budget.
+- GREEN: three focused fake-launcher tests pass. Only `codex:cmux` was invoked in the six-row matrix; every other runtime/UI row was `NOT_RUN` with zero invocation.
+- A generic fleet acknowledgement and the presence of a credential-shaped environment variable did not authorize the combination and did not consume budget.
+- `invocation-budget.json` is atomically published in the run output before the fake external call. A fake failure consumed `codex:cmux`; a second run returned `NOT_RUN` without retry, and the separately authorized `codex:tmux` fallback was not invoked.
+- Final suite: `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 424 tests passed in 179.986s.
+- No real provider, cmux session, tmux session, credentials, or protected file was used. All real runtime/UI combinations remain `INCOMPLETE`/`NOT_RUN` pending exact human authorization for each combination.

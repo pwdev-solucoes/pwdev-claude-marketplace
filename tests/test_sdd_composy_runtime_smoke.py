@@ -239,6 +239,70 @@ else: print(json.dumps(result))
             budget.consume("codex")
         self.assertEqual(budget.counts, {"hermes": 0, "codex": 2, "claude": 0})
 
+    def test_real_interactive_requires_exact_runtime_ui_authorization(self):
+        with tempfile.TemporaryDirectory() as directory:
+            calls = []
+            def succeed(**kwargs):
+                calls.append(kwargs)
+                return {"status": "PASS"}
+            summary = SMOKE.run_acceptance(
+                mode="real", runtime="all", language="en-US",
+                scenario="fleet-interactive", ui="all",
+                output=Path(directory) / "run", plugin_root=ROOT / "plugins/sdd-composy",
+                provider_launcher=succeed,
+                authorized_runtime_uis={"codex:cmux"},
+            )
+            durable = json.loads((Path(directory) / "run" / "invocation-budget.json").read_text())
+        self.assertEqual([(row["runtime"], row["ui"], row["status"])
+                          for row in summary["scenarios"]], [
+            ("hermes", "cmux", "NOT_RUN"), ("hermes", "tmux", "NOT_RUN"),
+            ("codex", "cmux", "PASS"), ("codex", "tmux", "NOT_RUN"),
+            ("claude", "cmux", "NOT_RUN"), ("claude", "tmux", "NOT_RUN"),
+        ])
+        self.assertEqual([(call["runtime"], call["ui"]) for call in calls], [("codex", "cmux")])
+        self.assertEqual(durable["consumed"], ["codex:cmux"])
+
+    def test_generic_acknowledgement_and_credentials_do_not_authorize_a_combination(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(
+                os.environ, {"CODEX_API_KEY": "present-but-not-authority"}):
+            calls = []
+            summary = SMOKE.run_acceptance(
+                mode="real", runtime="codex", language="en-US",
+                scenario="fleet-interactive", ui="cmux",
+                output=Path(directory) / "run", plugin_root=ROOT / "plugins/sdd-composy",
+                provider_launcher=lambda **kwargs: calls.append(kwargs),
+                fleet_acknowledged=True,
+            )
+        self.assertEqual(calls, [])
+        self.assertEqual(summary["scenarios"][0]["status"], "NOT_RUN")
+        self.assertEqual(summary["provider_calls"]["codex"], 0)
+
+    def test_real_interactive_budget_is_durable_before_failure_and_cannot_retry_or_fallback(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "run"
+            calls = []
+            def failing(**kwargs):
+                budget = json.loads((output / "invocation-budget.json").read_text())
+                self.assertIn(f'{kwargs["runtime"]}:{kwargs["ui"]}', budget["consumed"])
+                calls.append((kwargs["runtime"], kwargs["ui"]))
+                raise OSError("fake provider failed")
+            first = SMOKE.run_acceptance(
+                mode="real", runtime="codex", language="en-US",
+                scenario="fleet-interactive", ui="cmux", output=output,
+                plugin_root=ROOT / "plugins/sdd-composy", provider_launcher=failing,
+                authorized_runtime_uis={"codex:cmux", "codex:tmux"},
+            )
+            second = SMOKE.run_acceptance(
+                mode="real", runtime="codex", language="en-US",
+                scenario="fleet-interactive", ui="cmux", output=output,
+                plugin_root=ROOT / "plugins/sdd-composy", provider_launcher=failing,
+                authorized_runtime_uis={"codex:cmux", "codex:tmux"},
+            )
+        self.assertEqual(calls, [("codex", "cmux")])
+        self.assertEqual(first["scenarios"][0]["status"], "BLOCKED")
+        self.assertEqual(second["scenarios"][0]["status"], "NOT_RUN")
+        self.assertIn("already consumed", second["scenarios"][0]["reason"])
+
     def test_controlled_process_timeout_terminates_child_and_reports_timeout(self):
         with tempfile.TemporaryDirectory() as directory:
             marker = Path(directory) / "child-finished"
