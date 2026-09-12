@@ -12,6 +12,7 @@ Task 05: complete (commits 9294d02..d6a09fc, review clean)
 Task 06: complete (commits d6a09fc..e41126d, review clean)
 Task 07: complete (read-only verification; focused checks pass, full-suite concerns recorded)
 Verification: APPROVED at commit 1cbae09; focused proofs pass and full-suite limitation retained.
+Task 08: complete (commits a2205f7..4fa3960, review clean)
 
 ### Pre-flight scan
 
@@ -33,3 +34,5 @@ Verification: APPROVED at commit 1cbae09; focused proofs pass and full-suite lim
 Ruling: Task-level RED checks will use focused command assertions rather than a persistent test
 file because the approved File Structure does not include a test file; if wrong, regressions in
 the prose contracts may rely more heavily on final validation than on the repository test suite.
+Ruling: Task 08 reuses the existing failing contract tests as RED evidence and changes only the two
+root READMEs; if wrong, a hidden documentation requirement outside those contracts may remain.
