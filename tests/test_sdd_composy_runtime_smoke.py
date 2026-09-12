@@ -584,7 +584,7 @@ raise SystemExit(0)
             (fake / "tmux").chmod(0o755)
             ticks = iter((0.0, 300.0))
             with patch.dict(os.environ, {"PATH": str(fake) + os.pathsep + os.environ["PATH"]}):
-                result = SMOKE.production_interactive_launcher(runtime="codex", language="en-US",
+                result = SMOKE.production_interactive_launcher(runtime="codex", language="pt-BR",
                     scenario="fleet-interactive", ui="tmux", timeout=300,
                     plugin_root=ROOT / "plugins/sdd-composy", output=Path(directory),
                     handle_validator=lambda **_kwargs: {"recoverable": True, "driver": "tmux"},
@@ -601,6 +601,14 @@ raise SystemExit(0)
             self.assertEqual(member["contract_sha256"], __import__("hashlib").sha256(contract.read_bytes()).hexdigest())
             self.assertEqual(tasks["prd_slug"], "task-008")
             self.assertEqual(tasks["tasks"][0]["id"], "TASK-008")
+            worktree = Path(member["worktree_path"])
+            language = SMOKE._load_local(ROOT / "plugins/sdd-composy/scripts", "sdd_language.py",
+                                         "acceptance_language_test")
+            self.assertEqual(language.resolve_language(worktree),
+                             {"language": "pt-BR", "source": "persisted"})
+            self.assertTrue((worktree / "AGENTS.md").is_file())
+            self.assertTrue((worktree / ".agents/rules/00-sdd-composy.md").is_file())
+            self.assertTrue((worktree / ".planning/sdd-composy/state.json").is_file())
 
     def test_controlled_process_timeout_terminates_child_and_reports_timeout(self):
         with tempfile.TemporaryDirectory() as directory:

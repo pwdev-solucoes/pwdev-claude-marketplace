@@ -1134,6 +1134,16 @@ def production_interactive_launcher(*, runtime: str, language: str, scenario: st
     except FileExistsError as exc:
         raise SmokeBlocked("interactive acceptance fixture already exists; retry is forbidden") from exc
     task_id, slug, fleet_id, base_branch = "TASK-008", "task-008", f"acceptance-{runtime}-{ui}", "smoke-base"
+    init = _load_local(plugin_root / "scripts", "sdd_init.py", "acceptance_init")
+    init_plan = init.run_plan(fixture, "agent:sdd-runtime-smoke",
+                             plugin_root / "templates", language)
+    if init_plan.get("language") != language or init_plan.get("conflicts"):
+        return {"status": "FAIL", "reason": "unable to plan confined SDD initialization",
+                "repository": str(fixture), "resources": [str(fixture)]}
+    initialized = init.apply(fixture, init_plan, plugin_root / "templates")
+    if initialized.get("ok") is not True:
+        return {"status": "FAIL", "reason": "unable to apply confined SDD initialization",
+                "repository": str(fixture), "resources": [str(fixture)]}
     task = fixture / ".planning/sdd-composy/tasks" / f"{slug}.json"
     task.parent.mkdir(parents=True)
     task.write_text(json.dumps({"schema_version": "1", "prd_slug": slug,

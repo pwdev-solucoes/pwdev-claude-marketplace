@@ -60,3 +60,18 @@ No real provider, cmux, or tmux session was executed. Every real runtime/UI comb
 - A regression runs the actual fleet launcher and actual interactive wrapper preflight with fake Codex/tmux executables, reaches durable `awaiting_human`, and verifies the canonical member contract path and SHA-256 digest.
 - Focused result: 4 tests passed in 2.498s. Full result: 434 tests passed in 298.112s.
 - No real provider/UI was invoked and neither consumed real combination was retried.
+
+## Production fixture initialization fix round 5
+
+- The confined acceptance repository now runs the existing `sdd_init.py` `run_plan`/`apply`
+  contract with the requested language before Task 08 artifacts, the base commit, and member
+  worktree creation.
+- Generated governance, compatibility, task index, persisted configuration, and INIT state are
+  included in the base commit. The canonical Task 08 task projection and phase artifacts are
+  added afterward without replacing any initializer-owned output.
+- The actual fleet launcher and interactive wrapper regression uses fake Codex/tmux executables,
+  reaches durable `awaiting_human`, and confirms the member worktree resolves `pt-BR` through the
+  production `sdd_language.py` helper with generated governance and state present.
+- No lifecycle `--human-approved` action is inferred or automated; native approval remains a
+  human action in the preserved interactive session.
+- Focused result: 4 tests passed in 3.002s. Full suite: 434 tests passed in 180.123s.

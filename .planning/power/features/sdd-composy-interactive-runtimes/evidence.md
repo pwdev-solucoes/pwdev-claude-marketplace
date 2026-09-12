@@ -120,3 +120,20 @@ Status: INCOMPLETE
 - The regression uses only fake Codex/tmux executables, runs actual `launch.sh` plus actual `interactive-run.sh`, reaches durable `awaiting_human`, and verifies the member path and digest remain bound to the canonical projection.
 - Focused result: 4 tests passed in 2.498s. Full suite: 434 tests passed in 298.112s.
 - The fix was reverted once and the regression failed again before restoration. No real provider/UI was invoked; the consumed Hermes/cmux and Codex/cmux combinations were not retried.
+
+## Task 08 production fixture initialization fix round 5
+
+- RED: the actual-launch regression reached `awaiting_human`, but production
+  `sdd_language.resolve_language(member_worktree)` returned `not_initialized` because the base
+  repository had never passed through `sdd-init`.
+- GREEN: the fixture executes the existing `sdd_init.py` plan/apply contract with `pt-BR` before
+  its base commit, then adds the canonical Task 08 contract/phase artifacts without overwriting
+  initializer outputs.
+- Four focused fake-only tests passed. The actual launcher/wrapper path reached durable
+  `awaiting_human`; the member worktree returned exactly
+  `{"language":"pt-BR","source":"persisted"}` through production `sdd_language.py` and carried
+  generated `AGENTS.md`, `.agents/rules/00-sdd-composy.md`, and INIT state.
+- No provider, real UI, preserved acceptance run, credential, or protected file was accessed.
+  No lifecycle `--human-approved` action was inferred or automated.
+- Full suite: `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 434 tests
+  passed in 180.123s.
