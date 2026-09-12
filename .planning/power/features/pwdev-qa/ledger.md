@@ -19,6 +19,10 @@ Task F02-08: fix round 1 — quatro findings Important confirmados sobre rastrea
 Task F02-08: complete (commits 67872a7..323a985, review clean after fix round 1)
 Task F02-09: fix round 1 — dois findings Important confirmados; métrica positiva sem proveniência/IDs/evidências e decisão humana de prontidão sem actor/authority/scope/rationale/timestamp.
 Task F02-09: complete (commits 323a985..e69099b, review clean after fix round 1)
+Task F03-10: complete (commits a67f9a2..8a5185e, review clean)
+Task F03-11: fix round 1 — 1 Critical e 2 Important confirmados: TOCTOU em diretório pai, imagem truncada aceita e credencial JSON escapada não detectada.
+Task F03-11: fix round 2 — Critical e revalidação ADDRESSED; permanecem variantes Important de paleta PNG incompatível com bit depth e chave JSON duplicada pós-decode.
+Task F03-11: complete (commits 8a5185e..b0412ba, review clean after fix rounds 1-2)
 
 Baseline 2026-09-12: `python3 -m unittest discover -s tests` executou 670 testes em 404.209s; 7 falhas preexistentes antes de qualquer código PWDEV QA.
 - 2 falhas `test_flow_claude_compat`: READMEs raiz não contêm `claude -p`.
@@ -53,6 +57,7 @@ Ruling: prontidão mobile `READY` exige probe positivo separado para todas as di
 Ruling: cenários de referência que exibem mutação ou carga observada só podem ser `READY` quando a própria linha carrega autorização rastreável e completa; para dados, alvo/dataset/limite de escrita/evidência, e para performance, alvo/limites/ambiente/janela. Se estiver errado, as tabelas ficarão mais verbosas, mas impedirão que autorização genérica seja confundida com permissão de execução.
 Ruling: pentest `READY` exige que a própria linha de cenário carregue owner, rate limit, stop conditions e cleanup, além de alvo, métodos, ambiente e janela; cada omissão mantém execução `NOT_RUN` e outcome `BLOCKED`. Se estiver errado, o cenário ficará mais estrito que uma proposta apenas consultiva, mas não confundirá autorização parcial com prontidão operacional.
 Ruling: percentual só é publicável quando target/contrato/coleta, IDs incluídos/excluídos e evidências sustentam numerador e denominador; decisão humana só habilita o cenário de readiness quando actor, authority, scope, rationale e timestamp estão explícitos e separados do parecer. Se estiver errado, a coleta exigirá mais metadados, mas evitará métricas e aprovações não auditáveis.
+Ruling: inspeção de evidência deve atravessar componentes por descritores confinados com `O_NOFOLLOW`; `copy_allowed` representa apenas elegibilidade daquele snapshot e exige reabertura/revalidação segura no momento da cópia. Imagens precisam de estrutura completa e JSON deve ser sanitizado semanticamente após decode. Se estiver errado, alguns anexos válidos incomuns poderão ser recusados, mas nenhum arquivo inseguro será promovido por pathname, truncamento ou escape textual.
 Ruling: cenários positivos de regressão, defeitos e produção devem materializar as relações verificáveis que sustentam o estado: IDs change→risk/criterion/defect→case e exclusões; `PASS` após reteste somente com todos os critérios aplicáveis PASS e nenhum outro defeito vigente; fronteira de produção completa por dimensão; causa nomeada e check preventivo com IDs/oráculo/ambiente/pré-requisitos. Se estiver errado, os exemplos ficarão extensos, mas não produzirão `READY`/`PASS` a partir de rótulos genéricos.
 
 ## Rulings
