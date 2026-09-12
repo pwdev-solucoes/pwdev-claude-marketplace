@@ -1,4 +1,4 @@
-"""Deterministic behavioural scenarios for the first PWDEV QA specialists."""
+"""Deterministic behavioural scenarios for the PWDEV QA specialists."""
 
 import re
 import unittest
@@ -17,6 +17,9 @@ SPECIALISTS = {
         "qa-specialist-web",
         "qa-specialist-api",
         "qa-specialist-mobile",
+        "qa-specialist-data",
+        "qa-specialist-accessibility",
+        "qa-specialist-performance",
     )
 }
 COMMON_SECTIONS = (
@@ -415,6 +418,132 @@ class QaSpecialistContractTest(unittest.TestCase):
                 self.assertEqual(row[field], value)
                 self.assertEqual(row["outcome"], outcome)
                 self.assertNotEqual(row["outcome"], "READY")
+
+    def test_data_ready_scenario_separates_reconciliation_integrity_and_transactions(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-data"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "reconciliation",
+                "integrity",
+                "transaction",
+                "atomicity",
+                "outcome",
+            ),
+        )
+        ready = next(row for row in rows if row["scenario"] == "complete-data-check")
+        self.assertEqual(
+            ready,
+            {
+                "scenario": "complete-data-check",
+                "reconciliation": "source and target totals match",
+                "integrity": "constraints and relationships verified",
+                "transaction": "commit and rollback observed",
+                "atomicity": "failure leaves no partial write",
+                "outcome": "READY",
+            },
+        )
+        self.assertRegex(text, r"(?is)reconciliation.*does not prove.*atomicity")
+        self.assertRegex(text, r"(?is)integrity.*does not prove.*transaction")
+
+    def test_data_missing_transaction_oracle_is_blocked(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-data"]),
+            (
+                "scenario",
+                "reconciliation",
+                "integrity",
+                "transaction",
+                "atomicity",
+                "outcome",
+            ),
+        )
+        limited = next(row for row in rows if row["scenario"] == "missing-transaction-oracle")
+        self.assertEqual(limited["reconciliation"], "source and target totals match")
+        self.assertEqual(limited["transaction"], "rollback not observed")
+        self.assertEqual(limited["atomicity"], "unverified")
+        self.assertEqual(limited["outcome"], "BLOCKED")
+
+    def test_accessibility_ready_requires_observed_keyboard_and_focus_beyond_scanner(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-accessibility"])
+        rows = parse_scenarios(
+            text,
+            ("scenario", "scanner", "keyboard", "focus", "semantics", "outcome"),
+        )
+        ready = next(row for row in rows if row["scenario"] == "complete-accessibility-check")
+        self.assertEqual(
+            ready,
+            {
+                "scenario": "complete-accessibility-check",
+                "scanner": "no reported violations",
+                "keyboard": "journey observed without pointer",
+                "focus": "order and visible indicator observed",
+                "semantics": "name role and state observed",
+                "outcome": "READY",
+            },
+        )
+        self.assertRegex(text, r"(?is)scanner.*does not prove.*accessib")
+        self.assertRegex(text, r"(?is)keyboard.*focus.*observ")
+
+    def test_accessibility_scanner_only_is_blocked(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-accessibility"]),
+            ("scenario", "scanner", "keyboard", "focus", "semantics", "outcome"),
+        )
+        limited = next(row for row in rows if row["scenario"] == "scanner-only")
+        self.assertEqual(limited["scanner"], "no reported violations")
+        self.assertEqual(limited["keyboard"], "not run")
+        self.assertEqual(limited["focus"], "not observed")
+        self.assertEqual(limited["outcome"], "BLOCKED")
+
+    def test_performance_ready_has_authorized_profile_sample_context_and_percentiles(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-performance"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "authorization",
+                "workload",
+                "sample",
+                "context",
+                "percentiles",
+                "threshold",
+                "outcome",
+            ),
+        )
+        ready = next(row for row in rows if row["scenario"] == "authorized-profile")
+        self.assertEqual(ready["authorization"], "explicit and bounded")
+        self.assertEqual(ready["workload"], "50 VUs for 10 minutes")
+        self.assertEqual(ready["sample"], "12000 requests")
+        self.assertEqual(ready["context"], "staging build abc123 warm cache")
+        self.assertEqual(ready["percentiles"], "p50 80 ms, p95 210 ms, p99 290 ms")
+        self.assertEqual(ready["threshold"], "p95 at most 250 ms")
+        self.assertEqual(ready["outcome"], "READY")
+        self.assertRegex(text, r"(?is)explicit authorization.*target.*limits.*environment.*time window")
+
+    def test_performance_average_only_without_authorization_is_blocked(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-performance"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "authorization",
+                "workload",
+                "sample",
+                "context",
+                "percentiles",
+                "threshold",
+                "outcome",
+            ),
+        )
+        limited = next(row for row in rows if row["scenario"] == "average-only")
+        self.assertEqual(limited["authorization"], "missing")
+        self.assertEqual(limited["workload"], "not run")
+        self.assertEqual(limited["sample"], "unspecified")
+        self.assertEqual(limited["percentiles"], "missing")
+        self.assertEqual(limited["outcome"], "BLOCKED")
+        self.assertRegex(text, r"(?is)average.*(?:alone|isolated).*does not.*(?:PASS|READY|approval)")
 
 
 if __name__ == "__main__":
