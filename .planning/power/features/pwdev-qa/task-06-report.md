@@ -21,11 +21,17 @@ Status: DONE
   `cannot grant authorization` contract phrase for performance.
 - GREEN after minimal correction: `python3 -m unittest tests.test_qa_specialists` ran 20 tests in
   0.005s — `OK`.
+- Review fix round 1 RED: after tests required row-level authorization scope, the focused suite
+  ran 20 tests and failed 4 because the data and performance scenario tables lacked those fields.
+- Review fix round 1 GREEN: after the minimum table changes, the focused suite ran 20 tests in
+  0.005s — `OK`.
+- Regression proof: temporarily reverting only the two table fixes restored exactly the 4 new
+  failures; restoring them returned the focused suite to 20 tests in 0.006s — `OK`.
 
 ## Regression and checks
 
 - `python3 -m unittest tests.test_qa_core tests.test_qa_runtime_contracts tests.test_qa_tooling tests.test_qa_specialists`
-  ran 41 tests in 0.040s — `OK`.
+  ran 41 tests in 0.053s after review fix round 1 — `OK`.
 - `git diff --check` — passed with no output.
 - No ledger, brief, review, reference-plugin, runtime configuration, installation, publication,
   push, or merge was changed by this task.
@@ -36,6 +42,8 @@ Status: DONE
   agent evaluation required by the brief.
 - No real database, accessibility, assistive-technology, or load execution was performed. Such
   execution depends on observed probes, safe data/access, and applicable explicit authorization.
+- Reference observations now become `READY` only when the same row carries the complete bounded
+  authorization context. Each omitted component is demonstrated as `NOT_RUN`/`BLOCKED`.
 
 ## Files
 

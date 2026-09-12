@@ -425,6 +425,11 @@ class QaSpecialistContractTest(unittest.TestCase):
             text,
             (
                 "scenario",
+                "authorization",
+                "target",
+                "dataset",
+                "write_limit",
+                "evidence",
                 "reconciliation",
                 "integrity",
                 "transaction",
@@ -437,6 +442,11 @@ class QaSpecialistContractTest(unittest.TestCase):
             ready,
             {
                 "scenario": "complete-data-check",
+                "authorization": "explicit mutation grant",
+                "target": "qa-db.orders",
+                "dataset": "synthetic orders v1",
+                "write_limit": "20 rows in one transaction",
+                "evidence": "EV-DATA-001",
                 "reconciliation": "source and target totals match",
                 "integrity": "constraints and relationships verified",
                 "transaction": "commit and rollback observed",
@@ -447,11 +457,16 @@ class QaSpecialistContractTest(unittest.TestCase):
         self.assertRegex(text, r"(?is)reconciliation.*does not prove.*atomicity")
         self.assertRegex(text, r"(?is)integrity.*does not prove.*transaction")
 
-    def test_data_missing_transaction_oracle_is_blocked(self) -> None:
+    def test_data_missing_authorization_scope_or_evidence_never_runs_transaction(self) -> None:
         rows = parse_scenarios(
             read_required(SPECIALISTS["qa-specialist-data"]),
             (
                 "scenario",
+                "authorization",
+                "target",
+                "dataset",
+                "write_limit",
+                "evidence",
                 "reconciliation",
                 "integrity",
                 "transaction",
@@ -459,11 +474,21 @@ class QaSpecialistContractTest(unittest.TestCase):
                 "outcome",
             ),
         )
-        limited = next(row for row in rows if row["scenario"] == "missing-transaction-oracle")
-        self.assertEqual(limited["reconciliation"], "source and target totals match")
-        self.assertEqual(limited["transaction"], "rollback not observed")
-        self.assertEqual(limited["atomicity"], "unverified")
-        self.assertEqual(limited["outcome"], "BLOCKED")
+        expected = {
+            "missing-data-authorization": ("authorization", "missing"),
+            "missing-data-target": ("target", "missing"),
+            "missing-data-dataset": ("dataset", "missing"),
+            "missing-write-limit": ("write_limit", "missing"),
+            "missing-data-evidence": ("evidence", "missing"),
+        }
+        for scenario, (field, value) in expected.items():
+            with self.subTest(scenario=scenario):
+                limited = next(row for row in rows if row["scenario"] == scenario)
+                self.assertEqual(limited[field], value)
+                self.assertEqual(limited["transaction"], "NOT_RUN")
+                self.assertEqual(limited["atomicity"], "unverified")
+                self.assertEqual(limited["outcome"], "BLOCKED")
+                self.assertNotEqual(limited["outcome"], "READY")
 
     def test_accessibility_ready_requires_observed_keyboard_and_focus_beyond_scanner(self) -> None:
         text = read_required(SPECIALISTS["qa-specialist-accessibility"])
@@ -504,6 +529,10 @@ class QaSpecialistContractTest(unittest.TestCase):
             (
                 "scenario",
                 "authorization",
+                "target",
+                "limits",
+                "environment",
+                "window",
                 "workload",
                 "sample",
                 "context",
@@ -513,7 +542,11 @@ class QaSpecialistContractTest(unittest.TestCase):
             ),
         )
         ready = next(row for row in rows if row["scenario"] == "authorized-profile")
-        self.assertEqual(ready["authorization"], "explicit and bounded")
+        self.assertEqual(ready["authorization"], "explicit load grant")
+        self.assertEqual(ready["target"], "https://staging.example.test/search")
+        self.assertEqual(ready["limits"], "50 VUs and 500 requests/s maximum")
+        self.assertEqual(ready["environment"], "staging")
+        self.assertEqual(ready["window"], "2026-09-12T14:00Z to 2026-09-12T14:10Z")
         self.assertEqual(ready["workload"], "50 VUs for 10 minutes")
         self.assertEqual(ready["sample"], "12000 requests")
         self.assertEqual(ready["context"], "staging build abc123 warm cache")
@@ -522,13 +555,17 @@ class QaSpecialistContractTest(unittest.TestCase):
         self.assertEqual(ready["outcome"], "READY")
         self.assertRegex(text, r"(?is)explicit authorization.*target.*limits.*environment.*time window")
 
-    def test_performance_average_only_without_authorization_is_blocked(self) -> None:
+    def test_performance_missing_authorization_component_never_runs_load(self) -> None:
         text = read_required(SPECIALISTS["qa-specialist-performance"])
         rows = parse_scenarios(
             text,
             (
                 "scenario",
                 "authorization",
+                "target",
+                "limits",
+                "environment",
+                "window",
                 "workload",
                 "sample",
                 "context",
@@ -537,12 +574,20 @@ class QaSpecialistContractTest(unittest.TestCase):
                 "outcome",
             ),
         )
-        limited = next(row for row in rows if row["scenario"] == "average-only")
-        self.assertEqual(limited["authorization"], "missing")
-        self.assertEqual(limited["workload"], "not run")
-        self.assertEqual(limited["sample"], "unspecified")
-        self.assertEqual(limited["percentiles"], "missing")
-        self.assertEqual(limited["outcome"], "BLOCKED")
+        expected = {
+            "missing-load-authorization": ("authorization", "missing"),
+            "missing-load-target": ("target", "missing"),
+            "missing-load-limits": ("limits", "missing"),
+            "missing-load-environment": ("environment", "missing"),
+            "missing-load-window": ("window", "missing"),
+        }
+        for scenario, (field, value) in expected.items():
+            with self.subTest(scenario=scenario):
+                limited = next(row for row in rows if row["scenario"] == scenario)
+                self.assertEqual(limited[field], value)
+                self.assertEqual(limited["workload"], "NOT_RUN")
+                self.assertEqual(limited["outcome"], "BLOCKED")
+                self.assertNotEqual(limited["outcome"], "READY")
         self.assertRegex(text, r"(?is)average.*(?:alone|isolated).*does not.*(?:PASS|READY|approval)")
 
 

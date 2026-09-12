@@ -60,14 +60,19 @@ execution, authorization, or global verdict.
 
 ## Reference scenarios
 
-| scenario | reconciliation | integrity | transaction | atomicity | outcome |
-|---|---|---|---|---|---|
-| complete-data-check | source and target totals match | constraints and relationships verified | commit and rollback observed | failure leaves no partial write | READY |
-| missing-transaction-oracle | source and target totals match | constraints and relationships verified | rollback not observed | unverified | BLOCKED |
+| scenario | authorization | target | dataset | write_limit | evidence | reconciliation | integrity | transaction | atomicity | outcome |
+|---|---|---|---|---|---|---|---|---|---|---|
+| complete-data-check | explicit mutation grant | qa-db.orders | synthetic orders v1 | 20 rows in one transaction | EV-DATA-001 | source and target totals match | constraints and relationships verified | commit and rollback observed | failure leaves no partial write | READY |
+| missing-data-authorization | missing | qa-db.orders | synthetic orders v1 | 20 rows in one transaction | EV-DATA-001 | NOT_RUN | NOT_RUN | NOT_RUN | unverified | BLOCKED |
+| missing-data-target | explicit mutation grant | missing | synthetic orders v1 | 20 rows in one transaction | EV-DATA-001 | NOT_RUN | NOT_RUN | NOT_RUN | unverified | BLOCKED |
+| missing-data-dataset | explicit mutation grant | qa-db.orders | missing | 20 rows in one transaction | EV-DATA-001 | NOT_RUN | NOT_RUN | NOT_RUN | unverified | BLOCKED |
+| missing-write-limit | explicit mutation grant | qa-db.orders | synthetic orders v1 | missing | EV-DATA-001 | NOT_RUN | NOT_RUN | NOT_RUN | unverified | BLOCKED |
+| missing-data-evidence | explicit mutation grant | qa-db.orders | synthetic orders v1 | 20 rows in one transaction | missing | NOT_RUN | NOT_RUN | NOT_RUN | unverified | BLOCKED |
 
-The complete scenario uses four separate oracles. In `missing-transaction-oracle`, successful
-reconciliation and integrity observations remain valid, but neither substitutes for rollback and
-atomicity evidence, so the transaction coverage remains blocked.
+The complete scenario carries the mutation grant and its target, synthetic dataset, write limit,
+and target-bound evidence before presenting the four separate observations as `READY`. Every
+limitation row omits one required component and therefore keeps reconciliation, integrity, and
+transaction `NOT_RUN`, atomicity unverified, and the outcome `BLOCKED`.
 
 ## Failure modes
 

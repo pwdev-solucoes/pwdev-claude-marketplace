@@ -62,15 +62,21 @@ It is not execution evidence, a case result, or a global verdict.
 
 ## Reference scenarios
 
-| scenario | authorization | workload | sample | context | percentiles | threshold | outcome |
-|---|---|---|---|---|---|---|---|
-| authorized-profile | explicit and bounded | 50 VUs for 10 minutes | 12000 requests | staging build abc123 warm cache | p50 80 ms, p95 210 ms, p99 290 ms | p95 at most 250 ms | READY |
-| average-only | missing | not run | unspecified | unspecified environment and build | missing | p95 at most 250 ms | BLOCKED |
+| scenario | authorization | target | limits | environment | window | workload | sample | context | percentiles | threshold | outcome |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| authorized-profile | explicit load grant | https://staging.example.test/search | 50 VUs and 500 requests/s maximum | staging | 2026-09-12T14:00Z to 2026-09-12T14:10Z | 50 VUs for 10 minutes | 12000 requests | staging build abc123 warm cache | p50 80 ms, p95 210 ms, p99 290 ms | p95 at most 250 ms | READY |
+| missing-load-authorization | missing | https://staging.example.test/search | 50 VUs and 500 requests/s maximum | staging | 2026-09-12T14:00Z to 2026-09-12T14:10Z | NOT_RUN | unspecified | not observed | missing | p95 at most 250 ms | BLOCKED |
+| missing-load-target | explicit load grant | missing | 50 VUs and 500 requests/s maximum | staging | 2026-09-12T14:00Z to 2026-09-12T14:10Z | NOT_RUN | unspecified | not observed | missing | p95 at most 250 ms | BLOCKED |
+| missing-load-limits | explicit load grant | https://staging.example.test/search | missing | staging | 2026-09-12T14:00Z to 2026-09-12T14:10Z | NOT_RUN | unspecified | not observed | missing | p95 at most 250 ms | BLOCKED |
+| missing-load-environment | explicit load grant | https://staging.example.test/search | 50 VUs and 500 requests/s maximum | missing | 2026-09-12T14:00Z to 2026-09-12T14:10Z | NOT_RUN | unspecified | not observed | missing | p95 at most 250 ms | BLOCKED |
+| missing-load-window | explicit load grant | https://staging.example.test/search | 50 VUs and 500 requests/s maximum | staging | missing | NOT_RUN | unspecified | not observed | missing | p95 at most 250 ms | BLOCKED |
 
-In `authorized-profile`, the values illustrate a plan/assessment contract with a bounded grant,
-sample, environment/build/cache context, distribution, and agreed oracle; they do not claim this
-repository executed load. In `average-only`, no load is run: missing authorization plus an
-isolated average without a sample or percentiles cannot support approval.
+In `authorized-profile`, the row itself carries the explicit grant, exact target, intensity/rate
+limits, environment, and UTC time window alongside sample, build/cache context, distribution, and
+agreed oracle. The values illustrate the scenario contract; they do not claim this repository
+executed load. Each limitation row omits one authorization component, so workload remains
+`NOT_RUN` and the outcome `BLOCKED`. An isolated average without a sample, context, and
+percentiles likewise cannot support approval.
 
 ## Failure modes
 
