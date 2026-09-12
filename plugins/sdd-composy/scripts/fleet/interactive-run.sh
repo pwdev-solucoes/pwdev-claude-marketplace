@@ -15,7 +15,7 @@ LOOP_MODULE=$SCRIPT_DIR/../sdd_loop.py
 
 state_action() {
   python3 - "$STATE" "$LOOP_MODULE" "$MEMBER_FILE" "$WORKTREE" "$1" "${2:-}" <<'PY'
-import hashlib, importlib.util, json, sys
+import hashlib, importlib.util, json, re, sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -30,6 +30,13 @@ now=lambda: datetime.now(timezone.utc).replace(microsecond=0).isoformat().replac
 member=state.load_member(member_path)
 def move(expected,target,message):
     state.transition(member_path,expected,target,{"next_action":message},now())
+def sensitive_contract_name(name):
+    # Reject .env, credentials, private-key, certificate, token, and secret
+    # basename families before any operation that could read file content.
+    lowered=name.lower()
+    return (lowered.startswith(".env") or re.search(
+        r"(^|[._-])(credentials?|private[-_]?keys?|certificates?|certs?|tokens?|secrets?|api[-_]?keys?|keys?)([._-]|$)",
+        lowered) is not None)
 if action == "preflight":
     try:
         if Path(member["worktree_path"]).resolve() != Path(worktree).resolve(): raise ValueError("worktree binding mismatch")
@@ -45,8 +52,9 @@ if action == "preflight":
         if contract.is_symlink(): raise ValueError("task contract path has a symlink")
         contract=contract.resolve(strict=True)
         relative=contract.relative_to(expected)
-        forbidden={".env","env","credentials","credential","secret","secrets","token","tokens","key","keys","certificate","certificates","cert","certs"}
-        if len(relative.parts) != 1 or relative.suffix != ".json" or any(part.lower() in forbidden for part in contract.parts): raise ValueError("task contract path is not canonical")
+        if (len(relative.parts) != 1 or re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*\.json",contract.name) is None
+                or sensitive_contract_name(contract.name)):
+            raise ValueError("task contract path is not canonical")
         cursor=expected
         for part in relative.parts:
             cursor=cursor/part
@@ -55,6 +63,7 @@ if action == "preflight":
         raw=contract.read_bytes()
         if hashlib.sha256(raw).hexdigest() != member.get("contract_sha256"): raise ValueError("task contract digest mismatch")
         tasks=sdd_tasks.load(contract); task=sdd_tasks._task(tasks,member["task_id"])
+        if contract.name != tasks["prd_slug"]+".json": raise ValueError("task contract filename does not match prd_slug")
         if task["state"] != "ready" or any(sdd_tasks._task(tasks,dep)["state"] != "complete" for dep in task["dependencies"]): raise ValueError("task is not approved and ready")
         if member["interaction"]["state"] != "starting": raise ValueError("member is not startable")
     except Exception as exc:

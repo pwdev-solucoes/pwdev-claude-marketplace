@@ -44,11 +44,19 @@ class FleetRunnerTest(unittest.TestCase):
             result,member,prompt=self.run_interactive(d,task_state="pending")
             self.assertNotEqual(result.returncode,0); self.assertEqual(member["interaction"]["state"],"blocked"); self.assertFalse(prompt.exists())
 
-    def test_interactive_wrapper_never_reads_external_or_secret_contract_path(self):
+    def test_interactive_wrapper_guards_sensitive_basename_patterns_before_read(self):
+        source=(FLEET/"interactive-run.sh").read_text()
+        self.assertIn("sensitive_contract_name",source)
+        guard=source.index("sensitive_contract_name")
+        read=source.index("contract.read_bytes()")
+        self.assertLess(guard,read)
+        for pattern in (".env", "credentials", "private-key", "certificate", "token", "secret"):
+            self.assertIn(pattern,source[guard:read])
+
+    def test_interactive_wrapper_requires_projection_filename_to_match_prd_slug(self):
         with tempfile.TemporaryDirectory() as d:
-            root,work,member=self.interactive_fixture(d); record=json.loads(member.read_text())
-            secret=root/".env"; secret.write_text('{"id":"TASK-001","state":"ready"}')
-            record["contract_path"]=str(secret); record["contract_sha256"]=__import__("hashlib").sha256(secret.read_bytes()).hexdigest(); member.write_text(json.dumps(record))
+            root,work,member=self.interactive_fixture(d); record=json.loads(member.read_text()); old=Path(record["contract_path"]); renamed=old.with_name("sentinel-mismatch.json"); old.rename(renamed)
+            record["contract_path"]=str(renamed); record["contract_sha256"]=__import__("hashlib").sha256(renamed.read_bytes()).hexdigest(); member.write_text(json.dumps(record))
             fake=Path(d)/"bin"; fake.mkdir(); called=Path(d)/"called"; (fake/"codex").write_text("#!/bin/sh\ntouch \"$CALLED\"\n"); (fake/"codex").chmod(0o755)
             result=subprocess.run([str(FLEET/"interactive-run.sh"),str(member),str(work)],env={**os.environ,"PATH":str(fake)+":"+os.environ["PATH"],"CALLED":str(called)},capture_output=True,text=True)
             self.assertNotEqual(result.returncode,0); self.assertFalse(called.exists()); self.assertEqual(json.loads(member.read_text())["interaction"]["state"],"blocked")
