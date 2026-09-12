@@ -126,4 +126,3 @@ Quality Profile e Quality Gate fixados, sem substituir os verificadores locais b
   desenho, avaliação e governança dos quality gates.
 - A especialização PostgreSQL pode se sobrepor a `postgres-dba`; mitigação: limitar seu escopo a
   verificações automatizadas de CI, sem diagnóstico ou operação do banco.
-
