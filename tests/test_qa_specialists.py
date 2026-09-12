@@ -14,6 +14,9 @@ SPECIALISTS = {
         "qa-specialist-strategy",
         "qa-specialist-requirements",
         "qa-specialist-functional",
+        "qa-specialist-web",
+        "qa-specialist-api",
+        "qa-specialist-mobile",
     )
 }
 COMMON_SECTIONS = (
@@ -201,6 +204,150 @@ class QaSpecialistContractTest(unittest.TestCase):
         self.assertEqual(limited[0]["expected"], "unspecified")
         self.assertEqual(limited[0]["observable"], "no")
         self.assertEqual(limited[0]["outcome"], "BLOCKED")
+
+    def test_web_available_cli_uses_isolated_observed_interaction(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-web"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "availability",
+                "browser",
+                "session",
+                "snapshot",
+                "action",
+                "capture",
+                "suite",
+                "outcome",
+            ),
+        )
+        success = next(row for row in rows if row["scenario"] == "available-cli")
+        self.assertEqual(success["availability"], "available")
+        self.assertEqual(success["browser"], "chromium")
+        self.assertEqual(success["session"], "qa-report")
+        self.assertEqual(success["snapshot"], "fresh")
+        self.assertEqual(success["action"], "observed refs")
+        self.assertEqual(success["capture"], "reviewed")
+        self.assertEqual(success["suite"], "Playwright Test")
+        self.assertEqual(success["outcome"], "READY")
+        self.assertIn("playwright-cli --version", text)
+        self.assertIn("npx --no-install playwright --version", text)
+        self.assertIn("npx playwright cli", text)
+        self.assertRegex(text, r"playwright-cli -s=qa-report (?:open|snapshot)")
+        self.assertRegex(text, r"(?is)screenshot.*review.*before.*attach")
+        self.assertRegex(text, r"(?is)does not replace.*(?:repeatable|deterministic).*suite")
+
+    def test_web_missing_cli_records_limitation_without_execution(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-web"]),
+            (
+                "scenario",
+                "availability",
+                "browser",
+                "session",
+                "snapshot",
+                "action",
+                "capture",
+                "suite",
+                "outcome",
+            ),
+        )
+        limited = next(row for row in rows if row["scenario"] == "missing-cli")
+        self.assertEqual(limited["availability"], "missing")
+        self.assertEqual(limited["session"], "none")
+        self.assertEqual(limited["snapshot"], "not run")
+        self.assertEqual(limited["action"], "not run")
+        self.assertEqual(limited["outcome"], "BLOCKED")
+
+    def test_api_success_covers_contract_access_errors_and_idempotency(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-api"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "contract",
+                "authentication",
+                "authorization",
+                "errors",
+                "idempotency",
+                "outcome",
+            ),
+        )
+        success = next(row for row in rows if row["scenario"] == "complete-api")
+        self.assertEqual(
+            success,
+            {
+                "scenario": "complete-api",
+                "contract": "schema and status verified",
+                "authentication": "valid and invalid credentials",
+                "authorization": "allowed and denied roles",
+                "errors": "mapped responses verified",
+                "idempotency": "same key no duplicate effect",
+                "outcome": "READY",
+            },
+        )
+        self.assertRegex(text, r"(?is)expected.*observed")
+        self.assertRegex(text, r"(?is)side effect.*idempot")
+
+    def test_api_missing_authorization_oracle_is_blocked(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-api"]),
+            (
+                "scenario",
+                "contract",
+                "authentication",
+                "authorization",
+                "errors",
+                "idempotency",
+                "outcome",
+            ),
+        )
+        limited = next(row for row in rows if row["scenario"] == "missing-authz-oracle")
+        self.assertEqual(limited["authorization"], "missing role policy")
+        self.assertEqual(limited["outcome"], "BLOCKED")
+
+    def test_mobile_ready_scenarios_distinguish_android_and_ios_prerequisites(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-mobile"])
+        rows = parse_scenarios(
+            text,
+            ("scenario", "platform", "tool", "sdk", "driver", "device", "outcome"),
+        )
+        ready = [row for row in rows if row["scenario"] == "platform-ready"]
+        self.assertEqual(
+            ready,
+            [
+                {
+                    "scenario": "platform-ready",
+                    "platform": "Android",
+                    "tool": "Appium UiAutomator2",
+                    "sdk": "available",
+                    "driver": "available",
+                    "device": "available emulator",
+                    "outcome": "READY",
+                },
+                {
+                    "scenario": "platform-ready",
+                    "platform": "iOS",
+                    "tool": "Appium XCUITest",
+                    "sdk": "available",
+                    "driver": "available",
+                    "device": "available simulator",
+                    "outcome": "READY",
+                },
+            ],
+        )
+        self.assertRegex(text, r"(?is)Android.*SDK.*driver.*device")
+        self.assertRegex(text, r"(?is)iOS.*Xcode.*driver.*device")
+
+    def test_mobile_missing_device_is_blocked_and_never_fabricated(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-mobile"]),
+            ("scenario", "platform", "tool", "sdk", "driver", "device", "outcome"),
+        )
+        limited = next(row for row in rows if row["scenario"] == "missing-device")
+        self.assertEqual(limited["platform"], "Android")
+        self.assertEqual(limited["device"], "missing")
+        self.assertEqual(limited["outcome"], "BLOCKED")
 
 
 if __name__ == "__main__":
