@@ -10,7 +10,7 @@ root=$(cd -- "$root" 2>/dev/null && pwd -P) || { echo 'fleet dashboard: root una
 state="$root/.planning/sdd-composy/fleet/$fleet_id"; members="$state/members"
 [[ -d "$state" && ! -L "$state" && -d "$members" && ! -L "$members" ]] || { echo 'fleet dashboard: state unavailable' >&2; exit 1; }
 payload=$(python3 - "$root" "$state" "$fleet_id" <<'PY'
-import json, os, sys
+import json, os, sys, unicodedata
 from pathlib import Path
 root=Path(sys.argv[1]); state=Path(sys.argv[2]); fleet_id=sys.argv[3]; members_dir=state/'members'
 records=[]; errors=[]
@@ -19,6 +19,9 @@ def clean(value, limit=160):
         return None
     text=''.join(' ' if ord(char) < 32 or ord(char) == 127 else char for char in str(value))
     return ' '.join(text.split())[:limit]
+def encoded_key(value):
+    return ''.join(f'%U{ord(char):06X}' if char == '%' or unicodedata.category(char).startswith('C') else char
+                   for char in value)
 def sanitized(value, depth=0):
     if depth > 16: return None
     if isinstance(value,str): return clean(value)
@@ -27,7 +30,7 @@ def sanitized(value, depth=0):
     if isinstance(value,dict):
         result={}
         for key,item in value.items():
-            safe_key=clean(key) if isinstance(key,str) else clean(str(key))
+            safe_key=encoded_key(key if isinstance(key,str) else str(key))
             if safe_key: result[safe_key]=sanitized(item,depth+1)
         return result
     return clean(value)

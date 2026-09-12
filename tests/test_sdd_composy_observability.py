@@ -375,6 +375,27 @@ class FleetInteractiveDashboardTest(unittest.TestCase):
                 "extension": {"owner": "fleet owner", "sequence": ["one", 2, True, None]},
             })
 
+    def test_handle_projection_preserves_colliding_unsafe_key_names(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); members = root / ".planning/sdd-composy/fleet/demo/members"
+            members.mkdir(parents=True)
+            record = {"id": "MEMBER-01", "interaction": {"state": "running", "handle": {
+                "owner\nid": {"value": "control-key"}, "owner id": {"value": "space-key"},
+                "literal%U00000A": "percent-key",
+            }}}
+            (members / "member.json").write_text(json.dumps(record), encoding="utf-8")
+            result = self.invoke(root); self.assertEqual(result.returncode, 0, result.stderr)
+            handle = json.loads(result.stdout)["members"][0]["handle"]
+            self.assertEqual(handle, {
+                "owner%U00000Aid": {"value": "control-key"},
+                "owner id": {"value": "space-key"},
+                "literal%U000025U00000A": "percent-key",
+            })
+            human = subprocess.run([str(self.DASHBOARD), "--root", str(root), "--fleet-id", "demo"],
+                                   capture_output=True, text=True, check=True)
+            self.assertNotIn("owner\nid", human.stdout)
+            self.assertIn("owner%U00000Aid", human.stdout)
+
     def test_handle_option_is_observational_and_human_output_omits_missing_fields(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory); fleet_id = "demo\nunsafe"
