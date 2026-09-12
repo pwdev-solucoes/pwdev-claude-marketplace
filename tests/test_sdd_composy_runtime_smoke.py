@@ -172,6 +172,11 @@ else: print(json.dumps(result))
         })
         self.assertTrue(all(row["status"] == "PASS" for row in rows))
         self.assertTrue(all(row["timeout_seconds"] == 300 for row in rows))
+        self.assertTrue(all(row["runner_state"] == "awaiting_human" for row in rows))
+        self.assertTrue(all(row["driver_observation"]["recoverable"] for row in rows))
+        self.assertTrue(all(row["exercised_components"] == [
+            "fleet/launch.sh", "fleet/interactive-run.sh", f"fleet/ui-{row['ui']}.sh"
+        ] for row in rows))
 
     def test_fleet_interactive_negative_pty_content_never_becomes_a_witness(self):
         expected = {
@@ -181,9 +186,12 @@ else: print(json.dumps(result))
         }
         for case, status in expected.items():
             with self.subTest(case=case):
-                result = SMOKE._offline_interactive_assessment(case, timeout=300)
+                with tempfile.TemporaryDirectory() as directory:
+                    result = SMOKE._offline_interactive_negative_fixture(
+                        Path(directory), case, timeout=300)
                 self.assertEqual(result["status"], status)
                 self.assertFalse(result["terminal_is_witness"])
+                self.assertTrue(result["executed"])
                 if case == "timeout":
                     self.assertEqual(result["interaction_state"], "awaiting_human")
 
@@ -200,6 +208,10 @@ else: print(json.dumps(result))
                 self.assertEqual(row["status"], "PASS")
                 self.assertEqual(row["requested_ui"], requested)
                 self.assertEqual(row["ui"], resolved)
+                self.assertEqual(row["auto_resolution"], {
+                    "cmux": "cmux", "tmux": "tmux", "none": "headless"
+                })
+                self.assertTrue(row["selection_before_mutation"])
 
     def test_budget_is_per_runtime_hard_limit_and_has_no_automatic_retry(self):
         budget = SMOKE.InvocationBudget(2)

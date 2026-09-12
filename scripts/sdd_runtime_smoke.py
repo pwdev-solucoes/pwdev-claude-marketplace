@@ -478,25 +478,145 @@ exit 0
             _cleanup_fleet(root, [record])
 
 
-def _offline_interactive_assessment(case: str, *, timeout: int = DEFAULT_TIMEOUT) -> Dict[str, Any]:
-    """Classify hostile terminal observations without treating them as durable evidence."""
+def _offline_interactive_negative_fixture(folder: Path, case: str,
+                                          *, timeout: int = DEFAULT_TIMEOUT) -> Dict[str, Any]:
+    """Execute observer decisions against files and process observations, never labels."""
     if timeout != DEFAULT_TIMEOUT:
         raise ValueError(f"interactive observation timeout must be {DEFAULT_TIMEOUT}")
-    outcomes = {
-        "markdown": ("FAIL", "inconclusive", "terminal Markdown is not evidence"),
-        "json-string": ("FAIL", "inconclusive", "terminal JSON text is not evidence"),
-        "tampered-witness": ("FAIL", "inconclusive", "durable witness digest mismatch"),
-        "dead-pane": ("FAIL", "failed", "interactive pane exited without completion evidence"),
-        "timeout": ("BLOCKED", "awaiting_human", "observation timeout with live process"),
-        "divergent-loop": ("FAIL", "inconclusive", "durable LOOP binding mismatch"),
-        "unsupported-combination": ("NOT_RUN", "inconclusive", "combination was not executed"),
-    }
-    if case not in outcomes:
+    folder.mkdir(parents=True, exist_ok=True)
+    terminal = folder / "terminal.txt"
+    terminal.write_text("# completed\n" if case == "markdown" else
+                        '"{\\"status\\":\\"completed\\",\\"approved\\":true}"\n')
+    witness = folder / "witness.json"; witness.write_text('{"durable":true}\n')
+    expected = sha256_path(witness)
+    member = folder / "member.json"; loop = folder / "loop.json"
+    member.write_text(json.dumps({"interaction": {"loop": {"id": "loop-1"}}}))
+    loop.write_text(json.dumps({"id": "loop-1", "status": "running"}))
+    observation = {"alive": True, "exit_status": None, "recoverable": True}
+    elapsed = 0
+    if case == "tampered-witness": witness.write_text('{"durable":false}\n')
+    if case == "dead-pane": observation.update(alive=False, exit_status=23)
+    if case == "timeout": elapsed = timeout
+    if case == "divergent-loop": loop.write_text(json.dumps({"id": "loop-2", "status": "running"}))
+    if case == "unsupported-combination":
         return {"status": "NOT_RUN", "interaction_state": "inconclusive",
-                "reason": "unknown offline PTY case", "terminal_is_witness": False}
-    status, state, reason = outcomes[case]
+                "reason": "combination was not executed", "terminal_is_witness": False,
+                "executed": True}
+    durable_member = json.loads(member.read_text()); durable_loop = json.loads(loop.read_text())
+    if durable_member["interaction"]["loop"]["id"] != durable_loop["id"]:
+        status, state, reason = "FAIL", "inconclusive", "durable LOOP binding mismatch"
+    elif sha256_path(witness) != expected:
+        status, state, reason = "FAIL", "inconclusive", "durable witness digest mismatch"
+    elif not observation["alive"]:
+        status, state, reason = "FAIL", "failed", "driver observed a dead pane"
+    elif elapsed >= timeout:
+        status, state, reason = "BLOCKED", "awaiting_human", "live process reached observation timeout"
+    else:
+        # Deliberately do not parse terminal: without a durable completed LOOP and
+        # witness it cannot satisfy any gate, even when it contains JSON text.
+        status, state, reason = "FAIL", "inconclusive", "terminal content is not witness evidence"
     return {"status": status, "interaction_state": state, "reason": reason,
-            "terminal_is_witness": False}
+            "terminal_is_witness": False, "executed": True,
+            "observation": observation, "elapsed_seconds": elapsed}
+
+
+def _select_ui_matrix(root: Path, common: Path) -> tuple[Dict[str, str], bool]:
+    resolved = {}
+    mutation = root / "selection-mutation"
+    for label, tools in (("cmux", ("cmux", "tmux")), ("tmux", ("tmux",)), ("none", ())):
+        bindir = root / f"select-{label}"; bindir.mkdir()
+        for name in tools:
+            binary = bindir / name; binary.write_text("#!/bin/sh\nexit 0\n"); binary.chmod(0o755)
+        result = subprocess.run(["bash", "-c", 'source "$1"; fleet_select_ui auto', "", str(common)],
+            env={**os.environ, "PATH": str(bindir) + ":/usr/bin:/bin", "SDD_CMUX_BIN": str(bindir / "cmux")},
+            text=True, capture_output=True, check=False)
+        if mutation.exists() or result.returncode:
+            return resolved, False
+        resolved[label] = result.stdout.strip()
+    mutation.touch()
+    return resolved, resolved == {"cmux": "cmux", "tmux": "tmux", "none": "headless"}
+
+
+def _run_bound_interactive(root: Path, plugin: Path, runtime: str) -> tuple[str, int]:
+    work = root / "interactive-work"; work.mkdir()
+    tasks = root / ".planning/sdd-composy/tasks"; tasks.mkdir(parents=True)
+    contract = tasks / "smoke.json"; stamp = "2026-09-12T00:00:00Z"
+    contract.write_text(json.dumps({"schema_version":"1","prd_slug":"smoke","updated_at":stamp,
+        "tasks":[{"id":"TASK-007","title":"Offline","state":"ready","dependencies":[],
+        "acceptance_criteria":["CA-007"],"verification_commands":["true"],
+        "allowed_paths":["README.md"],"evidence_required":True}]}))
+    loops = root / ".planning/sdd-composy/loops"; loops.mkdir(parents=True)
+    loop_id = "loop-offline-interactive"
+    (loops / f"{loop_id}.json").write_text(json.dumps({"schema_version":"1","id":loop_id,
+        "task_id":"TASK-007","status":"running","iteration":0,"max_iterations":3,
+        "started_at":stamp,"updated_at":stamp,"stages":[{"name":name,"status":"pending"}
+        for name in ("EXECUTE","QA","EVIDENCE","REVIEW","VERIFY")]}))
+    member = root / "interactive-member.json"; stored = "claude-code" if runtime == "claude" else runtime
+    member.write_text(json.dumps({"schema_version":"2","id":"member-7","task_id":"TASK-007",
+        "slug":"member-7","status":"pending","runtime":stored,"ui":"cmux","branch":"fleet/member-7",
+        "worktree_path":str(work),"repository_root":str(root),"started_at":stamp,"updated_at":stamp,
+        "owner":{"kind":"sdd-composy-fleet","fleet_id":"offline","member_id":"member-7"},
+        "resources":{"branch":"fleet/member-7","worktree_path":str(work),"port":43007,
+        "compose_project":"offline-member-7","compose_file":".planning/sdd-composy/fleet/offline/docker-compose.yml",
+        "compose_allocated":False},"contract_path":str(contract),"contract_sha256":sha256_path(contract),
+        "interaction":{"state":"starting","started_at":stamp,"updated_at":stamp,
+        "loop":{"id":loop_id,"task_id":"TASK-007"}}}))
+    fake = root / "runner-bin"; fake.mkdir(); executable = fake / runtime
+    executable.write_text("#!/bin/sh\nprintf '%s\\n' '# terminal markdown' '\"{\\\"approved\\\":true}\"'\n")
+    executable.chmod(0o755)
+    result = subprocess.run([str(plugin / "scripts/fleet/interactive-run.sh"), str(member), str(work)],
+        cwd=root, env={**os.environ, "PATH": str(fake) + ":/usr/bin:/bin"},
+        text=True, capture_output=True, check=False)
+    return json.loads(member.read_text())["interaction"]["state"], result.returncode
+
+
+def _exercise_ui_driver(root: Path, plugin: Path, ui: str) -> Dict[str, Any]:
+    handle = root / f"{ui}-handle.json"; bindir = root / f"{ui}-bin"; bindir.mkdir()
+    if ui == "headless":
+        command = (f'source "{plugin / "scripts/fleet/ui-headless.sh"}"; '
+                   'fleet_ui_headless_start "$1" "$2" sleep 30; '
+                   f'source "{plugin / "scripts/fleet/common.sh"}"; '
+                   'fleet_ui_resource_established headless "$1"')
+        result = subprocess.run(["bash", "-c", command, "", str(handle), str(root)],
+                                text=True, capture_output=True, check=False)
+        observed = {"alive": result.returncode == 0, "recoverable": result.returncode == 0,
+                    "driver": "headless", "exit_status": None}
+        subprocess.run(["bash", "-c", f'source "{plugin / "scripts/fleet/ui-headless.sh"}"; fleet_ui_teardown "$1"',
+                        "", str(handle)], capture_output=True)
+        return observed
+    binary = bindir / ui
+    if ui == "tmux":
+        binary.write_text(f"#!{sys.executable}\n" + '''import json,os,sys
+a=' '.join(sys.argv[1:])
+if 'has-session' in a: raise SystemExit(0 if os.path.exists(os.environ['TMUX_STATE']) else 1)
+if 'new-session' in a:
+ open(os.environ['TMUX_STATE'],'w').write('started'); print('offline-session|%7')
+elif 'show-options' in a: print(json.load(open(os.environ['UI_HANDLE']))['ownership_marker'])
+elif 'display-message' in a: print('sdd-composy-fleet|offline|member-7|0|')
+''')
+        env = {**os.environ, "PATH": str(bindir) + ":/usr/bin:/bin", "UI_HANDLE": str(handle),
+               "TMUX_STATE": str(root / "tmux-state")}
+        command = (f'source "{plugin / "scripts/fleet/ui-tmux.sh"}"; '
+                   'fleet_ui_tmux_start "$1" "$2" offline member-7 true; '
+                   'fleet_ui_tmux_inspect "$1"')
+    else:
+        binary.write_text(f"#!{sys.executable}\n" + '''import json,os,sys
+a=sys.argv[1:]; state=os.environ['CMUX_STATE']
+if 'new-workspace' in a:
+ open(state,'w').write(json.dumps({'title':a[a.index('--name')+1],'marker':a[a.index('--description')+1]}))
+elif 'tree' in a:
+ d=json.load(open(state)); print(json.dumps({'windows':[{'workspaces':[{'id':'11111111-1111-1111-1111-111111111111','title':d['title'],'description':d['marker'],'panes':[{'surfaces':[{'id':'22222222-2222-2222-2222-222222222222','type':'terminal'}]}]}]}]}))
+elif 'list-status' in a: print('sdd-composy-owner=sdd-composy-fleet\\nsdd-composy-fleet=offline\\nsdd-composy-member=member-7')
+''')
+        env = {**os.environ, "PATH": str(bindir) + ":/usr/bin:/bin", "SDD_CMUX_BIN": str(binary),
+               "CMUX_STATE": str(root / "cmux-state.json")}
+        command = (f'source "{plugin / "scripts/fleet/ui-cmux.sh"}"; '
+                   'fleet_ui_cmux_start "$1" "$2" offline member-7 true; fleet_ui_cmux_inspect "$1"')
+    binary.chmod(0o755)
+    result = subprocess.run(["bash", "-c", command, "", str(handle), str(root)], env=env,
+                            text=True, capture_output=True, check=False)
+    return json.loads(result.stdout.splitlines()[-1]) if result.returncode == 0 else {
+        "alive": False, "recoverable": False, "driver": ui, "exit_status": result.returncode}
 
 
 def _offline_fleet_interactive(root: Path, plugin: Path, runtime: str, ui: str) -> Dict[str, Any]:
@@ -509,13 +629,9 @@ def _offline_fleet_interactive(root: Path, plugin: Path, runtime: str, ui: str) 
     # Consume the real launch path first. It creates canonical member/worktree
     # records while its built-in fake providers prove no native provider is used.
     fleet_probe = _offline_fleet(root, plugin, runtime)
-    driver = plugin / "scripts/fleet" / f"ui-{ui}.sh"
-    runner = plugin / "scripts/fleet/interactive-run.sh"
-    driver_probe = subprocess.run(
-        ["bash", "-c", 'source "$1"; declare -F "fleet_ui_' + ui + '_start" >/dev/null', "", str(driver)],
-        cwd=root, text=True, capture_output=True, check=False)
-    runner_probe = subprocess.run(["bash", "-n", str(runner)], cwd=root,
-                                  text=True, capture_output=True, check=False)
+    runner_state, runner_status = _run_bound_interactive(root, plugin, runtime)
+    driver_observation = _exercise_ui_driver(root, plugin, ui)
+    auto_resolution, selection_before_mutation = _select_ui_matrix(root, plugin / "scripts/fleet/common.sh")
     fake_bin = root / "interactive-bin"; fake_bin.mkdir()
     capture = root / "interactive-capture.json"
     executable = fake_bin / runtime
@@ -553,20 +669,24 @@ print('```json {"approved":true,"witness":"forged"} ```')
     forbidden = {"--dangerously-skip-permissions", "--dangerously-bypass-approvals-and-sandbox",
                  "--yolo", "--full-auto"}
     argv = invocation.get("argv", [])
-    negatives = {case: _offline_interactive_assessment(case)
+    negatives = {case: _offline_interactive_negative_fixture(root / f"negative-{case}", case)
                  for case in ("markdown", "json-string", "tampered-witness", "dead-pane",
                               "timeout", "divergent-loop")}
-    passed = (fleet_probe["passed"] and driver_probe.returncode == 0 and runner_probe.returncode == 0
+    passed = (fleet_probe["passed"] and runner_status == 0 and runner_state == "awaiting_human"
+              and driver_observation.get("alive") is True and driver_observation.get("recoverable") is True
+              and selection_before_mutation
               and process.returncode == 0 and pty_run.returncode == 0 and bool(argv)
               and not forbidden.intersection(argv)
               and all(not row["terminal_is_witness"] for row in negatives.values())
               and negatives["timeout"]["interaction_state"] == "awaiting_human")
     return {"passed": passed, "resources": [str(capture.relative_to(root)),
-            str(pty_capture.relative_to(root))], "command": ["fleet/launch.sh", "fleet/interactive-run.sh",
-            f"fleet/ui-{ui}.sh", "fake-runtime", runtime, "fake-pty", ui],
+            str(pty_capture.relative_to(root))], "command": ["fake-runtime", runtime, "fake-pty", ui],
+            "exercised_components": ["fleet/launch.sh", "fleet/interactive-run.sh", f"fleet/ui-{ui}.sh"],
             "exit_code": 0 if passed else 1, "version": "offline-fake 1.0",
             "ui": ui, "requested_ui": requested_ui, "timeout_seconds": DEFAULT_TIMEOUT,
-            "negative_cases": negatives,
+            "negative_cases": negatives, "runner_state": runner_state,
+            "driver_observation": driver_observation, "auto_resolution": auto_resolution,
+            "selection_before_mutation": selection_before_mutation,
             "runtime_invocation": invocation, "pty_invocation": pty_invocation}
 
 
@@ -606,7 +726,9 @@ def _offline_check(root: Path, plugin_root: Path, runtime: str, language: str,
             "worktree": str(root), "version": (outcome.get("version") if "version" in outcome
                                                    else _runtime_version(runtime)),
             "provider": "offline-fixture", "model": None}
-    for key in ("ui", "requested_ui", "timeout_seconds", "negative_cases", "runtime_invocation", "pty_invocation"):
+    for key in ("ui", "requested_ui", "timeout_seconds", "negative_cases", "runtime_invocation",
+                "pty_invocation", "runner_state", "driver_observation", "auto_resolution",
+                "selection_before_mutation", "exercised_components"):
         if key in outcome:
             result[key] = outcome[key]
     return result
@@ -626,7 +748,9 @@ def _record(runtime: str, language: str, scenario: str, status: str,
     for key in ("version", "provider", "model", "duration_seconds", "result_sha256",
                 "command", "resources", "usage", "task_id", "worktree", "stdout", "stderr",
                 "snapshot_before", "snapshot_after", "loaded_resources", "native_events",
-                "ui", "requested_ui", "timeout_seconds", "negative_cases", "runtime_invocation", "pty_invocation"):
+                "ui", "requested_ui", "timeout_seconds", "negative_cases", "runtime_invocation",
+                "pty_invocation", "runner_state", "driver_observation", "auto_resolution",
+                "selection_before_mutation", "exercised_components"):
         if key in measurements:
             record[key] = measurements[key]
     return record
