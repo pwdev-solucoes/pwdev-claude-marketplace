@@ -82,3 +82,15 @@ Status: INCOMPLETE
 - Observation reads only durable member, LOOP, and handle JSON for the fixed 300-second window. Terminal stdout is ignored as evidence. PASS/BLOCKED/FAIL results carry repository, worktree, member, LOOP, and handle paths, with no merge, teardown, fallback, or retry.
 - Full suite: `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 431 tests passed in 172.945s.
 - No real provider, cmux, or tmux process was invoked. Real combinations remain INCOMPLETE/NOT_RUN pending their individual human-authorized runs.
+
+## Task 08 launcher fix round 3
+
+- RED: adversarial tuple and injected-clock tests failed because the launcher accepted unbound JSON and returned immediately on `awaiting_human`.
+- GREEN: three focused tests passed in 0.626s using injected runners and handle validators only.
+- Member state is loaded through the canonical interactive-state validator, then bound to the exact fleet/member/task/runtime/UI/repository and matching registered worktree resource. The canonical worktree must remain inside the acceptance run area.
+- LOOP IDs must satisfy the canonical safe-basename regex before path construction; the regular non-symlink LOOP remains confined to the fixture and its canonical validator must confirm internal ID/task identity.
+- The fixed handle path must be confined, regular, non-symlinked, match driver/cwd/fleet/member ownership, and pass the existing cmux/tmux inspect or headless recoverability contract before classification.
+- Adversarial member, owner, runtime, UI, worktree/resource, traversal/absolute LOOP, LOOP task, handle owner, and handle symlink cases all fail before PASS/BLOCKED classification.
+- `awaiting_human` remains observed until a validated terminal transition or the exact monotonic 300-second boundary. Boundary classification is BLOCKED with no wall sleep; completion before the boundary is revalidated and PASS.
+- No terminal output was used and no real provider or UI was invoked. All real combinations remain INCOMPLETE/NOT_RUN.
+- Final suite: `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 432 tests passed in 173.870s.

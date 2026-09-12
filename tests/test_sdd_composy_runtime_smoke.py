@@ -48,16 +48,32 @@ class RuntimeSmokeContractTests(unittest.TestCase):
             loop_id = f"loop-{fleet_id}-task-008"
             loop = root / ".planning/sdd-composy/loops" / f"{loop_id}.json"
             loop.parent.mkdir(parents=True)
-            loop.write_text(json.dumps({"id": loop_id, "task_id": "TASK-008",
-                "status": "completed" if terminal_state == "completed" else "running"}))
+            stamp = "2026-09-12T00:00:00Z"
+            loop.write_text(json.dumps({"schema_version": "1", "id": loop_id,
+                "task_id": "TASK-008", "status": "completed" if terminal_state == "completed" else "running",
+                "iteration": 0, "max_iterations": 3, "started_at": stamp, "updated_at": stamp,
+                "stop_reason": "human completed" if terminal_state == "completed" else None,
+                "finished_at": stamp if terminal_state == "completed" else None,
+                "stages": []}))
             member = members / "TASK-008.json"
-            member.write_text(json.dumps({"id": "TASK-008", "task_id": "TASK-008",
-                "slug": "task-008", "worktree_path": str(worktree),
-                "interaction": {"state": terminal_state,
+            record_runtime = "claude-code" if command[command.index("--runtime") + 1] == "claude" else command[command.index("--runtime") + 1]
+            ui = command[command.index("--ui") + 1]
+            member.write_text(json.dumps({"schema_version": "2", "id": "TASK-008",
+                "task_id": "TASK-008", "slug": "task-008", "status": "pending",
+                "runtime": record_runtime, "ui": ui, "branch": f"sdd-fleet/{fleet_id}/TASK-008",
+                "worktree_path": str(worktree), "repository_root": str(root),
+                "started_at": stamp, "updated_at": stamp,
+                "owner": {"kind": "sdd-composy-fleet", "fleet_id": fleet_id, "member_id": "TASK-008"},
+                "resources": {"branch": f"sdd-fleet/{fleet_id}/TASK-008",
+                    "worktree_path": str(worktree), "port": 43008,
+                    "compose_project": f"sdd_fleet_{fleet_id}",
+                    "compose_file": f".planning/sdd-composy/fleet/{fleet_id}/docker-compose.yml",
+                    "compose_allocated": False},
+                "interaction": {"state": terminal_state, "started_at": stamp, "updated_at": stamp,
                     "loop": {"id": loop_id, "task_id": "TASK-008"}}}))
             handle = state / "task-008.ui.json"
-            handle.write_text(json.dumps({"driver": command[command.index("--ui") + 1],
-                                          "recoverable": True}))
+            handle.write_text(json.dumps({"driver": ui, "fleet_id": fleet_id,
+                "member_id": "TASK-008", "cwd": str(worktree), "recoverable": True}))
             return {"status": "PASS", "exit_code": 0, "stdout": "terminal ignored",
                     "stderr": "", "duration_seconds": 0.01}
         return runner
@@ -457,6 +473,7 @@ else: print(json.dumps(result))
                 ui="cmux", timeout=300, plugin_root=ROOT / "plugins/sdd-composy",
                 output=Path(directory),
                 command_runner=self._fake_interactive_launch_runner("completed", calls),
+                handle_validator=lambda **_kwargs: {"recoverable": True, "driver": "cmux"},
                 clock=lambda: 0.0, sleep=lambda _seconds: None)
         self.assertEqual(result["status"], "PASS")
         self.assertEqual(len(calls), 1)
@@ -469,24 +486,85 @@ else: print(json.dumps(result))
                           "--yolo", "--full-auto"}.intersection(command))
         self.assertTrue(all(result[key] for key in ("repository", "worktree", "member", "loop", "handle")))
 
-    def test_production_interactive_launcher_classifies_durable_state_and_preserves_resources(self):
-        for state, expected in (("awaiting_human", "BLOCKED"), ("failed", "FAIL")):
-            with self.subTest(state=state), tempfile.TemporaryDirectory() as directory:
+    def test_production_interactive_launcher_rejects_unbound_or_escaping_durable_tuple(self):
+        for case in ("member-id", "owner", "runtime", "ui", "worktree", "resource-worktree",
+                     "loop-id", "absolute-loop-id", "loop-task", "handle-owner", "handle-symlink"):
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as directory:
                 calls = []
-                ticks = iter((0.0, 300.0))
-                result = SMOKE.production_interactive_launcher(
-                    runtime="claude", language="pt-BR", scenario="fleet-interactive",
-                    ui="tmux", timeout=300, plugin_root=ROOT / "plugins/sdd-composy",
-                    output=Path(directory),
-                    command_runner=self._fake_interactive_launch_runner(state, calls),
-                    clock=lambda: next(ticks), sleep=lambda _seconds: None)
-                self.assertEqual(result["status"], expected)
-                self.assertEqual(len(calls), 1)
-                self.assertTrue(Path(result["repository"]).is_dir())
-                self.assertTrue(Path(result["worktree"]).is_dir())
-                self.assertTrue(Path(result["member"]).is_file())
-                self.assertTrue(Path(result["loop"]).is_file())
-                self.assertTrue(Path(result["handle"]).is_file())
+                base = self._fake_interactive_launch_runner("completed", calls)
+                def adversarial(command, cwd, timeout):
+                    result = base(command, cwd, timeout)
+                    root = Path(command[command.index("--root") + 1]); fleet_id = command[command.index("--fleet-id") + 1]
+                    member_path = root / ".planning/sdd-composy/fleet" / fleet_id / "members/TASK-008.json"
+                    member = json.loads(member_path.read_text())
+                    if case == "member-id": member["id"] = "FOREIGN"
+                    if case == "owner": member["owner"]["fleet_id"] = "foreign"
+                    if case == "runtime": member["runtime"] = "hermes"
+                    if case == "ui": member["ui"] = "tmux"
+                    if case == "worktree":
+                        member["worktree_path"] = "/outside/unowned"
+                        member["resources"]["worktree_path"] = "/outside/unowned"
+                    if case == "resource-worktree": member["resources"]["worktree_path"] += "-foreign"
+                    if case == "loop-id": member["interaction"]["loop"]["id"] = "../../outside"
+                    if case == "absolute-loop-id": member["interaction"]["loop"]["id"] = "/outside"
+                    member_path.write_text(json.dumps(member))
+                    if case == "loop-task":
+                        loop_path = next((root / ".planning/sdd-composy/loops").glob("*.json"))
+                        loop = json.loads(loop_path.read_text()); loop["task_id"] = "TASK-999"
+                        loop_path.write_text(json.dumps(loop))
+                    if case == "handle-owner":
+                        handle = root / ".planning/sdd-composy/fleet" / fleet_id / "task-008.ui.json"
+                        data = json.loads(handle.read_text()); data["member_id"] = "foreign"
+                        handle.write_text(json.dumps(data))
+                    if case == "handle-symlink":
+                        handle = root / ".planning/sdd-composy/fleet" / fleet_id / "task-008.ui.json"
+                        target = handle.with_name("benign-handle.json"); handle.replace(target)
+                        handle.symlink_to(target)
+                    return result
+                result = SMOKE.production_interactive_launcher(runtime="codex", language="en-US",
+                    scenario="fleet-interactive", ui="cmux", timeout=300,
+                    plugin_root=ROOT / "plugins/sdd-composy", output=Path(directory),
+                    command_runner=adversarial,
+                    handle_validator=lambda **_kwargs: {"recoverable": True, "driver": "cmux"},
+                    clock=lambda: 0.0, sleep=lambda _seconds: self.fail("invalid tuple was observed"))
+                self.assertEqual(result["status"], "FAIL")
+
+    def test_awaiting_human_observes_exact_boundary_and_completion_before_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            calls, clock_calls, sleeps = [], [], []
+            ticks = iter((0.0, 300.0))
+            def clock():
+                value = next(ticks); clock_calls.append(value); return value
+            result = SMOKE.production_interactive_launcher(runtime="claude", language="pt-BR",
+                scenario="fleet-interactive", ui="tmux", timeout=300,
+                plugin_root=ROOT / "plugins/sdd-composy", output=Path(directory),
+                command_runner=self._fake_interactive_launch_runner("awaiting_human", calls),
+                handle_validator=lambda **_kwargs: {"recoverable": True, "driver": "tmux"},
+                clock=clock, sleep=lambda seconds: sleeps.append(seconds))
+            self.assertEqual(result["status"], "BLOCKED")
+            self.assertEqual(clock_calls, [0.0, 300.0])
+            self.assertEqual(sleeps, [])
+
+        with tempfile.TemporaryDirectory() as directory:
+            calls = []
+            def complete(_seconds):
+                command = calls[0][0]; root = Path(command[command.index("--root") + 1])
+                fleet_id = command[command.index("--fleet-id") + 1]
+                member_path = root / ".planning/sdd-composy/fleet" / fleet_id / "members/TASK-008.json"
+                member = json.loads(member_path.read_text()); member["interaction"]["state"] = "completed"
+                member_path.write_text(json.dumps(member))
+                loop_path = next((root / ".planning/sdd-composy/loops").glob("*.json"))
+                loop = json.loads(loop_path.read_text()); loop.update(status="completed",
+                    stop_reason="human completed", finished_at="2026-09-12T00:00:00Z")
+                loop_path.write_text(json.dumps(loop))
+            ticks = iter((0.0, 299.0))
+            result = SMOKE.production_interactive_launcher(runtime="claude", language="pt-BR",
+                scenario="fleet-interactive", ui="tmux", timeout=300,
+                plugin_root=ROOT / "plugins/sdd-composy", output=Path(directory),
+                command_runner=self._fake_interactive_launch_runner("awaiting_human", calls),
+                handle_validator=lambda **_kwargs: {"recoverable": True, "driver": "tmux"},
+                clock=lambda: next(ticks), sleep=complete)
+            self.assertEqual(result["status"], "PASS")
 
     def test_controlled_process_timeout_terminates_child_and_reports_timeout(self):
         with tempfile.TemporaryDirectory() as directory:

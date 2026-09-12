@@ -1077,10 +1077,48 @@ def _acceptance_json(path: Path) -> Dict[str, Any]:
     return value
 
 
+def _confined_acceptance_path(root: Path, value: str, *, directory: bool = False) -> Path:
+    if not isinstance(value, str) or not value or not Path(value).is_absolute():
+        raise SmokeBlocked("acceptance path is not canonical")
+    path = Path(value)
+    _reject_symlink_ancestors(path)
+    resolved, boundary = path.resolve(strict=True), root.resolve(strict=True)
+    try:
+        resolved.relative_to(boundary)
+    except ValueError as exc:
+        raise SmokeBlocked("acceptance path escapes confined fixture") from exc
+    if directory and not resolved.is_dir():
+        raise SmokeBlocked("acceptance worktree is unavailable")
+    if not directory and not resolved.is_file():
+        raise SmokeBlocked("acceptance state is unavailable")
+    return resolved
+
+
+def _production_handle_observation(*, ui: str, handle: Path, plugin_root: Path,
+                                   cwd: Path) -> Dict[str, Any]:
+    if ui == "headless":
+        script = 'source "$1"; fleet_ui_resource_established headless "$2"'
+        command = ["bash", "-c", script, "", str(plugin_root / "scripts/fleet/common.sh"),
+                   str(handle)]
+        result = run_process(command, cwd, timeout=10)
+        return {"driver": ui, "recoverable": result["status"] == "PASS"}
+    script = f'source "$1"; fleet_ui_{ui}_inspect "$2"'
+    command = ["bash", "-c", script, "", str(plugin_root / f"scripts/fleet/ui-{ui}.sh"),
+               str(handle)]
+    result = run_process(command, cwd, timeout=10)
+    if result["status"] != "PASS":
+        return {"driver": ui, "recoverable": False}
+    try:
+        return json.loads(result["stdout"].splitlines()[-1])
+    except (json.JSONDecodeError, IndexError):
+        return {"driver": ui, "recoverable": False}
+
+
 def production_interactive_launcher(*, runtime: str, language: str, scenario: str,
                                     ui: str, timeout: float, plugin_root: Path,
                                     output: Path,
                                     command_runner: Callable[..., Dict[str, Any]] = run_process,
+                                    handle_validator: Callable[..., Dict[str, Any]] = _production_handle_observation,
                                     clock: Callable[[], float] = time.monotonic,
                                     sleep: Callable[[float], None] = time.sleep) -> Dict[str, Any]:
     """Launch one recoverable fleet fixture and classify durable state only."""
@@ -1088,8 +1126,9 @@ def production_interactive_launcher(*, runtime: str, language: str, scenario: st
         return {"status": "NOT_RUN", "reason": "unsupported interactive production request"}
     if ui not in (*INTERACTIVE_UIS, "headless") or timeout != DEFAULT_TIMEOUT:
         return {"status": "NOT_RUN", "reason": "exact UI and 300 second timeout are required"}
-    fixture = output / "production-interactive" / f"{runtime}-{ui}"
-    _reject_symlink_ancestors(fixture)
+    run_area = output.resolve(strict=True) / "production-interactive" / f"{runtime}-{ui}"
+    fixture = run_area / "repository"
+    _reject_symlink_ancestors(run_area)
     try:
         fixture.mkdir(parents=True, exist_ok=False)
     except FileExistsError as exc:
@@ -1129,31 +1168,60 @@ def production_interactive_launcher(*, runtime: str, language: str, scenario: st
         return {**locations, "status": status, "reason": "fleet launch failed",
                 "exit_code": launched.get("exit_code")}
     started = clock()
+    interactive_state = _load_local(plugin_root / "scripts/fleet", "interactive_state.py",
+                                    "acceptance_state")
+    loops = _load_local(plugin_root / "scripts", "sdd_loop.py", "acceptance_loop")
     while True:
         try:
-            member = _acceptance_json(member_path)
-            interaction = member.get("interaction", {})
-            binding = interaction.get("loop", {})
-            loop_path = fixture / ".planning/sdd-composy/loops" / f"{binding.get('id', '')}.json"
-            loop = _acceptance_json(loop_path)
-            handle_path = Path(locations["handle"])
-            _acceptance_json(handle_path)
-            locations.update(worktree=str(member.get("worktree_path", "")), loop=str(loop_path))
+            member = interactive_state.load_member(member_path)
+            expected_runtime = "claude-code" if runtime == "claude" else runtime
+            owner, resources, interaction = member["owner"], member["resources"], member["interaction"]
+            if (member["id"] != task_id or member["task_id"] != task_id
+                    or owner != {"kind": "sdd-composy-fleet", "fleet_id": fleet_id,
+                                 "member_id": task_id}
+                    or member["runtime"] != expected_runtime or member["ui"] != ui
+                    or Path(member["repository_root"]).resolve() != fixture.resolve()
+                    or resources["worktree_path"] != member["worktree_path"]):
+                raise SmokeBlocked("member identity or ownership mismatch")
+            worktree = _confined_acceptance_path(run_area, member["worktree_path"], directory=True)
+            binding = interaction.get("loop")
+            if (not isinstance(binding, dict) or binding.get("task_id") != task_id
+                    or not isinstance(binding.get("id"), str)
+                    or not interactive_state.LOOP_ID.fullmatch(binding["id"])):
+                raise SmokeBlocked("invalid confined LOOP binding")
+            loop_path = fixture / ".planning/sdd-composy/loops" / f"{binding['id']}.json"
+            _confined_acceptance_path(fixture, str(loop_path))
+            loop = loops.status(fixture, binding["id"])
+            if loop["id"] != binding["id"] or loop["task_id"] != task_id:
+                raise SmokeBlocked("LOOP identity mismatch")
+            handle_path = _confined_acceptance_path(fixture, locations["handle"])
+            handle = _acceptance_json(handle_path)
+            if (handle.get("driver") != ui or handle.get("cwd") != str(worktree)
+                    or (ui != "headless" and (handle.get("fleet_id") != fleet_id
+                                               or handle.get("member_id") != task_id))):
+                raise SmokeBlocked("UI handle identity or ownership mismatch")
+            observation = handle_validator(ui=ui, handle=handle_path, plugin_root=plugin_root,
+                                           cwd=fixture)
+            if observation.get("driver") != ui or observation.get("recoverable") is not True:
+                raise SmokeBlocked("UI handle is not owned and recoverable")
+            locations.update(worktree=str(worktree), loop=str(loop_path))
             locations["resources"] = [str(fixture), str(member_path), str(loop_path),
-                                      str(handle_path), locations["worktree"]]
-            interaction_state, loop_state = interaction.get("state"), loop.get("status")
-            if interaction_state == "completed" and loop_state == "completed":
-                return {**locations, "status": "PASS", "reason": None}
-            if interaction_state in {"failed", "cancelled"}:
-                return {**locations, "status": "FAIL", "reason": f"durable interaction state: {interaction_state}"}
-            if interaction_state in {"blocked", "awaiting_human"}:
-                return {**locations, "status": "BLOCKED", "reason": "awaiting human completion"}
-        except (SmokeBlocked, OSError, ValueError, TypeError, AttributeError) as exc:
-            if clock() - started >= timeout:
-                return {**locations, "status": "FAIL", "reason": sanitize(str(exc))}
-        if clock() - started >= timeout:
-            return {**locations, "status": "BLOCKED", "reason": "observation timeout"}
-        sleep(min(1.0, timeout))
+                                      str(handle_path), str(worktree)]
+        except (SmokeBlocked, OSError, ValueError, TypeError, AttributeError,
+                interactive_state.InteractiveStateError, loops.LoopError) as exc:
+            return {**locations, "status": "FAIL", "reason": sanitize(str(exc))}
+        interaction_state, loop_state = interaction.get("state"), loop.get("status")
+        if interaction_state == "completed" and loop_state == "completed":
+            return {**locations, "status": "PASS", "reason": None}
+        if interaction_state in {"failed", "cancelled"}:
+            return {**locations, "status": "FAIL", "reason": f"durable interaction state: {interaction_state}"}
+        if interaction_state == "blocked":
+            return {**locations, "status": "BLOCKED", "reason": "durable interaction blocked"}
+        elapsed = clock() - started
+        if elapsed >= timeout:
+            reason = "awaiting human completion" if interaction_state == "awaiting_human" else "observation timeout"
+            return {**locations, "status": "BLOCKED", "reason": reason}
+        sleep(min(1.0, timeout - elapsed))
 
 
 def production_provider_launcher(*, runtime: str, language: str, scenario: str,

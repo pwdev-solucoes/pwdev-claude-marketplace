@@ -44,3 +44,11 @@ No real provider, cmux, or tmux session was executed. Every real runtime/UI comb
 - It returns inspectable repository, worktree, member, LOOP, and handle paths and never treats terminal output as witness or performs cleanup, merge, retry, or fallback.
 - Focused smoke module: 39 tests passed in 137.914s. Full suite: 431 tests passed in 172.945s.
 - Verification used injected fake command runners only; all real combinations remain INCOMPLETE/NOT_RUN.
+
+## Launcher fix round 3
+
+- Added authoritative tuple validation using the existing member/LOOP validators and UI driver ownership/recoverability inspection contracts.
+- Member, owner, task, runtime, UI, repository, registered worktree, LOOP binding/internal identity, and handle ownership are all bound and confined before PASS/BLOCKED classification.
+- `awaiting_human` now remains under observation through the exact 300-second monotonic boundary; a validated completion before that boundary passes.
+- Focused adversarial/timing result: three fake-only tests passed in 0.626s. Real rows remain INCOMPLETE/NOT_RUN.
+- Full result: 432 tests passed in 173.870s.
