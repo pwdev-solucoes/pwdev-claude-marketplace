@@ -1134,11 +1134,15 @@ def production_interactive_launcher(*, runtime: str, language: str, scenario: st
     except FileExistsError as exc:
         raise SmokeBlocked("interactive acceptance fixture already exists; retry is forbidden") from exc
     task_id, slug, fleet_id, base_branch = "TASK-008", "task-008", f"acceptance-{runtime}-{ui}", "smoke-base"
-    task = fixture / "task-008.json"
-    task.write_text(json.dumps({"id": task_id, "state": "ready", "dependencies": [],
-        "acceptance_criteria": ["Human-assisted runtime acceptance"],
+    task = fixture / ".planning/sdd-composy/tasks" / f"{slug}.json"
+    task.parent.mkdir(parents=True)
+    task.write_text(json.dumps({"schema_version": "1", "prd_slug": slug,
+        "updated_at": "2026-09-12T00:00:00Z", "tasks": [{"id": task_id,
+        "title": "Human-assisted runtime acceptance", "state": "ready", "dependencies": [],
+        "acceptance_criteria": ["CA-008"],
         "verification_commands": ["python3 -m unittest"], "allowed_paths": ["README.md"],
-        "contract_path": str(task)}, indent=2) + "\n", encoding="utf-8")
+        "evidence_required": True, "contract_path": str(task)}]}, indent=2) + "\n",
+        encoding="utf-8")
     (fixture / "README.md").write_text("# Confined interactive acceptance fixture\n", encoding="utf-8")
     phases = fixture / ".planning/sdd-composy/phases" / slug
     phases.mkdir(parents=True)

@@ -566,6 +566,42 @@ else: print(json.dumps(result))
                 clock=lambda: next(ticks), sleep=complete)
             self.assertEqual(result["status"], "PASS")
 
+    def test_production_fixture_actual_launch_and_wrapper_preflight_use_canonical_projection(self):
+        with tempfile.TemporaryDirectory() as directory:
+            fake = Path(directory) / "bin"; fake.mkdir()
+            (fake / "codex").write_text("#!/bin/sh\nexit 0\n")
+            (fake / "codex").chmod(0o755)
+            (fake / "tmux").write_text(f"#!{sys.executable}\n" + '''import subprocess,sys
+args=sys.argv[1:]
+if 'has-session' in args: raise SystemExit(1)
+if 'new-session' in args:
+    split=args.index('--'); cwd=args[args.index('-c')+1]
+    completed=subprocess.run(args[split+1:],cwd=cwd)
+    print('sdd-composy-acceptance|%8')
+    raise SystemExit(completed.returncode)
+raise SystemExit(0)
+''')
+            (fake / "tmux").chmod(0o755)
+            ticks = iter((0.0, 300.0))
+            with patch.dict(os.environ, {"PATH": str(fake) + os.pathsep + os.environ["PATH"]}):
+                result = SMOKE.production_interactive_launcher(runtime="codex", language="en-US",
+                    scenario="fleet-interactive", ui="tmux", timeout=300,
+                    plugin_root=ROOT / "plugins/sdd-composy", output=Path(directory),
+                    handle_validator=lambda **_kwargs: {"recoverable": True, "driver": "tmux"},
+                    clock=lambda: next(ticks), sleep=lambda _seconds: None)
+            repository = Path(result["repository"])
+            contract = repository / ".planning/sdd-composy/tasks/task-008.json"
+            self.assertTrue(Path(result["member"]).is_file(), result)
+            member = json.loads(Path(result["member"]).read_text())
+            tasks = SMOKE._load_local(ROOT / "plugins/sdd-composy/scripts", "sdd_tasks.py",
+                                      "acceptance_tasks_test").load(contract)
+            self.assertEqual(result["status"], "BLOCKED")
+            self.assertEqual(member["interaction"]["state"], "awaiting_human")
+            self.assertEqual(Path(member["contract_path"]), contract)
+            self.assertEqual(member["contract_sha256"], __import__("hashlib").sha256(contract.read_bytes()).hexdigest())
+            self.assertEqual(tasks["prd_slug"], "task-008")
+            self.assertEqual(tasks["tasks"][0]["id"], "TASK-008")
+
     def test_controlled_process_timeout_terminates_child_and_reports_timeout(self):
         with tempfile.TemporaryDirectory() as directory:
             marker = Path(directory) / "child-finished"

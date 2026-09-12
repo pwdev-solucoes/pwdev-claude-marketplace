@@ -52,3 +52,11 @@ No real provider, cmux, or tmux session was executed. Every real runtime/UI comb
 - `awaiting_human` now remains under observation through the exact 300-second monotonic boundary; a validated completion before that boundary passes.
 - Focused adversarial/timing result: three fake-only tests passed in 0.626s. Real rows remain INCOMPLETE/NOT_RUN.
 - Full result: 432 tests passed in 173.870s.
+
+## Production fixture fix round 4
+
+- The production acceptance fixture now writes a complete `sdd_tasks` projection at `.planning/sdd-composy/tasks/task-008.json` and passes that canonical path to `fleet/launch.sh`.
+- The ready task includes explicit dependencies, acceptance criterion, verification command, allowed path, and evidence requirement; the existing phase approvals remain explicit.
+- A regression runs the actual fleet launcher and actual interactive wrapper preflight with fake Codex/tmux executables, reaches durable `awaiting_human`, and verifies the canonical member contract path and SHA-256 digest.
+- Focused result: 4 tests passed in 2.498s. Full result: 434 tests passed in 298.112s.
+- No real provider/UI was invoked and neither consumed real combination was retried.

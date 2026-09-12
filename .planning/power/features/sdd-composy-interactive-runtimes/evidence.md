@@ -94,3 +94,29 @@ Status: INCOMPLETE
 - `awaiting_human` remains observed until a validated terminal transition or the exact monotonic 300-second boundary. Boundary classification is BLOCKED with no wall sleep; completion before the boundary is revalidated and PASS.
 - No terminal output was used and no real provider or UI was invoked. All real combinations remain INCOMPLETE/NOT_RUN.
 - Final suite: `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 432 tests passed in 173.870s.
+
+## Real acceptance `codex:cmux`
+
+- Exactly one human-authorized call was consumed; verdict `BLOCKED` with reason `durable interaction blocked` before Codex provider execution.
+- Durable member reason: the acceptance fixture placed `task-008.json` at repository root, outside the canonical `.planning/sdd-composy/tasks/` contract directory required by `interactive-run.sh`.
+- cmux ownership was correct after `290f337`: handle `fleet_id` and `member_id` matched the member owner exactly.
+- Session, handle, LOOP, branch and worktree were preserved. No retry, fallback, merge or teardown was performed.
+- This is not a successful Codex/cmux acceptance result; the combination remains consumed for this run.
+
+## Real acceptance — Hermes + cmux
+
+- Exact human authorization: `hermes:cmux`, one call, `pt-BR`, 300-second observation window.
+- Command completed with verdict `FAIL` before human interaction: `UI handle identity or ownership mismatch`.
+- Invocation budget was durably consumed once; no retry or UI fallback was attempted.
+- The cmux workspace, handle, LOOP, branch, and worktree were preserved for diagnosis. `runtime.env` was not read.
+- Root cause was a launcher/driver arity and identity mismatch: the command path was shifted into the handle's member ownership, then the first correction used the lowercase slug instead of canonical `member.owner.member_id`.
+- Corrective commits: `7ca8822` (arity) followed by `290f337` (canonical ownership). Independent re-review: SPEC PASS / QUALITY PASS, 87 offline tests.
+- This failed attempt is not acceptance evidence for Hermes or cmux and will not be retried automatically.
+
+## Task 08 production fixture fix round 4
+
+- RED: the actual-launch regression failed because the root `task-008.json` was rejected by the real interactive wrapper preflight and the fleet launcher rolled back its pre-resource state.
+- GREEN: the fixture publishes `.planning/sdd-composy/tasks/task-008.json` as a complete validated projection and passes that exact path to `fleet/launch.sh`.
+- The regression uses only fake Codex/tmux executables, runs actual `launch.sh` plus actual `interactive-run.sh`, reaches durable `awaiting_human`, and verifies the member path and digest remain bound to the canonical projection.
+- Focused result: 4 tests passed in 2.498s. Full suite: 434 tests passed in 298.112s.
+- The fix was reverted once and the regression failed again before restoration. No real provider/UI was invoked; the consumed Hermes/cmux and Codex/cmux combinations were not retried.
