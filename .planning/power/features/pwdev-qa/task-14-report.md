@@ -1,0 +1,43 @@
+# Task 14 — implementation report
+
+Status: DONE
+
+## Delivered
+
+- Added `render_pdf(report, destination) -> None` using exactly ReportLab 4.4.9.
+- Added A4 output with exact 18 mm document margins, embedded Vera TTF fonts for
+  Portuguese accents, repeating headers/footers, `Page X of Y`, textual status labels,
+  a page-numbered contents section, status legend, and breakable content blocks.
+- Rendered every allowlisted public report field without recalculating criterion results or
+  verdicts. ReportLab paragraph markup is escaped, stored commands remain inert, and only
+  verified evidence IDs are shown as approved references.
+- Writes through a sibling temporary file and atomically replaces the destination only after
+  a successful build. Missing or non-4.4.9 ReportLab raises an explicit runtime error.
+- Pinned export and verification dependencies in `requirements.txt`; no package was installed.
+
+## TDD and verification
+
+- RED: bundled Python 3.12, `python3 -m unittest tests.test_qa_pdf` — 4 expected
+  failures because `qa_pdf.py` was absent.
+- Additional RED: blocked-evidence reference test failed because the initial renderer listed
+  `ev-pending` as approved; fixed by intersecting references with `verified_evidence`.
+- GREEN: bundled Python 3.12, `python3 -m unittest tests.test_qa_pdf` — 5 tests passed.
+- Regression: bundled Python 3.12,
+  `python3 -m unittest discover -s tests -p 'test_qa_*.py'` — 111 tests passed.
+- Load fixture: 100 criteria × 2000 characters produced more than 20 pages; pypdf 6.10.0
+  and pdfplumber 0.11.9 each extracted the complete expected token inventory.
+- `git diff --check` passed.
+
+## Visual evidence and cleanup
+
+- Generated `/tmp/pwdev-qa-f03-14.ONzNSu/report.pdf` and pages
+  `/tmp/pwdev-qa-f03-14.ONzNSu/page-1.png` through `page-7.png` with bundled
+  `native/poppler/bin/pdftoppm` at 110 DPI.
+- Inspected all 7 pages: margins, headings, page breaks, contents, accents, headers, footers,
+  status boxes, and long hashes were readable with no clipping or overlap.
+- Removed the PDF, rendered pages, temporary directory, and generated `__pycache__` trees.
+
+## Limitations
+
+- The embedded ReportLab Vera font covers the required Latin Unicode/accented text; scripts
+  outside that font's glyph repertoire are not promised by the v1 contract.
