@@ -12,6 +12,13 @@ Task F02-05: fix round 1 — finding Important confirmado; cenários mobile `REA
 Task F02-05: complete (commits 3846a91..8db1e6b, review clean after fix round 1)
 Task F02-06: fix round 1 — dois findings Important confirmados; cenários `READY` de dados e performance registram observações que exigem autorização sem carregar o escopo autorizativo completo.
 Task F02-06: complete (commits 8db1e6b..ec76425, review clean after fix round 1)
+Task F02-07: fix round 1 — finding Important confirmado; pentest `READY` omite owner, rate limit, stop conditions e cleanup.
+Task F02-07: minor (deferred): cenário de quarentena flaky registra owner e investigação, mas não explicita rationale e expiração delimitada.
+Task F02-07: complete (commits a0407c1..67872a7, review clean after fix round 1; 1 Minor deferred)
+Task F02-08: fix round 1 — quatro findings Important confirmados sobre rastreabilidade de regressão, precedência do parecer após reteste, fronteira de produção e prevenção determinística.
+Task F02-08: complete (commits 67872a7..323a985, review clean after fix round 1)
+Task F02-09: fix round 1 — dois findings Important confirmados; métrica positiva sem proveniência/IDs/evidências e decisão humana de prontidão sem actor/authority/scope/rationale/timestamp.
+Task F02-09: complete (commits 323a985..e69099b, review clean after fix round 1)
 
 Baseline 2026-09-12: `python3 -m unittest discover -s tests` executou 670 testes em 404.209s; 7 falhas preexistentes antes de qualquer código PWDEV QA.
 - 2 falhas `test_flow_claude_compat`: READMEs raiz não contêm `claude -p`.
@@ -44,5 +51,8 @@ Ruling: sanitização `pending` deve gerar diagnóstico explícito além de impe
 Ruling: nesta tarefa de skills Markdown, testes determinísticos devem interpretar a tabela de rotas em fixtures temporárias e comprovar resolução/recusa e ausência de mutação; avaliação do comportamento do modelo permanece no smoke real F05. Se estiver errado, F01 poderá oferecer confiança estrutural insuficiente antes do smoke final.
 Ruling: prontidão mobile `READY` exige probe positivo separado para todas as dimensões da plataforma — host, SDK/toolchain, ADB/conectividade quando aplicável, driver, build/signing, device e service; ausência ou probe não executado resulta em `BLOCKED` ou `unverified`, nunca `READY`. Se estiver errado, a referência poderá bloquear uma exploração consultiva parcial, mas não alegará capacidade de execução inexistente.
 Ruling: cenários de referência que exibem mutação ou carga observada só podem ser `READY` quando a própria linha carrega autorização rastreável e completa; para dados, alvo/dataset/limite de escrita/evidência, e para performance, alvo/limites/ambiente/janela. Se estiver errado, as tabelas ficarão mais verbosas, mas impedirão que autorização genérica seja confundida com permissão de execução.
+Ruling: pentest `READY` exige que a própria linha de cenário carregue owner, rate limit, stop conditions e cleanup, além de alvo, métodos, ambiente e janela; cada omissão mantém execução `NOT_RUN` e outcome `BLOCKED`. Se estiver errado, o cenário ficará mais estrito que uma proposta apenas consultiva, mas não confundirá autorização parcial com prontidão operacional.
+Ruling: percentual só é publicável quando target/contrato/coleta, IDs incluídos/excluídos e evidências sustentam numerador e denominador; decisão humana só habilita o cenário de readiness quando actor, authority, scope, rationale e timestamp estão explícitos e separados do parecer. Se estiver errado, a coleta exigirá mais metadados, mas evitará métricas e aprovações não auditáveis.
+Ruling: cenários positivos de regressão, defeitos e produção devem materializar as relações verificáveis que sustentam o estado: IDs change→risk/criterion/defect→case e exclusões; `PASS` após reteste somente com todos os critérios aplicáveis PASS e nenhum outro defeito vigente; fronteira de produção completa por dimensão; causa nomeada e check preventivo com IDs/oráculo/ambiente/pré-requisitos. Se estiver errado, os exemplos ficarão extensos, mas não produzirão `READY`/`PASS` a partir de rótulos genéricos.
 
 ## Rulings
