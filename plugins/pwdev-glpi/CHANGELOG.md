@@ -4,6 +4,29 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 Versionamento: `major.minor.patch` do plugin (`.claude-plugin/plugin.json`),
 independente do versionamento do servidor MCP `@soarescbm/mcp-glpi`.
 
+## [1.1.0] — 2026-09-12 (preparada, não publicada)
+
+### Adicionado
+- Compatibilidade documentada com GLPI **10.x e 11.x** usando o mesmo backend
+  da API REST Legacy V1 em `/apirest.php`.
+- Diagnóstico best-effort da geração por `getGlpiConfig`: falha HTTP,
+  permissão negada, payload desconhecido ou versão ausente resultam em
+  `unknown`, sem bloquear as tools.
+- Major numérico diferente de 10 e 11 é informado como `unsupported`, com
+  aviso e continuidade; `unsupported` não é tratado como `unknown`.
+
+### Alterado
+- Plugin preparado para fixar `@soarescbm/mcp-glpi@0.4.0`, preservando as 20
+  tools, 2 prompts, 3 resources e as variáveis `GLPI_PAT`, `GLPI_APP_TOKEN`,
+  `GLPI_USE_SESSION` e `GLPI_TIMEOUT_MS`.
+
+### Limites
+- A High-Level API V2 do GLPI 11 (`/api.php`) e OAuth2 não são suportados
+  nesta versão; o contrato permanece na Legacy V1.
+- `@soarescbm/mcp-glpi@0.4.0` ainda não está publicado no npm. Esta entrada
+  registra apenas a preparação local do plugin 1.1.0; publicação do MCP e do
+  plugin exige autorização separada.
+
 ## [1.0.5] — 2026-07-27
 
 ### Corrigido
