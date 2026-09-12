@@ -2,11 +2,14 @@
 
 import builtins
 import copy
+import hashlib
 import importlib.util
 import re
+import struct
 import sys
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
 from unittest import mock
 
@@ -22,6 +25,27 @@ SCRIPTS = ROOT / "plugins" / "pwdev-qa" / "scripts"
 PDF_SCRIPT = SCRIPTS / "qa_pdf.py"
 VERDICT_SCRIPT = SCRIPTS / "qa_verdict.py"
 REQUIREMENTS = ROOT / "plugins" / "pwdev-qa" / "requirements.txt"
+
+
+def png_fixture(width: int = 40, height: int = 24) -> bytes:
+    def chunk(kind: bytes, payload: bytes) -> bytes:
+        return (
+            struct.pack(">I", len(payload))
+            + kind
+            + payload
+            + struct.pack(">I", zlib.crc32(kind + payload) & 0xFFFFFFFF)
+        )
+
+    header = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    rows = b"".join(
+        b"\x00" + bytes((20, 80, 180)) * width for _ in range(height)
+    )
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(
+        b"IDAT", zlib.compress(rows)
+    ) + chunk(b"IEND", b"")
+
+
+PNG_BYTES = png_fixture()
 
 
 def load_module(name: str, path: Path):
@@ -60,6 +84,19 @@ class QaPdfTest(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.destination = Path(self.temporary.name) / "report.pdf"
+
+    def image_report(
+        self, relative_path: str, *, digest: str, size: int, media_type: str
+    ) -> dict:
+        data = valid_manifest()
+        data["defects"] = []
+        data["evidence"][0].update(
+            path=relative_path,
+            sha256=digest,
+            size_bytes=size,
+            media_type=media_type,
+        )
+        return build(data)
 
     def test_renders_a4_paginated_complete_public_report_with_textual_statuses(self) -> None:
         report = build(valid_manifest())
@@ -144,13 +181,68 @@ class QaPdfTest(unittest.TestCase):
                 self.renderer.render_pdf(report, self.destination)
         self.assertFalse(self.destination.exists())
 
+    def test_embeds_revalidated_verified_image_with_safe_caption(self) -> None:
+        relative = "artifacts/captura-á.png"
+        staged = self.destination.parent / relative
+        staged.parent.mkdir(parents=True)
+        staged.write_bytes(PNG_BYTES)
+        report = self.image_report(
+            relative,
+            digest=hashlib.sha256(PNG_BYTES).hexdigest(),
+            size=len(PNG_BYTES),
+            media_type="image/png",
+        )
+
+        self.renderer.render_pdf(report, self.destination)
+
+        reader = PdfReader(self.destination)
+        self.assertEqual(sum(len(page.images) for page in reader.pages), 1)
+        extracted = "\n".join(page.extract_text() or "" for page in reader.pages)
+        self.assertIn("Evidence image: ev-1 — artifacts/captura-á.png", extracted)
+
+    def test_refuses_unsafe_or_changed_staged_images(self) -> None:
+        digest = hashlib.sha256(PNG_BYTES).hexdigest()
+        scenarios = {
+            "missing": ("capture.png", digest, len(PNG_BYTES), "image/png", "missing"),
+            "hash": ("capture.png", "0" * 64, len(PNG_BYTES), "image/png", "SHA-256"),
+            "mime": ("capture.png", digest, len(PNG_BYTES), "image/jpeg", "MIME"),
+            "symlink": ("capture.png", digest, len(PNG_BYTES), "image/png", "symlink"),
+        }
+        for name, (relative, expected_hash, size, media_type, error) in scenarios.items():
+            with self.subTest(name=name):
+                parent = Path(self.temporary.name) / name
+                parent.mkdir()
+                self.destination = parent / "report.pdf"
+                staged = parent / relative
+                if name == "symlink":
+                    target = parent / "target.png"
+                    target.write_bytes(PNG_BYTES)
+                    staged.symlink_to(target.name)
+                elif name != "missing":
+                    staged.write_bytes(PNG_BYTES)
+                report = self.image_report(
+                    relative,
+                    digest=expected_hash,
+                    size=size,
+                    media_type=media_type,
+                )
+
+                with self.assertRaisesRegex(RuntimeError, error):
+                    self.renderer.render_pdf(report, self.destination)
+                self.assertFalse(self.destination.exists())
+
     def test_lists_only_verified_evidence_as_approved_references(self) -> None:
         data = valid_manifest()
         pending = copy.deepcopy(data["evidence"][0])
+        pending_path = self.destination.parent / "artifacts" / "SECRET-unreviewed.png"
+        pending_path.parent.mkdir(parents=True)
+        pending_path.write_bytes(PNG_BYTES)
         pending.update(
             id="ev-pending",
             path="artifacts/SECRET-unreviewed.png",
             media_type="image/png",
+            sha256=hashlib.sha256(PNG_BYTES).hexdigest(),
+            size_bytes=len(PNG_BYTES),
         )
         pending["sanitization"]["status"] = "pending"
         data["evidence"].append(pending)
@@ -169,6 +261,7 @@ class QaPdfTest(unittest.TestCase):
         self.assertNotIn("SECRET-unreviewed.png", extracted)
         self.assertIn("Approved evidence IDs\nev-1", extracted)
         self.assertIn("evidence 'ev-pending': unavailable", extracted)
+        self.assertEqual(sum(len(page.images) for page in PdfReader(self.destination).pages), 0)
 
     def test_declares_exact_runtime_and_verification_dependencies(self) -> None:
         lines = [

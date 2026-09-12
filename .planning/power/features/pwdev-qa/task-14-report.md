@@ -2,6 +2,32 @@
 
 Status: DONE
 
+## Review fix — round 1
+
+- Addressed the Important finding by embedding verified PNG/JPEG evidence with a safe text
+  caption containing its evidence ID and staged relative path.
+- Image bytes are reopened only beneath `destination.parent` through descriptor-relative
+  traversal with `O_NOFOLLOW`; no original or external evidence path is consulted.
+- Before a ReportLab flowable is created, the renderer revalidates approval flags, regular-file
+  type, exact byte size, SHA-256, declared-versus-detected MIME, and complete image decoding.
+  Missing files, symlinks, hash mismatches, MIME mismatches, and malformed images fail explicitly.
+- Pending evidence remains absent from both approved references and embedded PDF objects.
+- The deferred Minor concerning the final partial token in the 100 × 2000 fixture was not changed.
+
+### Fix TDD and fresh verification
+
+- RED: verified-image test found 0 embedded images; missing/hash/MIME/symlink scenarios raised
+  no error (5 expected failures).
+- GREEN: 7 PDF tests passed; full QA regression passed 113 tests.
+- Regression proof: stashed only the production fix, observed the same 5 failures again, restored
+  it, then observed both regression tests pass.
+- Fresh visual artifact: `/tmp/pwdev-qa-f03-14-fix1.w4tXnz/report.pdf`, rendered to 7 PNG pages
+  at 110 DPI using bundled `pdftoppm`. Pages 5–7 were inspected around the evidence boundary;
+  image, caption, margins, pagination, and surrounding sections had no clipping or overlap.
+- `pdfimages` and pypdf found exactly 1 embedded 480 × 240 RGB image on page 6. Both pypdf and
+  pdfplumber extracted `Evidence image: ev-1 — artifacts/capture.png` intact.
+- The fresh PDF, rendered pages, staged fixture, temporary directory, and caches were removed.
+
 ## Delivered
 
 - Added `render_pdf(report, destination) -> None` using exactly ReportLab 4.4.9.

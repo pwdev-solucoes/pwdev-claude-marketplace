@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import errno
+import hashlib
+import io
 import os
+import stat
 import tempfile
 from pathlib import Path
 from typing import Any, Iterable
@@ -21,6 +25,7 @@ def _reportlab():
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
         from reportlab.lib.units import mm
+        from reportlab.lib.utils import ImageReader
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
         from reportlab.pdfgen import canvas
@@ -28,6 +33,8 @@ def _reportlab():
             BaseDocTemplate,
             Frame,
             HRFlowable,
+            Image,
+            KeepTogether,
             PageBreak,
             PageTemplate,
             Paragraph,
@@ -65,6 +72,120 @@ def _joined(values: Iterable[Any]) -> str:
     return ", ".join(rendered) if rendered else "—"
 
 
+def _staged_image_bytes(root: Path, evidence: dict, image_reader):
+    identifier = _value(evidence.get("id"))
+    relative = Path(_value(evidence.get("path")))
+    if relative.is_absolute() or not relative.parts or any(
+        part in ("", ".", "..") for part in relative.parts
+    ):
+        raise RuntimeError(
+            f"evidence image {identifier}: path is not a confined relative path"
+        )
+    if (
+        evidence.get("status") != "VERIFIED"
+        or evidence.get("copy_allowed") is not True
+        or evidence.get("requires_copy_revalidation") is not True
+    ):
+        raise RuntimeError(
+            f"evidence image {identifier}: record is not approved for revalidation"
+        )
+    no_follow = getattr(os, "O_NOFOLLOW", 0)
+    if not no_follow or os.open not in os.supports_dir_fd:
+        raise RuntimeError(
+            f"evidence image {identifier}: no-follow traversal is unavailable"
+        )
+
+    read_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
+    directory_flags = read_flags | getattr(os, "O_DIRECTORY", 0) | no_follow
+    descriptors = []
+    try:
+        descriptors.append(os.open(root, read_flags | getattr(os, "O_DIRECTORY", 0)))
+        directory_fd = descriptors[-1]
+        for part in relative.parts[:-1]:
+            try:
+                opened = os.open(part, directory_flags, dir_fd=directory_fd)
+            except OSError as error:
+                if error.errno == errno.ELOOP:
+                    raise RuntimeError(
+                        f"evidence image {identifier}: symlink traversal refused"
+                    ) from error
+                if error.errno in (errno.ENOENT, errno.ENOTDIR):
+                    raise RuntimeError(
+                        f"evidence image {identifier}: staged file is missing"
+                    ) from error
+                raise RuntimeError(
+                    f"evidence image {identifier}: staged traversal failed"
+                ) from error
+            descriptors.append(opened)
+            directory_fd = opened
+        try:
+            file_fd = os.open(
+                relative.parts[-1],
+                read_flags | no_follow | getattr(os, "O_NONBLOCK", 0),
+                dir_fd=directory_fd,
+            )
+        except OSError as error:
+            if error.errno == errno.ELOOP:
+                raise RuntimeError(
+                    f"evidence image {identifier}: symlink refused"
+                ) from error
+            if error.errno in (errno.ENOENT, errno.ENOTDIR):
+                raise RuntimeError(
+                    f"evidence image {identifier}: staged file is missing"
+                ) from error
+            raise RuntimeError(
+                f"evidence image {identifier}: staged file open failed"
+            ) from error
+        descriptors.append(file_fd)
+        metadata = os.fstat(file_fd)
+        if not stat.S_ISREG(metadata.st_mode):
+            raise RuntimeError(
+                f"evidence image {identifier}: staged path is not a regular file"
+            )
+        expected_size = evidence.get("size_bytes")
+        if metadata.st_size != expected_size:
+            raise RuntimeError(
+                f"evidence image {identifier}: size mismatch "
+                f"(expected {expected_size}, found {metadata.st_size})"
+            )
+        chunks = []
+        while True:
+            chunk = os.read(file_fd, 1024 * 1024)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        data = b"".join(chunks)
+    finally:
+        for descriptor in reversed(descriptors):
+            os.close(descriptor)
+
+    actual_hash = hashlib.sha256(data).hexdigest()
+    if actual_hash != evidence.get("sha256"):
+        raise RuntimeError(f"evidence image {identifier}: SHA-256 mismatch")
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        actual_mime = "image/png"
+    elif data.startswith(b"\xff\xd8") and data.endswith(b"\xff\xd9"):
+        actual_mime = "image/jpeg"
+    else:
+        raise RuntimeError(
+            f"evidence image {identifier}: content is not a supported PNG or JPEG"
+        )
+    if actual_mime != evidence.get("media_type"):
+        raise RuntimeError(
+            f"evidence image {identifier}: MIME mismatch "
+            f"(expected {evidence.get('media_type')}, found {actual_mime})"
+        )
+    try:
+        decoded = image_reader(io.BytesIO(data))
+        width, height = decoded.getSize()
+        decoded.getRGBData()
+    except Exception as error:
+        raise RuntimeError(
+            f"evidence image {identifier}: complete image validation failed"
+        ) from error
+    return data, width, height
+
+
 def render_pdf(report: dict, destination: Path) -> None:
     """Write the public ``build_report`` projection to ``destination``.
 
@@ -78,6 +199,7 @@ def render_pdf(report: dict, destination: Path) -> None:
     colors = rl["colors"]
     A4 = rl["A4"]
     mm = rl["mm"]
+    ImageReader = rl["ImageReader"]
     pdfmetrics = rl["pdfmetrics"]
     TTFont = rl["TTFont"]
     canvas = rl["canvas"]
@@ -91,6 +213,8 @@ def render_pdf(report: dict, destination: Path) -> None:
     PageBreak = rl["PageBreak"]
     Spacer = rl["Spacer"]
     HRFlowable = rl["HRFlowable"]
+    Image = rl["Image"]
+    KeepTogether = rl["KeepTogether"]
     TA_CENTER = rl["TA_CENTER"]
 
     font_dir = Path(reportlab.__file__).resolve().parent / "fonts"
@@ -111,6 +235,8 @@ def render_pdf(report: dict, destination: Path) -> None:
     margin = 18 * mm
     page_width, page_height = A4
     run_id = _value(report["run_id"])
+    destination = Path(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
 
     class NumberedCanvas(canvas.Canvas):
         def __init__(self, *args, **kwargs):
@@ -413,6 +539,28 @@ def render_pdf(report: dict, destination: Path) -> None:
             ("Diagnostic", item["diagnostic"]),
         ):
             field(name, value)
+        if item["media_type"] in ("image/png", "image/jpeg"):
+            data, image_width, image_height = _staged_image_bytes(
+                destination.parent, item, ImageReader
+            )
+            scale = min(
+                1.0,
+                (page_width - 2 * margin) / image_width,
+                (110 * mm) / image_height,
+            )
+            image_flowable = Image(
+                io.BytesIO(data),
+                width=image_width * scale,
+                height=image_height * scale,
+            )
+            image_flowable.hAlign = "LEFT"
+            caption = Paragraph(
+                "Evidence image: {} — {}".format(
+                    _markup(item["id"]), _markup(item["path"])
+                ),
+                label,
+            )
+            story.append(KeepTogether([image_flowable, caption]))
 
     section("Diagnostics")
     if not report["diagnostics"]:
@@ -423,8 +571,6 @@ def render_pdf(report: dict, destination: Path) -> None:
     section("Verdict")
     field("Global verdict", report["verdict"], style=status)
 
-    destination = Path(destination)
-    destination.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = None
     try:
         with tempfile.NamedTemporaryFile(
