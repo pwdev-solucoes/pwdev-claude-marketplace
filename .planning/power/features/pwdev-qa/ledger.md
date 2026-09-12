@@ -19,17 +19,17 @@ Critério de baseline: testes `test_qa_*` devem ficar verdes; regressões novas 
 | Par/tarefa | Arquivo ou interface compartilhada | Compatibilidade |
 |---|---|---|
 | F01-01 -> F01-02/F01-03/F02/F04 | contrato de skill, workflow, safety e artifacts | Consumos nomeiam saídas de F01-01; limitação/autorização preservadas |
-| F01-02 -> F04-01/F05-02/F05-03 | `qa-tooling` e contrato de recomendação | campos de disponibilidade e evidência são usados sem instalação automática |
-| F01-03 -> F05-01/F05-03 | mappings de runtime | registro e smoke usam os mesmos nomes de runtime |
-| F02-01..06 -> F04 | `qa-specialist-*` | prefixo evita colisão com workflows `qa-*` |
-| F03-01 -> F03-02..07 | `validate_manifest(data: dict) -> dict` | consumidor recebe manifesto normalizado e preserva extras |
-| F03-02 -> F03-03/F03-06 | `inspect_evidence(root, manifest) -> list[dict]` | lista sanitizada; rejeitados não entram em exportação |
-| F03-03 -> F03-04/F03-05/F03-06 | `build_report(manifest, evidence) -> dict` | renderizadores não recalculam parecer |
-| F03-04/F03-05 -> F03-06/F03-07 | HTML/PDF do mesmo modelo | paridade validada contra a fonte, não apenas entre formatos |
-| F03-06 -> F04-05/F05-03 | `generate_report` e CLI | workflow report não executa comandos armazenados |
-| F04-01..05 -> F05-01/F05-03 | 10 skills e 10 wrappers | empacotamento conta e descobre nomes exatos |
-| F05-01 -> F05-02/F05-03 | 29 skills/manifests | catálogo e smoke verificam o inventário produzido |
-| Todas F01-01..F05-03 | texto interno vs Files/Consumes/Produces/Steps | 24 tarefas têm 2-5 arquivos, comando específico, ciclo RED/GREEN e dependências coerentes |
+| F01-02 -> F04-17/F05-23/F05-24 | `qa-tooling` e contrato de recomendação | campos de disponibilidade e evidência são usados sem instalação automática |
+| F01-03 -> F05-22/F05-24 | mappings de runtime | registro e smoke usam os mesmos nomes de runtime |
+| F02-04..09 -> F04 | `qa-specialist-*` | prefixo evita colisão com workflows `qa-*` |
+| F03-10 -> F03-11..16 | `validate_manifest(data: dict) -> dict` | consumidor recebe manifesto normalizado e preserva extras |
+| F03-11 -> F03-12/F03-15 | `inspect_evidence(root, manifest) -> list[dict]` | lista sanitizada; rejeitados não entram em exportação |
+| F03-12 -> F03-13/F03-14/F03-15 | `build_report(manifest, evidence) -> dict` | renderizadores não recalculam parecer |
+| F03-13/F03-14 -> F03-15/F03-16 | HTML/PDF do mesmo modelo | paridade validada contra a fonte, não apenas entre formatos |
+| F03-15 -> F04-21/F05-24 | `generate_report` e CLI | workflow report não executa comandos armazenados |
+| F04-17..21 -> F05-22/F05-24 | 10 skills e 10 wrappers | empacotamento conta e descobre nomes exatos |
+| F05-22 -> F05-23/F05-24 | 29 skills/manifests | catálogo e smoke verificam o inventário produzido |
+| Todas F01-01..F05-24 | texto interno vs Files/Consumes/Produces/Steps | 24 tarefas têm 2-5 arquivos, comando específico, ciclo RED/GREEN e dependências coerentes |
 
 Ruling: o baseline completo já está vermelho por 7 falhas fora do PWDEV QA; conclusão exigirá ausência de novas falhas e registro separado dessas 7. Se estiver errado, uma regressão preexistente poderá permanecer fora do escopo da branch.
 Ruling: planos por feature usam IDs locais; briefs e ledger sempre qualificam `Fxx-NN`. Se estiver errado, um status sem prefixo pode ser associado à tarefa incorreta.
