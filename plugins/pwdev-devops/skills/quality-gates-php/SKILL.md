@@ -34,7 +34,7 @@ comandos do projeto ou limites globais para substituir medições.
 | Testes | Pest ou PHPUnit | lockfile, `phpunit.xml`, seed, relógio/fuso fixados, fixtures e serviços efêmeros por imagem/digest | código de saída e relatório JUnit; bloqueia teste falho, erro ou execução incompleta, separando falha de infraestrutura |
 | Cobertura | cobertura do Pest/PHPUnit via PCOV ou Xdebug | mesmo conjunto de testes, driver e versão fixados; relatório Cobertura/HTML versionado como evidência | relatório de cobertura; bloqueia valor inferior a **80% nas linhas alteradas**; cobertura global existente não pode cair mais que **0,0 ponto percentual** |
 | SAST | Semgrep ou equivalente local | binário fixado, regras locais versionadas, exclusões revisadas e escopo explícito | SARIF/JSON; bloqueia achado novo de severidade `ERROR` e aumento da baseline por regra, impressão digital e caminho |
-| SCA | Composer Audit | `composer.lock`, versão do Composer e snapshot versionado da base de advisories | JSON; bloqueia advisory novo no snapshot controlado; consulta a base remota corrente é apenas informativa |
+| SCA | Trivy fixado por digest, em modo offline, sobre SBOM CycloneDX do Composer | `composer.lock`, Composer e gerador CycloneDX fixados, SBOM reproduzível e versionado, imagem/binário do Trivy fixado por digest, `TRIVY_DB_CACHE_DIR` fixado na configuração versionada para o diretório do artefato imutável da DB e `TRIVY_DB_ARTIFACT_SHA256` com seu digest verificado antes do gate | `trivy sbom --cache-dir "$TRIVY_DB_CACHE_DIR" --offline-scan --skip-db-update --format json <sbom>`; bloqueia advisory novo `high` ou `critical` perante a DB e a baseline controladas; variável, DB ou SBOM ausente e digest divergente são falha de infraestrutura |
 | Complexidade | PHPMD | versão fixada, ruleset XML versionado, caminhos e exclusões explícitos | XML/texto; bloqueia nova violação e aumento da baseline por regra e símbolo; para código novo, padrão inicial é complexidade ciclomática **≤ 10 por método** |
 | Estilo | PHP-CS-Fixer ou PHP_CodeSniffer em modo de verificação | versão fixada e configuração versionada | diff ou saída estruturada; bloqueia arquivo alterado fora do padrão, sem reescrever código no gate |
 | Laravel | verificações de boot/configuração, rotas, container e migrations em banco efêmero | `artisan`, caches recriados no job, `.env.testing` sem segredo, fixtures e imagem do banco fixadas | código de saída e logs; bloqueia falha de boot, resolução do container, cache de configuração/rotas ou migration do zero |
@@ -79,6 +79,19 @@ Em projeto Laravel, avalie também:
 Não rode migrations, limpezas de cache, filas ou qualquer comando mutável em produção como parte
 da avaliação. Falha na criação do ambiente é falha de infraestrutura e deve ser distinguida de
 regressão do produto, sem converter ausência de teste em aprovação.
+
+## SCA reproduzível
+
+Gere a SBOM CycloneDX de forma reproduzível a partir de `composer.lock`, com Composer e gerador
+fixados, e prepare fora do gate a vulnerability DB do Trivy como artefato imutável. Fixe a
+imagem ou o binário do Trivy por digest, configure `TRIVY_DB_CACHE_DIR` para o diretório extraído
+desse artefato e verifique seu conteúdo contra `TRIVY_DB_ARTIFACT_SHA256` antes da análise. O gate
+bloqueante executa `trivy sbom --cache-dir "$TRIVY_DB_CACHE_DIR" --offline-scan --skip-db-update
+--format json <sbom>` sem consultar a rede. Variável, DB ou SBOM ausente e digest divergente são
+falha de infraestrutura: não aprovam o gate nem criam baseline.
+
+O `composer audit` normal consulta advisories dos repositórios configurados. Por depender de
+estado de registry, ele é apenas informativo e nunca substitui o scanner offline bloqueante.
 
 ## SonarQube opcional
 
