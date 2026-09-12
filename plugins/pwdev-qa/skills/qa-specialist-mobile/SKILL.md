@@ -34,6 +34,11 @@ Read [workflow](../../references/workflow.md), [safety](../../references/safety.
 4. Ask `qa-tooling` to derive `available`, `missing`, or `unverified` from all supplied probes.
    Keep tool, SDK, driver, and device evidence separate. Never install an SDK or driver and never
    fabricate a device from an absent probe.
+   Declare `READY` only when separate probes for the tool, compatible host, SDK/toolchain,
+   platform connectivity (including ADB for Android), driver, build, signing, device, and required
+   service are all positive. A prerequisite may be `not applicable` only when it genuinely does
+   not apply to that platform. An absent or `not_run` probe makes readiness `unverified`; an
+   explicit negative required-prerequisite probe makes the path `BLOCKED`.
 5. Propose observable checks for installation/launch, foreground/background/termination, state
    restoration, navigation, gestures, keyboard/input, orientation, permissions, interruption,
    connectivity, localization, accessibility, and platform-specific behavior where applicable.
@@ -60,16 +65,23 @@ executed case result or global verdict.
 
 ## Reference scenarios
 
-| scenario | platform | tool | sdk | driver | device | outcome |
-|---|---|---|---|---|---|---|
-| platform-ready | Android | Appium UiAutomator2 | available | available | available emulator | READY |
-| platform-ready | iOS | Appium XCUITest | available | available | available simulator | READY |
-| missing-device | Android | Appium UiAutomator2 | available | available | missing | BLOCKED |
+| scenario | platform | tool_probe | host_probe | sdk_probe | adb_probe | driver_probe | build_probe | signing_probe | device_probe | service_probe | outcome |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| platform-ready | Android | positive: Appium | positive: compatible host | positive: Android SDK | positive: connected | positive: UiAutomator2 | positive: test build | positive: installable | positive: emulator | positive: test backend | READY |
+| platform-ready | iOS | positive: Appium | positive: macOS | positive: Xcode iOS SDK | not applicable: iOS | positive: XCUITest | positive: test build | positive: simulator-valid | positive: simulator | positive: test backend | READY |
+| missing-device | Android | positive: Appium | positive: compatible host | positive: Android SDK | positive: connected | positive: UiAutomator2 | positive: test build | positive: installable | negative: missing | positive: test backend | BLOCKED |
+| missing-host | iOS | positive: Appium | not_run: host | positive: Xcode iOS SDK | not applicable: iOS | positive: XCUITest | positive: test build | positive: simulator-valid | positive: simulator | positive: test backend | unverified |
+| missing-build | iOS | positive: Appium | positive: macOS | positive: Xcode iOS SDK | not applicable: iOS | positive: XCUITest | negative: missing | positive: simulator-valid | positive: simulator | positive: test backend | BLOCKED |
+| missing-signing | iOS | positive: Appium | positive: macOS | positive: Xcode iOS SDK | not applicable: iOS | positive: XCUITest | positive: test build | not_run: signing | positive: simulator | positive: test backend | unverified |
+| missing-adb | Android | positive: Appium | positive: compatible host | positive: Android SDK | not_run: ADB | positive: UiAutomator2 | positive: test build | positive: installable | positive: emulator | positive: test backend | unverified |
 
-The ready rows remain separate because Android SDK/UiAutomator2/emulator evidence cannot prove
-iOS Xcode/XCUITest/simulator readiness, or vice versa. In `missing-device`, positive tool, SDK,
-and driver probes do not create an Android device; execution remains `BLOCKED` and the specialist
-offers an authorized manual device or compatible native-runner alternative.
+The ready rows remain separate because Android host/SDK/ADB/UiAutomator2/build/signing/emulator
+evidence cannot prove iOS macOS/Xcode/XCUITest/build/signing/simulator readiness, or vice versa.
+Both also require a positive tool and service probe. In `missing-device` and `missing-build`, an
+explicit negative required probe keeps execution `BLOCKED`. In `missing-host`,
+`missing-signing`, and `missing-adb`, the applicable probe was not run, so readiness remains
+`unverified`. None of these limitation scenarios may become `READY` from the remaining positive
+probes.
 
 ## Failure modes
 

@@ -310,7 +310,20 @@ class QaSpecialistContractTest(unittest.TestCase):
         text = read_required(SPECIALISTS["qa-specialist-mobile"])
         rows = parse_scenarios(
             text,
-            ("scenario", "platform", "tool", "sdk", "driver", "device", "outcome"),
+            (
+                "scenario",
+                "platform",
+                "tool_probe",
+                "host_probe",
+                "sdk_probe",
+                "adb_probe",
+                "driver_probe",
+                "build_probe",
+                "signing_probe",
+                "device_probe",
+                "service_probe",
+                "outcome",
+            ),
         )
         ready = [row for row in rows if row["scenario"] == "platform-ready"]
         self.assertEqual(
@@ -319,19 +332,29 @@ class QaSpecialistContractTest(unittest.TestCase):
                 {
                     "scenario": "platform-ready",
                     "platform": "Android",
-                    "tool": "Appium UiAutomator2",
-                    "sdk": "available",
-                    "driver": "available",
-                    "device": "available emulator",
+                    "tool_probe": "positive: Appium",
+                    "host_probe": "positive: compatible host",
+                    "sdk_probe": "positive: Android SDK",
+                    "adb_probe": "positive: connected",
+                    "driver_probe": "positive: UiAutomator2",
+                    "build_probe": "positive: test build",
+                    "signing_probe": "positive: installable",
+                    "device_probe": "positive: emulator",
+                    "service_probe": "positive: test backend",
                     "outcome": "READY",
                 },
                 {
                     "scenario": "platform-ready",
                     "platform": "iOS",
-                    "tool": "Appium XCUITest",
-                    "sdk": "available",
-                    "driver": "available",
-                    "device": "available simulator",
+                    "tool_probe": "positive: Appium",
+                    "host_probe": "positive: macOS",
+                    "sdk_probe": "positive: Xcode iOS SDK",
+                    "adb_probe": "not applicable: iOS",
+                    "driver_probe": "positive: XCUITest",
+                    "build_probe": "positive: test build",
+                    "signing_probe": "positive: simulator-valid",
+                    "device_probe": "positive: simulator",
+                    "service_probe": "positive: test backend",
                     "outcome": "READY",
                 },
             ],
@@ -342,12 +365,56 @@ class QaSpecialistContractTest(unittest.TestCase):
     def test_mobile_missing_device_is_blocked_and_never_fabricated(self) -> None:
         rows = parse_scenarios(
             read_required(SPECIALISTS["qa-specialist-mobile"]),
-            ("scenario", "platform", "tool", "sdk", "driver", "device", "outcome"),
+            (
+                "scenario",
+                "platform",
+                "tool_probe",
+                "host_probe",
+                "sdk_probe",
+                "adb_probe",
+                "driver_probe",
+                "build_probe",
+                "signing_probe",
+                "device_probe",
+                "service_probe",
+                "outcome",
+            ),
         )
         limited = next(row for row in rows if row["scenario"] == "missing-device")
         self.assertEqual(limited["platform"], "Android")
-        self.assertEqual(limited["device"], "missing")
+        self.assertEqual(limited["device_probe"], "negative: missing")
         self.assertEqual(limited["outcome"], "BLOCKED")
+
+    def test_mobile_omitted_host_build_signing_or_adb_never_becomes_ready(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-mobile"]),
+            (
+                "scenario",
+                "platform",
+                "tool_probe",
+                "host_probe",
+                "sdk_probe",
+                "adb_probe",
+                "driver_probe",
+                "build_probe",
+                "signing_probe",
+                "device_probe",
+                "service_probe",
+                "outcome",
+            ),
+        )
+        expected = {
+            "missing-host": ("host_probe", "not_run: host", "unverified"),
+            "missing-build": ("build_probe", "negative: missing", "BLOCKED"),
+            "missing-signing": ("signing_probe", "not_run: signing", "unverified"),
+            "missing-adb": ("adb_probe", "not_run: ADB", "unverified"),
+        }
+        for scenario, (field, value, outcome) in expected.items():
+            with self.subTest(scenario=scenario):
+                row = next(item for item in rows if item["scenario"] == scenario)
+                self.assertEqual(row[field], value)
+                self.assertEqual(row["outcome"], outcome)
+                self.assertNotEqual(row["outcome"], "READY")
 
 
 if __name__ == "__main__":
