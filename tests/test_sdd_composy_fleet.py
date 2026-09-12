@@ -252,11 +252,37 @@ elif 'set-status' in a: raise SystemExit(23)
         fleet=self.repo/'.planning/sdd-composy/fleet/demo'; member_file=fleet/'members/TASK-001.json'
         member=json.loads(member_file.read_text()); work=Path(member['worktree_path']); handle=fleet/'task-001.ui.json'
         self.assertTrue(work.is_dir()); self.assertTrue(handle.is_file())
-        self.assertEqual(json.loads(handle.read_text())['workspace_id'],'11111111-1111-1111-1111-111111111111')
+        published=json.loads(handle.read_text())
+        self.assertEqual(published['workspace_id'],'11111111-1111-1111-1111-111111111111')
+        self.assertEqual(published['fleet_id'],'demo'); self.assertEqual(published['member_id'],'task-001')
         loops=list((self.repo/'.planning/sdd-composy/loops').glob('*.json')); self.assertEqual(len(loops),1)
         self.assertEqual(member['interaction']['loop']['id'],json.loads(loops[0].read_text())['id'])
         calls=log.read_text(); self.assertEqual(calls.count('new-workspace'),1); self.assertNotIn('called',calls)
         self.assertIn('interactive-run.sh',calls); self.assertNotIn('/run.sh task-001',calls)
+
+    def test_launch_tmux_publishes_exact_owners_and_keeps_runner_as_first_command_argv(self):
+        self._approved_launch_fixture(); fake=Path(self.tmp.name)/'fake-tmux-launch'; fake.mkdir(); log=fake/'calls.log'
+        (fake/'codex').write_text('#!/bin/sh\nexit 0\n'); (fake/'codex').chmod(0o755)
+        (fake/'tmux').write_text("""#!/bin/sh
+printf '%s\n' "$*" >> "$TMUX_LOG"
+case "$*" in
+ *has-session*) exit 1;;
+ *new-session*) printf 'sdd-composy-acceptance-task-001|%%19\n';;
+esac
+exit 0
+"""); (fake/'tmux').chmod(0o755)
+        result=subprocess.run(
+            [str(LAUNCH),'--runtime','codex','--ui','tmux','--root',str(self.repo),
+             '--fleet-id','acceptance','--base-branch',self.base,'--task',str(self.contract)],
+            capture_output=True,text=True,env={**os.environ,'PATH':str(fake)+':/usr/bin:/bin','TMUX_LOG':str(log)})
+        self.assertEqual(result.returncode,0,result.stderr)
+        handle=self.repo/'.planning/sdd-composy/fleet/acceptance/task-001.ui.json'
+        published=json.loads(handle.read_text())
+        self.assertEqual(published['fleet_id'],'acceptance'); self.assertEqual(published['member_id'],'task-001')
+        creation=next(line for line in log.read_text().splitlines() if 'new-session' in line)
+        command=creation.split(' -- ',1)[1].split()
+        self.assertTrue(command[0].endswith('/interactive-run.sh'),creation)
+        self.assertTrue(command[1].endswith('/members/TASK-001.json'),creation)
 
     def test_symlinked_state_ancestor_is_rejected_without_external_write(self):
         self.task(); outside=Path(self.tmp.name+"-outside"); outside.mkdir(); (self.repo/".planning").symlink_to(outside,target_is_directory=True)

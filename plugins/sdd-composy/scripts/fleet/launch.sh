@@ -206,7 +206,7 @@ PY
       fi
     else
       cmd=("$HERE/interactive-run.sh" "$member_file" "$work")
-      if ! "fleet_ui_${ui}_start" "$handle" "$work" "$fleet_id-$slug" "${cmd[@]}"; then
+      if ! "fleet_ui_${ui}_start" "$handle" "$work" "$fleet_id" "$slug" "${cmd[@]}"; then
         fleet_ui_resource_established "$ui" "$handle" && trap 'fleet_unlock "$lock"' EXIT
         fleet_die "$ui runner creation failed"
       fi
