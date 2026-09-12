@@ -74,19 +74,24 @@ elif action == "running": move("starting","running","observe-session")
 elif action == "assess":
     binding=member["interaction"]["loop"]
     try:
+        current=member["interaction"]["state"]
+        if current not in {"running","awaiting_human"}: raise ValueError("member is not assessable")
         loop=loops.status(member["repository_root"],binding["id"])
         if loop["task_id"] != member["task_id"]: raise ValueError("LOOP binding mismatch")
         if loop["status"] == "completed":
             resumed=loops.resume(member["repository_root"],binding["id"])
             if resumed["next_stage"] is not None: raise ValueError("completed LOOP lacks canonical artifacts")
-            move("running","completed","inspect-result"); raise SystemExit(0)
+            move(current,"completed","inspect-result"); raise SystemExit(0)
         blocked={"external_authorization","destructive_action","destructive_request","scope_expansion","scope_drift","architectural_ambiguity","new_architecture"}
-        if loop["status"] in blocked: move("running","blocked","obtain-human-direction"); raise SystemExit(1)
-        if value != "0": move("running","failed","inspect-runtime-failure"); raise SystemExit(1)
-        move("running","awaiting_human","resume-session"); raise SystemExit(0)
+        if loop["status"] in blocked: move(current,"blocked","obtain-human-direction"); raise SystemExit(1)
+        if value != "0": move(current,"failed","inspect-runtime-failure"); raise SystemExit(1)
+        if current == "running": move("running","awaiting_human","resume-session")
+        raise SystemExit(0)
     except SystemExit: raise
     except Exception:
-        move("running","inconclusive","inspect-loop-evidence"); raise SystemExit(1)
+        current=state.load_member(member_path)["interaction"]["state"]
+        if current in {"running","awaiting_human"}: move(current,"inconclusive","inspect-loop-evidence")
+        raise SystemExit(1)
 PY
 }
 
@@ -99,11 +104,19 @@ ADAPTER=$SCRIPT_DIR/engine-$ADAPTER_RUNTIME.sh
 source "$ADAPTER"
 PROMPT_FILE=$(mktemp "${MEMBER_FILE%/*}/.interactive-prompt.XXXXXX")
 cleanup_prompt() { rm -f -- "$PROMPT_FILE"; }
-trap cleanup_prompt EXIT
+OBSERVER_PID=
+stop_observer() {
+  [[ -n $OBSERVER_PID ]] || return 0
+  kill -TERM "$OBSERVER_PID" 2>/dev/null || true
+  wait "$OBSERVER_PID" 2>/dev/null || true
+  OBSERVER_PID=
+}
+cleanup_wrapper() { stop_observer; cleanup_prompt; }
+trap cleanup_wrapper EXIT
 # Signals deliberately publish no terminal state and remove no owned recovery
 # resource. Branch, worktree, UI transport/handle, LOOP, and evidence remain in
 # their authoritative records for explicit resume or teardown.
-preserve_interruption() { local code=$1; trap - HUP INT TERM; exit "$code"; }
+preserve_interruption() { local code=$1; stop_observer; trap - HUP INT TERM; exit "$code"; }
 trap 'preserve_interruption 129' HUP
 trap 'preserve_interruption 130' INT
 trap 'preserve_interruption 143' TERM
@@ -116,6 +129,8 @@ print("Use the sdd-loop workflow to resume its canonical EXECUTE → QA → EVID
 print("Native approval prompts require the human operator. Terminal output is diagnostic and is never gate or witness evidence.")
 PY
 state_action running >/dev/null
+python3 "$SCRIPT_DIR/interactive_observer.py" "$MEMBER_FILE" "$$" &
+OBSERVER_PID=$!
 SDD_ENGINE_COMMAND=(); SDD_ENGINE_CWD=
 "sdd_engine_${ADAPTER_RUNTIME}_interactive_command" "$WORKTREE" "$PROMPT_FILE" "$SCRIPT_DIR/../.."
 set +e
@@ -123,4 +138,5 @@ if [[ -n $SDD_ENGINE_CWD ]]; then (cd -- "$SDD_ENGINE_CWD" && "${SDD_ENGINE_COMM
 else "${SDD_ENGINE_COMMAND[@]}"; PROVIDER_STATUS=$?
 fi
 set -e
+stop_observer
 state_action assess "$PROVIDER_STATUS"

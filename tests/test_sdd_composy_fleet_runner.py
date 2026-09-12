@@ -1,11 +1,18 @@
-import json, os, subprocess, tempfile, unittest
+import importlib.util, json, os, subprocess, tempfile, unittest
 from pathlib import Path
 from tests.test_sdd_composy import assert_schema_valid
 
 ROOT = Path(__file__).parents[1]
 FLEET = ROOT / "plugins/sdd-composy/scripts/fleet"
+OBSERVER = FLEET / "interactive_observer.py"
 
 class FleetRunnerTest(unittest.TestCase):
+    def observer(self):
+        self.assertTrue(OBSERVER.is_file(), "production observer is missing")
+        spec=importlib.util.spec_from_file_location("sdd_fleet_interactive_observer",OBSERVER)
+        module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        return module
+
     def source(self, runtime, code):
         script = FLEET / f"engine-{runtime}.sh"
         return subprocess.run(["bash", "-c", f'. "{script}"; {code}'], capture_output=True, text=True)
@@ -38,6 +45,26 @@ class FleetRunnerTest(unittest.TestCase):
             self.assertEqual(member["interaction"]["loop"]["id"],"loop-fleet-member"); self.assertEqual(member["x-preserved"],{"yes":True})
             text=prompt.read_text(); self.assertIn("fleet-1",text); self.assertIn("member-1",text); self.assertIn("TASK-001",text); self.assertIn("loop-fleet-member",text)
             self.assertNotIn(" sdd-loop start ",text)
+
+    def test_observer_publishes_at_exactly_300_with_live_original_parent_without_signals_or_terminal(self):
+        with tempfile.TemporaryDirectory() as d:
+            _,_,member=self.interactive_fixture(d); record=json.loads(member.read_text()); record["interaction"]["state"]="running"; member.write_text(json.dumps(record))
+            class Clock:
+                value=0.0
+                def monotonic(self): return self.value
+                def sleep(self,seconds): self.value += seconds
+            clock=Clock(); checks=[]
+            outcome=self.observer().observe(member,4242,clock=clock.monotonic,sleep=clock.sleep,parent_alive=lambda pid: checks.append(("alive",pid)) or True,parent_is_original=lambda pid: checks.append(("parent",pid)) or True)
+            updated=json.loads(member.read_text())
+            self.assertEqual(clock.value,300.0); self.assertEqual(outcome,"awaiting_human"); self.assertEqual(updated["interaction"]["state"],"awaiting_human")
+            self.assertEqual(updated["interaction"]["next_action"],"resume-session"); self.assertNotIn("terminal",updated["interaction"]); self.assertNotIn("signal",updated["interaction"])
+            self.assertTrue(all(pid==4242 for _,pid in checks))
+
+    def test_observer_cancels_when_original_parent_relationship_ends(self):
+        with tempfile.TemporaryDirectory() as d:
+            _,_,member=self.interactive_fixture(d); record=json.loads(member.read_text()); record["interaction"]["state"]="running"; member.write_text(json.dumps(record)); before=member.read_bytes()
+            outcome=self.observer().observe(member,4242,clock=lambda:0.0,sleep=lambda _:None,parent_alive=lambda _:True,parent_is_original=lambda _:False)
+            self.assertEqual(outcome,"cancelled"); self.assertEqual(member.read_bytes(),before)
 
     def test_interactive_wrapper_rejects_pending_task_before_runtime(self):
         with tempfile.TemporaryDirectory() as d:
