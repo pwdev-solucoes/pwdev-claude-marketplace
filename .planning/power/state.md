@@ -2,10 +2,10 @@
 
 - Schema: 1
 - Repository: brownfield
-- Status: VERIFICATION_APPROVED_WITH_LIMITATIONS
+- Status: VERIFICATION_APPROVED
 - Active feature: quality-gates-skills
 - Active artifact: .planning/power/features/quality-gates-skills/verdict.md
-- Last gate: APPROVED — independent verification at 1cbae09
+- Last gate: APPROVED — independent verification at 979fa91
 - Correction cycles: 0
 - Updated: 2026-09-12
-- Next: resolve or explicitly accept the pre-existing full-suite failures before integration
+- Next: run pwdev-power:power-finish
