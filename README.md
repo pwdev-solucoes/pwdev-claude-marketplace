@@ -35,7 +35,7 @@ Restart the runtime after installation. Read each plugin README for its setup an
 | [pwdev-devops](./plugins/pwdev-devops/) | 1.0.0 | Platform, operations and incidents |
 | [pwdev-feat](./plugins/pwdev-feat/) | 2.1.1 | Fast feature planning |
 | [pwdev-flow](./plugins/pwdev-flow/) | 0.6.0 | Portable development workflow |
-| [pwdev-glpi](./plugins/pwdev-glpi/) | 1.1.0 | GLPI ITSM |
+| [pwdev-glpi](./plugins/pwdev-glpi/) | 1.2.0 | Multi-runtime GLPI ITSM for Claude Code, Codex and Hermes |
 | [pwdev-obsidian](./plugins/pwdev-obsidian/) | 1.0.0 | Obsidian vault operations |
 | [pwdev-postgres](./plugins/pwdev-postgres/) | 1.0.0 | Safe PostgreSQL operations |
 | [pwdev-power](./plugins/pwdev-power/) | 0.1.0 | Approval-gated development and cmux fleets |

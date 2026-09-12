@@ -4,6 +4,19 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 Versionamento: `major.minor.patch` do plugin (`.claude-plugin/plugin.json`),
 independente do versionamento do servidor MCP `@soarescbm/mcp-glpi`.
 
+## [1.2.0] — 2026-09-12 (preparada, não publicada)
+
+### Adicionado
+- Compatibilidade do plugin com Claude Code, Codex e Hermes por meio da skill
+  compartilhada e dos adaptadores de runtime correspondentes.
+- Catálogo atualizado para identificar explicitamente o suporte multi-runtime.
+
+### Mantido
+- GLPI 10.x e 11.x via API REST Legacy V1 e servidor MCP
+  `@soarescbm/mcp-glpi@0.4.0`, com 20 tools, 2 prompts e 3 resources.
+- Esta entrada registra somente a preparação local; publicação, release e
+  distribuição exigem autorização separada.
+
 ## [1.1.0] — 2026-09-12 (preparada, não publicada)
 
 ### Adicionado
