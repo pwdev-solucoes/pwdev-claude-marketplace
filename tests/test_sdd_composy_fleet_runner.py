@@ -10,6 +10,61 @@ class FleetRunnerTest(unittest.TestCase):
         script = FLEET / f"engine-{runtime}.sh"
         return subprocess.run(["bash", "-c", f'. "{script}"; {code}'], capture_output=True, text=True)
 
+    def interactive_fixture(self, folder, *, loop_task="TASK-001", task_state="ready", loop_status="running"):
+        root=Path(folder)/"repo"; work=root/"work"; work.mkdir(parents=True)
+        contract=root/"task.json"; contract.write_text(json.dumps({"id":"TASK-001","state":task_state}))
+        loops=root/".planning/sdd-composy/loops"; loops.mkdir(parents=True)
+        stamp="2026-09-12T00:00:00Z"; loop_id="loop-fleet-member"
+        loop={"schema_version":"1","id":loop_id,"task_id":loop_task,"status":loop_status,"iteration":0,"max_iterations":3,"started_at":stamp,"updated_at":stamp,"stages":[{"name":name,"status":"pending"} for name in ("EXECUTE","QA","EVIDENCE","REVIEW","VERIFY")]}
+        if loop_status != "running": loop.update(stop_reason="Completed",finished_at=stamp)
+        (loops/f"{loop_id}.json").write_text(json.dumps(loop))
+        member=root/"member.json"
+        member.write_text(json.dumps({"schema_version":"2","id":"member-1","task_id":"TASK-001","slug":"member-1","status":"pending","runtime":"codex","ui":"cmux","branch":"fleet/member-1","worktree_path":str(work),"repository_root":str(root),"started_at":stamp,"updated_at":stamp,"owner":{"kind":"sdd-composy-fleet","fleet_id":"fleet-1","member_id":"member-1"},"resources":{"branch":"fleet/member-1","worktree_path":str(work),"port":43001,"compose_project":"fleet-1-member-1","compose_file":".planning/sdd-composy/fleet/fleet-1/docker-compose.yml","compose_allocated":False},"contract_path":str(contract),"interaction":{"state":"starting","started_at":stamp,"updated_at":stamp,"loop":{"id":loop_id,"task_id":"TASK-001"}},"x-preserved":{"yes":True}}))
+        return root,work,member
+
+    def run_interactive(self, folder, **fixture):
+        root,work,member=self.interactive_fixture(folder,**fixture); fake=Path(folder)/"bin"; fake.mkdir()
+        capture=Path(folder)/"prompt"; (fake/"codex").write_text("#!/bin/sh\nfor value do last=$value; done\nprintf '%s' \"$last\" > \"$CAPTURE\"\n")
+        (fake/"codex").chmod(0o755)
+        result=subprocess.run([str(FLEET/"interactive-run.sh"),str(member),str(work)],env={**os.environ,"PATH":str(fake)+":"+os.environ["PATH"],"CAPTURE":str(capture)},capture_output=True,text=True)
+        return result,json.loads(member.read_text()),capture
+
+    def test_interactive_wrapper_consumes_one_bound_loop_without_starting_another(self):
+        with tempfile.TemporaryDirectory() as d:
+            result,member,prompt=self.run_interactive(d)
+            self.assertEqual(result.returncode,0,result.stderr); self.assertEqual(member["interaction"]["state"],"awaiting_human")
+            self.assertEqual(member["interaction"]["loop"]["id"],"loop-fleet-member"); self.assertEqual(member["x-preserved"],{"yes":True})
+            text=prompt.read_text(); self.assertIn("fleet-1",text); self.assertIn("member-1",text); self.assertIn("TASK-001",text); self.assertIn("loop-fleet-member",text)
+            self.assertNotIn(" sdd-loop start ",text)
+
+    def test_interactive_wrapper_rejects_pending_task_before_runtime(self):
+        with tempfile.TemporaryDirectory() as d:
+            result,member,prompt=self.run_interactive(d,task_state="pending")
+            self.assertNotEqual(result.returncode,0); self.assertEqual(member["interaction"]["state"],"blocked"); self.assertFalse(prompt.exists())
+
+    def test_interactive_wrapper_rejects_cross_bound_loop(self):
+        with tempfile.TemporaryDirectory() as d:
+            result,member,prompt=self.run_interactive(d,loop_task="TASK-002")
+            self.assertNotEqual(result.returncode,0); self.assertEqual(member["interaction"]["state"],"blocked"); self.assertFalse(prompt.exists())
+
+    def test_interactive_wrapper_requires_loop_proof_for_completion(self):
+        with tempfile.TemporaryDirectory() as d:
+            result,member,_=self.run_interactive(d,loop_status="completed")
+            self.assertNotEqual(result.returncode,0); self.assertEqual(member["interaction"]["state"],"inconclusive")
+
+    def test_interactive_wrapper_interruption_preserves_member_and_loop(self):
+        with tempfile.TemporaryDirectory() as d:
+            root,work,member=self.interactive_fixture(d); fake=Path(d)/"bin"; fake.mkdir()
+            (fake/"codex").write_text("#!/bin/sh\nkill -TERM $PPID\n") ; (fake/"codex").chmod(0o755)
+            result=subprocess.run([str(FLEET/"interactive-run.sh"),str(member),str(work)],env={**os.environ,"PATH":str(fake)+":"+os.environ["PATH"]},capture_output=True,text=True)
+            record=json.loads(member.read_text())
+            self.assertNotEqual(result.returncode,0); self.assertEqual(record["interaction"]["state"],"running")
+            self.assertTrue((root/".planning/sdd-composy/loops/loop-fleet-member.json").is_file()); self.assertTrue(work.is_dir())
+
+    def test_headless_runner_consumes_bound_loop_identity(self):
+        text=(FLEET/"run.sh").read_text()
+        self.assertIn('BOUND_LOOP_ID',text); self.assertNotIn('sdd_loop.start',text)
+
     def test_codex_vector_is_fixed_and_acknowledges_dangerous_mode(self):
         r = self.source("codex", 'sdd_engine_codex_stage_command /wt /schema /result PROMPT; printf "%s\\n" "${FLOW_ENGINE_COMMAND[@]}"')
         self.assertEqual(r.returncode, 0, r.stderr)

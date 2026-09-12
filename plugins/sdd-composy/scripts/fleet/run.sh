@@ -215,6 +215,9 @@ if ! jq -e --arg slug "$SLUG" --arg branch "$EXPECTED_BRANCH" --arg worktree "$W
 ' "$MEMBER_FILE" >/dev/null 2>&1; then fail "registered fleet member does not bind $SLUG to the supplied worktree"; fi
 CENTRAL_STATUS=$(jq -r '.status // ""' "$MEMBER_FILE")
 [[ $CENTRAL_STATUS == pending || $CENTRAL_STATUS == running ]] || fail "central member status $CENTRAL_STATUS cannot start a runner"
+# Task 05 supplies the binding for new headless members. Keep legacy v2 members
+# startable while consuming that immutable identity whenever it is present.
+BOUND_LOOP_ID=$(jq -r '.interaction.loop.id // ""' "$MEMBER_FILE")
 BOUND_SPEC_SHA256=$(jq -r '.spec_sha256 // ""' "$MEMBER_FILE"); BOUND_DECISIONS_SHA256=$(jq -r '.decisions_sha256 // ""' "$MEMBER_FILE")
 worktree_identity_matches || fail 'registered fleet member does not match canonical Git worktree registration'
 
