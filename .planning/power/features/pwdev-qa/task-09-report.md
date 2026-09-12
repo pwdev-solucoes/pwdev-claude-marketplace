@@ -35,3 +35,21 @@ Date: 2026-09-12
   to F05-24.
 - No workflow, evidence command, release, deployment, external effect, product correction, or
   human approval was executed by these advisory contracts.
+
+## Review correction — round 1
+
+- The positive metric scenario now materializes target, contract, collection source, freshness
+  and build, all 10 criterion IDs, the 8 numerator IDs, the two remaining statuses/reasons,
+  explicit N/A accounting, and evidence references.
+- Nine isolated metric-precondition omissions each return `BLOCKED` with no percentage.
+- The release-ready scenario now keeps the QA verdict and human decision record separate and
+  exposes decision record, actor, authority, scope, rationale, and timestamp.
+- Six isolated human-decision omissions each return `BLOCKED`; the specialist still only
+  recommends and never grants or executes release approval.
+- RED: the corrected focused suite ran 42 tests with 7 expected scenario-contract failures before
+  implementation.
+- GREEN: the corrected focused suite passed 42 tests.
+- Regression proof: temporarily reversing both skill fixes made the four new focused contract
+  tests fail; restoring the patch returned all 42 focused tests to green.
+- F01/F02 regression: 63 tests passed across core, tooling, runtime contracts, and specialists.
+- Diff hygiene: `git diff --check` passed after restoration.

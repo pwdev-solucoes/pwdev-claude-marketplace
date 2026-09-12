@@ -38,6 +38,40 @@ COMMON_SECTIONS = (
     "Safety",
     "Related skills",
 )
+METRIC_COLUMNS = (
+    "scenario",
+    "metric",
+    "target",
+    "contract",
+    "source_collection",
+    "freshness_build",
+    "numerator",
+    "denominator",
+    "population",
+    "window",
+    "criterion_ids",
+    "numerator_ids",
+    "remainder_status_reason",
+    "na_items_reason",
+    "evidence_refs",
+    "state_treatment",
+    "result",
+)
+READINESS_COLUMNS = (
+    "scenario",
+    "applicable_criteria",
+    "current_defects",
+    "risks",
+    "limitations",
+    "decision_record",
+    "decision_actor",
+    "decision_authority",
+    "decision_scope",
+    "decision_rationale",
+    "decision_timestamp",
+    "verdict",
+    "recommendation",
+)
 
 
 def read_required(path: Path) -> str:
@@ -1139,29 +1173,26 @@ class QaSpecialistContractTest(unittest.TestCase):
 
     def test_metrics_carry_explicit_population_window_denominator_and_state_treatment(self) -> None:
         text = read_required(SPECIALISTS["qa-specialist-metrics"])
-        rows = parse_scenarios(
-            text,
-            (
-                "scenario",
-                "metric",
-                "numerator",
-                "denominator",
-                "population",
-                "window",
-                "state_treatment",
-                "result",
-            ),
-        )
+        rows = parse_scenarios(text, METRIC_COLUMNS)
         measured = next(row for row in rows if row["scenario"] == "explicit-rate")
         self.assertEqual(
             measured,
             {
                 "scenario": "explicit-rate",
                 "metric": "applicable criterion pass rate",
+                "target": "checkout-api build rc-17",
+                "contract": "QA-CONTRACT-17 sha256:abc123",
+                "source_collection": "normalized manifest run-17 collected by qa-report",
+                "freshness_build": "fresh for build rc-17",
                 "numerator": "8 PASS",
                 "denominator": "10 applicable criteria",
                 "population": "complete release-candidate criterion catalog",
                 "window": "build rc-17 at 2026-09-12T18:00Z",
+                "criterion_ids": "AC-01 AC-02 AC-03 AC-04 AC-05 AC-06 AC-07 AC-08 AC-09 AC-10",
+                "numerator_ids": "AC-01 AC-02 AC-03 AC-04 AC-05 AC-06 AC-07 AC-08",
+                "remainder_status_reason": "AC-09=FAIL expected total mismatch; AC-10=BLOCKED evidence pending",
+                "na_items_reason": "none",
+                "evidence_refs": "EV-01 EV-02 EV-03 EV-04 EV-05 EV-06 EV-07 EV-08 EV-09 EV-10",
                 "state_treatment": "PASS numerator; FAIL BLOCKED NOT_RUN denominator only; NOT_APPLICABLE excluded",
                 "result": "80%",
             },
@@ -1170,19 +1201,7 @@ class QaSpecialistContractTest(unittest.TestCase):
         self.assertRegex(text, r"(?is)numerator.*denominator.*population.*window")
 
     def test_metrics_zero_applicable_is_blocked_without_a_percentage(self) -> None:
-        rows = parse_scenarios(
-            read_required(SPECIALISTS["qa-specialist-metrics"]),
-            (
-                "scenario",
-                "metric",
-                "numerator",
-                "denominator",
-                "population",
-                "window",
-                "state_treatment",
-                "result",
-            ),
-        )
+        rows = parse_scenarios(read_required(SPECIALISTS["qa-specialist-metrics"]), METRIC_COLUMNS)
         empty = next(row for row in rows if row["scenario"] == "zero-applicable")
         self.assertEqual(empty["numerator"], "0 PASS")
         self.assertEqual(empty["denominator"], "0 applicable criteria")
@@ -1194,21 +1213,29 @@ class QaSpecialistContractTest(unittest.TestCase):
         self.assertEqual(empty["result"], "BLOCKED")
         self.assertNotRegex(empty["result"], r"100%|PASS")
 
+    def test_metrics_missing_any_audit_precondition_is_blocked_without_a_percentage(self) -> None:
+        rows = parse_scenarios(read_required(SPECIALISTS["qa-specialist-metrics"]), METRIC_COLUMNS)
+        omissions = {
+            "missing-metric-target": "target",
+            "missing-metric-contract": "contract",
+            "missing-source-collection": "source_collection",
+            "missing-freshness-build": "freshness_build",
+            "missing-criterion-ids": "criterion_ids",
+            "missing-numerator-ids": "numerator_ids",
+            "missing-remainder-status-reason": "remainder_status_reason",
+            "missing-na-accounting": "na_items_reason",
+            "missing-metric-evidence": "evidence_refs",
+        }
+        for scenario, field in omissions.items():
+            with self.subTest(scenario=scenario):
+                row = next(item for item in rows if item["scenario"] == scenario)
+                self.assertEqual(row[field], "missing")
+                self.assertEqual(row["result"], "BLOCKED")
+                self.assertNotRegex(row["result"], r"%|PASS")
+
     def test_readiness_pass_is_a_recommendation_after_human_decision_not_an_approval(self) -> None:
         text = read_required(SPECIALISTS["qa-specialist-readiness"])
-        rows = parse_scenarios(
-            text,
-            (
-                "scenario",
-                "applicable_criteria",
-                "current_defects",
-                "risks",
-                "limitations",
-                "human_decision",
-                "verdict",
-                "recommendation",
-            ),
-        )
+        rows = parse_scenarios(text, READINESS_COLUMNS)
         ready = next(row for row in rows if row["scenario"] == "release-ready")
         self.assertEqual(
             ready,
@@ -1218,7 +1245,12 @@ class QaSpecialistContractTest(unittest.TestCase):
                 "current_defects": "none including unlinked inventory",
                 "risks": "none unresolved",
                 "limitations": "none pending",
-                "human_decision": "release owner approved",
+                "decision_record": "recorded approve",
+                "decision_actor": "release-owner-17",
+                "decision_authority": "production release owner",
+                "decision_scope": "checkout-api build rc-17",
+                "decision_rationale": "all applicable criteria passed and no current defects or pending risks",
+                "decision_timestamp": "2026-09-12T18:30:00Z",
                 "verdict": "PASS",
                 "recommendation": "recommend release without approving it",
             },
@@ -1227,39 +1259,15 @@ class QaSpecialistContractTest(unittest.TestCase):
         self.assertRegex(text, r"(?is)human.*decision")
 
     def test_readiness_proven_unlinked_failure_overrides_risk_acceptance(self) -> None:
-        rows = parse_scenarios(
-            read_required(SPECIALISTS["qa-specialist-readiness"]),
-            (
-                "scenario",
-                "applicable_criteria",
-                "current_defects",
-                "risks",
-                "limitations",
-                "human_decision",
-                "verdict",
-                "recommendation",
-            ),
-        )
+        rows = parse_scenarios(read_required(SPECIALISTS["qa-specialist-readiness"]), READINESS_COLUMNS)
         failed = next(row for row in rows if row["scenario"] == "proven-unlinked-failure")
         self.assertEqual(failed["current_defects"], "DEF-UNLINKED-01 proven current in scope")
-        self.assertEqual(failed["human_decision"], "risk accepted by release owner")
+        self.assertEqual(failed["decision_record"], "recorded risk acceptance")
         self.assertEqual(failed["verdict"], "FAIL")
         self.assertEqual(failed["recommendation"], "do not release")
 
     def test_readiness_pending_or_zero_applicable_is_blocked(self) -> None:
-        rows = parse_scenarios(
-            read_required(SPECIALISTS["qa-specialist-readiness"]),
-            (
-                "scenario",
-                "applicable_criteria",
-                "current_defects",
-                "risks",
-                "limitations",
-                "human_decision",
-                "verdict",
-                "recommendation",
-            ),
-        )
+        rows = parse_scenarios(read_required(SPECIALISTS["qa-specialist-readiness"]), READINESS_COLUMNS)
         expected = {
             "pending-limitation": ("browser evidence pending", "BLOCKED"),
             "zero-applicable": ("zero applicable criteria", "BLOCKED"),
@@ -1273,6 +1281,23 @@ class QaSpecialistContractTest(unittest.TestCase):
                 )
                 self.assertEqual(row["verdict"], verdict)
                 self.assertNotEqual(row["recommendation"], "recommend release without approving it")
+
+    def test_readiness_missing_any_human_decision_component_is_blocked(self) -> None:
+        rows = parse_scenarios(read_required(SPECIALISTS["qa-specialist-readiness"]), READINESS_COLUMNS)
+        omissions = {
+            "missing-decision-record": "decision_record",
+            "missing-decision-actor": "decision_actor",
+            "missing-decision-authority": "decision_authority",
+            "missing-decision-scope": "decision_scope",
+            "missing-decision-rationale": "decision_rationale",
+            "missing-decision-timestamp": "decision_timestamp",
+        }
+        for scenario, field in omissions.items():
+            with self.subTest(scenario=scenario):
+                row = next(item for item in rows if item["scenario"] == scenario)
+                self.assertEqual(row[field], "missing")
+                self.assertEqual(row["verdict"], "BLOCKED")
+                self.assertEqual(row["recommendation"], "obtain complete human decision")
 
 
 if __name__ == "__main__":

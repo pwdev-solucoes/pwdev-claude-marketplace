@@ -60,17 +60,25 @@ Return:
 
 ## Reference scenarios
 
-| scenario | applicable_criteria | current_defects | risks | limitations | human_decision | verdict | recommendation |
-|---|---|---|---|---|---|---|---|
-| release-ready | AC-LOGIN-01=PASS AC-SESSION-02=PASS | none including unlinked inventory | none unresolved | none pending | release owner approved | PASS | recommend release without approving it |
-| proven-unlinked-failure | AC-LOGIN-01=PASS AC-SESSION-02=PASS | DEF-UNLINKED-01 proven current in scope | accepted operational risk | none pending | risk accepted by release owner | FAIL | do not release |
-| pending-limitation | AC-LOGIN-01=PASS AC-SESSION-02=PASS | none including unlinked inventory | none unresolved | browser evidence pending | release owner decision pending | BLOCKED | resolve pending evidence and decision |
-| zero-applicable | zero applicable criteria | none including unlinked inventory | none unresolved | no executable release criteria | release owner approved | BLOCKED | define applicable criteria |
+| scenario | applicable_criteria | current_defects | risks | limitations | decision_record | decision_actor | decision_authority | decision_scope | decision_rationale | decision_timestamp | verdict | recommendation |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| release-ready | AC-LOGIN-01=PASS AC-SESSION-02=PASS | none including unlinked inventory | none unresolved | none pending | recorded approve | release-owner-17 | production release owner | checkout-api build rc-17 | all applicable criteria passed and no current defects or pending risks | 2026-09-12T18:30:00Z | PASS | recommend release without approving it |
+| proven-unlinked-failure | AC-LOGIN-01=PASS AC-SESSION-02=PASS | DEF-UNLINKED-01 proven current in scope | accepted operational risk | none pending | recorded risk acceptance | release-owner-17 | production release owner | checkout-api build rc-17 | accept operational risk for scheduled window | 2026-09-12T18:30:00Z | FAIL | do not release |
+| pending-limitation | AC-LOGIN-01=PASS AC-SESSION-02=PASS | none including unlinked inventory | none unresolved | browser evidence pending | missing | missing | missing | missing | missing | missing | BLOCKED | resolve pending evidence and decision |
+| zero-applicable | zero applicable criteria | none including unlinked inventory | none unresolved | no executable release criteria | recorded approve | release-owner-17 | production release owner | checkout-api build rc-18 | owner requests release after catalog review | 2026-09-12T19:30:00Z | BLOCKED | define applicable criteria |
+| missing-decision-record | AC-LOGIN-01=PASS AC-SESSION-02=PASS | none including unlinked inventory | none unresolved | none pending | missing | release-owner-17 | production release owner | checkout-api build rc-17 | all applicable criteria passed and no current defects or pending risks | 2026-09-12T18:30:00Z | BLOCKED | obtain complete human decision |
+| missing-decision-actor | AC-LOGIN-01=PASS AC-SESSION-02=PASS | none including unlinked inventory | none unresolved | none pending | recorded approve | missing | production release owner | checkout-api build rc-17 | all applicable criteria passed and no current defects or pending risks | 2026-09-12T18:30:00Z | BLOCKED | obtain complete human decision |
+| missing-decision-authority | AC-LOGIN-01=PASS AC-SESSION-02=PASS | none including unlinked inventory | none unresolved | none pending | recorded approve | release-owner-17 | missing | checkout-api build rc-17 | all applicable criteria passed and no current defects or pending risks | 2026-09-12T18:30:00Z | BLOCKED | obtain complete human decision |
+| missing-decision-scope | AC-LOGIN-01=PASS AC-SESSION-02=PASS | none including unlinked inventory | none unresolved | none pending | recorded approve | release-owner-17 | production release owner | missing | all applicable criteria passed and no current defects or pending risks | 2026-09-12T18:30:00Z | BLOCKED | obtain complete human decision |
+| missing-decision-rationale | AC-LOGIN-01=PASS AC-SESSION-02=PASS | none including unlinked inventory | none unresolved | none pending | recorded approve | release-owner-17 | production release owner | checkout-api build rc-17 | missing | 2026-09-12T18:30:00Z | BLOCKED | obtain complete human decision |
+| missing-decision-timestamp | AC-LOGIN-01=PASS AC-SESSION-02=PASS | none including unlinked inventory | none unresolved | none pending | recorded approve | release-owner-17 | production release owner | checkout-api build rc-17 | all applicable criteria passed and no current defects or pending risks | missing | BLOCKED | obtain complete human decision |
 
 `release-ready` produces a QA recommendation after a separately supplied human decision; the
 specialist does not approve or execute the release. In `proven-unlinked-failure`, human risk
 acceptance cannot erase the proven current failure. Pending evidence or a zero-applicable catalog
 remains `BLOCKED`.
+The `missing-decision-*` rows keep the QA assessment separate from the supplied human record and
+show that omitting any one decision component is `BLOCKED`, never implicit approval.
 
 ## Failure modes
 
