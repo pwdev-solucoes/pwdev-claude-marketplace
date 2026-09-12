@@ -103,6 +103,14 @@ Status: INCOMPLETE
 - Session, handle, LOOP, branch and worktree were preserved. No retry, fallback, merge or teardown was performed.
 - This is not a successful Codex/cmux acceptance result; the combination remains consumed for this run.
 
+## Real acceptance `claude:cmux`
+
+- Exactly one human-authorized call reached a real Claude Code session through the owned cmux workspace.
+- Durable state reached `running`; at the exact 300-second boundary it transitioned to `awaiting_human` and the harness returned `BLOCKED: observation timeout`, preserving all resources.
+- Diagnostic terminal inspection after timeout showed the initial Claude login was completed and `sdd-loop` loaded successfully. Terminal text was not used as gate or witness evidence.
+- Claude correctly refused to continue: the acceptance fixture and worktree lacked the persisted language configuration normally created by `sdd-init`, and lifecycle continuation still required native human approval.
+- No stage advanced and no evidence was inferred. The session, member, LOOP, handle, branch and worktree remain preserved; no retry, fallback, merge or teardown occurred.
+
 ## Real acceptance — Hermes + cmux
 
 - Exact human authorization: `hermes:cmux`, one call, `pt-BR`, 300-second observation window.
@@ -137,3 +145,27 @@ Status: INCOMPLETE
   No lifecycle `--human-approved` action was inferred or automated.
 - Full suite: `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 434 tests
   passed in 180.123s.
+
+## Task 09 — explicit fixture contract approval gate
+
+Status: INCOMPLETE
+
+- RED: four focused regressions failed because the canonical TASK-008 approval projection did
+  not exist, `run_acceptance` accepted no approved digest, and runtime/UI authorization alone
+  could reach the injected production UI path.
+- GREEN: `python3 -m unittest tests.test_sdd_composy_runtime_smoke` — 46 tests passed in
+  139.599s using local fakes only.
+- Final full suite after the last gate change:
+  `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 439 tests passed in
+  178.367s.
+- `--print-task-008-contract` emits a deterministic canonical JSON projection and SHA-256 while
+  leaving the requested output path absent. The projection contains no approval status.
+- Missing, generic, and incorrect contract approvals return `NOT_RUN`/`BLOCKED` before output,
+  budget, fixture, provider, or UI mutation. Exact execution requires the matching contract
+  SHA-256 plus the existing exact `runtime:UI` authorization; either gate missing leaves the
+  requested output path absent.
+- The approved task projection and both phase artifacts record provenance
+  `explicit-task-008-contract-sha256` and the exact bound digest. Fake coverage proves the
+  launcher is reached exactly once only with both gates satisfied.
+- No real provider, UI, credential, protected file, or preserved run resource was accessed.
+  All real runtime/UI acceptance remains INCOMPLETE/NOT_RUN pending a new exact human approval.

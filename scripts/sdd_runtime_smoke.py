@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 import fcntl
 import hashlib
+import hmac
 import importlib.util
 import json
 import os
@@ -31,6 +32,7 @@ SCENARIOS = (*OFFLINE_SCENARIOS, "fleet-interactive")
 STATUSES = {"PASS", "FAIL", "BLOCKED", "NOT_RUN"}
 DEFAULT_TIMEOUT = 300
 DEFAULT_MAX_CALLS = 28
+TASK_008_APPROVAL_PROVENANCE = "explicit-task-008-contract-sha256"
 
 
 class SmokeBlocked(RuntimeError):
@@ -131,6 +133,38 @@ def sha256_path(path: Path) -> str:
         for block in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def task_008_approval_contract(runtime: str, ui: str, language: str) -> Dict[str, Any]:
+    """Return the canonical, non-approved contract a human may review and hash."""
+    if runtime not in RUNTIMES or ui not in (*INTERACTIVE_UIS, "headless"):
+        raise ValueError("TASK-008 approval contract requires one exact runtime and UI")
+    if language not in LANGUAGES:
+        raise ValueError("TASK-008 approval contract requires one exact language")
+    projection = {
+        "schema_version": 1,
+        "type": "TASK-008_INTERACTIVE_ACCEPTANCE_APPROVAL_CONTRACT",
+        "task_id": "TASK-008",
+        "task": {
+            "id": "TASK-008",
+            "title": "Human-assisted runtime acceptance",
+            "state": "ready",
+            "dependencies": [],
+            "acceptance_criteria": ["CA-008"],
+            "verification_commands": ["python3 -m unittest"],
+            "allowed_paths": ["README.md"],
+            "evidence_required": True,
+            "contract_path": ".planning/sdd-composy/tasks/task-008.json",
+        },
+        "authorization": {"runtime": runtime, "ui": ui},
+        "language": language,
+        "fixture_scope": "confined-production-interactive-acceptance",
+        "approved_phase_artifacts": ["spec.md", "decisions.md"],
+    }
+    canonical = json.dumps(projection, sort_keys=True, separators=(",", ":"),
+                           ensure_ascii=False) + "\n"
+    return {**projection, "canonical_json": canonical,
+            "sha256": hashlib.sha256(canonical.encode("utf-8")).hexdigest()}
 
 
 def tree_fingerprint(root: Path) -> str:
@@ -907,13 +941,42 @@ def run_acceptance(*, mode: str, runtime: str, language: str, scenario: str,
                    hermes_automation_acknowledged: bool = False,
                    authorized_runtime_uis: Optional[set[str]] = None,
                    production_interactive_launcher: Optional[Callable[..., Dict[str, Any]]] = None,
+                   approved_task_008_sha256: Optional[str] = None,
                    ui: str = "all") -> Dict[str, Any]:
     runtimes = _selection(runtime, "all", RUNTIMES)
     languages = _selection(language, "both", LANGUAGES)
     scenarios = OFFLINE_SCENARIOS if scenario == "all" else (scenario,)
-    budget = InvocationBudget(max_calls_per_runtime, output if mode == "real" else None)
     authorizations = authorized_runtime_uis or set()
     plugin_hash = tree_fingerprint(plugin_root)
+    if mode == "real" and scenario == "fleet-interactive":
+        exact_request = (runtime in RUNTIMES and language in LANGUAGES
+                         and ui in (*INTERACTIVE_UIS, "headless"))
+        contract = task_008_approval_contract(runtime, ui, language) if exact_request else None
+        digest_approved = (contract is not None and isinstance(approved_task_008_sha256, str)
+                           and hmac.compare_digest(approved_task_008_sha256,
+                                                   contract["sha256"]))
+        approved = (digest_approved
+                    and f"{runtime}:{ui}" in authorizations)
+        if not approved:
+            reason = ("real interactive execution requires one concrete runtime, language, and UI"
+                      if not exact_request else
+                      "exact TASK-008 approval contract SHA-256 is required"
+                      if approved_task_008_sha256 is None
+                      else "TASK-008 approval contract SHA-256 does not match"
+                      if not digest_approved
+                      else "exact runtime+UI authorization is required")
+            records = [_record(selected_runtime, selected_language, "fleet-interactive",
+                "NOT_RUN", utc_now(), reason, plugin_hash, None, ui=ui)
+                for selected_runtime in runtimes for selected_language in languages]
+            return {"schema_version": 1, "mode": mode, "verdict": "BLOCKED",
+                    "started_at": records[0]["started_at"] if records else utc_now(),
+                    "ended_at": utc_now(), "plugin_sha256": plugin_hash,
+                    "provider_calls": {name: 0 for name in RUNTIMES},
+                    "max_calls_per_runtime": max_calls_per_runtime,
+                    "timeout_seconds": DEFAULT_TIMEOUT, "usage": None, "scenarios": records}
+    else:
+        contract = None
+    budget = InvocationBudget(max_calls_per_runtime, output if mode == "real" else None)
     records = []
     for selected_runtime in runtimes:
         for selected_language in languages:
@@ -962,6 +1025,8 @@ def run_acceptance(*, mode: str, runtime: str, language: str, scenario: str,
                                     plugin_root=plugin_root, output=output, budget=budget,
                                     reservation=reservation,
                                     interactive_launcher=production_interactive_launcher,
+                                    approval_contract_sha256=contract["sha256"] if contract else None,
+                                    approval_provenance=TASK_008_APPROVAL_PROVENANCE if contract else None,
                                     hermes_automation_acknowledged=hermes_automation_acknowledged)
                             else:
                                 budget.consume(selected_runtime, selected_ui)
@@ -969,7 +1034,9 @@ def run_acceptance(*, mode: str, runtime: str, language: str, scenario: str,
                                                     language=selected_language,
                                                     scenario=selected_scenario,
                                                     ui=selected_ui,
-                                                    timeout=DEFAULT_TIMEOUT)
+                                                    timeout=DEFAULT_TIMEOUT,
+                                                    approval_contract_sha256=contract["sha256"] if contract else None,
+                                                    approval_provenance=TASK_008_APPROVAL_PROVENANCE if contract else None)
                         except InvocationAlreadyConsumed as exc:
                             outcome = {"status": "NOT_RUN", "reason": sanitize(str(exc))}
                         except (SmokeBlocked, OSError) as exc:
@@ -1002,6 +1069,10 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--max-calls-per-runtime", type=int, default=DEFAULT_MAX_CALLS)
     parser.add_argument("--provider-entry-point", choices=("production",))
+    parser.add_argument("--print-task-008-contract", action="store_true",
+                        help="Print the canonical TASK-008 approval contract and SHA-256 without writes")
+    parser.add_argument("--approve-task-008-contract-sha256",
+                        help="Exact SHA-256 of the human-approved TASK-008 contract")
     parser.add_argument("--acknowledge-real-fleet", action="store_true")
     parser.add_argument("--authorize-runtime-ui", action="append", default=[],
                         choices=tuple(f"{runtime}:{ui}" for runtime in RUNTIMES
@@ -1117,6 +1188,8 @@ def _production_handle_observation(*, ui: str, handle: Path, plugin_root: Path,
 def production_interactive_launcher(*, runtime: str, language: str, scenario: str,
                                     ui: str, timeout: float, plugin_root: Path,
                                     output: Path,
+                                    approval_contract_sha256: str,
+                                    approval_provenance: str,
                                     command_runner: Callable[..., Dict[str, Any]] = run_process,
                                     handle_validator: Callable[..., Dict[str, Any]] = _production_handle_observation,
                                     clock: Callable[[], float] = time.monotonic,
@@ -1126,6 +1199,12 @@ def production_interactive_launcher(*, runtime: str, language: str, scenario: st
         return {"status": "NOT_RUN", "reason": "unsupported interactive production request"}
     if ui not in (*INTERACTIVE_UIS, "headless") or timeout != DEFAULT_TIMEOUT:
         return {"status": "NOT_RUN", "reason": "exact UI and 300 second timeout are required"}
+    expected_contract = task_008_approval_contract(runtime, ui, language)
+    if (approval_provenance != TASK_008_APPROVAL_PROVENANCE
+            or not isinstance(approval_contract_sha256, str)
+            or not hmac.compare_digest(approval_contract_sha256, expected_contract["sha256"])):
+        return {"status": "NOT_RUN",
+                "reason": "exact TASK-008 approval contract SHA-256 is required"}
     run_area = output.resolve(strict=True) / "production-interactive" / f"{runtime}-{ui}"
     fixture = run_area / "repository"
     _reject_symlink_ancestors(run_area)
@@ -1151,12 +1230,16 @@ def production_interactive_launcher(*, runtime: str, language: str, scenario: st
         "title": "Human-assisted runtime acceptance", "state": "ready", "dependencies": [],
         "acceptance_criteria": ["CA-008"],
         "verification_commands": ["python3 -m unittest"], "allowed_paths": ["README.md"],
-        "evidence_required": True, "contract_path": str(task)}]}, indent=2) + "\n",
+        "evidence_required": True, "contract_path": str(task),
+        "approval": {"provenance": approval_provenance,
+                     "contract_sha256": approval_contract_sha256}}]}, indent=2) + "\n",
         encoding="utf-8")
     (fixture / "README.md").write_text("# Confined interactive acceptance fixture\n", encoding="utf-8")
     phases = fixture / ".planning/sdd-composy/phases" / slug
     phases.mkdir(parents=True)
     approval = ("# Scoped acceptance fixture contract\n\nStatus: APPROVED\n\n"
+                f"Approval provenance: {approval_provenance}\n"
+                f"Approval contract SHA-256: {approval_contract_sha256}\n\n"
                 f"Runtime: {runtime}\nUI: {ui}\nLanguage: {language}\n")
     for name in ("spec.md", "decisions.md"):
         (phases / name).write_text(approval, encoding="utf-8")
@@ -1245,6 +1328,8 @@ def production_provider_launcher(*, runtime: str, language: str, scenario: str,
                                  ui: Optional[str] = None,
                                  reservation: Optional[str] = None,
                                  interactive_launcher: Optional[Callable[..., Dict[str, Any]]] = None,
+                                 approval_contract_sha256: Optional[str] = None,
+                                 approval_provenance: Optional[str] = None,
                                  hermes_automation_acknowledged: bool = False) -> Dict[str, Any]:
     """One real status invocation, using the corrected local adapter command contract.
 
@@ -1262,7 +1347,9 @@ def production_provider_launcher(*, runtime: str, language: str, scenario: str,
             raise SmokeBlocked("interactive acceptance output is required")
         return interactive_launcher(runtime=runtime, language=language, scenario=scenario,
                                     ui=ui, timeout=timeout, plugin_root=plugin_root,
-                                    output=output)
+                                    output=output,
+                                    approval_contract_sha256=approval_contract_sha256,
+                                    approval_provenance=approval_provenance)
     if scenario != "read-only":
         return {"status": "NOT_RUN", "reason": "only the read-only production entry is implemented"}
     if runtime == "hermes" and not hermes_automation_acknowledged:
@@ -1352,6 +1439,14 @@ def production_provider_launcher(*, runtime: str, language: str, scenario: str,
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parse_args(argv)
+    if args.print_task_008_contract:
+        if (args.mode != "real" or args.scenario != "fleet-interactive"
+                or args.runtime not in RUNTIMES or args.language not in LANGUAGES
+                or args.ui not in (*INTERACTIVE_UIS, "headless")):
+            raise SmokeBlocked("contract projection requires one exact real runtime, UI, and language")
+        print(json.dumps(task_008_approval_contract(args.runtime, args.ui, args.language),
+                         indent=2, sort_keys=True, ensure_ascii=False))
+        return 0
     root = Path(__file__).resolve().parents[1]
     launcher = production_provider_launcher if args.provider_entry_point == "production" else None
     summary = run_acceptance(mode=args.mode, runtime=args.runtime, language=args.language,
@@ -1363,6 +1458,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                              max_calls_per_runtime=args.max_calls_per_runtime,
                              fleet_acknowledged=args.acknowledge_real_fleet,
                              authorized_runtime_uis=set(args.authorize_runtime_ui),
+                             approved_task_008_sha256=args.approve_task_008_contract_sha256,
                              hermes_automation_acknowledged=args.acknowledge_hermes_automation)
     print(json.dumps({"verdict": summary["verdict"],
                       "output": str(args.output / "summary.json")}))

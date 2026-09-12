@@ -1,4 +1,5 @@
 import importlib.util
+import hashlib
 import json
 import multiprocessing
 import os
@@ -37,6 +38,14 @@ def _consume_budget_process(output, ready, start, results):
 
 
 class RuntimeSmokeContractTests(unittest.TestCase):
+    def _task_008_approval(self, runtime, ui, language):
+        contract = SMOKE.task_008_approval_contract(runtime, ui, language)
+        return {"approval_contract_sha256": contract["sha256"],
+                "approval_provenance": SMOKE.TASK_008_APPROVAL_PROVENANCE}
+
+    def _approved_hash(self, runtime, ui, language):
+        return SMOKE.task_008_approval_contract(runtime, ui, language)["sha256"]
+
     def _fake_interactive_launch_runner(self, terminal_state, calls):
         def runner(command, cwd, timeout):
             calls.append((command, cwd, timeout))
@@ -304,6 +313,7 @@ else: print(json.dumps(result))
                 output=Path(directory) / "run", plugin_root=ROOT / "plugins/sdd-composy",
                 provider_launcher=succeed,
                 authorized_runtime_uis={"codex:cmux"},
+                approved_task_008_sha256=self._approved_hash("codex", "cmux", "en-US"),
             )
             durable = json.loads((Path(directory) / "run" / "invocation-budget.json").read_text())
         self.assertEqual([(row["runtime"], row["ui"], row["status"])
@@ -361,12 +371,14 @@ else: print(json.dumps(result))
                 scenario="fleet-interactive", ui="cmux", output=output,
                 plugin_root=ROOT / "plugins/sdd-composy", provider_launcher=failing,
                 authorized_runtime_uis={"codex:cmux", "codex:tmux"},
+                approved_task_008_sha256=self._approved_hash("codex", "cmux", "en-US"),
             )
             second = SMOKE.run_acceptance(
                 mode="real", runtime="codex", language="en-US",
                 scenario="fleet-interactive", ui="cmux", output=output,
                 plugin_root=ROOT / "plugins/sdd-composy", provider_launcher=failing,
                 authorized_runtime_uis={"codex:cmux", "codex:tmux"},
+                approved_task_008_sha256=self._approved_hash("codex", "cmux", "en-US"),
             )
         self.assertEqual(calls, [("codex", "cmux")])
         self.assertEqual(first["scenarios"][0]["status"], "BLOCKED")
@@ -389,6 +401,7 @@ else: print(json.dumps(result))
                 provider_launcher=SMOKE.production_provider_launcher,
                 production_interactive_launcher=injected,
                 authorized_runtime_uis={"codex:cmux", "codex:tmux"},
+                approved_task_008_sha256=self._approved_hash("codex", "cmux", "en-US"),
             )
             retry = SMOKE.run_acceptance(
                 mode="real", runtime="codex", language="en-US",
@@ -397,10 +410,103 @@ else: print(json.dumps(result))
                 provider_launcher=SMOKE.production_provider_launcher,
                 production_interactive_launcher=injected,
                 authorized_runtime_uis={"codex:cmux", "codex:tmux"},
+                approved_task_008_sha256=self._approved_hash("codex", "cmux", "en-US"),
             )
         self.assertEqual(calls, [("codex", "cmux")])
         self.assertEqual(first["scenarios"][0]["status"], "BLOCKED")
         self.assertEqual(retry["scenarios"][0]["status"], "NOT_RUN")
+
+    def test_task_008_contract_projection_is_deterministic_and_read_only(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            before = SMOKE._snapshot(root, include_git=True)
+            first = SMOKE.task_008_approval_contract("codex", "cmux", "pt-BR")
+            second = SMOKE.task_008_approval_contract("codex", "cmux", "pt-BR")
+            after = SMOKE._snapshot(root, include_git=True)
+        self.assertEqual(first, second)
+        self.assertEqual(before, after)
+        self.assertEqual(first["task_id"], "TASK-008")
+        self.assertEqual(first["authorization"], {"runtime": "codex", "ui": "cmux"})
+        self.assertRegex(first["sha256"], r"^[0-9a-f]{64}$")
+        self.assertEqual(first["sha256"], hashlib.sha256(
+            first["canonical_json"].encode("utf-8")).hexdigest())
+        self.assertNotIn("APPROVED", first["canonical_json"])
+
+    def test_cli_prints_task_008_contract_without_creating_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "must-not-exist"
+            completed = subprocess.run([
+                sys.executable, str(ROOT / "scripts/sdd_runtime_smoke.py"),
+                "--mode", "real", "--runtime", "codex", "--language", "pt-BR",
+                "--scenario", "fleet-interactive", "--ui", "cmux",
+                "--output", str(output), "--print-task-008-contract",
+            ], cwd=ROOT, text=True, capture_output=True, check=False)
+            payload = json.loads(completed.stdout)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(payload["sha256"], self._approved_hash("codex", "cmux", "pt-BR"))
+            self.assertFalse(output.exists())
+
+    def test_missing_wrong_or_generic_contract_approval_is_read_only_before_budget(self):
+        contract = SMOKE.task_008_approval_contract("codex", "cmux", "en-US")
+        for supplied in (None, "approved", "0" * 64):
+            with self.subTest(supplied=supplied), tempfile.TemporaryDirectory() as directory:
+                output = Path(directory) / "run"
+                calls = []
+                summary = SMOKE.run_acceptance(
+                    mode="real", runtime="codex", language="en-US",
+                    scenario="fleet-interactive", ui="cmux", output=output,
+                    plugin_root=ROOT / "plugins/sdd-composy",
+                    provider_launcher=lambda **kwargs: calls.append(kwargs),
+                    authorized_runtime_uis={"codex:cmux"},
+                    approved_task_008_sha256=supplied)
+                self.assertEqual(calls, [])
+                self.assertEqual(summary["provider_calls"]["codex"], 0)
+                self.assertIn(summary["scenarios"][0]["status"], {"NOT_RUN", "BLOCKED"})
+                self.assertFalse(output.exists())
+        self.assertNotEqual(contract["sha256"], "0" * 64)
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "run"
+            summary = SMOKE.run_acceptance(
+                mode="real", runtime="codex", language="en-US",
+                scenario="fleet-interactive", ui="cmux", output=output,
+                plugin_root=ROOT / "plugins/sdd-composy",
+                provider_launcher=lambda **_kwargs: self.fail("launcher called"),
+                approved_task_008_sha256=contract["sha256"])
+            self.assertEqual(summary["provider_calls"]["codex"], 0)
+            self.assertFalse(output.exists())
+
+    def test_exact_contract_hash_and_runtime_ui_authorization_launch_once_with_provenance(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "run"
+            contract = SMOKE.task_008_approval_contract("codex", "cmux", "pt-BR")
+            calls = []
+            def launcher(**kwargs):
+                calls.append(kwargs)
+                self.assertEqual(kwargs["approval_contract_sha256"], contract["sha256"])
+                self.assertEqual(kwargs["approval_provenance"], "explicit-task-008-contract-sha256")
+                return {"status": "BLOCKED", "reason": "fake stop"}
+            summary = SMOKE.run_acceptance(
+                mode="real", runtime="codex", language="pt-BR",
+                scenario="fleet-interactive", ui="cmux", output=output,
+                plugin_root=ROOT / "plugins/sdd-composy", provider_launcher=launcher,
+                authorized_runtime_uis={"codex:cmux"},
+                approved_task_008_sha256=contract["sha256"])
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(summary["provider_calls"]["codex"], 1)
+
+    def test_runtime_ui_authorization_without_contract_hash_never_reaches_production_ui(self):
+        with tempfile.TemporaryDirectory() as directory:
+            called = []
+            summary = SMOKE.run_acceptance(
+                mode="real", runtime="codex", language="pt-BR",
+                scenario="fleet-interactive", ui="cmux", output=Path(directory) / "run",
+                plugin_root=ROOT / "plugins/sdd-composy",
+                provider_launcher=SMOKE.production_provider_launcher,
+                production_interactive_launcher=lambda **kwargs: called.append(kwargs),
+                authorized_runtime_uis={"codex:cmux"})
+        self.assertEqual(called, [])
+        self.assertEqual(summary["provider_calls"]["codex"], 0)
 
     def test_stale_and_cross_process_budget_instances_cannot_both_reserve(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -446,7 +552,8 @@ else: print(json.dumps(result))
                         scenario="fleet-interactive", ui="cmux", output=output,
                         plugin_root=ROOT / "plugins/sdd-composy",
                         provider_launcher=lambda **kwargs: called.append(kwargs),
-                        authorized_runtime_uis={"codex:cmux"})
+                        authorized_runtime_uis={"codex:cmux"},
+                        approved_task_008_sha256=self._approved_hash("codex", "cmux", "en-US"))
             self.assertEqual(called, [])
 
     def test_main_wires_the_production_interactive_launcher(self):
@@ -474,7 +581,8 @@ else: print(json.dumps(result))
                 output=Path(directory),
                 command_runner=self._fake_interactive_launch_runner("completed", calls),
                 handle_validator=lambda **_kwargs: {"recoverable": True, "driver": "cmux"},
-                clock=lambda: 0.0, sleep=lambda _seconds: None)
+                clock=lambda: 0.0, sleep=lambda _seconds: None,
+                **self._task_008_approval("codex", "cmux", "en-US"))
         self.assertEqual(result["status"], "PASS")
         self.assertEqual(len(calls), 1)
         command, cwd, timeout = calls[0]
@@ -526,7 +634,8 @@ else: print(json.dumps(result))
                     plugin_root=ROOT / "plugins/sdd-composy", output=Path(directory),
                     command_runner=adversarial,
                     handle_validator=lambda **_kwargs: {"recoverable": True, "driver": "cmux"},
-                    clock=lambda: 0.0, sleep=lambda _seconds: self.fail("invalid tuple was observed"))
+                    clock=lambda: 0.0, sleep=lambda _seconds: self.fail("invalid tuple was observed"),
+                    **self._task_008_approval("codex", "cmux", "en-US"))
                 self.assertEqual(result["status"], "FAIL")
 
     def test_awaiting_human_observes_exact_boundary_and_completion_before_it(self):
@@ -540,7 +649,8 @@ else: print(json.dumps(result))
                 plugin_root=ROOT / "plugins/sdd-composy", output=Path(directory),
                 command_runner=self._fake_interactive_launch_runner("awaiting_human", calls),
                 handle_validator=lambda **_kwargs: {"recoverable": True, "driver": "tmux"},
-                clock=clock, sleep=lambda seconds: sleeps.append(seconds))
+                clock=clock, sleep=lambda seconds: sleeps.append(seconds),
+                **self._task_008_approval("claude", "tmux", "pt-BR"))
             self.assertEqual(result["status"], "BLOCKED")
             self.assertEqual(clock_calls, [0.0, 300.0])
             self.assertEqual(sleeps, [])
@@ -563,7 +673,8 @@ else: print(json.dumps(result))
                 plugin_root=ROOT / "plugins/sdd-composy", output=Path(directory),
                 command_runner=self._fake_interactive_launch_runner("awaiting_human", calls),
                 handle_validator=lambda **_kwargs: {"recoverable": True, "driver": "tmux"},
-                clock=lambda: next(ticks), sleep=complete)
+                clock=lambda: next(ticks), sleep=complete,
+                **self._task_008_approval("claude", "tmux", "pt-BR"))
             self.assertEqual(result["status"], "PASS")
 
     def test_production_fixture_actual_launch_and_wrapper_preflight_use_canonical_projection(self):
@@ -588,7 +699,8 @@ raise SystemExit(0)
                     scenario="fleet-interactive", ui="tmux", timeout=300,
                     plugin_root=ROOT / "plugins/sdd-composy", output=Path(directory),
                     handle_validator=lambda **_kwargs: {"recoverable": True, "driver": "tmux"},
-                    clock=lambda: next(ticks), sleep=lambda _seconds: None)
+                    clock=lambda: next(ticks), sleep=lambda _seconds: None,
+                    **self._task_008_approval("codex", "tmux", "pt-BR"))
             repository = Path(result["repository"])
             contract = repository / ".planning/sdd-composy/tasks/task-008.json"
             self.assertTrue(Path(result["member"]).is_file(), result)
@@ -601,6 +713,15 @@ raise SystemExit(0)
             self.assertEqual(member["contract_sha256"], __import__("hashlib").sha256(contract.read_bytes()).hexdigest())
             self.assertEqual(tasks["prd_slug"], "task-008")
             self.assertEqual(tasks["tasks"][0]["id"], "TASK-008")
+            approval = tasks["tasks"][0]["approval"]
+            expected = self._approved_hash("codex", "tmux", "pt-BR")
+            self.assertEqual(approval, {"provenance": SMOKE.TASK_008_APPROVAL_PROVENANCE,
+                                        "contract_sha256": expected})
+            for phase_name in ("spec.md", "decisions.md"):
+                phase = repository / ".planning/sdd-composy/phases/task-008" / phase_name
+                self.assertIn(f"Approval contract SHA-256: {expected}", phase.read_text())
+                self.assertIn(f"Approval provenance: {SMOKE.TASK_008_APPROVAL_PROVENANCE}",
+                              phase.read_text())
             worktree = Path(member["worktree_path"])
             language = SMOKE._load_local(ROOT / "plugins/sdd-composy/scripts", "sdd_language.py",
                                          "acceptance_language_test")
