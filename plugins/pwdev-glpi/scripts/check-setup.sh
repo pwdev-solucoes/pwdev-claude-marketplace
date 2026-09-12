@@ -113,7 +113,7 @@ else
   printf '%-22s %-12s %s\n' "GLPI_APP_TOKEN" "—" "não setado (opcional)"
 fi
 
-# REST: initSession → killSession
+# REST Legacy V1: initSession → getGlpiConfig → killSession
 if [ -n "$BASE" ] && [ -n "$TOKEN" ]; then
   if [ -n "${GLPI_APP_TOKEN:-}" ]; then
     RESP=$(curl -sS -m 15 -H "Authorization: user_token $TOKEN" \
@@ -128,12 +128,22 @@ if [ -n "$BASE" ] && [ -n "$TOKEN" ]; then
       ST=$(printf '%s' "$RESP" | sed -n 's/.*"session_token":"\([^"]*\)".*/\1/p')
       if [ -n "$ST" ]; then
         if [ -n "${GLPI_APP_TOKEN:-}" ]; then
+          CONFIG=$(curl -sS -m 15 -H "Session-Token: $ST" \
+            -H "App-Token: ${GLPI_APP_TOKEN}" "$BASE/getGlpiConfig" 2>/dev/null || true)
           curl -sS -m 15 -o /dev/null -H "Session-Token: $ST" \
             -H "App-Token: ${GLPI_APP_TOKEN}" "$BASE/killSession" 2>/dev/null || true
         else
+          CONFIG=$(curl -sS -m 15 -H "Session-Token: $ST" \
+            "$BASE/getGlpiConfig" 2>/dev/null || true)
           curl -sS -m 15 -o /dev/null -H "Session-Token: $ST" \
             "$BASE/killSession" 2>/dev/null || true
         fi
+        VERSION=$(printf '%s' "$CONFIG" | sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+        case "$VERSION" in
+          10.*) printf '%-22s %-12s %s\n' "GLPI generation" "ok" "10.x (Legacy V1)" ;;
+          11.*) printf '%-22s %-12s %s\n' "GLPI generation" "ok" "11.x (Legacy V1)" ;;
+          *) printf '%-22s %-12s %s\n' "GLPI generation" "desconhecida" "Legacy V1 disponível; versão não identificada" ;;
+        esac
       fi
       ;;
     *ERROR_GLPI_LOGIN*|*401*)
