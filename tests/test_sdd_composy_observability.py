@@ -299,6 +299,65 @@ class StatusContractTest(unittest.TestCase):
             self.assertEqual(before, after)
 
 
+class FleetInteractiveDashboardTest(unittest.TestCase):
+    DASHBOARD = ROOT / "plugins" / "sdd-composy" / "scripts" / "fleet" / "dashboard.sh"
+
+    def invoke(self, root, *extra):
+        return subprocess.run(
+            [str(self.DASHBOARD), "--root", str(root), "--fleet-id", "demo", "--json", *extra],
+            capture_output=True, text=True)
+
+    def test_projects_authoritative_interaction_and_bound_loop(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); members = root / ".planning/sdd-composy/fleet/demo/members"
+            members.mkdir(parents=True)
+            record = {
+                "id": "MEMBER-01", "task_id": "TASK-006", "runtime": "codex", "ui": "tmux",
+                "status": "pending", "started_at": "top-level-is-not-authoritative",
+                "interaction": {
+                    "state": "awaiting_human", "started_at": "2026-09-12T00:00:00Z",
+                    "updated_at": "2026-09-12T00:05:00Z", "next_action": "Approve LOOP evidence",
+                    "loop": {"id": "loop-demo-task-006", "task_id": "TASK-006"},
+                    "handle": {"driver": "tmux", "session_name": "fleet-demo", "pane_id": "%6"},
+                },
+            }
+            (members / "MEMBER-01.json").write_text(json.dumps(record), encoding="utf-8")
+            result = self.invoke(root)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            member = json.loads(result.stdout)["members"][0]
+            self.assertEqual(member, {
+                "runtime": "codex", "ui": "tmux", "member": "MEMBER-01", "task": "TASK-006",
+                "loop": "loop-demo-task-006", "state": "awaiting_human",
+                "handle": {"driver": "tmux", "session_name": "fleet-demo", "pane_id": "%6"},
+                "timestamps": {"started_at": "2026-09-12T00:00:00Z", "updated_at": "2026-09-12T00:05:00Z"},
+                "next_action": "Approve LOOP evidence",
+            })
+
+    def test_missing_optional_fields_remain_absent_and_values_are_sanitized(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); members = root / ".planning/sdd-composy/fleet/demo/members"
+            members.mkdir(parents=True)
+            record = {
+                "id": "MEMBER\n01", "task_id": "TASK\t006", "runtime": "co\u001bdex", "ui": "cmux\r",
+                "interaction": {"state": "running\nforged", "started_at": "2026-09-12T00:00:00Z\nBAD"},
+            }
+            (members / "member.json").write_text(json.dumps(record), encoding="utf-8")
+            before = (members / "member.json").read_bytes()
+            result = self.invoke(root)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            member = json.loads(result.stdout)["members"][0]
+            self.assertEqual(member["member"], "MEMBER 01")
+            self.assertEqual(member["task"], "TASK 006")
+            self.assertEqual(member["runtime"], "co dex")
+            self.assertEqual(member["ui"], "cmux")
+            self.assertEqual(member["state"], "running forged")
+            self.assertEqual(member["timestamps"], {"started_at": "2026-09-12T00:00:00Z BAD"})
+            self.assertNotIn("loop", member)
+            self.assertNotIn("handle", member)
+            self.assertNotIn("next_action", member)
+            self.assertEqual(before, (members / "member.json").read_bytes())
+
+
 class QuickContractTest(unittest.TestCase):
     BASE = ROOT / "plugins" / "sdd-composy"
 

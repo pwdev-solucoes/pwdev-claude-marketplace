@@ -874,6 +874,19 @@ class SddComposyFleetAdapterTest(unittest.TestCase):
         self.assertNotIn("claude -p", command)
         self.assertNotIn("codex exec", command)
 
+    def test_fleet_contract_keeps_interactivity_and_authority_at_the_fleet_boundary(self):
+        skill = (PLUGIN / "skills" / "sdd-fleet" / "SKILL.md").read_text(encoding="utf-8").lower()
+        reference = (PLUGIN / "references" / "fleet.md").read_text(encoding="utf-8").lower()
+        for content in (skill, reference):
+            for promise in (
+                "exactly one", "bound loop", "isolated loop", "non-interactive",
+                "read-only", "terminal capture", "diagnostic", "human approval", "never merges",
+            ):
+                self.assertIn(promise, content)
+        self.assertIn("runtime", reference)
+        self.assertIn("handle", reference)
+        self.assertIn("next_action", reference)
+
     def test_full_plugin_catalogue_has_seventeen_skills_and_commands(self):
         self.assertEqual(len(list((PLUGIN / "skills").glob("*/SKILL.md"))), 17)
         self.assertEqual(len(list((PLUGIN / "commands").glob("*.md"))), 17)
