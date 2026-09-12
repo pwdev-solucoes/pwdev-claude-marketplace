@@ -20,6 +20,9 @@ SPECIALISTS = {
         "qa-specialist-data",
         "qa-specialist-accessibility",
         "qa-specialist-performance",
+        "qa-specialist-security",
+        "qa-specialist-automation",
+        "qa-specialist-cicd",
     )
 }
 COMMON_SECTIONS = (
@@ -589,6 +592,187 @@ class QaSpecialistContractTest(unittest.TestCase):
                 self.assertEqual(limited["outcome"], "BLOCKED")
                 self.assertNotEqual(limited["outcome"], "READY")
         self.assertRegex(text, r"(?is)average.*(?:alone|isolated).*does not.*(?:PASS|READY|approval)")
+
+    def test_security_authorized_pentest_stays_inside_the_bounded_scope(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-security"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "scanner",
+                "pentest_authorization",
+                "target",
+                "methods",
+                "environment",
+                "window",
+                "execution",
+                "outcome",
+            ),
+        )
+        ready = next(row for row in rows if row["scenario"] == "bounded-pentest")
+        self.assertEqual(
+            ready,
+            {
+                "scenario": "bounded-pentest",
+                "scanner": "reviewed findings",
+                "pentest_authorization": "explicit bounded grant",
+                "target": "staging.example.test/api",
+                "methods": "OWASP API checks excluding denial of service",
+                "environment": "staging",
+                "window": "2026-09-12T15:00Z to 2026-09-12T16:00Z",
+                "execution": "authorized reproducible checks",
+                "outcome": "READY",
+            },
+        )
+        self.assertRegex(
+            text,
+            r"(?is)explicit authorization.*target.*methods.*environment.*time window",
+        )
+
+    def test_security_scanner_never_becomes_pentest_authorization(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-security"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "scanner",
+                "pentest_authorization",
+                "target",
+                "methods",
+                "environment",
+                "window",
+                "execution",
+                "outcome",
+            ),
+        )
+        limited = next(row for row in rows if row["scenario"] == "scanner-only")
+        self.assertEqual(limited["scanner"], "available with findings")
+        self.assertEqual(limited["pentest_authorization"], "missing")
+        self.assertEqual(limited["execution"], "NOT_RUN")
+        self.assertEqual(limited["outcome"], "BLOCKED")
+        self.assertRegex(text, r"(?is)scanner.*does not.*(?:grant|become).*pentest")
+        self.assertRegex(text, r"(?is)(?:never|do not).*expand.*scope")
+
+    def test_automation_separates_interactive_cli_from_repeatable_suite(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-automation"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "cli_availability",
+                "session",
+                "snapshot",
+                "interaction",
+                "capture",
+                "repeatable_suite",
+                "outcome",
+            ),
+        )
+        ready = next(row for row in rows if row["scenario"] == "interactive-exploration")
+        self.assertEqual(
+            ready,
+            {
+                "scenario": "interactive-exploration",
+                "cli_availability": "available",
+                "session": "qa-report",
+                "snapshot": "fresh",
+                "interaction": "observed refs",
+                "capture": "reviewed screenshot",
+                "repeatable_suite": "Playwright Test",
+                "outcome": "READY",
+            },
+        )
+        self.assertRegex(text, r"(?is)playwright-cli.*interactive.*explor")
+        self.assertRegex(text, r"(?is)Playwright Test.*repeatable.*CI")
+
+    def test_automation_missing_cli_uses_probe_based_alternative(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-automation"]),
+            (
+                "scenario",
+                "cli_availability",
+                "session",
+                "snapshot",
+                "interaction",
+                "capture",
+                "repeatable_suite",
+                "outcome",
+            ),
+        )
+        missing = next(row for row in rows if row["scenario"] == "missing-cli")
+        self.assertEqual(missing["cli_availability"], "missing")
+        self.assertEqual(missing["session"], "none")
+        self.assertEqual(missing["snapshot"], "not run")
+        self.assertEqual(missing["interaction"], "not run")
+        self.assertEqual(missing["repeatable_suite"], "existing Web/UI test runner")
+        self.assertEqual(missing["outcome"], "BLOCKED")
+
+    def test_automation_flaky_result_requires_reproduction_not_rerun_until_pass(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-automation"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "attempts",
+                "evidence",
+                "reproduction",
+                "classification",
+                "action",
+                "outcome",
+            ),
+        )
+        flaky = next(row for row in rows if row["scenario"] == "reproduced-flaky")
+        self.assertEqual(
+            flaky,
+            {
+                "scenario": "reproduced-flaky",
+                "attempts": "three recorded under same conditions",
+                "evidence": "failure and pass artifacts retained",
+                "reproduction": "intermittent failure reproduced",
+                "classification": "flaky",
+                "action": "quarantine with owner and root-cause investigation",
+                "outcome": "BLOCKED",
+            },
+        )
+        self.assertRegex(text, r"(?is)do not.*rerun.*until.*pass")
+        self.assertRegex(text, r"(?is)flaky.*evidence.*reproduc")
+
+    def test_cicd_gate_uses_manifest_verdict_not_export_exit_code(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-cicd"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "manifest_verdict",
+                "export_exit_code",
+                "export_status",
+                "qa_gate",
+                "pipeline_action",
+            ),
+        )
+        self.assertEqual(
+            rows,
+            [
+                {
+                    "scenario": "qa-fail-exported",
+                    "manifest_verdict": "FAIL",
+                    "export_exit_code": "0",
+                    "export_status": "complete",
+                    "qa_gate": "FAIL",
+                    "pipeline_action": "stop for QA failure",
+                },
+                {
+                    "scenario": "qa-pass-export-failed",
+                    "manifest_verdict": "PASS",
+                    "export_exit_code": "3",
+                    "export_status": "incomplete",
+                    "qa_gate": "PASS",
+                    "pipeline_action": "report export failure separately",
+                },
+            ],
+        )
+        self.assertRegex(text, r"(?is)manifest.*verdict.*(?:source|authoritative)")
+        self.assertRegex(text, r"(?is)exit code.*does not.*QA.*verdict")
 
 
 if __name__ == "__main__":
