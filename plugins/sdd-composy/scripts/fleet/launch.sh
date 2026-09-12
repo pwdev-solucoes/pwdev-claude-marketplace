@@ -85,7 +85,7 @@ for r,destination in zip(records,destinations): publish(destination,r)
 publish(state/'fleet.json',{'schema_version':'2','fleet_id':fleet_id,'base_branch':base_branch,'runtime':runtime,'ui':ui,'owner':{'kind':'sdd-composy-fleet','fleet_id':fleet_id},'members':[r['id'] for r in records]})
 PY
 
-created=(); branches=(); ports=(); loops=(); port=; runtime_created=0; state_created=1; compose_created=0; compose_started=0; base="sdd-fleet/$fleet_id"
+created=(); branches=(); ports=(); loops=(); handles=(); port=; runtime_created=0; state_created=1; compose_created=0; compose_started=0; base="sdd-fleet/$fleet_id"
 cleanup(){ local rc=$?; set +e; if ((rc!=0)); then
   if ((compose_started)); then docker compose --project-name "sdd_fleet_$fleet_id" --env-file "$state/runtime.env" -f "$state/docker-compose.yml" down >/dev/null 2>&1 || true; fi
   if ((compose_created)); then rm -f "$state/docker-compose.yml"; fi
@@ -93,6 +93,7 @@ cleanup(){ local rc=$?; set +e; if ((rc!=0)); then
   if ((${#ports[@]})); then for allocated in "${ports[@]}"; do rm -f "$state/port-$allocated"; done; fi
   if ((runtime_created)); then rm -f "$state/runtime.env"; fi
   if ((${#loops[@]})); then for loop in "${loops[@]}"; do rm -f -- "$loop"; done; fi
+  if ((${#handles[@]})); then for handle in "${handles[@]}"; do rm -f -- "$handle"; done; fi
   if ((state_created)); then
     if ((fleet_preexisting == 0)); then
       rm -f "$state/fleet.json"
@@ -192,18 +193,28 @@ PY
     loops+=("$loop_path")
   done
   [[ "${SDD_FLEET_FAIL_AFTER_LOOP:-}" == 1 ]] && fleet_die "injected post-LOOP failure"
-  # Once processes start, preserve all recovery resources on any dispatch failure.
-  trap 'fleet_unlock "$lock"' EXIT
   for member_file in "$state"/members/*.json; do
     work=$(fleet_json_string "$member_file" worktree); slug=$(fleet_json_string "$member_file" slug)
     handle="$state/$slug.ui.json"
+    [[ ! -e "$handle" && ! -L "$handle" ]] || fleet_die "UI handle already exists: $handle"
+    handles+=("$handle")
     if [[ $ui == headless ]]; then
       cmd=(env "SDD_FLEET_RUNTIME=$record_runtime" "SDD_FLEET_MEMBER_FILE=$member_file" "$HERE/run.sh" "$slug" "$work")
-      fleet_ui_headless_start "$handle" "$work" "${cmd[@]}"
+      if ! fleet_ui_headless_start "$handle" "$work" "${cmd[@]}"; then
+        fleet_ui_resource_established "$ui" "$handle" && trap 'fleet_unlock "$lock"' EXIT
+        fleet_die "headless runner creation failed"
+      fi
     else
       cmd=("$HERE/interactive-run.sh" "$member_file" "$work")
-      "fleet_ui_${ui}_start" "$handle" "$work" "$fleet_id-$slug" "${cmd[@]}"
+      if ! "fleet_ui_${ui}_start" "$handle" "$work" "$fleet_id-$slug" "${cmd[@]}"; then
+        fleet_ui_resource_established "$ui" "$handle" && trap 'fleet_unlock "$lock"' EXIT
+        fleet_die "$ui runner creation failed"
+      fi
     fi
+    # From the first successful adapter creation onward, every failure preserves
+    # all recovery state. There is never retry or fallback to another driver.
+    fleet_ui_resource_established "$ui" "$handle" || fleet_die "$ui adapter returned without recoverable resource evidence"
+    trap 'fleet_unlock "$lock"' EXIT
   done
 fi
 printf '%s\n' "$(cat "$state/fleet.json")"

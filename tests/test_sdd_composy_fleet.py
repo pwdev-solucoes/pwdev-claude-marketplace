@@ -205,13 +205,58 @@ class FleetLaunchTest(unittest.TestCase):
         self.assertEqual(member["interaction"]["state"],"starting")
         self.assertNotIn("loop",member["interaction"])
 
-    def test_launch_source_creates_one_bound_loop_then_selects_runner(self):
-        launch=LAUNCH.read_text()
-        self.assertIn("sdd_loop.start(root, task_id, max_iterations=3, loop_id=loop_id)",launch)
-        self.assertIn("interactive_state.bind_loop(member_path, loop_id, task_id, now)",launch)
-        self.assertIn('"$HERE/interactive-run.sh" "$member_file" "$work"',launch)
-        self.assertIn('"$HERE/run.sh" "$slug" "$work"',launch)
-        self.assertLess(launch.index("fleet_select_ui"),launch.index("mkdir -p \"$state/members\""))
+    def _approved_launch_fixture(self):
+        phase=self.repo/'.planning/sdd-composy/phases/task-001'; phase.mkdir(parents=True)
+        for name in ('spec.md','decisions.md'): (phase/name).write_text('Status: APPROVED\n')
+        subprocess.run(['git','-C',str(self.repo),'add','.'],check=True)
+        subprocess.run(['git','-C',str(self.repo),'commit','-qm','approved phase'],check=True)
+        self.task()
+
+    def _cmux_launch(self, fake, state, log):
+        return subprocess.run(
+            [str(LAUNCH),'--runtime','codex','--ui','auto','--root',str(self.repo),
+             '--fleet-id','demo','--base-branch',self.base,'--task',str(self.contract)],
+            capture_output=True,text=True,env={**os.environ,'PATH':str(fake)+':/usr/bin:/bin',
+            'SDD_CMUX_BIN':str(fake/'cmux'),'CMUX_STATE':str(state),'CMUX_LOG':str(log)})
+
+    def test_launch_failure_before_ui_resource_rolls_back_every_created_artifact(self):
+        self._approved_launch_fixture(); fake=Path(self.tmp.name)/'fake-pre'; fake.mkdir()
+        (fake/'codex').write_text('#!/bin/sh\nexit 0\n'); (fake/'codex').chmod(0o755)
+        (fake/'cmux').write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$CMUX_LOG"\nexit 9\n'); (fake/'cmux').chmod(0o755)
+        result=self._cmux_launch(fake,fake/'state.json',fake/'calls.log')
+        self.assertNotEqual(result.returncode,0)
+        fleet=self.repo/'.planning/sdd-composy/fleet/demo'
+        self.assertFalse((fleet/'fleet.json').exists()); self.assertEqual(list((fleet/'members').glob('*.json')),[])
+        self.assertEqual(list((self.repo/'.planning/sdd-composy/loops').glob('*.json')),[])
+        self.assertFalse((fleet/'task-001.ui.json').exists())
+        self.assertNotIn('.sddcomposy-fleet-demo-',subprocess.check_output(['git','-C',str(self.repo),'worktree','list'],text=True))
+        self.assertNotEqual(subprocess.run(['git','-C',str(self.repo),'show-ref','--verify','--quiet','refs/heads/sdd-fleet/demo/TASK-001']).returncode,0)
+
+    def test_launch_failure_after_cmux_resource_preserves_once_without_fallback(self):
+        self._approved_launch_fixture(); fake=Path(self.tmp.name)/'fake-post'; fake.mkdir()
+        (fake/'codex').write_text('#!/bin/sh\nexit 0\n'); (fake/'codex').chmod(0o755)
+        (fake/'tmux').write_text('#!/bin/sh\nprintf called >> "$CMUX_LOG"\nexit 88\n'); (fake/'tmux').chmod(0o755)
+        (fake/'cmux').write_text("""#!/usr/bin/env python3
+import json,os,sys
+a=sys.argv[1:]; open(os.environ['CMUX_LOG'],'a').write(' '.join(a)+'\\n')
+state=os.environ['CMUX_STATE']
+if 'list-workspaces' in a: print('')
+elif 'new-workspace' in a:
+ json.dump({'title':a[a.index('--name')+1],'marker':a[a.index('--description')+1]},open(state,'w'))
+elif 'tree' in a:
+ d=json.load(open(state)); print(json.dumps({'windows':[{'workspaces':[{'id':'11111111-1111-1111-1111-111111111111','title':d['title'],'description':d['marker'],'panes':[]}]}]}))
+elif 'set-status' in a: raise SystemExit(23)
+"""); (fake/'cmux').chmod(0o755)
+        log=fake/'calls.log'; result=self._cmux_launch(fake,fake/'state.json',log)
+        self.assertNotEqual(result.returncode,0)
+        fleet=self.repo/'.planning/sdd-composy/fleet/demo'; member_file=fleet/'members/TASK-001.json'
+        member=json.loads(member_file.read_text()); work=Path(member['worktree_path']); handle=fleet/'task-001.ui.json'
+        self.assertTrue(work.is_dir()); self.assertTrue(handle.is_file())
+        self.assertEqual(json.loads(handle.read_text())['workspace_id'],'11111111-1111-1111-1111-111111111111')
+        loops=list((self.repo/'.planning/sdd-composy/loops').glob('*.json')); self.assertEqual(len(loops),1)
+        self.assertEqual(member['interaction']['loop']['id'],json.loads(loops[0].read_text())['id'])
+        calls=log.read_text(); self.assertEqual(calls.count('new-workspace'),1); self.assertNotIn('called',calls)
+        self.assertIn('interactive-run.sh',calls); self.assertNotIn('/run.sh task-001',calls)
 
     def test_symlinked_state_ancestor_is_rejected_without_external_write(self):
         self.task(); outside=Path(self.tmp.name+"-outside"); outside.mkdir(); (self.repo/".planning").symlink_to(outside,target_is_directory=True)
