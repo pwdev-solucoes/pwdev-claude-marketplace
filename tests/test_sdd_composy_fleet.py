@@ -475,15 +475,17 @@ class FleetLaunchTest(unittest.TestCase):
             tmp=Path(tmp); fake=tmp/"tmux"; log=tmp/"log"
             fake.write_text("""#!/bin/sh
 printf '%s\n' "$*" >> "$UI_LOG"
+for arg in "$@"; do [ "${prev:-}" = @sdd-composy-owner ] && case "$arg" in sdd-composy-fleet:*) printf '%s' "$arg" > "$UI_STATE";; esac; prev=$arg; done
 case "$*" in
- *has-session*) exit ${UI_COLLISION:-1};;
+ *has-session*) if [ -n "${UI_COLLISION+x}" ]; then exit "$UI_COLLISION"; else test -f "$UI_STATE"; fi;;
  *new-session*) printf 'fleet-demo|%%17\n';;
+ *show-options*) cat "$UI_STATE";;
  *set-option*) exit 0;;
  *display-message*) printf 'sdd-composy-fleet|demo|TASK-001|1|23\n';;
  *kill-server*) exit 0;;
 esac
 """) ; fake.chmod(0o755)
-            env={**os.environ,"PATH":str(tmp)+":"+os.environ["PATH"],"UI_LOG":str(log)}
+            env={**os.environ,"PATH":str(tmp)+":"+os.environ["PATH"],"UI_LOG":str(log),"UI_STATE":str(tmp/"owner")}
             h=tmp/"h.json"
             r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_start "$1" "$2" "$3" "$4" "$5" "$6"',"",str(h),str(tmp),"demo","TASK-001","printf","a b"],capture_output=True,text=True,env=env)
             self.assertEqual(r.returncode,0,r.stderr)
@@ -511,10 +513,11 @@ esac
         with tempfile.TemporaryDirectory() as tmp:
             tmp=Path(tmp); log=tmp/"log"
             cmux=tmp/"cmux"; cmux.write_text("""#!/usr/bin/env python3
-import os,sys
+import json,os,sys
 a=sys.argv[1:]; open(os.environ['UI_LOG'],'a').write(' '.join(a)+'\\n')
-if 'new-workspace' in a: open(os.environ['CMUX_STATE'],'w').write(a[a.index('--name')+1]); print('OK workspace:10')
-elif 'list-workspaces' in a and os.path.exists(os.environ['CMUX_STATE']): print('11111111-1111-1111-1111-111111111111 '+open(os.environ['CMUX_STATE']).read())
+if 'new-workspace' in a: open(os.environ['CMUX_STATE'],'w').write(json.dumps({'title':a[a.index('--name')+1],'marker':a[a.index('--description')+1]})); print('OK workspace:10')
+elif 'tree' in a and os.path.exists(os.environ['CMUX_STATE']):
+ state=json.load(open(os.environ['CMUX_STATE'])); print(json.dumps({'windows':[{'workspaces':[{'id':'11111111-1111-1111-1111-111111111111','title':state['title'],'description':state['marker'],'panes':[]}]}]}))
 elif 'set-status' in a: raise SystemExit(9)
 """); cmux.chmod(0o755)
             ch=tmp/"cmux.json"; env={**os.environ,"SDD_CMUX_BIN":str(cmux),"UI_LOG":str(log),"CMUX_STATE":str(tmp/"cmux-state")}
@@ -523,12 +526,39 @@ elif 'set-status' in a: raise SystemExit(9)
             self.assertEqual(subprocess.run(["bash","-c",f'source "{cmux_ui}"; fleet_ui_cmux_teardown "$1"',"",str(ch)],env=env,capture_output=True,text=True).returncode,0); self.assertFalse(ch.exists())
             tmux=tmp/"tmux"; tmux.write_text("""#!/bin/sh
 printf '%s\n' "$*" >> "$UI_LOG"
-case "$*" in *has-session*) exit 1;; *new-session*) printf 'fleet-demo|%%17\n'; exit 9;; esac
+for arg in "$@"; do [ "${prev:-}" = @sdd-composy-owner ] && case "$arg" in sdd-composy-fleet:*) printf '%s' "$arg" > "$UI_STATE";; esac; prev=$arg; done
+case "$*" in *has-session*) test -f "$UI_STATE";; *new-session*) printf 'fleet-demo|%%17\n';; *show-options*) cat "$UI_STATE";; *'set-option -p'*) exit 9;; esac
 """); tmux.chmod(0o755)
-            th=tmp/"tmux.json"; env={**os.environ,"PATH":str(tmp)+":/usr/bin:/bin","UI_LOG":str(log)}
+            th=tmp/"tmux.json"; env={**os.environ,"PATH":str(tmp)+":/usr/bin:/bin","UI_LOG":str(log),"UI_STATE":str(tmp/"tmux-owner")}
             r=subprocess.run(["bash","-c",f'source "{tmux_ui}"; fleet_ui_tmux_start "$1" "$2" demo TASK-001 true',"",str(th),str(tmp)],env=env,capture_output=True,text=True)
             self.assertNotEqual(r.returncode,0); self.assertTrue(th.exists()); self.assertEqual(json.loads(th.read_text())["state"],"recovering")
             self.assertEqual(subprocess.run(["bash","-c",f'source "{tmux_ui}"; fleet_ui_tmux_teardown "$1"',"",str(th)],env=env,capture_output=True,text=True).returncode,0); self.assertFalse(th.exists())
+
+    def test_cmux_forged_recovering_handle_cannot_close_foreign_workspace(self):
+        ui=ROOT/"plugins/sdd-composy/scripts/fleet/ui-cmux.sh"
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp=Path(tmp); fake=tmp/"cmux"; log=tmp/"log"
+            fake.write_text("""#!/usr/bin/env python3
+import json,os,sys
+a=sys.argv[1:]; open(os.environ['UI_LOG'],'a').write(' '.join(a)+'\\n')
+if 'list-workspaces' in a: print('11111111-1111-1111-1111-111111111111 claimed-title')
+elif 'tree' in a: print(json.dumps({'windows':[{'workspaces':[{'id':'11111111-1111-1111-1111-111111111111','title':'claimed-title','description':'foreign-owner','panes':[]}]}]}))
+"""); fake.chmod(0o755)
+            h=tmp/"h.json"; h.write_text(json.dumps({'driver':'cmux','state':'recovering','workspace_id':'11111111-1111-1111-1111-111111111111','surface_id':'-','fleet_id':'demo','member_id':'TASK-001','cwd':str(tmp),'title':'claimed-title','nonce':'claimed-nonce','ownership_marker':'sdd-composy-fleet:claimed-nonce:demo:TASK-001'}))
+            r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_cmux_teardown "$1"',"",str(h)],env={**os.environ,"SDD_CMUX_BIN":str(fake),"UI_LOG":str(log)},capture_output=True,text=True)
+            self.assertNotEqual(r.returncode,0); self.assertTrue(h.exists()); self.assertNotIn('close-workspace',log.read_text())
+
+    def test_tmux_forged_recovering_handle_cannot_kill_foreign_server(self):
+        ui=ROOT/"plugins/sdd-composy/scripts/fleet/ui-tmux.sh"
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp=Path(tmp); fake=tmp/"tmux"; log=tmp/"log"
+            fake.write_text("""#!/bin/sh
+printf '%s\n' "$*" >> "$UI_LOG"
+case "$*" in *show-options*) printf 'foreign-owner\n';; *has-session*) exit 0;; esac
+"""); fake.chmod(0o755)
+            h=tmp/"h.json"; h.write_text(json.dumps({'driver':'tmux','state':'recovering','socket_name':'foreign-socket','session_name':'foreign-session','pane_id':'','fleet_id':'demo','member_id':'TASK-001','cwd':str(tmp),'ownership_marker':'sdd-composy-fleet:claimed:demo:TASK-001'}))
+            r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_teardown "$1"',"",str(h)],env={**os.environ,"PATH":str(tmp)+":/usr/bin:/bin","UI_LOG":str(log)},capture_output=True,text=True)
+            self.assertNotEqual(r.returncode,0); self.assertTrue(h.exists()); self.assertNotIn('kill-server',log.read_text())
 
     def test_ui_selection_matrix_and_missing_tool_fallback(self):
         common=ROOT/"plugins/sdd-composy/scripts/fleet/common.sh"
@@ -562,10 +592,10 @@ case "$*" in *has-session*) exit 1;; *new-session*) printf 'fleet-demo|%%17\n'; 
             tmp=Path(tmp); fake=tmp/"tmux"; log=tmp/"log"
             fake.write_text("""#!/bin/sh
 printf '%s\n' "$*" >> "$UI_LOG"
-case "$*" in *display-message*) [ "${UI_DEAD:-0}" = 1 ] && exit 1; printf 'foreign|demo|TASK-001|0|\n';; esac
+case "$*" in *show-options*) printf 'expected-marker\n';; *has-session*) exit 0;; *display-message*) [ "${UI_DEAD:-0}" = 1 ] && exit 1; printf 'foreign|demo|TASK-001|0|\n';; esac
 """); fake.chmod(0o755)
             env={**os.environ,"PATH":str(tmp)+":/usr/bin:/bin","UI_LOG":str(log)}; h=tmp/"h.json"
-            h.write_text(json.dumps({"driver":"tmux","state":"active","socket_name":"sdd-composy-owned","session_name":"fleet-demo","pane_id":"%17","fleet_id":"demo","member_id":"TASK-001","cwd":str(tmp)}))
+            h.write_text(json.dumps({"driver":"tmux","state":"active","socket_name":"sdd-composy-owned","session_name":"fleet-demo","pane_id":"%17","fleet_id":"demo","member_id":"TASK-001","cwd":str(tmp),"ownership_marker":"expected-marker"}))
             for extra in ({},{"UI_DEAD":"1"}):
                 r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_teardown "$1"',"",str(h)],env={**env,**extra},capture_output=True,text=True)
                 self.assertNotEqual(r.returncode,0); self.assertTrue(h.exists())
@@ -588,13 +618,14 @@ log=os.environ['CMUX_LOG']; a=sys.argv[1:]
 with open(log,'a') as f: f.write(json.dumps(a)+'\\n')
 if 'new-workspace' in a:
  title=a[a.index('--name')+1]
- open(os.environ['CMUX_STATE'],'w').write(title)
+ marker=a[a.index('--description')+1]
+ open(os.environ['CMUX_STATE'],'w').write(json.dumps({'title':title,'marker':marker}))
  print('OK workspace:10')
 elif 'list-pane-surfaces' in a: print('* 22222222-2222-2222-2222-222222222222 terminal')
 elif 'tree' in a:
- title=open(os.environ['CMUX_STATE']).read()
- print(json.dumps({'windows':[{'workspaces':[{'id':'11111111-1111-1111-1111-111111111111','title':title,'panes':[{'surfaces':[{'id':'22222222-2222-2222-2222-222222222222','type':'terminal'}]}]}]}]}))
-elif 'list-workspaces' in a and os.path.exists(os.environ['CMUX_STATE']): print('* 11111111-1111-1111-1111-111111111111 '+open(os.environ['CMUX_STATE']).read())
+ state=json.load(open(os.environ['CMUX_STATE']))
+ print(json.dumps({'windows':[{'workspaces':[{'id':'11111111-1111-1111-1111-111111111111','title':state['title'],'description':state['marker'],'panes':[{'surfaces':[{'id':'22222222-2222-2222-2222-222222222222','type':'terminal'}]}]}]}]}))
+elif 'list-workspaces' in a and os.path.exists(os.environ['CMUX_STATE']): print('* 11111111-1111-1111-1111-111111111111 '+json.load(open(os.environ['CMUX_STATE']))['title'])
 elif 'list-status' in a: print('sdd-composy-owner=sdd-composy-fleet\\nsdd-composy-fleet=demo\\nsdd-composy-member=TASK-001')
 else: print('ok')
 """); fake.chmod(0o755)
@@ -617,14 +648,16 @@ else: print('ok')
         with tempfile.TemporaryDirectory() as td:
             td=Path(td); fake=td/"cmux"
             fake.write_text("""#!/usr/bin/env python3
-import json,sys
+import json,os,sys
 a=sys.argv[1:]
 if 'list-workspaces' in a: print('')
-elif 'new-workspace' in a: print('workspace 11111111-1111-1111-1111-111111111111')
+elif 'new-workspace' in a:
+ open(os.environ['CMUX_STATE'],'w').write(json.dumps({'title':a[a.index('--name')+1],'marker':a[a.index('--description')+1]})); print('OK workspace:10')
 elif 'set-status' in a: print('ok')
-elif 'tree' in a: print(json.dumps({'windows':[{'workspaces':[{'id':'11111111-1111-1111-1111-111111111111','panes':[{'surfaces':[{'id':'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa','type':'terminal'},{'id':'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb','type':'terminal'}]}]}]}]}))
+elif 'tree' in a:
+ state=json.load(open(os.environ['CMUX_STATE'])); print(json.dumps({'windows':[{'workspaces':[{'id':'11111111-1111-1111-1111-111111111111','title':state['title'],'description':state['marker'],'panes':[{'surfaces':[{'id':'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa','type':'terminal'},{'id':'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb','type':'terminal'}]}]}]}]}))
 """); fake.chmod(0o755)
-            h=td/"h.json"; r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_cmux_start "$1" "$2" demo TASK-001 true',"",str(h),str(td)],env={**os.environ,"SDD_CMUX_BIN":str(fake)},capture_output=True,text=True)
+            h=td/"h.json"; r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_cmux_start "$1" "$2" demo TASK-001 true',"",str(h),str(td)],env={**os.environ,"SDD_CMUX_BIN":str(fake),"CMUX_STATE":str(td/"state")},capture_output=True,text=True)
             self.assertNotEqual(r.returncode,0); self.assertTrue(h.exists()); self.assertNotIn(json.loads(h.read_text()).get("surface_id"),("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"))
 
     def test_cmux_stale_handle_and_override_fallback(self):
