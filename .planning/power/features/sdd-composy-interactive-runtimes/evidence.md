@@ -34,3 +34,11 @@ credential, protected file, real terminal session, or approval was used as evide
 - Fresh offline matrix: 6/6 PASS across Hermes/Codex/Claude × cmux/tmux; provider counters remained zero.
 - Production authorities: terminal Markdown/JSON and divergent binding use `fleet/interactive-run.sh`; exact-300 timeout uses `interactive_observer.observe` with injected monotonic ticks; dead panes use both real UI inspect functions; tampered evidence uses canonical `sdd_loop.resume` digest validation.
 - The smoke harness only translates returned production state/error into report vocabulary. Real human-assisted tests remain INCOMPLETE.
+
+## Review fix round 3
+
+- RED: the new outcome-injection regression failed because the runner result translator was absent and terminal/divergent cases returned fixed FAIL labels.
+- GREEN: `python3 -m unittest tests.test_sdd_composy_runtime_smoke` — 29 tests passed in 140.300s.
+- Fresh matrix: 6/6 PASS, zero provider calls.
+- Markdown/terminal JSON now PASS only when the captured production run reaches durable `awaiting_human`, invokes the fake provider, leaves LOOP bytes/status/stages unchanged, and advances no evidence. Divergent LOOP now PASS only on nonzero, pre-provider `blocked` rejection with the original LOOP preserved.
+- Regression injections for `completed`, advanced stages, zero exit, and provider invocation on divergence all produce FAIL. Real tests remain INCOMPLETE.

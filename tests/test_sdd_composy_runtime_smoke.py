@@ -180,8 +180,8 @@ else: print(json.dumps(result))
 
     def test_fleet_interactive_negative_pty_content_never_becomes_a_witness(self):
         expected = {
-            "markdown": "FAIL", "json-string": "FAIL", "tampered-witness": "FAIL",
-            "dead-pane": "FAIL", "timeout": "BLOCKED", "divergent-loop": "FAIL",
+            "markdown": "PASS", "json-string": "PASS", "tampered-witness": "FAIL",
+            "dead-pane": "FAIL", "timeout": "BLOCKED", "divergent-loop": "PASS",
             "unsupported-combination": "NOT_RUN",
         }
         for case, status in expected.items():
@@ -197,6 +197,21 @@ else: print(json.dumps(result))
                 if case == "timeout":
                     self.assertEqual(result["interaction_state"], "awaiting_human")
                     self.assertEqual(result["production_calls"], ["interactive_observer.observe"])
+
+    def test_runner_negative_translation_fails_on_accepted_or_bypassed_outcomes(self):
+        safe = {"provider_invoked": True, "loop_unchanged": True,
+                "loop_status": "running", "stages_advanced": False}
+        for case in ("markdown", "json-string"):
+            self.assertEqual(SMOKE._runner_negative_translation(case, "awaiting_human", 0, safe)[0], "PASS")
+            self.assertEqual(SMOKE._runner_negative_translation(case, "completed", 0, safe)[0], "FAIL")
+            advanced = {**safe, "stages_advanced": True}
+            self.assertEqual(SMOKE._runner_negative_translation(case, "awaiting_human", 0, advanced)[0], "FAIL")
+        rejected = {"provider_invoked": False, "loop_unchanged": True,
+                    "loop_status": "running", "stages_advanced": False}
+        self.assertEqual(SMOKE._runner_negative_translation("divergent-loop", "blocked", 2, rejected)[0], "PASS")
+        self.assertEqual(SMOKE._runner_negative_translation("divergent-loop", "blocked", 0, rejected)[0], "FAIL")
+        self.assertEqual(SMOKE._runner_negative_translation(
+            "divergent-loop", "blocked", 2, {**rejected, "provider_invoked": True})[0], "FAIL")
 
     def test_fleet_interactive_exercises_auto_resolution_and_headless_offline(self):
         for requested, resolved in (("auto", "cmux"), ("headless", "headless")):

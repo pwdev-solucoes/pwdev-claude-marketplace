@@ -21,3 +21,9 @@ STATUS: DONE
 - Every negative now records and depends on its production decision owner: interactive runner, interactive observer, cmux/tmux inspection, or canonical LOOP evidence validation.
 - Exact-300 timeout executes the observer's monotonic seam without a wall-clock delay and verifies the atomic durable transition to `awaiting_human`.
 - Fresh focused suite: 28 PASS in 152.274s. Fresh matrix: 6/6 PASS, zero provider calls. Real tests remain INCOMPLETE.
+
+## Review fix round 3
+
+- Replaced the final fixed terminal/divergence labels with outcome-derived translation over real runner exit code, durable member state, provider invocation marker, and unchanged LOOP bytes/status/stages.
+- Added regressions proving accepted terminal output, advanced LOOP stages, zero-code divergence, or provider invocation before divergent rejection produce FAIL.
+- Fresh focused suite: 29 PASS in 140.300s. Fresh matrix: 6/6 PASS, zero provider calls. Real tests remain INCOMPLETE.

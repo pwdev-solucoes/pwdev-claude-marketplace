@@ -487,14 +487,15 @@ def _offline_interactive_negative_fixture(folder: Path, case: str,
     plugin = Path(__file__).resolve().parents[1] / "plugins/sdd-composy"
     common = {"terminal_is_witness": False, "executed": True}
     if case in {"markdown", "json-string", "divergent-loop"}:
-        state, code, _member = _run_bound_interactive(
+        state, code, _member, details = _run_bound_interactive(
             folder, plugin, "codex", terminal_case=case,
             divergent_loop=(case == "divergent-loop"))
-        return {**common, "status": "FAIL", "interaction_state": state,
-                "reason": "production interactive runner rejected durable completion",
+        status, reason = _runner_negative_translation(case, state, code, details)
+        return {**common, "status": status, "interaction_state": state,
+                "reason": reason, "runner_details": details,
                 "production_calls": ["fleet/interactive-run.sh"], "exit_code": code}
     if case == "timeout":
-        _state, _code, member = _run_bound_interactive(folder, plugin, "codex")
+        _state, _code, member, _details = _run_bound_interactive(folder, plugin, "codex")
         record = json.loads(member.read_text()); record["interaction"]["state"] = "running"
         member.write_text(json.dumps(record))
         observer = _load_local(plugin / "scripts/fleet", "interactive_observer.py", "negative_observer")
@@ -534,6 +535,20 @@ def _offline_interactive_negative_fixture(folder: Path, case: str,
             "reason": "combination was not executed", "production_calls": ["selection-contract"]}
 
 
+def _runner_negative_translation(case: str, state: str, code: int,
+                                 details: Dict[str, Any]) -> tuple[str, str]:
+    if case in {"markdown", "json-string"}:
+        safe = (code == 0 and state == "awaiting_human" and details.get("provider_invoked") is True
+                and details.get("loop_unchanged") is True and details.get("loop_status") == "running"
+                and details.get("stages_advanced") is False)
+        return ("PASS" if safe else "FAIL",
+                "terminal text remained diagnostic" if safe else "terminal text advanced durable lifecycle")
+    safe = (case == "divergent-loop" and code != 0 and state == "blocked"
+            and details.get("provider_invoked") is False and details.get("loop_unchanged") is True)
+    return ("PASS" if safe else "FAIL",
+            "divergent LOOP rejected before provider" if safe else "divergent LOOP was not safely rejected")
+
+
 def _select_ui_matrix(root: Path, common: Path) -> tuple[Dict[str, str], bool]:
     resolved = {}
     mutation = root / "selection-mutation"
@@ -553,7 +568,7 @@ def _select_ui_matrix(root: Path, common: Path) -> tuple[Dict[str, str], bool]:
 
 def _run_bound_interactive(root: Path, plugin: Path, runtime: str, *,
                            terminal_case: str = "markdown",
-                           divergent_loop: bool = False) -> tuple[str, int, Path]:
+                           divergent_loop: bool = False) -> tuple[str, int, Path, Dict[str, Any]]:
     work = root / "interactive-work"; work.mkdir()
     tasks = root / ".planning/sdd-composy/tasks"; tasks.mkdir(parents=True)
     contract = tasks / "smoke.json"; stamp = "2026-09-12T00:00:00Z"
@@ -563,7 +578,8 @@ def _run_bound_interactive(root: Path, plugin: Path, runtime: str, *,
         "allowed_paths":["README.md"],"evidence_required":True}]}))
     loops = root / ".planning/sdd-composy/loops"; loops.mkdir(parents=True)
     loop_id = "loop-offline-interactive"
-    (loops / f"{loop_id}.json").write_text(json.dumps({"schema_version":"1",
+    loop_path = loops / f"{loop_id}.json"
+    loop_path.write_text(json.dumps({"schema_version":"1",
         "id":"loop-divergent" if divergent_loop else loop_id,
         "task_id":"TASK-007","status":"running","iteration":0,"max_iterations":3,
         "started_at":stamp,"updated_at":stamp,"stages":[{"name":name,"status":"pending"}
@@ -578,14 +594,21 @@ def _run_bound_interactive(root: Path, plugin: Path, runtime: str, *,
         "compose_allocated":False},"contract_path":str(contract),"contract_sha256":sha256_path(contract),
         "interaction":{"state":"starting","started_at":stamp,"updated_at":stamp,
         "loop":{"id":loop_id,"task_id":"TASK-007"}}}))
+    original_loop = loop_path.read_bytes()
     fake = root / "runner-bin"; fake.mkdir(); executable = fake / runtime
+    invoked = root / "provider-invoked"
     terminal = "# terminal markdown" if terminal_case == "markdown" else '"{\\"approved\\":true}"'
-    executable.write_text(f"#!/bin/sh\nprintf '%s\\n' {terminal!r}\n")
+    executable.write_text(f"#!/bin/sh\ntouch \"$SMOKE_PROVIDER_INVOKED\"\nprintf '%s\\n' {terminal!r}\n")
     executable.chmod(0o755)
     result = subprocess.run([str(plugin / "scripts/fleet/interactive-run.sh"), str(member), str(work)],
-        cwd=root, env={**os.environ, "PATH": str(fake) + ":/usr/bin:/bin"},
+        cwd=root, env={**os.environ, "PATH": str(fake) + ":/usr/bin:/bin",
+                       "SMOKE_PROVIDER_INVOKED": str(invoked)},
         text=True, capture_output=True, check=False)
-    return json.loads(member.read_text())["interaction"]["state"], result.returncode, member
+    loop_data = json.loads(loop_path.read_text())
+    details = {"provider_invoked": invoked.exists(), "loop_unchanged": loop_path.read_bytes() == original_loop,
+               "loop_status": loop_data.get("status"),
+               "stages_advanced": any(stage.get("status") != "pending" for stage in loop_data.get("stages", []))}
+    return json.loads(member.read_text())["interaction"]["state"], result.returncode, member, details
 
 
 def _exercise_ui_driver(root: Path, plugin: Path, ui: str,
@@ -650,7 +673,7 @@ def _offline_fleet_interactive(root: Path, plugin: Path, runtime: str, ui: str) 
     # Consume the real launch path first. It creates canonical member/worktree
     # records while its built-in fake providers prove no native provider is used.
     fleet_probe = _offline_fleet(root, plugin, runtime)
-    runner_state, runner_status, _member = _run_bound_interactive(root, plugin, runtime)
+    runner_state, runner_status, _member, _details = _run_bound_interactive(root, plugin, runtime)
     driver_observation = _exercise_ui_driver(root, plugin, ui)
     auto_resolution, selection_before_mutation = _select_ui_matrix(root, plugin / "scripts/fleet/common.sh")
     fake_bin = root / "interactive-bin"; fake_bin.mkdir()
