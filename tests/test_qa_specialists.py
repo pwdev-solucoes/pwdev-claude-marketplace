@@ -26,6 +26,8 @@ SPECIALISTS = {
         "qa-specialist-regression",
         "qa-specialist-defects",
         "qa-specialist-production",
+        "qa-specialist-metrics",
+        "qa-specialist-readiness",
     )
 }
 COMMON_SECTIONS = (
@@ -1134,6 +1136,143 @@ class QaSpecialistContractTest(unittest.TestCase):
         self.assertEqual(generic["stable_case_id"], "missing")
         self.assertEqual(generic["oracle"], "missing")
         self.assertEqual(generic["outcome"], "BLOCKED")
+
+    def test_metrics_carry_explicit_population_window_denominator_and_state_treatment(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-metrics"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "metric",
+                "numerator",
+                "denominator",
+                "population",
+                "window",
+                "state_treatment",
+                "result",
+            ),
+        )
+        measured = next(row for row in rows if row["scenario"] == "explicit-rate")
+        self.assertEqual(
+            measured,
+            {
+                "scenario": "explicit-rate",
+                "metric": "applicable criterion pass rate",
+                "numerator": "8 PASS",
+                "denominator": "10 applicable criteria",
+                "population": "complete release-candidate criterion catalog",
+                "window": "build rc-17 at 2026-09-12T18:00Z",
+                "state_treatment": "PASS numerator; FAIL BLOCKED NOT_RUN denominator only; NOT_APPLICABLE excluded",
+                "result": "80%",
+            },
+        )
+        self.assertRegex(text, r"(?is)requirements coverage.*not.*(?:source|line) coverage")
+        self.assertRegex(text, r"(?is)numerator.*denominator.*population.*window")
+
+    def test_metrics_zero_applicable_is_blocked_without_a_percentage(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-metrics"]),
+            (
+                "scenario",
+                "metric",
+                "numerator",
+                "denominator",
+                "population",
+                "window",
+                "state_treatment",
+                "result",
+            ),
+        )
+        empty = next(row for row in rows if row["scenario"] == "zero-applicable")
+        self.assertEqual(empty["numerator"], "0 PASS")
+        self.assertEqual(empty["denominator"], "0 applicable criteria")
+        self.assertEqual(empty["population"], "complete catalog with all criteria NOT_APPLICABLE")
+        self.assertEqual(
+            empty["state_treatment"],
+            "PASS numerator; FAIL BLOCKED NOT_RUN denominator only; NOT_APPLICABLE excluded with reasons; empty denominator has no rate",
+        )
+        self.assertEqual(empty["result"], "BLOCKED")
+        self.assertNotRegex(empty["result"], r"100%|PASS")
+
+    def test_readiness_pass_is_a_recommendation_after_human_decision_not_an_approval(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-readiness"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "applicable_criteria",
+                "current_defects",
+                "risks",
+                "limitations",
+                "human_decision",
+                "verdict",
+                "recommendation",
+            ),
+        )
+        ready = next(row for row in rows if row["scenario"] == "release-ready")
+        self.assertEqual(
+            ready,
+            {
+                "scenario": "release-ready",
+                "applicable_criteria": "AC-LOGIN-01=PASS AC-SESSION-02=PASS",
+                "current_defects": "none including unlinked inventory",
+                "risks": "none unresolved",
+                "limitations": "none pending",
+                "human_decision": "release owner approved",
+                "verdict": "PASS",
+                "recommendation": "recommend release without approving it",
+            },
+        )
+        self.assertRegex(text, r"(?is)recommend.*does not.*approve.*release")
+        self.assertRegex(text, r"(?is)human.*decision")
+
+    def test_readiness_proven_unlinked_failure_overrides_risk_acceptance(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-readiness"]),
+            (
+                "scenario",
+                "applicable_criteria",
+                "current_defects",
+                "risks",
+                "limitations",
+                "human_decision",
+                "verdict",
+                "recommendation",
+            ),
+        )
+        failed = next(row for row in rows if row["scenario"] == "proven-unlinked-failure")
+        self.assertEqual(failed["current_defects"], "DEF-UNLINKED-01 proven current in scope")
+        self.assertEqual(failed["human_decision"], "risk accepted by release owner")
+        self.assertEqual(failed["verdict"], "FAIL")
+        self.assertEqual(failed["recommendation"], "do not release")
+
+    def test_readiness_pending_or_zero_applicable_is_blocked(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-readiness"]),
+            (
+                "scenario",
+                "applicable_criteria",
+                "current_defects",
+                "risks",
+                "limitations",
+                "human_decision",
+                "verdict",
+                "recommendation",
+            ),
+        )
+        expected = {
+            "pending-limitation": ("browser evidence pending", "BLOCKED"),
+            "zero-applicable": ("zero applicable criteria", "BLOCKED"),
+        }
+        for scenario, (limitation_or_criteria, verdict) in expected.items():
+            with self.subTest(scenario=scenario):
+                row = next(item for item in rows if item["scenario"] == scenario)
+                self.assertIn(
+                    limitation_or_criteria,
+                    (row["limitations"], row["applicable_criteria"]),
+                )
+                self.assertEqual(row["verdict"], verdict)
+                self.assertNotEqual(row["recommendation"], "recommend release without approving it")
 
 
 if __name__ == "__main__":
