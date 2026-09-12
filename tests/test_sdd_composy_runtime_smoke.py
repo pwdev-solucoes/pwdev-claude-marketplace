@@ -192,8 +192,11 @@ else: print(json.dumps(result))
                 self.assertEqual(result["status"], status)
                 self.assertFalse(result["terminal_is_witness"])
                 self.assertTrue(result["executed"])
+                self.assertTrue(result["production_calls"])
+                self.assertNotIn("smoke-classifier", result["production_calls"])
                 if case == "timeout":
                     self.assertEqual(result["interaction_state"], "awaiting_human")
+                    self.assertEqual(result["production_calls"], ["interactive_observer.observe"])
 
     def test_fleet_interactive_exercises_auto_resolution_and_headless_offline(self):
         for requested, resolved in (("auto", "cmux"), ("headless", "headless")):

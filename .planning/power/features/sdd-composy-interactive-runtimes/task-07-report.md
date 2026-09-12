@@ -14,3 +14,10 @@ STATUS: DONE
 - Every runtime×UI row now executes the real bound `interactive-run.sh` path and the relevant UI driver's start/inspect path; the report lists only those exercised production components.
 - `fleet_select_ui auto` is executed against cmux+tmux, tmux-only, and neither-available environments, with a mutation sentinel proving selection occurred first.
 - Fresh verification: 28 focused tests PASS; offline matrix 6/6 PASS with zero provider calls. Real tests remain INCOMPLETE.
+
+## Review fix round 2
+
+- Removed the parallel smoke-local negative classifier.
+- Every negative now records and depends on its production decision owner: interactive runner, interactive observer, cmux/tmux inspection, or canonical LOOP evidence validation.
+- Exact-300 timeout executes the observer's monotonic seam without a wall-clock delay and verifies the atomic durable transition to `awaiting_human`.
+- Fresh focused suite: 28 PASS in 152.274s. Fresh matrix: 6/6 PASS, zero provider calls. Real tests remain INCOMPLETE.

@@ -480,44 +480,58 @@ exit 0
 
 def _offline_interactive_negative_fixture(folder: Path, case: str,
                                           *, timeout: int = DEFAULT_TIMEOUT) -> Dict[str, Any]:
-    """Execute observer decisions against files and process observations, never labels."""
+    """Translate production decisions; domain classification remains in production code."""
     if timeout != DEFAULT_TIMEOUT:
         raise ValueError(f"interactive observation timeout must be {DEFAULT_TIMEOUT}")
     folder.mkdir(parents=True, exist_ok=True)
-    terminal = folder / "terminal.txt"
-    terminal.write_text("# completed\n" if case == "markdown" else
-                        '"{\\"status\\":\\"completed\\",\\"approved\\":true}"\n')
-    witness = folder / "witness.json"; witness.write_text('{"durable":true}\n')
-    expected = sha256_path(witness)
-    member = folder / "member.json"; loop = folder / "loop.json"
-    member.write_text(json.dumps({"interaction": {"loop": {"id": "loop-1"}}}))
-    loop.write_text(json.dumps({"id": "loop-1", "status": "running"}))
-    observation = {"alive": True, "exit_status": None, "recoverable": True}
-    elapsed = 0
-    if case == "tampered-witness": witness.write_text('{"durable":false}\n')
-    if case == "dead-pane": observation.update(alive=False, exit_status=23)
-    if case == "timeout": elapsed = timeout
-    if case == "divergent-loop": loop.write_text(json.dumps({"id": "loop-2", "status": "running"}))
-    if case == "unsupported-combination":
-        return {"status": "NOT_RUN", "interaction_state": "inconclusive",
-                "reason": "combination was not executed", "terminal_is_witness": False,
-                "executed": True}
-    durable_member = json.loads(member.read_text()); durable_loop = json.loads(loop.read_text())
-    if durable_member["interaction"]["loop"]["id"] != durable_loop["id"]:
-        status, state, reason = "FAIL", "inconclusive", "durable LOOP binding mismatch"
-    elif sha256_path(witness) != expected:
-        status, state, reason = "FAIL", "inconclusive", "durable witness digest mismatch"
-    elif not observation["alive"]:
-        status, state, reason = "FAIL", "failed", "driver observed a dead pane"
-    elif elapsed >= timeout:
-        status, state, reason = "BLOCKED", "awaiting_human", "live process reached observation timeout"
-    else:
-        # Deliberately do not parse terminal: without a durable completed LOOP and
-        # witness it cannot satisfy any gate, even when it contains JSON text.
-        status, state, reason = "FAIL", "inconclusive", "terminal content is not witness evidence"
-    return {"status": status, "interaction_state": state, "reason": reason,
-            "terminal_is_witness": False, "executed": True,
-            "observation": observation, "elapsed_seconds": elapsed}
+    plugin = Path(__file__).resolve().parents[1] / "plugins/sdd-composy"
+    common = {"terminal_is_witness": False, "executed": True}
+    if case in {"markdown", "json-string", "divergent-loop"}:
+        state, code, _member = _run_bound_interactive(
+            folder, plugin, "codex", terminal_case=case,
+            divergent_loop=(case == "divergent-loop"))
+        return {**common, "status": "FAIL", "interaction_state": state,
+                "reason": "production interactive runner rejected durable completion",
+                "production_calls": ["fleet/interactive-run.sh"], "exit_code": code}
+    if case == "timeout":
+        _state, _code, member = _run_bound_interactive(folder, plugin, "codex")
+        record = json.loads(member.read_text()); record["interaction"]["state"] = "running"
+        member.write_text(json.dumps(record))
+        observer = _load_local(plugin / "scripts/fleet", "interactive_observer.py", "negative_observer")
+        ticks = iter((0.0, float(timeout)))
+        state = observer.observe(member, 4242, clock=lambda: next(ticks), sleep=lambda _value: None,
+                                 parent_alive=lambda _pid: True, parent_is_original=lambda _pid: True)
+        durable = json.loads(member.read_text())["interaction"]["state"]
+        return {**common, "status": "BLOCKED", "interaction_state": durable,
+                "reason": state, "production_calls": ["interactive_observer.observe"]}
+    if case == "dead-pane":
+        observations = [_exercise_ui_driver(folder / ui, plugin, ui, dead=True)
+                        for ui in INTERACTIVE_UIS]
+        failed = all(not item.get("alive", True) for item in observations)
+        return {**common, "status": "FAIL" if failed else "PASS",
+                "interaction_state": "failed" if failed else "running",
+                "reason": "production drivers observed dead panes", "observations": observations,
+                "production_calls": ["fleet_ui_cmux_inspect", "fleet_ui_tmux_inspect"]}
+    if case == "tampered-witness":
+        loop = _load_local(plugin / "scripts", "sdd_loop.py", "negative_loop")
+        root = folder / "loop-root"; root.mkdir()
+        value = loop.start(root, "TASK-007", loop_id="loop-negative-witness")
+        loop.publish_stage(root, value["id"], "EXECUTE", artifact={"ok": True},
+                           evidence={"status": "passed"})
+        path = root / ".planning/sdd-composy/loops/loop-negative-witness.json"
+        data = json.loads(path.read_text()); data["stages"][0]["evidence"]["status"] = "failed"
+        path.write_text(json.dumps(data))
+        try:
+            loop.resume(root, value["id"])
+            rejected = False
+        except Exception:
+            rejected = True
+        return {**common, "status": "FAIL" if rejected else "PASS",
+                "interaction_state": "inconclusive" if rejected else "running",
+                "reason": "canonical LOOP evidence validation rejected tampering",
+                "production_calls": ["sdd_loop.resume"]}
+    return {**common, "status": "NOT_RUN", "interaction_state": "inconclusive",
+            "reason": "combination was not executed", "production_calls": ["selection-contract"]}
 
 
 def _select_ui_matrix(root: Path, common: Path) -> tuple[Dict[str, str], bool]:
@@ -537,7 +551,9 @@ def _select_ui_matrix(root: Path, common: Path) -> tuple[Dict[str, str], bool]:
     return resolved, resolved == {"cmux": "cmux", "tmux": "tmux", "none": "headless"}
 
 
-def _run_bound_interactive(root: Path, plugin: Path, runtime: str) -> tuple[str, int]:
+def _run_bound_interactive(root: Path, plugin: Path, runtime: str, *,
+                           terminal_case: str = "markdown",
+                           divergent_loop: bool = False) -> tuple[str, int, Path]:
     work = root / "interactive-work"; work.mkdir()
     tasks = root / ".planning/sdd-composy/tasks"; tasks.mkdir(parents=True)
     contract = tasks / "smoke.json"; stamp = "2026-09-12T00:00:00Z"
@@ -547,7 +563,8 @@ def _run_bound_interactive(root: Path, plugin: Path, runtime: str) -> tuple[str,
         "allowed_paths":["README.md"],"evidence_required":True}]}))
     loops = root / ".planning/sdd-composy/loops"; loops.mkdir(parents=True)
     loop_id = "loop-offline-interactive"
-    (loops / f"{loop_id}.json").write_text(json.dumps({"schema_version":"1","id":loop_id,
+    (loops / f"{loop_id}.json").write_text(json.dumps({"schema_version":"1",
+        "id":"loop-divergent" if divergent_loop else loop_id,
         "task_id":"TASK-007","status":"running","iteration":0,"max_iterations":3,
         "started_at":stamp,"updated_at":stamp,"stages":[{"name":name,"status":"pending"}
         for name in ("EXECUTE","QA","EVIDENCE","REVIEW","VERIFY")]}))
@@ -562,15 +579,18 @@ def _run_bound_interactive(root: Path, plugin: Path, runtime: str) -> tuple[str,
         "interaction":{"state":"starting","started_at":stamp,"updated_at":stamp,
         "loop":{"id":loop_id,"task_id":"TASK-007"}}}))
     fake = root / "runner-bin"; fake.mkdir(); executable = fake / runtime
-    executable.write_text("#!/bin/sh\nprintf '%s\\n' '# terminal markdown' '\"{\\\"approved\\\":true}\"'\n")
+    terminal = "# terminal markdown" if terminal_case == "markdown" else '"{\\"approved\\":true}"'
+    executable.write_text(f"#!/bin/sh\nprintf '%s\\n' {terminal!r}\n")
     executable.chmod(0o755)
     result = subprocess.run([str(plugin / "scripts/fleet/interactive-run.sh"), str(member), str(work)],
         cwd=root, env={**os.environ, "PATH": str(fake) + ":/usr/bin:/bin"},
         text=True, capture_output=True, check=False)
-    return json.loads(member.read_text())["interaction"]["state"], result.returncode
+    return json.loads(member.read_text())["interaction"]["state"], result.returncode, member
 
 
-def _exercise_ui_driver(root: Path, plugin: Path, ui: str) -> Dict[str, Any]:
+def _exercise_ui_driver(root: Path, plugin: Path, ui: str,
+                        *, dead: bool = False) -> Dict[str, Any]:
+    root.mkdir(parents=True, exist_ok=True)
     handle = root / f"{ui}-handle.json"; bindir = root / f"{ui}-bin"; bindir.mkdir()
     if ui == "headless":
         command = (f'source "{plugin / "scripts/fleet/ui-headless.sh"}"; '
@@ -592,10 +612,10 @@ if 'has-session' in a: raise SystemExit(0 if os.path.exists(os.environ['TMUX_STA
 if 'new-session' in a:
  open(os.environ['TMUX_STATE'],'w').write('started'); print('offline-session|%7')
 elif 'show-options' in a: print(json.load(open(os.environ['UI_HANDLE']))['ownership_marker'])
-elif 'display-message' in a: print('sdd-composy-fleet|offline|member-7|0|')
+elif 'display-message' in a: print('sdd-composy-fleet|offline|member-7|%s|23' % ('1' if os.environ.get('UI_DEAD')=='1' else '0'))
 ''')
         env = {**os.environ, "PATH": str(bindir) + ":/usr/bin:/bin", "UI_HANDLE": str(handle),
-               "TMUX_STATE": str(root / "tmux-state")}
+               "TMUX_STATE": str(root / "tmux-state"), "UI_DEAD": "1" if dead else "0"}
         command = (f'source "{plugin / "scripts/fleet/ui-tmux.sh"}"; '
                    'fleet_ui_tmux_start "$1" "$2" offline member-7 true; '
                    'fleet_ui_tmux_inspect "$1"')
@@ -605,11 +625,12 @@ a=sys.argv[1:]; state=os.environ['CMUX_STATE']
 if 'new-workspace' in a:
  open(state,'w').write(json.dumps({'title':a[a.index('--name')+1],'marker':a[a.index('--description')+1]}))
 elif 'tree' in a:
+ if os.environ.get('UI_DEAD')=='1': raise SystemExit(1)
  d=json.load(open(state)); print(json.dumps({'windows':[{'workspaces':[{'id':'11111111-1111-1111-1111-111111111111','title':d['title'],'description':d['marker'],'panes':[{'surfaces':[{'id':'22222222-2222-2222-2222-222222222222','type':'terminal'}]}]}]}]}))
 elif 'list-status' in a: print('sdd-composy-owner=sdd-composy-fleet\\nsdd-composy-fleet=offline\\nsdd-composy-member=member-7')
 ''')
         env = {**os.environ, "PATH": str(bindir) + ":/usr/bin:/bin", "SDD_CMUX_BIN": str(binary),
-               "CMUX_STATE": str(root / "cmux-state.json")}
+               "CMUX_STATE": str(root / "cmux-state.json"), "UI_DEAD": "1" if dead else "0"}
         command = (f'source "{plugin / "scripts/fleet/ui-cmux.sh"}"; '
                    'fleet_ui_cmux_start "$1" "$2" offline member-7 true; fleet_ui_cmux_inspect "$1"')
     binary.chmod(0o755)
@@ -629,7 +650,7 @@ def _offline_fleet_interactive(root: Path, plugin: Path, runtime: str, ui: str) 
     # Consume the real launch path first. It creates canonical member/worktree
     # records while its built-in fake providers prove no native provider is used.
     fleet_probe = _offline_fleet(root, plugin, runtime)
-    runner_state, runner_status = _run_bound_interactive(root, plugin, runtime)
+    runner_state, runner_status, _member = _run_bound_interactive(root, plugin, runtime)
     driver_observation = _exercise_ui_driver(root, plugin, ui)
     auto_resolution, selection_before_mutation = _select_ui_matrix(root, plugin / "scripts/fleet/common.sh")
     fake_bin = root / "interactive-bin"; fake_bin.mkdir()
