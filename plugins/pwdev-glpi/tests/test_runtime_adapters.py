@@ -1,4 +1,5 @@
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -24,7 +25,37 @@ class RuntimeAdapterContractTests(unittest.TestCase):
 
     def test_mcp_contract_preserves_twenty_tools_two_prompts_three_resources(self):
         reference = (PLUGIN / "references" / "mcp-tools.md").read_text()
-        self.assertIn("20 tools + 2 prompts + 3 resources", reference)
+        tools = re.findall(r"^\| `([a-z_]+)` \|", reference.split("## Prompts MCP", 1)[0], re.MULTILINE)
+        self.assertEqual(len(tools), 20)
+        self.assertEqual(len(set(tools)), 20)
+        self.assertEqual(
+            set(tools),
+            {
+                "search_tickets", "get_ticket", "create_ticket", "update_ticket",
+                "add_ticket_followup", "close_ticket", "request_ticket_validation",
+                "answer_ticket_validation", "upload_document", "link_document",
+                "search_users", "get_user", "search_groups", "get_group",
+                "search_assets", "get_asset", "search_projects", "get_project",
+                "search_kb", "get_kb_article",
+            },
+        )
+
+    def test_mcp_server_contract_is_pinned_and_keeps_runtime_env(self):
+        config = json.loads((PLUGIN / ".mcp.json").read_text())
+        server = config["glpi"]
+        self.assertEqual(server["command"], "npx")
+        self.assertEqual(server["args"], ["-y", "@soarescbm/mcp-glpi@0.4.0"])
+        self.assertEqual(
+            set(server["env"]),
+            {"GLPI_BASE_URL", "GLPI_PAT", "GLPI_APP_TOKEN", "GLPI_USE_SESSION", "GLPI_TIMEOUT_MS"},
+        )
+
+    def test_mcp_prompt_and_resource_sections_have_exact_entries(self):
+        reference = (PLUGIN / "references" / "mcp-tools.md").read_text()
+        prompts = re.findall(r"^\| `([a-z_]+)` \|.*\|", reference.split("## Prompts MCP", 1)[1].split("## Resources MCP", 1)[0], re.MULTILINE)
+        self.assertEqual(prompts, ["triage_ticket", "summarize_tickets"])
+        resources = re.findall(r"`(glpi://[^`]+)`", reference.split("## Resources MCP", 1)[1].split("## O que", 1)[0])
+        self.assertEqual(resources, ["glpi://ticket/{id}", "glpi://asset/{itemtype}/{id}", "glpi://kb/{id}"])
 
 
 if __name__ == "__main__":
