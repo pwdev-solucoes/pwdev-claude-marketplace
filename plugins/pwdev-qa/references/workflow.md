@@ -26,18 +26,18 @@ reason and does not erase the criterion. Neither value can be used to manufactur
 
 ## Workflow boundaries
 
-| Workflow | Contract |
-|---|---|
-| `qa-init` | Observe context and report available, missing, and unverified tools without installing them. |
-| `qa-strategy` | Define risk, coverage, environments, data, and entry/exit criteria. |
-| `qa-test` | Execute authorized tests and bind results to evidence. |
-| `qa-explore` | Run an authorized charter and record observations and defects. |
-| `qa-regression` | Select checks by impact and record the selection rationale. |
-| `qa-bug` | Record reproduction, severity, priority, state, and retest. |
-| `qa-review` | Perform a read-only review of requirements, coverage, evidence, and findings. |
-| `qa-release` | Produce a release verdict that exposes failures and pending work. |
-| `qa-report` | Export a report from normalized data without executing evidence commands. |
-| `qa-status` | Produce a read-only summary of existing QA state and its next valid action. |
+| Workflow | Mode | Contract |
+|---|---|---|
+| `qa-init` | `observe` | Observe context and report available, missing, and unverified tools without installing them. |
+| `qa-strategy` | `write` | Define risk, coverage, environments, data, and entry/exit criteria. |
+| `qa-test` | `execute` | Execute authorized tests and bind results to evidence. |
+| `qa-explore` | `execute` | Run an authorized charter and record observations and defects. |
+| `qa-regression` | `write` | Select checks by impact and record the selection rationale. |
+| `qa-bug` | `write` | Record reproduction, severity, priority, state, and retest. |
+| `qa-review` | `read-only` | Review requirements, coverage, evidence, and findings without mutation. |
+| `qa-release` | `write` | Produce a release verdict that exposes failures and pending work. |
+| `qa-report` | `export` | Export a report from normalized data without executing evidence commands. |
+| `qa-status` | `read-only` | Summarize existing QA state and its next valid action without mutation. |
 
 `qa-review` and `qa-status` are read-only: they must not execute tests, mutate product or QA
 artifacts, write approvals, or trigger external effects. A user must explicitly select and

@@ -21,7 +21,8 @@ Accepted media types in v1 are `text/plain`, `application/json`, `image/png`, an
 Treat JSON as inert text. Do not attach SVG, HTML, PDF, executable files, traces, or videos.
 
 Sanitization status is `synthetic`, `reviewed`, or `pending`. A pending sanitization review
-prevents copying the attachment and prevents `PASS`. Images require a recorded visual review.
+must produce an explicit diagnostic, prevents copying the attachment, and prevents `PASS`.
+Images require a recorded visual review.
 Known credential patterns are rejected. Never claim universal secret detection.
 
 ## Input limits
