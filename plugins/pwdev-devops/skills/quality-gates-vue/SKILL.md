@@ -2,8 +2,8 @@
 name: quality-gates-vue
 description: >
   Quality gates determinísticos para Vue.js, JavaScript e TypeScript. Use quando o
-  usuário pedir "quality gate Vue", "quality gate frontend", "ESLint", "vue-tsc",
-  "Vitest", cobertura, complexidade, bundle, acessibilidade ou baseline em Vue.js.
+  usuário pedir "quality gate Vue.js", ESLint, vue-tsc ou Vitest em projeto Vue.js,
+  cobertura, complexidade, bundle, acessibilidade ou baseline para Vue.js.
 metadata: { version: 1.0.0 }
 ---
 

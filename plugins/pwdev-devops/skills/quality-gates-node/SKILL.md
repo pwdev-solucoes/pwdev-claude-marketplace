@@ -2,8 +2,8 @@
 name: quality-gates-node
 description: >
   Quality gates determinísticos para aplicações e serviços Node.js, JavaScript e
-  TypeScript. Use quando o usuário pedir "quality gate Node", "quality gate backend",
-  "ESLint", "tsc", testes, cobertura, complexidade, SAST, SCA, build ou baseline em Node.js.
+  TypeScript. Use quando o usuário pedir "quality gate Node.js", ESLint ou tsc em
+  Node.js, testes, cobertura, complexidade, SAST, SCA, build ou baseline para Node.js.
 metadata: { version: 1.0.0 }
 ---
 
@@ -41,7 +41,7 @@ compatibilidade de runtime ou limites permanentes sem medição e aprovação.
 | Cobertura | provider local do runner, com versão fixada | mesmo conjunto de testes, provider, sourcemaps e inclusões/exclusões versionados | LCOV/JSON; bloqueia cobertura inferior a **80% das linhas alteradas** ou queda global maior que **0,0 ponto percentual** |
 | Complexidade | ESLint `complexity` ou analisador local equivalente | versão, regras, parser, paths, exclusões e baseline versionados | JSON; bloqueia função nova ou alterada com complexidade ciclomática **> 10** e qualquer aumento da baseline |
 | SAST | Semgrep ou equivalente local | binário fixado, regras locais versionadas, exclusões revisadas e escopo explícito | SARIF/JSON; bloqueia achado novo de severidade `ERROR` e aumento da baseline por regra, impressão digital e caminho |
-| SCA | Trivy fixado, em modo offline, sobre SBOM CycloneDX | lockfile, gerador e SBOM versionados, versão/imagem do Trivy fixada por digest e diretório da vulnerability DB proveniente de artefato imutável identificado por digest | `trivy sbom --offline-scan --skip-db-update --format json <sbom>`; bloqueia advisory novo `high` ou `critical` perante a DB e a baseline controladas |
+| SCA | Trivy fixado, em modo offline, sobre SBOM CycloneDX | lockfile, gerador e SBOM versionados, versão/imagem do Trivy fixada por digest, `TRIVY_DB_CACHE_DIR` fixado na configuração versionada para o diretório do artefato imutável da DB e `TRIVY_DB_ARTIFACT_SHA256` com seu digest verificado antes do gate | `trivy sbom --cache-dir "$TRIVY_DB_CACHE_DIR" --offline-scan --skip-db-update --format json <sbom>`; bloqueia advisory novo `high` ou `critical` perante a DB e a baseline controladas; variável ausente, digest divergente ou DB ausente é falha de infraestrutura |
 | Build | script de build existente em ambiente limpo | runtime, lockfile, instalação imutável, bundler/compiler, targets, variáveis e configuração versionados | código de saída e manifesto de artefatos; bloqueia falha, saída ausente ou mudança não aprovada no conjunto de artefatos esperado |
 
 Ferramentas equivalentes são aceitáveis somente quando preservam o contrato de entradas, saída
@@ -76,9 +76,12 @@ mantenha-o observacional até existir normalização versionada.
 - Use apenas um lockfile coerente com o gerenciador e fixe a versão desse gerenciador; instalação
   que atualize resolução ou lockfile não é uma verificação determinística.
 - Gere a SBOM CycloneDX de forma reproduzível a partir do lockfile e prepare fora do gate a
-  vulnerability DB do Trivy como artefato imutável por digest. No caminho bloqueante, a DB já
-  deve estar disponível localmente e o scanner usa `--offline-scan --skip-db-update`; se a DB ou
-  a SBOM esperada estiver ausente, classifique falha de infraestrutura, sem consultar a rede.
+  vulnerability DB do Trivy como artefato imutável por digest. Fixe `TRIVY_DB_CACHE_DIR` na
+  configuração versionada para o diretório extraído desse artefato e verifique-o contra
+  `TRIVY_DB_ARTIFACT_SHA256` antes do gate. No caminho bloqueante, execute
+  `trivy sbom --cache-dir "$TRIVY_DB_CACHE_DIR" --offline-scan --skip-db-update --format json
+  <sbom>`; variável ausente, digest divergente, DB ou SBOM ausente é falha de infraestrutura,
+  sem consultar a rede.
 - `npm audit`, `pnpm audit` e `yarn npm audit` consultam endpoints de registry: esses audits dos
   gerenciadores são apenas informativos e nunca substituem o scanner offline bloqueante.
 - Execute type checking para todos os projetos e packages declarados, inclusive project

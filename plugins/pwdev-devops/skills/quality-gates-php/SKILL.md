@@ -3,7 +3,7 @@ name: quality-gates-php
 description: >
   Quality gates determinísticos para PHP e Laravel. Use quando o usuário pedir
   "quality gate PHP", "quality gate Laravel", "PHPStan", "Larastan", "Pest",
-  "PHPUnit", "PHPMD", "Composer Audit", cobertura ou baseline em PHP.
+  "PHPUnit", "PHPMD", "Composer Audit", cobertura PHP ou baseline PHP.
 metadata: { version: 1.0.0 }
 ---
 

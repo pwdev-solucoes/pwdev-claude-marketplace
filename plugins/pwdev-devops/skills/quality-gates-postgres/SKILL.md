@@ -2,8 +2,9 @@
 name: quality-gates-postgres
 description: >
   Quality gates determinísticos para PostgreSQL. Use quando o usuário pedir
-  "quality gate PostgreSQL", "quality gate Postgres", validação de migration,
-  schema drift, constraints, índices, EXPLAIN, plano de consulta ou baseline de banco.
+  "quality gate PostgreSQL", "quality gate Postgres", migrations ou schema drift
+  PostgreSQL, constraints ou índices PostgreSQL, EXPLAIN, plano de consulta ou baseline
+  para PostgreSQL.
 metadata: { version: 1.0.0 }
 ---
 
