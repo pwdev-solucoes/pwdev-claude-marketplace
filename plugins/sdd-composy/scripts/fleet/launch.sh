@@ -195,6 +195,7 @@ PY
   [[ "${SDD_FLEET_FAIL_AFTER_LOOP:-}" == 1 ]] && fleet_die "injected post-LOOP failure"
   for member_file in "$state"/members/*.json; do
     work=$(fleet_json_string "$member_file" worktree); slug=$(fleet_json_string "$member_file" slug)
+    member_id=$(jq -er '.owner.member_id | select(type == "string" and length > 0)' "$member_file") || fleet_die "member owner identity is unavailable"
     handle="$state/$slug.ui.json"
     [[ ! -e "$handle" && ! -L "$handle" ]] || fleet_die "UI handle already exists: $handle"
     handles+=("$handle")
@@ -206,7 +207,7 @@ PY
       fi
     else
       cmd=("$HERE/interactive-run.sh" "$member_file" "$work")
-      if ! "fleet_ui_${ui}_start" "$handle" "$work" "$fleet_id" "$slug" "${cmd[@]}"; then
+      if ! "fleet_ui_${ui}_start" "$handle" "$work" "$fleet_id" "$member_id" "${cmd[@]}"; then
         fleet_ui_resource_established "$ui" "$handle" && trap 'fleet_unlock "$lock"' EXIT
         fleet_die "$ui runner creation failed"
       fi
