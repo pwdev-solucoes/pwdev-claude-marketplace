@@ -23,6 +23,9 @@ SPECIALISTS = {
         "qa-specialist-security",
         "qa-specialist-automation",
         "qa-specialist-cicd",
+        "qa-specialist-regression",
+        "qa-specialist-defects",
+        "qa-specialist-production",
     )
 }
 COMMON_SECTIONS = (
@@ -828,6 +831,148 @@ class QaSpecialistContractTest(unittest.TestCase):
         )
         self.assertRegex(text, r"(?is)manifest.*verdict.*(?:source|authoritative)")
         self.assertRegex(text, r"(?is)exit code.*does not.*QA.*verdict")
+
+    def test_regression_selects_coverage_by_impact_and_traceability(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-regression"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "change_impact",
+                "traceability",
+                "selection",
+                "rationale",
+                "outcome",
+            ),
+        )
+        selected = next(row for row in rows if row["scenario"] == "impact-selected")
+        self.assertEqual(
+            selected,
+            {
+                "scenario": "impact-selected",
+                "change_impact": "authentication and session boundaries",
+                "traceability": "changes to risks criteria and prior defects",
+                "selection": "login logout expiry and denied-role checks",
+                "rationale": "high impact and reachable regression paths",
+                "outcome": "READY",
+            },
+        )
+        self.assertRegex(text, r"(?is)impact.*traceab.*select")
+        self.assertRegex(text, r"(?is)(?:not|never).*convenience")
+
+    def test_regression_convenience_only_selection_is_blocked(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-regression"]),
+            (
+                "scenario",
+                "change_impact",
+                "traceability",
+                "selection",
+                "rationale",
+                "outcome",
+            ),
+        )
+        limited = next(row for row in rows if row["scenario"] == "convenience-only")
+        self.assertEqual(limited["change_impact"], "not assessed")
+        self.assertEqual(limited["traceability"], "missing")
+        self.assertEqual(limited["selection"], "fastest available checks")
+        self.assertEqual(limited["outcome"], "BLOCKED")
+
+    def test_defects_separate_severity_priority_and_preserve_retest_history(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-defects"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "severity",
+                "priority",
+                "status",
+                "history",
+                "retest",
+                "evidence",
+                "verdict",
+            ),
+        )
+        resolved = next(row for row in rows if row["scenario"] == "verified-resolution")
+        self.assertEqual(resolved["severity"], "critical product impact")
+        self.assertEqual(resolved["priority"], "P1 delivery order")
+        self.assertEqual(resolved["status"], "resolved")
+        self.assertEqual(resolved["history"], "original failure and all attempts preserved")
+        self.assertEqual(resolved["retest"], "terminal PASS attempt")
+        self.assertEqual(resolved["evidence"], "valid original and retest evidence")
+        self.assertEqual(resolved["verdict"], "PASS")
+        self.assertRegex(text, r"(?is)severity.*product impact.*priority.*delivery")
+        self.assertRegex(text, r"(?is)retest.*history")
+
+    def test_proven_current_unlinked_defect_forces_fail(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-defects"]),
+            (
+                "scenario",
+                "severity",
+                "priority",
+                "status",
+                "history",
+                "retest",
+                "evidence",
+                "verdict",
+            ),
+        )
+        current = next(row for row in rows if row["scenario"] == "proven-unlinked-current")
+        self.assertEqual(current["status"], "open")
+        self.assertEqual(current["history"], "original failure preserved")
+        self.assertEqual(current["retest"], "NOT_RUN")
+        self.assertEqual(current["evidence"], "valid in-scope failure evidence")
+        self.assertEqual(current["verdict"], "FAIL")
+
+    def test_production_observation_is_authorized_read_only_and_preventive(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-production"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "authorization",
+                "boundary",
+                "observation",
+                "external_effects",
+                "cause",
+                "evidence",
+                "preventive_regression",
+                "outcome",
+            ),
+        )
+        ready = next(row for row in rows if row["scenario"] == "authorized-observation")
+        self.assertEqual(ready["authorization"], "explicit read-only production grant")
+        self.assertEqual(ready["boundary"], "named service metrics and time window")
+        self.assertEqual(ready["observation"], "approved existing telemetry only")
+        self.assertEqual(ready["external_effects"], "none")
+        self.assertEqual(ready["cause"], "supported by EV-PROD-001")
+        self.assertEqual(ready["evidence"], "EV-PROD-001 reviewed and target-bound")
+        self.assertEqual(ready["preventive_regression"], "linked to cause and EV-PROD-001")
+        self.assertEqual(ready["outcome"], "READY")
+        self.assertRegex(text, r"(?is)explicit authorization.*read-only")
+        self.assertRegex(text, r"(?is)prevent.*recurrence.*cause.*evidence")
+
+    def test_production_missing_authorization_observes_nothing(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-production"]),
+            (
+                "scenario",
+                "authorization",
+                "boundary",
+                "observation",
+                "external_effects",
+                "cause",
+                "evidence",
+                "preventive_regression",
+                "outcome",
+            ),
+        )
+        blocked = next(row for row in rows if row["scenario"] == "missing-authorization")
+        self.assertEqual(blocked["authorization"], "missing")
+        self.assertEqual(blocked["observation"], "NOT_RUN")
+        self.assertEqual(blocked["external_effects"], "none")
+        self.assertEqual(blocked["outcome"], "BLOCKED")
 
 
 if __name__ == "__main__":
