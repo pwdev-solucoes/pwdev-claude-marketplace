@@ -258,21 +258,38 @@ else: print(json.dumps(result))
                 calls.append(kwargs)
                 return {"status": "PASS"}
             summary = SMOKE.run_acceptance(
-                mode="real", runtime="all", language="en-US",
-                scenario="fleet-interactive", ui="all",
+                mode="real", runtime="codex", language="en-US",
+                scenario="fleet-interactive", ui="cmux",
                 output=Path(directory) / "run", plugin_root=ROOT / "plugins/sdd-composy",
                 provider_launcher=succeed,
                 authorized_runtime_uis={"codex:cmux"},
             )
             durable = json.loads((Path(directory) / "run" / "invocation-budget.json").read_text())
         self.assertEqual([(row["runtime"], row["ui"], row["status"])
-                          for row in summary["scenarios"]], [
-            ("hermes", "cmux", "NOT_RUN"), ("hermes", "tmux", "NOT_RUN"),
-            ("codex", "cmux", "PASS"), ("codex", "tmux", "NOT_RUN"),
-            ("claude", "cmux", "NOT_RUN"), ("claude", "tmux", "NOT_RUN"),
-        ])
+                          for row in summary["scenarios"]], [("codex", "cmux", "PASS")])
         self.assertEqual([(call["runtime"], call["ui"]) for call in calls], [("codex", "cmux")])
         self.assertEqual(durable["consumed"], ["codex:cmux"])
+
+    def test_real_interactive_rejects_multi_ui_before_reservation_or_fake_launch(self):
+        for launcher in (lambda **kwargs: self.fail(f"injected launcher called: {kwargs}"),
+                         SMOKE.production_provider_launcher):
+            with self.subTest(production=launcher is SMOKE.production_provider_launcher):
+                with tempfile.TemporaryDirectory() as directory:
+                    output = Path(directory) / "run"
+                    external_calls = []
+                    summary = SMOKE.run_acceptance(
+                        mode="real", runtime="codex", language="en-US",
+                        scenario="fleet-interactive", ui="all", output=output,
+                        plugin_root=ROOT / "plugins/sdd-composy", provider_launcher=launcher,
+                        production_interactive_launcher=lambda **kwargs: external_calls.append(kwargs),
+                        authorized_runtime_uis={"codex:cmux", "codex:tmux"},
+                    )
+                    self.assertFalse((output / "invocation-budget.json").exists())
+                self.assertEqual(external_calls, [])
+                self.assertEqual(summary["provider_calls"], {"hermes": 0, "codex": 0, "claude": 0})
+                self.assertEqual(len(summary["scenarios"]), 1)
+                self.assertEqual(summary["scenarios"][0]["status"], "NOT_RUN")
+                self.assertIn("concrete", summary["scenarios"][0]["reason"])
 
     def test_generic_acknowledgement_and_credentials_do_not_authorize_a_combination(self):
         with tempfile.TemporaryDirectory() as directory, patch.dict(

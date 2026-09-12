@@ -918,7 +918,8 @@ def run_acceptance(*, mode: str, runtime: str, language: str, scenario: str,
     for selected_runtime in runtimes:
         for selected_language in languages:
             for selected_scenario in scenarios:
-                selected_uis = (_selection(ui, "all", INTERACTIVE_UIS)
+                selected_uis = (((ui,) if mode == "real"
+                                 else _selection(ui, "all", INTERACTIVE_UIS))
                                 if selected_scenario == "fleet-interactive" else (None,))
                 for selected_ui in selected_uis:
                     started_at = utc_now()
@@ -926,6 +927,10 @@ def run_acceptance(*, mode: str, runtime: str, language: str, scenario: str,
                         with isolated_fixture(plugin_root) as fixture:
                             outcome = _offline_check(fixture, fixture / "plugin", selected_runtime,
                                                      selected_language, selected_scenario, selected_ui)
+                    elif (selected_scenario == "fleet-interactive"
+                          and selected_ui not in (*INTERACTIVE_UIS, "headless")):
+                        outcome = {"status": "NOT_RUN",
+                                   "reason": "real interactive execution requires one concrete cmux, tmux, or headless UI"}
                     elif selected_scenario == "fleet-interactive" and f"{selected_runtime}:{selected_ui}" not in authorizations:
                         outcome = {"status": "NOT_RUN",
                                    "reason": "exact runtime+UI authorization is required"}

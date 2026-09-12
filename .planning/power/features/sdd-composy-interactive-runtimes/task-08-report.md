@@ -29,3 +29,10 @@ No real provider, cmux, or tmux session was executed. Every real runtime/UI comb
 - Symlinked budget/lock paths and ancestors are rejected before reading durable budget content.
 - Focused result: six gate/budget tests passed in 0.129s. Only fake launchers were used.
 - Full result: 427 tests passed in 175.120s.
+
+## Review fix round 2
+
+- Real interactive invocation now requires exactly one concrete cmux, tmux, or headless UI; `all` and `auto` are rejected as `NOT_RUN` before reservation/call.
+- Offline `all` remains supported. A failed concrete UI is terminal for that invocation and no cross-UI fallback can occur.
+- Focused result: four fake-only tests passed in 49.962s.
+- Full result: 428 tests passed in 176.683s.

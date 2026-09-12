@@ -63,3 +63,12 @@ Status: INCOMPLETE
 - Budget and lock paths, including ancestors, are rejected if symlinked before budget contents are read. Malformed state remains fail-closed and no launcher is called.
 - All real combinations remain INCOMPLETE/NOT_RUN; no provider or real UI session was executed.
 - Final suite: `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 427 tests passed in 175.120s.
+
+## Task 08 review fix round 2
+
+- RED: real `ui=all` invoked the injected cmux path and could continue to tmux; the production identity probe likewise entered the first UI path.
+- GREEN: four focused tests passed in 49.962s with fake injection only.
+- Real `fleet-interactive` now accepts exactly one concrete `cmux`, `tmux`, or `headless` UI. `all` and `auto` produce `NOT_RUN` before reservation or launcher invocation; `all` remains valid for the offline matrix.
+- A failed concrete `codex:cmux` run makes exactly one call and cannot continue to the separately authorized `codex:tmux` combination in the same invocation.
+- All real runtime/UI rows remain INCOMPLETE/NOT_RUN; no real provider or UI was executed.
+- Final suite: `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 428 tests passed in 176.683s.
