@@ -72,3 +72,13 @@ Status: INCOMPLETE
 - A failed concrete `codex:cmux` run makes exactly one call and cannot continue to the separately authorized `codex:tmux` combination in the same invocation.
 - All real runtime/UI rows remain INCOMPLETE/NOT_RUN; no real provider or UI was executed.
 - Final suite: `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 428 tests passed in 176.683s.
+
+## Task 08 production interactive launcher
+
+- RED: three focused tests failed because `production_interactive_launcher` did not exist and `main()` did not pass it into `run_acceptance`.
+- GREEN: `python3 -m unittest tests.test_sdd_composy_runtime_smoke` — 39 tests passed in 137.914s using injected command runners only.
+- `main()` now wires the production interactive launcher. After the exact reservation is consumed, it creates a confined recoverable Git/task/approval fixture under the requested run output and invokes existing `fleet/launch.sh` once with exactly one authorized runtime and concrete UI.
+- The launch vector contains no compose, prepare-only, bypass, yolo, or full-auto flag. Runtime/UI command construction remains owned by the existing fleet adapters and drivers.
+- Observation reads only durable member, LOOP, and handle JSON for the fixed 300-second window. Terminal stdout is ignored as evidence. PASS/BLOCKED/FAIL results carry repository, worktree, member, LOOP, and handle paths, with no merge, teardown, fallback, or retry.
+- Full suite: `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 431 tests passed in 172.945s.
+- No real provider, cmux, or tmux process was invoked. Real combinations remain INCOMPLETE/NOT_RUN pending their individual human-authorized runs.

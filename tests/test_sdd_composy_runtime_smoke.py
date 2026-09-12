@@ -37,6 +37,31 @@ def _consume_budget_process(output, ready, start, results):
 
 
 class RuntimeSmokeContractTests(unittest.TestCase):
+    def _fake_interactive_launch_runner(self, terminal_state, calls):
+        def runner(command, cwd, timeout):
+            calls.append((command, cwd, timeout))
+            root = Path(command[command.index("--root") + 1])
+            fleet_id = command[command.index("--fleet-id") + 1]
+            state = root / ".planning/sdd-composy/fleet" / fleet_id
+            members = state / "members"; members.mkdir(parents=True)
+            worktree = root.parent / "preserved-member-worktree"; worktree.mkdir()
+            loop_id = f"loop-{fleet_id}-task-008"
+            loop = root / ".planning/sdd-composy/loops" / f"{loop_id}.json"
+            loop.parent.mkdir(parents=True)
+            loop.write_text(json.dumps({"id": loop_id, "task_id": "TASK-008",
+                "status": "completed" if terminal_state == "completed" else "running"}))
+            member = members / "TASK-008.json"
+            member.write_text(json.dumps({"id": "TASK-008", "task_id": "TASK-008",
+                "slug": "task-008", "worktree_path": str(worktree),
+                "interaction": {"state": terminal_state,
+                    "loop": {"id": loop_id, "task_id": "TASK-008"}}}))
+            handle = state / "task-008.ui.json"
+            handle.write_text(json.dumps({"driver": command[command.index("--ui") + 1],
+                                          "recoverable": True}))
+            return {"status": "PASS", "exit_code": 0, "stdout": "terminal ignored",
+                    "stderr": "", "duration_seconds": 0.01}
+        return runner
+
     def _real_fake(self, runtime, behavior="success", consent=True):
         with tempfile.TemporaryDirectory() as directory:
             binary = Path(directory) / runtime
@@ -407,6 +432,61 @@ else: print(json.dumps(result))
                         provider_launcher=lambda **kwargs: called.append(kwargs),
                         authorized_runtime_uis={"codex:cmux"})
             self.assertEqual(called, [])
+
+    def test_main_wires_the_production_interactive_launcher(self):
+        captured = {}
+        def acceptance(**kwargs):
+            captured.update(kwargs)
+            return {"verdict": "BLOCKED"}
+        with tempfile.TemporaryDirectory() as directory, patch.object(
+                SMOKE, "run_acceptance", side_effect=acceptance):
+            code = SMOKE.main(["--mode", "real", "--runtime", "codex",
+                "--language", "en-US", "--scenario", "fleet-interactive",
+                "--ui", "cmux", "--provider-entry-point", "production",
+                "--authorize-runtime-ui", "codex:cmux", "--output", directory])
+        self.assertEqual(code, 2)
+        self.assertIs(captured["provider_launcher"], SMOKE.production_provider_launcher)
+        self.assertIs(captured["production_interactive_launcher"],
+                      SMOKE.production_interactive_launcher)
+
+    def test_production_interactive_launcher_uses_exact_fleet_argv_once_and_durable_pass(self):
+        with tempfile.TemporaryDirectory() as directory:
+            calls = []
+            result = SMOKE.production_interactive_launcher(
+                runtime="codex", language="en-US", scenario="fleet-interactive",
+                ui="cmux", timeout=300, plugin_root=ROOT / "plugins/sdd-composy",
+                output=Path(directory),
+                command_runner=self._fake_interactive_launch_runner("completed", calls),
+                clock=lambda: 0.0, sleep=lambda _seconds: None)
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(len(calls), 1)
+        command, cwd, timeout = calls[0]
+        self.assertEqual(command[0], str(ROOT / "plugins/sdd-composy/scripts/fleet/launch.sh"))
+        self.assertEqual(command[command.index("--runtime") + 1], "codex")
+        self.assertEqual(command[command.index("--ui") + 1], "cmux")
+        self.assertEqual(timeout, 300)
+        self.assertFalse({"--compose", "--prepare-only", "--dangerously-skip-permissions",
+                          "--yolo", "--full-auto"}.intersection(command))
+        self.assertTrue(all(result[key] for key in ("repository", "worktree", "member", "loop", "handle")))
+
+    def test_production_interactive_launcher_classifies_durable_state_and_preserves_resources(self):
+        for state, expected in (("awaiting_human", "BLOCKED"), ("failed", "FAIL")):
+            with self.subTest(state=state), tempfile.TemporaryDirectory() as directory:
+                calls = []
+                ticks = iter((0.0, 300.0))
+                result = SMOKE.production_interactive_launcher(
+                    runtime="claude", language="pt-BR", scenario="fleet-interactive",
+                    ui="tmux", timeout=300, plugin_root=ROOT / "plugins/sdd-composy",
+                    output=Path(directory),
+                    command_runner=self._fake_interactive_launch_runner(state, calls),
+                    clock=lambda: next(ticks), sleep=lambda _seconds: None)
+                self.assertEqual(result["status"], expected)
+                self.assertEqual(len(calls), 1)
+                self.assertTrue(Path(result["repository"]).is_dir())
+                self.assertTrue(Path(result["worktree"]).is_dir())
+                self.assertTrue(Path(result["member"]).is_file())
+                self.assertTrue(Path(result["loop"]).is_file())
+                self.assertTrue(Path(result["handle"]).is_file())
 
     def test_controlled_process_timeout_terminates_child_and_reports_timeout(self):
         with tempfile.TemporaryDirectory() as directory:

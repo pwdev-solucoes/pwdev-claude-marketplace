@@ -959,7 +959,7 @@ def run_acceptance(*, mode: str, runtime: str, language: str, scenario: str,
                                 outcome = provider_launcher(runtime=selected_runtime,
                                     language=selected_language, scenario=selected_scenario,
                                     ui=selected_ui, timeout=DEFAULT_TIMEOUT,
-                                    plugin_root=plugin_root, budget=budget,
+                                    plugin_root=plugin_root, output=output, budget=budget,
                                     reservation=reservation,
                                     interactive_launcher=production_interactive_launcher,
                                     hermes_automation_acknowledged=hermes_automation_acknowledged)
@@ -1067,9 +1067,99 @@ def _helper_witness(runtime: str, events: list, helper: Path, expected: dict) ->
     return False
 
 
+def _acceptance_json(path: Path) -> Dict[str, Any]:
+    _reject_symlink_ancestors(path)
+    if not path.is_file():
+        raise SmokeBlocked(f"durable acceptance state unavailable: {path.name}")
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise SmokeBlocked(f"invalid durable acceptance state: {path.name}")
+    return value
+
+
+def production_interactive_launcher(*, runtime: str, language: str, scenario: str,
+                                    ui: str, timeout: float, plugin_root: Path,
+                                    output: Path,
+                                    command_runner: Callable[..., Dict[str, Any]] = run_process,
+                                    clock: Callable[[], float] = time.monotonic,
+                                    sleep: Callable[[float], None] = time.sleep) -> Dict[str, Any]:
+    """Launch one recoverable fleet fixture and classify durable state only."""
+    if scenario != "fleet-interactive" or runtime not in RUNTIMES:
+        return {"status": "NOT_RUN", "reason": "unsupported interactive production request"}
+    if ui not in (*INTERACTIVE_UIS, "headless") or timeout != DEFAULT_TIMEOUT:
+        return {"status": "NOT_RUN", "reason": "exact UI and 300 second timeout are required"}
+    fixture = output / "production-interactive" / f"{runtime}-{ui}"
+    _reject_symlink_ancestors(fixture)
+    try:
+        fixture.mkdir(parents=True, exist_ok=False)
+    except FileExistsError as exc:
+        raise SmokeBlocked("interactive acceptance fixture already exists; retry is forbidden") from exc
+    task_id, slug, fleet_id, base_branch = "TASK-008", "task-008", f"acceptance-{runtime}-{ui}", "smoke-base"
+    task = fixture / "task-008.json"
+    task.write_text(json.dumps({"id": task_id, "state": "ready", "dependencies": [],
+        "acceptance_criteria": ["Human-assisted runtime acceptance"],
+        "verification_commands": ["python3 -m unittest"], "allowed_paths": ["README.md"],
+        "contract_path": str(task)}, indent=2) + "\n", encoding="utf-8")
+    (fixture / "README.md").write_text("# Confined interactive acceptance fixture\n", encoding="utf-8")
+    phases = fixture / ".planning/sdd-composy/phases" / slug
+    phases.mkdir(parents=True)
+    approval = ("# Scoped acceptance fixture contract\n\nStatus: APPROVED\n\n"
+                f"Runtime: {runtime}\nUI: {ui}\nLanguage: {language}\n")
+    for name in ("spec.md", "decisions.md"):
+        (phases / name).write_text(approval, encoding="utf-8")
+    local_commands = (["git", "init", "-q", "-b", base_branch], ["git", "add", "."],
+        ["git", "-c", "user.name=SDD Smoke", "-c", "user.email=sdd-smoke.invalid",
+         "commit", "-qm", "acceptance fixture"])
+    for command in local_commands:
+        result = subprocess.run(command, cwd=fixture, text=True, capture_output=True, check=False)
+        if result.returncode:
+            return {"status": "FAIL", "reason": "unable to prepare confined Git fixture",
+                    "repository": str(fixture), "resources": [str(fixture)]}
+    launch = [str(plugin_root / "scripts/fleet/launch.sh"), "--runtime", runtime,
+              "--root", str(fixture), "--fleet-id", fleet_id, "--base-branch", base_branch,
+              "--task", str(task), "--ui", ui]
+    launched = command_runner(launch, fixture, timeout=timeout)
+    state = fixture / ".planning/sdd-composy/fleet" / fleet_id
+    member_path = state / "members" / f"{task_id}.json"
+    locations: Dict[str, Any] = {"repository": str(fixture), "member": str(member_path),
+        "handle": str(state / f"{slug}.ui.json"), "worktree": "", "loop": "",
+        "resources": [str(fixture), str(state)]}
+    if launched.get("status") != "PASS":
+        status = "BLOCKED" if launched.get("status") == "BLOCKED" else "FAIL"
+        return {**locations, "status": status, "reason": "fleet launch failed",
+                "exit_code": launched.get("exit_code")}
+    started = clock()
+    while True:
+        try:
+            member = _acceptance_json(member_path)
+            interaction = member.get("interaction", {})
+            binding = interaction.get("loop", {})
+            loop_path = fixture / ".planning/sdd-composy/loops" / f"{binding.get('id', '')}.json"
+            loop = _acceptance_json(loop_path)
+            handle_path = Path(locations["handle"])
+            _acceptance_json(handle_path)
+            locations.update(worktree=str(member.get("worktree_path", "")), loop=str(loop_path))
+            locations["resources"] = [str(fixture), str(member_path), str(loop_path),
+                                      str(handle_path), locations["worktree"]]
+            interaction_state, loop_state = interaction.get("state"), loop.get("status")
+            if interaction_state == "completed" and loop_state == "completed":
+                return {**locations, "status": "PASS", "reason": None}
+            if interaction_state in {"failed", "cancelled"}:
+                return {**locations, "status": "FAIL", "reason": f"durable interaction state: {interaction_state}"}
+            if interaction_state in {"blocked", "awaiting_human"}:
+                return {**locations, "status": "BLOCKED", "reason": "awaiting human completion"}
+        except (SmokeBlocked, OSError, ValueError, TypeError, AttributeError) as exc:
+            if clock() - started >= timeout:
+                return {**locations, "status": "FAIL", "reason": sanitize(str(exc))}
+        if clock() - started >= timeout:
+            return {**locations, "status": "BLOCKED", "reason": "observation timeout"}
+        sleep(min(1.0, timeout))
+
+
 def production_provider_launcher(*, runtime: str, language: str, scenario: str,
                                  timeout: float = DEFAULT_TIMEOUT, plugin_root: Path,
                                  budget: InvocationBudget,
+                                 output: Optional[Path] = None,
                                  ui: Optional[str] = None,
                                  reservation: Optional[str] = None,
                                  interactive_launcher: Optional[Callable[..., Dict[str, Any]]] = None,
@@ -1086,8 +1176,11 @@ def production_provider_launcher(*, runtime: str, language: str, scenario: str,
             return {"status": "NOT_RUN", "reason": "interactive production launcher is unavailable"}
         if reservation != f"{runtime}:{ui}" or not budget.was_consumed(runtime, ui):
             raise SmokeBlocked("exact runtime+UI reservation was not consumed")
+        if output is None:
+            raise SmokeBlocked("interactive acceptance output is required")
         return interactive_launcher(runtime=runtime, language=language, scenario=scenario,
-                                    ui=ui, timeout=timeout, plugin_root=plugin_root)
+                                    ui=ui, timeout=timeout, plugin_root=plugin_root,
+                                    output=output)
     if scenario != "read-only":
         return {"status": "NOT_RUN", "reason": "only the read-only production entry is implemented"}
     if runtime == "hermes" and not hermes_automation_acknowledged:
@@ -1183,6 +1276,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                              scenario=args.scenario, output=args.output,
                              plugin_root=root / "plugins/sdd-composy",
                              provider_launcher=launcher,
+                             production_interactive_launcher=production_interactive_launcher,
                              ui=args.ui,
                              max_calls_per_runtime=args.max_calls_per_runtime,
                              fleet_acknowledged=args.acknowledge_real_fleet,

@@ -36,3 +36,11 @@ No real provider, cmux, or tmux session was executed. Every real runtime/UI comb
 - Offline `all` remains supported. A failed concrete UI is terminal for that invocation and no cross-UI fallback can occur.
 - Focused result: four fake-only tests passed in 49.962s.
 - Full result: 428 tests passed in 176.683s.
+
+## Production interactive launcher
+
+- Implemented and wired `production_interactive_launcher` for the production CLI path.
+- It prepares only a confined recoverable fixture beneath the requested output, calls the existing fleet launcher once with the exact runtime/UI, and observes durable member/LOOP/handle state for 300 seconds.
+- It returns inspectable repository, worktree, member, LOOP, and handle paths and never treats terminal output as witness or performs cleanup, merge, retry, or fallback.
+- Focused smoke module: 39 tests passed in 137.914s. Full suite: 431 tests passed in 172.945s.
+- Verification used injected fake command runners only; all real combinations remain INCOMPLETE/NOT_RUN.
