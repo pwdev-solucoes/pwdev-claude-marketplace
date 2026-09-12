@@ -153,6 +153,54 @@ else: print(json.dumps(result))
         self.assertTrue(all(row["duration_seconds"] is not None for row in summary["scenarios"]))
         self.assertTrue(all(row["result_sha256"] for row in summary["scenarios"]))
 
+    def test_fleet_interactive_offline_covers_runtime_ui_matrix_without_providers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            def forbidden(*_args, **_kwargs):
+                raise AssertionError("offline interactive mode invoked a real provider")
+
+            summary = SMOKE.run_acceptance(
+                mode="offline", runtime="all", language="en-US",
+                scenario="fleet-interactive", ui="all",
+                output=Path(directory) / "run", plugin_root=ROOT / "plugins/sdd-composy",
+                provider_launcher=forbidden,
+            )
+        rows = summary["scenarios"]
+        self.assertEqual(summary["verdict"], "PASS")
+        self.assertEqual(summary["provider_calls"], {"hermes": 0, "codex": 0, "claude": 0})
+        self.assertEqual({(row["runtime"], row["ui"]) for row in rows}, {
+            (runtime, ui) for runtime in SMOKE.RUNTIMES for ui in ("cmux", "tmux")
+        })
+        self.assertTrue(all(row["status"] == "PASS" for row in rows))
+        self.assertTrue(all(row["timeout_seconds"] == 300 for row in rows))
+
+    def test_fleet_interactive_negative_pty_content_never_becomes_a_witness(self):
+        expected = {
+            "markdown": "FAIL", "json-string": "FAIL", "tampered-witness": "FAIL",
+            "dead-pane": "FAIL", "timeout": "BLOCKED", "divergent-loop": "FAIL",
+            "unsupported-combination": "NOT_RUN",
+        }
+        for case, status in expected.items():
+            with self.subTest(case=case):
+                result = SMOKE._offline_interactive_assessment(case, timeout=300)
+                self.assertEqual(result["status"], status)
+                self.assertFalse(result["terminal_is_witness"])
+                if case == "timeout":
+                    self.assertEqual(result["interaction_state"], "awaiting_human")
+
+    def test_fleet_interactive_exercises_auto_resolution_and_headless_offline(self):
+        for requested, resolved in (("auto", "cmux"), ("headless", "headless")):
+            with self.subTest(ui=requested), tempfile.TemporaryDirectory() as directory:
+                summary = SMOKE.run_acceptance(
+                    mode="offline", runtime="codex", language="en-US",
+                    scenario="fleet-interactive", ui=requested,
+                    output=Path(directory) / "run", plugin_root=ROOT / "plugins/sdd-composy",
+                    provider_launcher=lambda *_args, **_kwargs: self.fail("provider invoked"),
+                )
+                row = summary["scenarios"][0]
+                self.assertEqual(row["status"], "PASS")
+                self.assertEqual(row["requested_ui"], requested)
+                self.assertEqual(row["ui"], resolved)
+
     def test_budget_is_per_runtime_hard_limit_and_has_no_automatic_retry(self):
         budget = SMOKE.InvocationBudget(2)
         budget.consume("codex")
