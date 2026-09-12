@@ -58,3 +58,41 @@ patterns in log and JSON; and a pending visual review. Fixtures contain no real 
 - `plugins/pwdev-qa/references/evidence.md`
 - `tests/test_qa_evidence.py`
 - `.planning/power/features/pwdev-qa/task-11-report.md`
+
+## Review correction — round 1
+
+- Replaced pathname reopening with descriptor-relative traversal rooted in a verified project
+  directory descriptor. Every component uses no-follow metadata inspection plus relative
+  `open`/`O_NOFOLLOW`; file reads remain bound to the opened parent descriptor.
+- Added a deterministic parent-swap probe. It renames the already opened parent and replaces its
+  pathname with a symlink to attacker-controlled bytes before the file open; inspection still
+  reads the original descriptor-held snapshot and never follows the replacement pathname.
+- `VERIFIED` now includes `requires_copy_revalidation=true`. The reference explicitly defines
+  `copy_allowed` as snapshot eligibility, never durable authorization, and requires the exporter
+  to reopen, revalidate, and copy from one descriptor into an exclusive temporary destination.
+- PNG admission now verifies the complete chunk stream, CRCs, critical structure, palette rules,
+  consecutive IDAT data, bounded decompression, row size/filter consistency, and terminal IEND.
+  JPEG admission validates segment lengths, frame/scan structure, entropy presence, and terminal
+  EOI. Tests use complete synthetic PNG/JPEG fixtures and reject truncated/malformed variants.
+- JSON credential checks now recursively inspect decoded keys and string values, so Unicode
+  escapes such as `api\\u005fkey` cannot evade the known-pattern policy; diagnostics continue to
+  expose no matched fragment, rejected path, or content.
+
+### Correction TDD and verification evidence
+
+- RED: focused correction probes failed on all confirmed gaps: parent swap was not descriptor
+  bound; truncated/malformed images were admitted; Unicode-escaped JSON credentials were
+  `VERIFIED`; and verified output omitted mandatory copy revalidation.
+- GREEN: `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v tests.test_qa_evidence` — 9 tests
+  passed after the fixes.
+- Regression proof: with the corrected tests retained and only `qa_evidence.py` temporarily
+  reversed to its prior version, the four targeted correction tests produced 4 failures. Restoring
+  the staged implementation returned the same four probes to 4 passing tests.
+- Adversarial probes cover deterministic parent swap, complete/truncated/malformed PNG, complete
+  and truncated JPEG, escaped semantic JSON keys, sanitized projections, and copy revalidation.
+- Independent fixture probe: macOS `sips` decoded the embedded JPEG with `pixelWidth: 1` and
+  `pixelHeight: 1`; the focused suite itself requires no imaging dependency.
+- QA regression: all 85 `test_qa_*` tests passed; Python compilation and staged `git diff --check`
+  passed after restoration.
+- No ledger, review artifact, brief, plugin used as reference, dependency, personal configuration,
+  publication, push, or merge was changed.

@@ -1,5 +1,6 @@
 """Behavioral tests for PWDEV QA evidence admission."""
 
+import base64
 import copy
 import hashlib
 import importlib.util
@@ -8,7 +9,9 @@ import struct
 import sys
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
+from unittest import mock
 
 from tests.test_qa_contract import load_contract_module, valid_manifest
 
@@ -36,6 +39,49 @@ def load_evidence_module():
 
 def png_header(width: int, height: int) -> bytes:
     return b"\x89PNG\r\n\x1a\n" + struct.pack(">I", 13) + b"IHDR" + struct.pack(">II", width, height)
+
+
+def png_chunk(kind: bytes, data: bytes) -> bytes:
+    checksum = zlib.crc32(kind + data) & 0xFFFFFFFF
+    return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", checksum)
+
+
+def png_image(width: int, height: int) -> bytes:
+    header = struct.pack(">IIBBBBB", width, height, 8, 0, 0, 0, 0)
+    pixels = (b"\x00" + (b"\x00" * width)) * height
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", header)
+        + png_chunk(b"IDAT", zlib.compress(pixels))
+        + png_chunk(b"IEND", b"")
+    )
+
+
+def png_with_pixels(width: int, height: int, pixels: bytes) -> bytes:
+    header = struct.pack(">IIBBBBB", width, height, 8, 0, 0, 0, 0)
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", header)
+        + png_chunk(b"IDAT", zlib.compress(pixels))
+        + png_chunk(b"IEND", b"")
+    )
+
+
+def jpeg_image() -> bytes:
+    return base64.b64decode(
+        "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRof"
+        "Hh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwh"
+        "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAAR"
+        "CAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAA"
+        "AgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkK"
+        "FhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWG"
+        "h4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl"
+        "5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREA"
+        "AgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYk"
+        "NOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOE"
+        "hYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk"
+        "5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3+iiigD//2Q=="
+    )
 
 
 class QaEvidenceTest(unittest.TestCase):
@@ -78,6 +124,7 @@ class QaEvidenceTest(unittest.TestCase):
                 },
                 "status": "VERIFIED",
                 "copy_allowed": True,
+                "requires_copy_revalidation": True,
                 "path": "artifacts/result.txt",
                 "sha256": hashlib.sha256(raw).hexdigest(),
                 "media_type": "text/plain",
@@ -147,6 +194,45 @@ class QaEvidenceTest(unittest.TestCase):
             with self.assertRaisesRegex(evidence.EvidenceError, "sensitive path"):
                 evidence.inspect_evidence(root, manifest)
 
+    def test_parent_path_swap_cannot_redirect_the_opened_snapshot(self) -> None:
+        evidence = load_evidence_module()
+        safe = b"synthetic safe evidence\n"
+        attacker = b"attacker-controlled bytes\n"
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            root = base / "root"
+            outside = base / "outside"
+            parent = root / "artifacts"
+            attacker_parent = outside / "attacker"
+            parent.mkdir(parents=True)
+            attacker_parent.mkdir(parents=True)
+            parent.joinpath("result.txt").write_bytes(safe)
+            attacker_parent.joinpath("result.txt").write_bytes(attacker)
+            manifest = self.manifest_for("artifacts/result.txt", safe)
+            original_open = evidence.os.open
+            swapped = False
+
+            def swap_before_file_open(path, flags, *args, **kwargs):
+                nonlocal swapped
+                if not swapped and Path(path).name == "result.txt":
+                    parent.rename(outside / "original")
+                    parent.symlink_to(attacker_parent, target_is_directory=True)
+                    swapped = True
+                return original_open(path, flags, *args, **kwargs)
+
+            with mock.patch.object(evidence.os, "open", side_effect=swap_before_file_open):
+                try:
+                    records = evidence.inspect_evidence(root, manifest)
+                    self.assertEqual(len(records), 1)
+                    record = records[0]
+                except ValueError:
+                    self.fail("parent swap redirected or invalidated the descriptor-held snapshot")
+
+        self.assertTrue(swapped)
+        self.assertEqual(record["status"], "VERIFIED")
+        self.assertTrue(record["requires_copy_revalidation"])
+        self.assertNotIn(attacker.decode().strip(), json.dumps(record))
+
     def test_revalidates_actual_individual_and_aggregate_size_limits(self) -> None:
         evidence = load_evidence_module()
         with tempfile.TemporaryDirectory() as directory:
@@ -191,13 +277,40 @@ class QaEvidenceTest(unittest.TestCase):
             with self.assertRaisesRegex(evidence.EvidenceError, "media type"):
                 evidence.inspect_evidence(root, manifest)
 
-            raw = png_header(1, 1)
+            raw = png_image(1, 1)
             root.joinpath("fake.jpg").write_bytes(raw)
             manifest = self.manifest_for("fake.jpg", raw, "image/jpeg")
             with self.assertRaisesRegex(evidence.EvidenceError, "media type"):
                 evidence.inspect_evidence(root, manifest)
 
-            huge = png_header(5000, 4001)
+            truncated_png = png_header(1, 1)
+            root.joinpath("truncated.png").write_bytes(truncated_png)
+            manifest = self.manifest_for("truncated.png", truncated_png, "image/png")
+            manifest["evidence"][0]["sanitization"]["status"] = "reviewed"
+            with self.assertRaisesRegex(evidence.EvidenceError, "PNG|image/png"):
+                evidence.inspect_evidence(root, manifest)
+
+            malformed_png = png_with_pixels(1, 1, b"\x00" * 1000)
+            root.joinpath("malformed.png").write_bytes(malformed_png)
+            manifest = self.manifest_for("malformed.png", malformed_png, "image/png")
+            manifest["evidence"][0]["sanitization"]["status"] = "reviewed"
+            with self.assertRaisesRegex(evidence.EvidenceError, "PNG"):
+                evidence.inspect_evidence(root, manifest)
+
+            truncated_jpeg = jpeg_image()[:-2]
+            root.joinpath("truncated.jpg").write_bytes(truncated_jpeg)
+            manifest = self.manifest_for("truncated.jpg", truncated_jpeg, "image/jpeg")
+            manifest["evidence"][0]["sanitization"]["status"] = "reviewed"
+            with self.assertRaisesRegex(evidence.EvidenceError, "JPEG|image/jpeg"):
+                evidence.inspect_evidence(root, manifest)
+
+            valid_jpeg = jpeg_image()
+            root.joinpath("valid.jpg").write_bytes(valid_jpeg)
+            manifest = self.manifest_for("valid.jpg", valid_jpeg, "image/jpeg")
+            manifest["evidence"][0]["sanitization"]["status"] = "reviewed"
+            self.assertEqual(self.inspect_one(root, manifest)["status"], "VERIFIED")
+
+            huge = png_image(5000, 4001)
             root.joinpath("huge.png").write_bytes(huge)
             manifest = self.manifest_for("huge.png", huge, "image/png")
             manifest["evidence"][0]["sanitization"]["status"] = "reviewed"
@@ -208,6 +321,11 @@ class QaEvidenceTest(unittest.TestCase):
         fixtures = (
             ("result.log", b"Authorization: Bearer synthetic-secret-token\n", "text/plain"),
             ("result.json", json.dumps({"api_key": "synthetic-secret-token"}).encode(), "application/json"),
+            (
+                "escaped.json",
+                b'{"api\\u005fkey":"synthetic-secret-token"}',
+                "application/json",
+            ),
         )
         for filename, raw, media_type in fixtures:
             with self.subTest(filename=filename), tempfile.TemporaryDirectory() as directory:
@@ -226,7 +344,7 @@ class QaEvidenceTest(unittest.TestCase):
                 self.assertIn("credential-like data", record["diagnostic"])
 
     def test_pending_image_is_blocked_without_public_path_or_bytes(self) -> None:
-        raw = png_header(1, 1)
+        raw = png_image(1, 1)
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             root.joinpath("capture.png").write_bytes(raw)
