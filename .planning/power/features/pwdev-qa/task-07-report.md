@@ -30,3 +30,16 @@ Date: 2026-09-12
 - These specialists are advisory contracts. They do not execute scanners, browsers, test suites,
   CI pipelines, exports, or external effects and do not grant authorization.
 - Runtime scenario evaluation remains assigned to F05-24, as required by the task brief.
+
+## Review correction — round 1
+
+- Resolved the Important finding: `bounded-pentest` now carries owner, rate limit, stop
+  conditions, and cleanup in addition to the preserved target, methods, environment, and window.
+- Added one scenario for each missing operational boundary. Every omission keeps
+  `execution=NOT_RUN`, `outcome=BLOCKED`, and never becomes `READY`.
+- RED: focused suite ran 27 tests with 3 expected security-scenario failures before the fix.
+- GREEN: focused suite passed 27 tests after the fix.
+- Regression proof: temporarily reversing only the production fix reproduced the same 3 failures;
+  restoring it returned the focused suite to 27 passing tests.
+- F01/F02 regression: 48 tests passed across core, runtime contracts, tooling, and specialists.
+- The deferred Minor quarantine finding was intentionally not changed in this round.

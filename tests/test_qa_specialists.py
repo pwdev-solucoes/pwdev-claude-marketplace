@@ -605,6 +605,10 @@ class QaSpecialistContractTest(unittest.TestCase):
                 "methods",
                 "environment",
                 "window",
+                "owner",
+                "rate_limit",
+                "stop_conditions",
+                "cleanup",
                 "execution",
                 "outcome",
             ),
@@ -620,6 +624,10 @@ class QaSpecialistContractTest(unittest.TestCase):
                 "methods": "OWASP API checks excluding denial of service",
                 "environment": "staging",
                 "window": "2026-09-12T15:00Z to 2026-09-12T16:00Z",
+                "owner": "qa-security-owner",
+                "rate_limit": "20 requests/s maximum",
+                "stop_conditions": "service degradation or unexpected data access",
+                "cleanup": "revoke test tokens and remove synthetic data",
                 "execution": "authorized reproducible checks",
                 "outcome": "READY",
             },
@@ -628,6 +636,49 @@ class QaSpecialistContractTest(unittest.TestCase):
             text,
             r"(?is)explicit authorization.*target.*methods.*environment.*time window",
         )
+
+    def test_security_missing_operational_boundary_never_runs_or_becomes_ready(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-security"]),
+            (
+                "scenario",
+                "scanner",
+                "pentest_authorization",
+                "target",
+                "methods",
+                "environment",
+                "window",
+                "owner",
+                "rate_limit",
+                "stop_conditions",
+                "cleanup",
+                "execution",
+                "outcome",
+            ),
+        )
+        expected = {
+            "missing-owner": ("owner", "missing"),
+            "missing-rate-limit": ("rate_limit", "missing"),
+            "missing-stop-conditions": ("stop_conditions", "missing"),
+            "missing-cleanup": ("cleanup", "missing"),
+        }
+        for scenario, (field, value) in expected.items():
+            with self.subTest(scenario=scenario):
+                limited = next(row for row in rows if row["scenario"] == scenario)
+                self.assertEqual(limited[field], value)
+                self.assertEqual(limited["target"], "staging.example.test/api")
+                self.assertEqual(
+                    limited["methods"],
+                    "OWASP API checks excluding denial of service",
+                )
+                self.assertEqual(limited["environment"], "staging")
+                self.assertEqual(
+                    limited["window"],
+                    "2026-09-12T15:00Z to 2026-09-12T16:00Z",
+                )
+                self.assertEqual(limited["execution"], "NOT_RUN")
+                self.assertEqual(limited["outcome"], "BLOCKED")
+                self.assertNotEqual(limited["outcome"], "READY")
 
     def test_security_scanner_never_becomes_pentest_authorization(self) -> None:
         text = read_required(SPECIALISTS["qa-specialist-security"])
@@ -641,6 +692,10 @@ class QaSpecialistContractTest(unittest.TestCase):
                 "methods",
                 "environment",
                 "window",
+                "owner",
+                "rate_limit",
+                "stop_conditions",
+                "cleanup",
                 "execution",
                 "outcome",
             ),

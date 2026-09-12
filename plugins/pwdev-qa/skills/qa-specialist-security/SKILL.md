@@ -18,7 +18,8 @@ the calling workflow.
 - Requested methods, exclusions, identities/roles, accounts, test data, rate limits, stop
   conditions, evidence requirements, and cleanup expectations.
 - Explicit penetration-test authorization naming the target, methods, environment, time window,
-  and responsible owner whenever active testing is requested.
+  responsible owner, rate limit, stop conditions, and cleanup whenever active testing is
+  requested.
 - Scanner and prerequisite probes with `state`, `result`, and `evidence`, plus current findings
   and prior retest evidence.
 
@@ -30,9 +31,10 @@ the calling workflow.
    secrets exposure, dependency risk, error disclosure, abuse cases, and data boundaries. Give
    each check an expected observable result and a reproducible method.
 3. Before proposing active execution, verify that explicit authorization covers the exact target,
-   methods, environment, and time window. Preserve exclusions, rate limits, stop conditions, and
-   cleanup obligations. Never expand the approved scope because another host, route, role, or
-   weakness is discovered.
+   methods, environment, time window, responsible owner, rate limit, stop conditions, and cleanup
+   obligations. If any boundary is absent, execution remains `NOT_RUN` and the proposal is
+   `BLOCKED`. Never expand the approved scope because another host, route, role, or weakness is
+   discovered.
 4. Ask `qa-tooling` to classify scanners and prerequisites as `available`, `missing`, or
    `unverified` from supplied probes. Scanner availability or scanner findings do not grant or
    become pentest authorization and do not establish exploitability by themselves.
@@ -60,20 +62,26 @@ execution evidence, a case result, a global verdict, or permission to test.
 
 ## Reference scenarios
 
-| scenario | scanner | pentest_authorization | target | methods | environment | window | execution | outcome |
-|---|---|---|---|---|---|---|---|---|
-| bounded-pentest | reviewed findings | explicit bounded grant | staging.example.test/api | OWASP API checks excluding denial of service | staging | 2026-09-12T15:00Z to 2026-09-12T16:00Z | authorized reproducible checks | READY |
-| scanner-only | available with findings | missing | staging.example.test/api | scanner triage only | staging | missing | NOT_RUN | BLOCKED |
+| scenario | scanner | pentest_authorization | target | methods | environment | window | owner | rate_limit | stop_conditions | cleanup | execution | outcome |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| bounded-pentest | reviewed findings | explicit bounded grant | staging.example.test/api | OWASP API checks excluding denial of service | staging | 2026-09-12T15:00Z to 2026-09-12T16:00Z | qa-security-owner | 20 requests/s maximum | service degradation or unexpected data access | revoke test tokens and remove synthetic data | authorized reproducible checks | READY |
+| scanner-only | available with findings | missing | staging.example.test/api | scanner triage only | staging | missing | missing | missing | missing | missing | NOT_RUN | BLOCKED |
+| missing-owner | reviewed findings | explicit bounded grant | staging.example.test/api | OWASP API checks excluding denial of service | staging | 2026-09-12T15:00Z to 2026-09-12T16:00Z | missing | 20 requests/s maximum | service degradation or unexpected data access | revoke test tokens and remove synthetic data | NOT_RUN | BLOCKED |
+| missing-rate-limit | reviewed findings | explicit bounded grant | staging.example.test/api | OWASP API checks excluding denial of service | staging | 2026-09-12T15:00Z to 2026-09-12T16:00Z | qa-security-owner | missing | service degradation or unexpected data access | revoke test tokens and remove synthetic data | NOT_RUN | BLOCKED |
+| missing-stop-conditions | reviewed findings | explicit bounded grant | staging.example.test/api | OWASP API checks excluding denial of service | staging | 2026-09-12T15:00Z to 2026-09-12T16:00Z | qa-security-owner | 20 requests/s maximum | missing | revoke test tokens and remove synthetic data | NOT_RUN | BLOCKED |
+| missing-cleanup | reviewed findings | explicit bounded grant | staging.example.test/api | OWASP API checks excluding denial of service | staging | 2026-09-12T15:00Z to 2026-09-12T16:00Z | qa-security-owner | 20 requests/s maximum | service degradation or unexpected data access | missing | NOT_RUN | BLOCKED |
 
-The bounded scenario carries an explicit authorization, target, methods, environment, and time
-window. The scanner-only scenario may support passive triage, but its tool output does not grant
-or become pentest permission. Active execution remains `NOT_RUN`, and discovered surface never
-expands the scope.
+The bounded scenario carries an explicit authorization, target, methods, environment, time
+window, responsible owner, rate limit, stop conditions, and cleanup. Each missing-boundary
+scenario preserves the requested target, methods, environment, and window but keeps execution
+`NOT_RUN` and outcome `BLOCKED`. The scanner-only scenario may support passive triage, but its
+tool output does not grant or become pentest permission. Discovered surface never expands scope.
 
 ## Failure modes
 
-- Missing, unclear, stale, or wrong-target authorization: record active testing as
-  `BLOCKED`/`NOT_RUN` and identify the exact missing boundary.
+- Missing, unclear, stale, or wrong-target authorization, owner, rate limit, stop condition, or
+  cleanup obligation: record active testing as `BLOCKED`/`NOT_RUN` and identify the exact missing
+  boundary.
 - Missing/not-run probe: record `unverified`; explicit negative scanner probe: record `missing`
   and propose a safe review or repository-native alternative without installation.
 - Scanner finding without reproducible evidence: preserve it as an unconfirmed finding; do not
