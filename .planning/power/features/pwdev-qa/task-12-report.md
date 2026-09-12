@@ -50,3 +50,29 @@ Date: 2026-09-12
 - `plugins/pwdev-qa/scripts/qa_verdict.py`
 - `tests/test_qa_verdict.py`
 - `.planning/power/features/pwdev-qa/task-12-report.md`
+
+## Review correction — round 1
+
+- A terminal `NOT_APPLICABLE` case is now neutral only when every reciprocal criterion link is
+  explicitly non-applicable with a reason. This preserves legitimate exclusions while mixed,
+  missing, or applicable links remain `BLOCKED`; other applicable required cases can still
+  sustain `PASS`.
+- A resolved defect now accepts only the referenced terminal attempt of its retest chain. A
+  historical `PASS` superseded by `FAIL`, `BLOCKED`, or `NOT_RUN` cannot close the defect; valid
+  original defect evidence keeps the current in-scope failure at `FAIL`.
+- The independent `in_scope` and `status` markers must agree. `true/out_of_scope`, `false/open`,
+  and `false/resolved` are diagnosed as contradictory and produce `BLOCKED`; coherent proven
+  in-scope defects retain `FAIL` precedence, and coherent out-of-scope defects remain visible
+  without forcing failure.
+- RED: four focused correction methods produced 7 failures across the legitimate waiver, three
+  superseded-retest terminals, and three contradictory-scope combinations.
+- GREEN: the full focused suite passed 15 tests after the minimum correction.
+- Regression proof: after reversing only the production correction, the same four methods
+  reproduced all 7 failures; restoring it returned the full focused suite to 15 passing tests.
+- Combined probes cover valid and invalid waivers, terminal `FAIL`/`BLOCKED`/`NOT_RUN` retests,
+  both directions of scope contradiction, resolved/out-of-scope states, and coherent in-scope
+  failure precedence.
+- Fresh final verification: all 101 `test_qa_*` tests passed; Python compilation and
+  `git diff --check` passed.
+- No ledger, review artifact, brief, review package, dependency, external state, publication,
+  push, or merge was changed.

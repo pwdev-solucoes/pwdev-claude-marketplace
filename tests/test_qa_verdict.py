@@ -194,6 +194,46 @@ class QaVerdictTest(unittest.TestCase):
         self.assertEqual(report["verified_evidence"], [])
         self.assertTrue(any("unavailable" in item for item in report["diagnostics"]))
 
+    def test_valid_not_applicable_case_does_not_block_other_applicable_criteria(self) -> None:
+        data = valid_manifest()
+        data["defects"] = []
+        data["criteria"][0].update(
+            applicable=False,
+            applicability_reason="Fora do escopo contratado",
+        )
+        data["cases"][0].update(status="NOT_APPLICABLE", required=False)
+        applicable = copy.deepcopy(data["criteria"][0])
+        applicable.update(
+            id="CA-002",
+            applicable=True,
+            applicability_reason="Escopo da entrega",
+            case_ids=["required-pass"],
+        )
+        passing_case = copy.deepcopy(data["cases"][0])
+        passing_case.update(
+            id="attempt-pass",
+            case_id="required-pass",
+            criterion_ids=["CA-002"],
+            status="PASS",
+            required=True,
+            attempt=1,
+            supersedes=None,
+        )
+        data["criteria"].append(applicable)
+        data["cases"].append(passing_case)
+
+        report = self.build(data)
+
+        self.assertEqual(report["verdict"], "PASS")
+        self.assertEqual(
+            report["criterion_results"],
+            [
+                {"id": "CA-001", "result": "NOT_APPLICABLE"},
+                {"id": "CA-002", "result": "PASS"},
+            ],
+        )
+        self.assertEqual(report["diagnostics"], [])
+
     def test_non_reciprocal_criterion_case_links_are_incomplete_coverage(self) -> None:
         data = valid_manifest()
         data["defects"] = []
@@ -248,6 +288,25 @@ class QaVerdictTest(unittest.TestCase):
         self.assertEqual(unproved_resolution["verdict"], "BLOCKED")
         self.assertEqual(unproved_resolution["counts"]["defects_current_in_scope"], 1)
 
+    def test_superseded_passing_retest_does_not_resolve_a_defect(self) -> None:
+        for terminal_status in ("FAIL", "BLOCKED", "NOT_RUN"):
+            with self.subTest(terminal_status=terminal_status):
+                data = valid_manifest()
+                terminal = add_attempt(data, terminal_status, evidence_ids=[])
+                self.assertEqual(data["defects"][0]["retest_attempt_id"], "attempt-1")
+                self.assertEqual(terminal["supersedes"], "attempt-1")
+
+                report = self.build(data)
+
+                self.assertEqual(report["verdict"], "FAIL")
+                self.assertEqual(report["counts"]["defects_current_in_scope"], 1)
+                self.assertTrue(
+                    any(
+                        "BUG-1" in item and "proven current" in item
+                        for item in report["diagnostics"]
+                    )
+                )
+
     def test_out_of_scope_defect_is_visible_without_forcing_failure(self) -> None:
         data = valid_manifest()
         data["defects"][0].update(
@@ -261,6 +320,37 @@ class QaVerdictTest(unittest.TestCase):
         self.assertEqual(report["verdict"], "PASS")
         self.assertEqual(report["counts"]["defects_out_of_scope"], 1)
         self.assertEqual(report["defects"][0]["id"], "BUG-external")
+
+    def test_contradictory_defect_scope_markers_are_blocked(self) -> None:
+        for in_scope, status in (
+            (True, "out_of_scope"),
+            (False, "open"),
+            (False, "resolved"),
+        ):
+            with self.subTest(in_scope=in_scope, status=status):
+                data = valid_manifest()
+                data["defects"][0].update(in_scope=in_scope, status=status)
+                if status != "resolved":
+                    data["defects"][0]["retest_attempt_id"] = None
+
+                report = self.build(data)
+
+                self.assertEqual(report["verdict"], "BLOCKED")
+                self.assertEqual(report["counts"]["defects_current_in_scope"], 0)
+                self.assertEqual(report["counts"]["defects_out_of_scope"], 0)
+                self.assertTrue(
+                    any("contradictory scope" in item for item in report["diagnostics"])
+                )
+
+    def test_coherent_proven_in_scope_defect_keeps_fail_precedence(self) -> None:
+        data = valid_manifest()
+        data["contract"]["criteria_review"]["complete"] = False
+        data["defects"][0].update(status="open", retest_attempt_id=None)
+
+        report = self.build(data)
+
+        self.assertEqual(report["verdict"], "FAIL")
+        self.assertEqual(report["counts"]["defects_current_in_scope"], 1)
 
     def test_cyclic_attempt_input_is_diagnosed_without_hanging_or_discarding_history(self) -> None:
         data = normalized(valid_manifest())

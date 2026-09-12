@@ -230,6 +230,8 @@ def build_report(manifest: dict, evidence: list[dict]) -> dict:
         diagnostic=diagnostic,
     )
     terminal_by_logical = {item["case_id"]: item for item in terminal_cases}
+    terminal_by_attempt = {item["id"]: item for item in terminal_cases}
+    criteria_by_id = {item["id"]: item for item in manifest["criteria"]}
 
     def all_evidence_verified(item: Dict[str, Any]) -> bool:
         references = item.get("evidence_ids", [])
@@ -237,6 +239,19 @@ def build_report(manifest: dict, evidence: list[dict]) -> dict:
 
     def any_evidence_verified(item: Dict[str, Any]) -> bool:
         return any(ref in verified_by_id for ref in item.get("evidence_ids", []))
+
+    def valid_not_applicable(case: Dict[str, Any]) -> bool:
+        criterion_ids = case.get("criterion_ids", [])
+        if not criterion_ids:
+            return False
+        related = [criteria_by_id.get(identifier) for identifier in criterion_ids]
+        return all(
+            criterion is not None
+            and not criterion["applicable"]
+            and bool(criterion["applicability_reason"])
+            and case["case_id"] in criterion["case_ids"]
+            for criterion in related
+        )
 
     proven_case_failure = False
     pending = bool(diagnostics) or invalid_case_history or blocked_evidence > 0
@@ -252,6 +267,8 @@ def build_report(manifest: dict, evidence: list[dict]) -> dict:
             else:
                 diagnostic(f"case {case['id']}: FAIL lacks verified evidence")
                 pending = True
+        elif status == "NOT_APPLICABLE" and valid_not_applicable(case):
+            continue
         elif status != "PASS":
             diagnostic(f"case {case['id']}: terminal status {status}")
             pending = True
@@ -342,17 +359,21 @@ def build_report(manifest: dict, evidence: list[dict]) -> dict:
         diagnostic=diagnostic,
     )
     pending = pending or invalid_defect_history
-    cases_by_id = {item["id"]: item for item in manifest["cases"]}
     proven_defect_failure = False
     current_in_scope = 0
     out_of_scope = 0
     for defect in terminal_defects:
-        if not defect["in_scope"] or defect["status"] == "out_of_scope":
+        scope_is_consistent = defect["in_scope"] == (defect["status"] != "out_of_scope")
+        if not scope_is_consistent:
+            diagnostic(f"defect {defect['id']}: contradictory scope markers")
+            pending = True
+            continue
+        if not defect["in_scope"]:
             out_of_scope += 1
             continue
         closed = False
         if defect["status"] == "resolved":
-            retest = cases_by_id.get(defect["retest_attempt_id"])
+            retest = terminal_by_attempt.get(defect["retest_attempt_id"])
             closed = bool(
                 retest
                 and retest.get("status") == "PASS"
