@@ -145,6 +145,10 @@ def task_008_approval_contract(runtime: str, ui: str, language: str) -> Dict[str
         "schema_version": 1,
         "type": "TASK-008_INTERACTIVE_ACCEPTANCE_APPROVAL_CONTRACT",
         "task_id": "TASK-008",
+        "scope": {"command": "sdd-fleet", "task_id": "TASK-008"},
+        "ownership": {"tasks": 1, "members_per_task": 1,
+                      "worktrees_per_member": 1,
+                      "active_existing_sdd_loops_per_member": 1},
         "task": {
             "id": "TASK-008",
             "title": "Human-assisted runtime acceptance",
@@ -157,9 +161,29 @@ def task_008_approval_contract(runtime: str, ui: str, language: str) -> Dict[str
             "contract_path": ".planning/sdd-composy/tasks/task-008.json",
         },
         "authorization": {"runtime": runtime, "ui": ui},
+        "interactive": {"runtime": runtime, "ui": ui,
+                        "real_ui_must_be_concrete": True,
+                        "auto_allowed_for_real": False,
+                        "separate_runtime_ui_authorization": f"{runtime}:{ui}"},
         "language": language,
         "fixture_scope": "confined-production-interactive-acceptance",
         "approved_phase_artifacts": ["spec.md", "decisions.md"],
+        "observation_timeout_seconds": 300,
+        "external_call_policy": {
+            "max_provider_calls_per_exact_runtime_ui": 1,
+            "automatic_retries": 0,
+            "fallback_after_first_resource": False,
+        },
+        "privileged_flags": [],
+        "protected_inputs": "never-read-secrets-credentials-env-keys-certificates",
+        "terminal_output": "diagnostic-only-never-witness-or-gate",
+        "interruption_preserves": ["worktree", "branch", "session", "handle", "LOOP",
+                                   "evidence"],
+        "fleet_eligibility": {"task_state": "ready", "dependencies": "independent",
+                              "worktree": "isolated", "automatic_merge": False},
+        "loop": {"implementation": "existing-sdd-loop", "max_iterations": 3,
+                 "native_human_approval": {"flag": "--human-approved",
+                                           "mode": "manual-only", "automated": False}},
     }
     canonical = json.dumps(projection, sort_keys=True, separators=(",", ":"),
                            ensure_ascii=False) + "\n"
@@ -1232,7 +1256,9 @@ def production_interactive_launcher(*, runtime: str, language: str, scenario: st
         "verification_commands": ["python3 -m unittest"], "allowed_paths": ["README.md"],
         "evidence_required": True, "contract_path": str(task),
         "approval": {"provenance": approval_provenance,
-                     "contract_sha256": approval_contract_sha256}}]}, indent=2) + "\n",
+                     "contract_sha256": approval_contract_sha256,
+                     "contract": json.loads(expected_contract["canonical_json"])}}]},
+        indent=2) + "\n",
         encoding="utf-8")
     (fixture / "README.md").write_text("# Confined interactive acceptance fixture\n", encoding="utf-8")
     phases = fixture / ".planning/sdd-composy/phases" / slug
@@ -1240,7 +1266,9 @@ def production_interactive_launcher(*, runtime: str, language: str, scenario: st
     approval = ("# Scoped acceptance fixture contract\n\nStatus: APPROVED\n\n"
                 f"Approval provenance: {approval_provenance}\n"
                 f"Approval contract SHA-256: {approval_contract_sha256}\n\n"
-                f"Runtime: {runtime}\nUI: {ui}\nLanguage: {language}\n")
+                f"Runtime: {runtime}\nUI: {ui}\nLanguage: {language}\n\n"
+                "Canonical approval contract:\n\n```json\n"
+                f"{expected_contract['canonical_json']}```\n")
     for name in ("spec.md", "decisions.md"):
         (phases / name).write_text(approval, encoding="utf-8")
     local_commands = (["git", "init", "-q", "-b", base_branch], ["git", "add", "."],

@@ -10,13 +10,20 @@ Status: DONE
 - Required the exact projected SHA-256 before durable budget reservation and retained the exact
   runtime/UI authorization as a separate mandatory gate.
 - Bound materialized task and phase approval artifacts to the explicit digest and provenance.
+- Expanded the canonical approval object to cover every load-bearing approved Task 08/global
+  constraint; the task record and phase artifacts embed this same complete object.
 - Kept production calls and UI sessions behind injected fakes; no real acceptance run occurred.
 
 ## Verification
 
 - RED: 4 focused tests failed on missing projection/gate behavior.
 - Focused: 46 tests passed in 139.599s.
-- Final full suite after the last gate change: 439 tests passed in 178.367s.
+- Corrected original committed-head result from independent review: 438 tests passed in 177.370s.
+- Review-fix RED: complete-contract coverage was absent and the old narrow digest reached the
+  provider boundary.
+- Review-fix focused: 6 tests passed in 2.279s; smoke module: 48 tests in 143.129s.
+- Final clean detached `5f6e407` suite: 440 tests passed in 177.987s using the exact recorded
+  discovery command.
 
 ## Scope
 

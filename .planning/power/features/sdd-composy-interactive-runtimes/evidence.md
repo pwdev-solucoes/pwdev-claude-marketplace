@@ -155,9 +155,9 @@ Status: INCOMPLETE
   could reach the injected production UI path.
 - GREEN: `python3 -m unittest tests.test_sdd_composy_runtime_smoke` — 46 tests passed in
   139.599s using local fakes only.
-- Final full suite after the last gate change:
-  `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 439 tests passed in
-  178.367s.
+- Independent review reran the committed `c8a0687` head and corrected the original suite result:
+  `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 438 tests passed in
+  177.370s. The earlier 439 count included an unrelated dirty-worktree test and was stale.
 - `--print-task-008-contract` emits a deterministic canonical JSON projection and SHA-256 while
   leaving the requested output path absent. The projection contains no approval status.
 - Missing, generic, and incorrect contract approvals return `NOT_RUN`/`BLOCKED` before output,
@@ -169,3 +169,26 @@ Status: INCOMPLETE
   launcher is reached exactly once only with both gates satisfied.
 - No real provider, UI, credential, protected file, or preserved run resource was accessed.
   All real runtime/UI acceptance remains INCOMPLETE/NOT_RUN pending a new exact human approval.
+
+## Task 09 review fix round 1
+
+- RED: two focused tests failed. The first found the canonical projection omitted every reviewed
+  load-bearing execution constraint; the second proved the previous narrow digest still reached
+  the provider boundary.
+- GREEN focused contract/materialization set: 6 tests passed in 2.279s. Complete smoke module:
+  48 tests passed in 143.129s.
+- The canonical object now binds `sdd-fleet` scope; one task/member/worktree/existing LOOP;
+  concrete non-auto UI and separate runtime:UI authorization; 300-second observation; one call,
+  no retry/fallback; no privileged flags or protected-input reads; diagnostic-only terminal
+  output; interruption preservation; ready/independent/isolated fleet eligibility; no automatic
+  merge; exact implementation/verification paths; LOOP maximum 3; and manual-only native
+  `--human-approved` handling. A recursive regression changes every canonical leaf and confirms
+  the SHA-256 changes.
+- The old narrow digest returns `NOT_RUN`/`BLOCKED` before output, budget, provider, or UI writes.
+  The approved task record and both phase artifacts embed the same complete canonical JSON,
+  digest, and explicit provenance.
+- Fresh clean committed-head verification from detached `5f6e407`:
+  `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 440 tests passed in
+  177.987s. The detached run excluded all unrelated dirty files and both preserved Hermes lines.
+- No real provider, UI session, lifecycle approval, credential, or protected file was used.
+  Real acceptance remains INCOMPLETE/NOT_RUN.

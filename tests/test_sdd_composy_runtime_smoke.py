@@ -1,5 +1,6 @@
 import importlib.util
 import hashlib
+import copy
 import json
 import multiprocessing
 import os
@@ -432,6 +433,78 @@ else: print(json.dumps(result))
             first["canonical_json"].encode("utf-8")).hexdigest())
         self.assertNotIn("APPROVED", first["canonical_json"])
 
+    def test_task_008_contract_hash_covers_every_load_bearing_approved_constraint(self):
+        contract = SMOKE.task_008_approval_contract("codex", "cmux", "pt-BR")
+        projection = json.loads(contract["canonical_json"])
+        self.assertEqual(projection["scope"], {"command": "sdd-fleet", "task_id": "TASK-008"})
+        self.assertEqual(projection["ownership"], {
+            "tasks": 1, "members_per_task": 1, "worktrees_per_member": 1,
+            "active_existing_sdd_loops_per_member": 1})
+        self.assertEqual(projection["interactive"]["ui"], "cmux")
+        self.assertEqual(projection["interactive"]["real_ui_must_be_concrete"], True)
+        self.assertEqual(projection["interactive"]["auto_allowed_for_real"], False)
+        self.assertEqual(projection["interactive"]["separate_runtime_ui_authorization"],
+                         "codex:cmux")
+        self.assertEqual(projection["observation_timeout_seconds"], 300)
+        self.assertEqual(projection["external_call_policy"], {
+            "max_provider_calls_per_exact_runtime_ui": 1,
+            "automatic_retries": 0, "fallback_after_first_resource": False})
+        self.assertEqual(projection["loop"], {
+            "implementation": "existing-sdd-loop", "max_iterations": 3,
+            "native_human_approval": {"flag": "--human-approved",
+                                      "mode": "manual-only", "automated": False}})
+        self.assertEqual(projection["fleet_eligibility"], {
+            "task_state": "ready", "dependencies": "independent",
+            "worktree": "isolated", "automatic_merge": False})
+        self.assertEqual(projection["terminal_output"],
+                         "diagnostic-only-never-witness-or-gate")
+        self.assertEqual(projection["protected_inputs"],
+                         "never-read-secrets-credentials-env-keys-certificates")
+        self.assertEqual(projection["interruption_preserves"],
+                         ["worktree", "branch", "session", "handle", "LOOP", "evidence"])
+        self.assertEqual(projection["privileged_flags"], [])
+
+        def leaf_paths(value, prefix=()):
+            if isinstance(value, dict):
+                for key, child in value.items():
+                    yield from leaf_paths(child, prefix + (key,))
+            else:
+                yield prefix
+        paths = list(leaf_paths(projection))
+        for path in paths:
+            changed = copy.deepcopy(projection)
+            owner = changed
+            for key in path[:-1]: owner = owner[key]
+            owner[path[-1]] = "changed"
+            encoded = json.dumps(changed, sort_keys=True, separators=(",", ":"),
+                                 ensure_ascii=False) + "\n"
+            self.assertNotEqual(hashlib.sha256(encoded.encode()).hexdigest(), contract["sha256"], path)
+
+    def test_legacy_narrow_task_008_hash_is_rejected_before_any_write(self):
+        narrow = {
+            "schema_version": 1,
+            "type": "TASK-008_INTERACTIVE_ACCEPTANCE_APPROVAL_CONTRACT",
+            "task_id": "TASK-008",
+            "task": {"id": "TASK-008", "title": "Human-assisted runtime acceptance",
+                "state": "ready", "dependencies": [], "acceptance_criteria": ["CA-008"],
+                "verification_commands": ["python3 -m unittest"],
+                "allowed_paths": ["README.md"], "evidence_required": True,
+                "contract_path": ".planning/sdd-composy/tasks/task-008.json"},
+            "authorization": {"runtime": "codex", "ui": "cmux"}, "language": "pt-BR",
+            "fixture_scope": "confined-production-interactive-acceptance",
+            "approved_phase_artifacts": ["spec.md", "decisions.md"]}
+        old_hash = hashlib.sha256((json.dumps(narrow, sort_keys=True, separators=(",", ":"),
+            ensure_ascii=False) + "\n").encode()).hexdigest()
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "run"
+            summary = SMOKE.run_acceptance(mode="real", runtime="codex", language="pt-BR",
+                scenario="fleet-interactive", ui="cmux", output=output,
+                plugin_root=ROOT / "plugins/sdd-composy",
+                provider_launcher=lambda **_kwargs: self.fail("provider called"),
+                authorized_runtime_uis={"codex:cmux"}, approved_task_008_sha256=old_hash)
+            self.assertEqual(summary["provider_calls"]["codex"], 0)
+            self.assertFalse(output.exists())
+
     def test_cli_prints_task_008_contract_without_creating_output(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "must-not-exist"
@@ -715,13 +788,16 @@ raise SystemExit(0)
             self.assertEqual(tasks["tasks"][0]["id"], "TASK-008")
             approval = tasks["tasks"][0]["approval"]
             expected = self._approved_hash("codex", "tmux", "pt-BR")
+            expected_contract = SMOKE.task_008_approval_contract("codex", "tmux", "pt-BR")
             self.assertEqual(approval, {"provenance": SMOKE.TASK_008_APPROVAL_PROVENANCE,
-                                        "contract_sha256": expected})
+                                        "contract_sha256": expected,
+                                        "contract": json.loads(expected_contract["canonical_json"])})
             for phase_name in ("spec.md", "decisions.md"):
                 phase = repository / ".planning/sdd-composy/phases/task-008" / phase_name
                 self.assertIn(f"Approval contract SHA-256: {expected}", phase.read_text())
                 self.assertIn(f"Approval provenance: {SMOKE.TASK_008_APPROVAL_PROVENANCE}",
                               phase.read_text())
+                self.assertIn(expected_contract["canonical_json"], phase.read_text())
             worktree = Path(member["worktree_path"])
             language = SMOKE._load_local(ROOT / "plugins/sdd-composy/scripts", "sdd_language.py",
                                          "acceptance_language_test")
