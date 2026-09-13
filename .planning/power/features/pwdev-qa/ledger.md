@@ -57,6 +57,8 @@ Task F05-22: complete (commits a01ad69..cb1a13d, review clean after fix rounds 1
 Task F05-23: fix round 1 — dois findings Major confirmados: contradições bilíngues passavam pelos testes e o snapshot do catálogo Claude não preservava todos os campos.
 Task F05-23: fix round 2 — os detectores bloqueavam as mutações nocivas, mas também rejeitavam 12 proibições válidas.
 Task F05-23: complete (commits 2d2ccc4..bfd2f2d, review clean after fix rounds 1-2)
+Task F05-24: fix round 1 — três findings Major confirmados: smoke podia ser promovido sem três passos/evidência, cenários podiam perder semântica e dois status fugiam do enum.
+Task F05-24: implementation complete (commits 513fdf7..9357b0d, review clean after fix round 1; acceptance BLOCKED somente em CA-003 porque 0/3 runtimes completaram discovery+invocation+report)
 
 Baseline 2026-09-12: `python3 -m unittest discover -s tests` executou 670 testes em 404.209s; 7 falhas preexistentes antes de qualquer código PWDEV QA.
 - 2 falhas `test_flow_claude_compat`: READMEs raiz não contêm `claude -p`.
