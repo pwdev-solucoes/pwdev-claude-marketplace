@@ -74,3 +74,44 @@ exit 0
 - The repository-wide non-QA baseline was not rerun because this task's approved verification
   scope requires the focused suite and all `test_qa_*` tests. The ledger records seven unrelated
   pre-existing full-suite failures.
+
+## Correction round 1
+
+Review source: `.planning/power/features/pwdev-qa/task-19-review.md`.
+
+### Root cause
+
+The original oracle checked broad vocabulary and a partial ordered relation. It did not encode
+the full structural invariants already present in the workflow contracts, so semantically invalid
+mutations retained enough nearby words to pass.
+
+### Mutation RED evidence
+
+Before changing the oracle, each reviewed mutation was reproduced in isolation and the original
+targeted test incorrectly returned `OK`:
+
+- removing `impact ID` from the regression relation;
+- allowing arbitrary logical cases/targets and non-linear `supersedes` history;
+- copying severity into priority instead of assessing delivery order independently.
+
+After adding the invariant assertions, each mutation failed its targeted test for the intended
+reason:
+
+- `drop-impact-id-edge`: failed the exact ordered
+  change→impact→risk→criterion/explicit-none→prior-defect/explicit-none→case assertion;
+- `allow-cross-target-branched-retest`: failed the stable logical case, unique/increasing attempt,
+  same-target, linear-supersedes, no-branch/cycle assertion;
+- `couple-priority-to-severity`: failed the independent product-impact versus delivery-order
+  rationale assertion.
+
+The new local `PASS` guard initially failed against the unchanged contract because it did not
+state absence of pending work explicitly. The smallest contract clarification now requires valid
+terminal retest evidence, all applicable criteria `PASS`, no pending work or limitations, and no
+other current in-scope defect.
+
+### Correction GREEN
+
+The focused suite returned `Ran 20 tests ... OK` after all mutations were removed and the guard
+was clarified. Packaged Python 3.12 discovery for `test_qa_*.py` returned
+`Ran 162 tests in 10.685s ... OK`; `py_compile` for the workflow test and plugin scripts exited
+zero using an isolated cache, and `git diff --check` exited zero.

@@ -50,8 +50,9 @@ attempt history, and retest semantics under the governing contract. Read
 7. Mark this defect resolved only when the referenced terminal retest attempt is `PASS` with
    valid current evidence; a blocked/failed terminal attempt never falls back to an older pass.
    Return global `PASS` only after the terminal retest is valid and has valid current evidence,
-   all applicable criteria are `PASS`, and no other current in-scope defects remain. Missing criteria or defect inventory is
-   `BLOCKED`; another proven current in-scope defect is `FAIL`.
+   all applicable criteria are `PASS`, no pending work or limitations remain, and no other current
+   in-scope defects remain. Missing criteria or defect inventory is `BLOCKED`; another proven
+   current in-scope defect is `FAIL`.
 8. Apply verdict precedence: any proven current in-scope failure, including an unlinked defect,
    is `FAIL`; without such proof, missing reproduction, evidence, retest, or complete inventories
    is `BLOCKED`. `qa_report.py report --manifest PATH --project-root PATH` is a later inert export

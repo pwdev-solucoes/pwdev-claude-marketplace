@@ -359,11 +359,12 @@ class QaWorkflowContractTest(unittest.TestCase):
         self.assertRegex(procedure, r"(?is)select.*impact.*(?:rationale|justification)")
         self.assertRegex(
             procedure,
-            r"(?is)change ID.*risk ID.*criterion ID.*defect ID.*case ID",
+            r"(?is)change ID,\s+impact ID,\s+risk ID,\s+criterion ID,\s+prior defect ID.*stable case ID;\s+use an\s+explicit `none`.*no defect or criterion",
         )
         self.assertRegex(procedure, r"(?is)selected.*excluded.*(?:rationale|reason)")
         for token in (
             "CHG-AUTH-017",
+            "IMP-SESSION-01",
             "RISK-AUTH-04",
             "AC-LOGIN-01",
             "DEF-SESSION-09",
@@ -416,7 +417,19 @@ class QaWorkflowContractTest(unittest.TestCase):
                 self.assertIn(phrase, text.lower())
         self.assertRegex(
             procedure,
-            r"(?is)`PASS`.*terminal.*retest.*valid.*evidence.*all applicable criteria.*`PASS`.*no (?:other )?current in-scope defects",
+            r"(?is)`PASS`.*terminal.*retest.*valid.*evidence.*all applicable criteria.*`PASS`.*no (?:other )?current\s+in-scope defects",
+        )
+        self.assertRegex(
+            procedure,
+            r"(?is)all applicable criteria.*`PASS`.*no pending.*no other current\s+in-scope defects",
+        )
+        self.assertRegex(
+            procedure,
+            r"(?is)severity from product/user impact.*priority independently from\s+delivery order.*neither value rewrites the other",
+        )
+        self.assertRegex(
+            procedure,
+            r"(?is)one stable logical\s+case ID, unique attempt IDs, strictly increasing attempt numbers, the same target, and a\s+linear `supersedes` chain.*never delete.*branch/cycle",
         )
         for token in (
             "ATT-LOGIN-01",
