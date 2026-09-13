@@ -763,6 +763,170 @@ class QaWorkflowContractTest(unittest.TestCase):
                 self.assertNotIn("qa_report.py", text)
                 self.assertLessEqual(len(text.splitlines()), 12)
 
+    def test_report_and_status_have_the_complete_portable_contract(self) -> None:
+        for name in ("qa-report", "qa-status"):
+            with self.subTest(name=name):
+                text = read_required(SKILLS / name / "SKILL.md")
+                self.assertRegex(
+                    text,
+                    rf"(?s)^---\nname: {re.escape(name)}\ndescription: .+?\n---\n",
+                )
+                for section in (
+                    "Inputs",
+                    "Procedure",
+                    "Output",
+                    "Failure modes",
+                    "Safety",
+                    "Related skills",
+                ):
+                    self.assertIn(f"## {section}", text)
+                for token in (
+                    "CLAUDE.md",
+                    "AGENTS.md",
+                    "${CLAUDE_PLUGIN_ROOT}",
+                    "$ARGUMENTS",
+                ):
+                    self.assertNotIn(token, text)
+
+    def test_report_exports_one_manifest_without_executing_evidence_commands(self) -> None:
+        text = read_required(SKILLS / "qa-report" / "SKILL.md")
+        inputs, procedure, output = re.split(
+            r"(?m)^## (?:Inputs|Procedure|Output)\n", text
+        )[1:4]
+        command = "qa_report.py report --manifest PATH --project-root PATH"
+        self.assertRegex(inputs, r"(?is)explicit.*manifest.*project root")
+        self.assertEqual(text.count(command), 1)
+        self.assertRegex(
+            procedure,
+            r"(?is)only process invocation.*`qa_report\.py report --manifest PATH --project-root PATH`",
+        )
+        self.assertRegex(
+            procedure,
+            r"(?is)same normalized manifest.*(?:HTML.*PDF|PDF.*HTML)",
+        )
+        self.assertRegex(
+            procedure,
+            r"(?is)acceptance criteri.*IDs.*text.*applicab.*expected.*observed.*case",
+        )
+        self.assertRegex(
+            procedure,
+            r"(?is)preserve.*diagnostics.*sanitization.*verdict",
+        )
+        self.assertRegex(
+            procedure,
+            r"(?is)(?:does not|never).*(?:execute|run|re-run).*tests.*evidence commands",
+        )
+        self.assertRegex(procedure, r"(?is)stored `command` values.*inert text")
+        expected_labels = [
+            "TARGET",
+            "OBJECTIVE",
+            "CONTRACT",
+            "CRITERIA",
+            "OPERATION",
+            "AUTHORIZATION",
+            "EXPORT",
+            "RESULTS",
+            "LIMITATIONS",
+            "EVIDENCE_REFERENCES",
+            "CURRENT_DEFECTS",
+            "VERDICT",
+            "NEXT",
+        ]
+        self.assertEqual(exact_output_labels(output), expected_labels)
+        self.assertRegex(text, r"(?is)exit code.*export.*(?:does not|never).*QA verdict")
+
+    def test_status_is_strictly_read_only_and_summarizes_recorded_state(self) -> None:
+        text = read_required(SKILLS / "qa-status" / "SKILL.md")
+        inputs, procedure, output = re.split(
+            r"(?m)^## (?:Inputs|Procedure|Output)\n", text
+        )[1:4]
+        self.assertRegex(inputs, r"(?is)explicit.*(?:objective|intent)")
+        self.assertRegex(inputs, r"(?is)(?:explicit )?authorization")
+        self.assertRegex(
+            procedure,
+            r"(?is)preserve.*(?:objective|intent).*limitations.*authorization.*verdict",
+        )
+        normalized_procedure = " ".join(procedure.split())
+        self.assertIn(
+            "It never creates, corrects, modifies, mutates, or writes product code, tests, "
+            "contracts, manifests, reports, evidence, defects, findings, approvals, "
+            "authorization, verdicts, or QA state.",
+            normalized_procedure,
+        )
+        self.assertRegex(
+            procedure,
+            r"(?is)summarize.*criteria.*cases.*evidence.*defects.*limitations.*authorization.*verdict",
+        )
+        self.assertRegex(
+            procedure,
+            r"(?is)(?:does not|never).*execute.*tests.*stored commands.*export",
+        )
+        self.assertNotRegex(
+            procedure,
+            r"(?is)\b(?:may|can|allowed|permitted)\b[^.\n]{0,120}\b(?:create|correct|modify|mutate|write|change)\b",
+        )
+        expected_labels = [
+            "TARGET",
+            "OBJECTIVE",
+            "CONTRACT",
+            "CRITERIA",
+            "OPERATION",
+            "AUTHORIZATION",
+            "CASES",
+            "RESULTS",
+            "LIMITATIONS",
+            "EVIDENCE_REFERENCES",
+            "CURRENT_DEFECTS",
+            "VERDICT",
+            "NEXT",
+        ]
+        self.assertEqual(exact_output_labels(output), expected_labels)
+
+    def test_report_and_status_consult_only_applicable_installed_specialists(self) -> None:
+        expected = {
+            "qa-report": "qa-specialist-requirements",
+            "qa-status": "qa-specialist-metrics",
+        }
+        for name, primary_specialist in expected.items():
+            with self.subTest(name=name):
+                text = read_required(SKILLS / name / "SKILL.md")
+                procedure = re.split(r"(?m)^## Procedure\n", text, maxsplit=1)[1].split(
+                    "\n## Output\n", 1
+                )[0]
+                self.assertIn(f"`{primary_specialist}`", procedure)
+                self.assertRegex(
+                    procedure,
+                    r"(?is)identify.*surfaces.*consult.*installed.*applicable.*`qa-specialist-",
+                )
+                self.assertRegex(
+                    procedure,
+                    r"(?is)(?:unavailable|absent|missing).*specialist.*limitation",
+                )
+                self.assertRegex(
+                    procedure,
+                    r"(?is)specialist.*(?:does not|cannot|never).*expand.*authorization",
+                )
+
+    def test_report_and_status_claude_commands_are_thin_adapters(self) -> None:
+        for command_name, skill_name in (
+            ("report", "qa-report"),
+            ("status", "qa-status"),
+        ):
+            with self.subTest(command=command_name):
+                text = read_required(COMMANDS / f"{command_name}.md")
+                self.assertRegex(
+                    text,
+                    r"(?s)^---\ndescription: .+\nargument-hint: .+\n---\n",
+                )
+                self.assertIn(
+                    f"${{CLAUDE_PLUGIN_ROOT}}/skills/{skill_name}/SKILL.md", text
+                )
+                self.assertIn("$ARGUMENTS", text)
+                self.assertIn("current repository context", text)
+                self.assertIn("return the shared skill's result unchanged", text)
+                self.assertNotIn("qa_report.py", text)
+                self.assertLessEqual(len(text.splitlines()), 12)
+
 
 if __name__ == "__main__":
     unittest.main()
