@@ -170,7 +170,7 @@ PRD ─▶ ROADMAP ─▶ DISCOVER ─▶ DESIGN ─▶ PLAN ─▶ EXECUTE ─�
 **Subagentes:** executor, advisor, simplifier, code-reviewer, qa, verifier adversarial, researcher, roadmap
 **Personas inline:** interviewer, architect, planner, product manager, quick engineer
 
-**Inclui:** 23 comandos · 8 subagentes · 2 skills · hooks
+**Inclui:** 23 comandos · 8 subagentes · 3 skills · hooks
 
 Veja a [documentação completa do plugin](./plugins/pwdev-code/README.md).
 

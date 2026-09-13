@@ -56,3 +56,6 @@ review-*.diff
 
 # Session pointer (active feature / next action) — per-checkout, never merged
 .planning/power/state.md
+
+# Local virtualenv (PDF verification environment for pwdev-qa tests)
+.venv/
