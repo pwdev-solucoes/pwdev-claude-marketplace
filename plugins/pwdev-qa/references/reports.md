@@ -33,16 +33,26 @@ validated before the exclusive atomic rename. PDF validation uses the standard l
 the numeric `startxref`, classic xref entries, trailer `/Size` and `/Root`, referenced root object,
 and final EOF produced by ReportLab. It also dereferences `/Root` as a `/Type /Catalog`
 dictionary, dereferences its `/Pages` dictionary, and checks non-negative `/Count`, `/Kids`, and
-live child references. Marker-only, xref-only, garbage-root, or malformed files are incomplete.
+live child references. The Pages tree is traversed recursively: every child must be a dictionary
+with exactly one `/Type /Page` or `/Type /Pages`, cycles and duplicate Page/Pages references are
+rejected, and every Pages `/Count` must equal its descendant leaf count. Marker-only, xref-only,
+garbage-root, garbage-child, cyclic, or malformed files are incomplete.
 
 Immediately before commit, the exporter reopens the nominal reports root without following
 symlinks and confirms its identity, then re-snapshots staging and compares it with the validated
 snapshot. A root/staging exchange or destination collision observed before the syscall fails and
 does not overwrite sentinels. The no-overwrite directory rename is the publication commit point.
 
+The staging directory descriptor remains open across the rename. Immediately after commit, the
+exporter calculates the returned snapshot/digest from that committed descriptor—not from the
+earlier validation snapshot—and performs one nominal no-follow root/run identity check. Therefore,
+a staging mutation in the final pre-syscall window is either refused by the last comparison or is
+represented by the committed digest, while a root/run exchange spanning the syscall fails without
+deleting a different directory or sentinel.
+
 No finite sequence of reads can make files immutable after that commit. Mutation by another actor
-after the rename is external to exporter success, even when it occurs before the caller consumes
-the return value. For consumer revalidation, every complete result includes
+after the final nominal check is external to exporter success, even when it occurs before the
+caller consumes the return value. For consumer revalidation, every complete result includes
 `publication_snapshot`—a path-keyed inventory of directory kinds and file byte sizes/SHA-256—and
 `publication_digest`, the lowercase SHA-256 of its canonical UTF-8 JSON (`ensure_ascii=false`,
 keys sorted, separators `,` and `:`). A consumer that needs current integrity must rebuild the

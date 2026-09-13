@@ -60,6 +60,32 @@ def snapshot_digest(snapshot):
     return hashlib.sha256(canonical).hexdigest()
 
 
+def write_classic_pdf(destination, bodies):
+    chunks = [b"%PDF-1.4\n"]
+    offsets = {0: 0}
+    position = len(chunks[0])
+    for object_id, body in sorted(bodies.items()):
+        offsets[object_id] = position
+        chunk = f"{object_id} 0 obj\n".encode("ascii") + body + b"\nendobj\n"
+        chunks.append(chunk)
+        position += len(chunk)
+    size = max(bodies) + 1
+    xref = position
+    chunks.extend([f"xref\n0 {size}\n".encode("ascii"), b"0000000000 65535 f \n"])
+    for object_id in range(1, size):
+        if object_id in offsets:
+            chunks.append(f"{offsets[object_id]:010d} 00000 n \n".encode("ascii"))
+        else:
+            chunks.append(b"0000000000 00000 f \n")
+    chunks.extend(
+        [
+            f"trailer\n<< /Size {size} /Root 1 0 R >>\n".encode("ascii"),
+            f"startxref\n{xref}\n%%EOF\n".encode("ascii"),
+        ]
+    )
+    Path(destination).write_bytes(b"".join(chunks))
+
+
 class QaReportCliTest(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -87,28 +113,13 @@ class QaReportCliTest(unittest.TestCase):
 
     @staticmethod
     def fake_pdf(_report, destination):
-        chunks = [
-            b"%PDF-1.4\n",
-            b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
-            b"2 0 obj\n<< /Type /Pages /Count 0 /Kids [] >>\nendobj\n",
-        ]
-        offsets = [0]
-        position = len(chunks[0])
-        for chunk in chunks[1:]:
-            offsets.append(position)
-            position += len(chunk)
-        xref = position
-        chunks.extend(
-            [
-                b"xref\n0 3\n",
-                b"0000000000 65535 f \n",
-                f"{offsets[1]:010d} 00000 n \n".encode("ascii"),
-                f"{offsets[2]:010d} 00000 n \n".encode("ascii"),
-                b"trailer\n<< /Size 3 /Root 1 0 R >>\n",
-                f"startxref\n{xref}\n%%EOF\n".encode("ascii"),
-            ]
+        write_classic_pdf(
+            destination,
+            {
+                1: b"<< /Type /Catalog /Pages 2 0 R >>",
+                2: b"<< /Type /Pages /Count 0 /Kids [] >>",
+            },
         )
-        Path(destination).write_bytes(b"".join(chunks))
 
     def test_publishes_complete_allowlisted_package_without_executing_command(self):
         publisher = load_module()
@@ -252,6 +263,73 @@ class QaReportCliTest(unittest.TestCase):
                 self.assertEqual(result["export_status"], "incomplete")
                 self.assertFalse(self.output().exists())
 
+    def test_page_tree_rejects_garbage_children_and_cycles(self):
+        scenarios = {
+            "garbage-child": {
+                1: b"<< /Type /Catalog /Pages 2 0 R >>",
+                2: b"<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+                3: b"garbage",
+            },
+            "self-cycle": {
+                1: b"<< /Type /Catalog /Pages 2 0 R >>",
+                2: b"<< /Type /Pages /Count 1 /Kids [2 0 R] >>",
+            },
+            "duplicate-leaf": {
+                1: b"<< /Type /Catalog /Pages 2 0 R >>",
+                2: b"<< /Type /Pages /Count 2 /Kids [3 0 R 3 0 R] >>",
+                3: b"<< /Type /Page >>",
+            },
+            "duplicate-pages": {
+                1: b"<< /Type /Catalog /Pages 2 0 R >>",
+                2: b"<< /Type /Pages /Count 2 /Kids [3 0 R 3 0 R] >>",
+                3: b"<< /Type /Pages /Count 1 /Kids [4 0 R] >>",
+                4: b"<< /Type /Page >>",
+            },
+            "recursive-count": {
+                1: b"<< /Type /Catalog /Pages 2 0 R >>",
+                2: b"<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+                3: b"<< /Type /Pages /Count 2 /Kids [4 0 R 5 0 R] >>",
+                4: b"<< /Type /Page >>",
+                5: b"<< /Type /Page >>",
+            },
+        }
+        for label, bodies in scenarios.items():
+            with self.subTest(label=label):
+                run_id = f"cli-run-{label}"
+                data = copy.deepcopy(self.manifest)
+                data["run_id"] = run_id
+                self.manifest_path.write_text(json.dumps(data), encoding="utf-8")
+                publisher = load_module(f"qa_report_tree_{label}")
+
+                def invalid_tree(_report, destination, bodies=bodies):
+                    write_classic_pdf(destination, bodies)
+
+                with mock.patch.object(publisher, "render_pdf", side_effect=invalid_tree):
+                    result = publisher.generate_report(self.manifest_path, self.root)
+                self.assertEqual(result["export_status"], "incomplete")
+                self.assertFalse(self.output(run_id).exists())
+
+    def test_recursive_page_tree_accepts_nested_pages_with_matching_leaf_counts(self):
+        publisher = load_module("qa_report_tree_nested_valid")
+
+        def nested_tree(_report, destination):
+            write_classic_pdf(
+                destination,
+                {
+                    1: b"<< /Type /Catalog /Pages 2 0 R >>",
+                    2: b"<< /Type /Pages /Count 2 /Kids [3 0 R] >>",
+                    3: b"<< /Type /Pages /Count 2 /Kids [4 0 R 5 0 R] >>",
+                    4: b"<< /Type /Page >>",
+                    5: b"<< /Type /Page >>",
+                },
+            )
+
+        with mock.patch.object(publisher, "render_pdf", side_effect=nested_tree):
+            result = publisher.generate_report(self.manifest_path, self.root)
+
+        self.assertEqual(result["export_status"], "complete")
+        self.assertEqual(result["publication_snapshot"], publication_snapshot(self.output()))
+
     def test_source_replaced_by_symlink_after_inspection_refuses_export(self):
         publisher = load_module("qa_report_source_symlink")
         real_inspect = publisher.inspect_evidence
@@ -354,19 +432,77 @@ class QaReportCliTest(unittest.TestCase):
 
         self.assertFalse(self.output().exists())
 
+    def test_pre_syscall_staging_exchange_is_reflected_by_committed_digest(self):
+        publisher = load_module("qa_report_exact_staging_window")
+        real_syscall = publisher._rename_no_replace_syscall
+
+        def exchange_then_commit(parent_fd, source, destination):
+            staging_fd = os.open(
+                source, os.O_RDONLY | os.O_DIRECTORY, dir_fd=parent_fd
+            )
+            try:
+                os.unlink("report.html", dir_fd=staging_fd)
+                replacement = os.open(
+                    "report.html",
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                    0o600,
+                    dir_fd=staging_fd,
+                )
+                os.write(replacement, b"changed in the final pre-syscall window")
+                os.close(replacement)
+            finally:
+                os.close(staging_fd)
+            return real_syscall(parent_fd, source, destination)
+
+        with mock.patch.object(publisher, "render_pdf", side_effect=self.fake_pdf), mock.patch.object(
+            publisher, "_rename_no_replace_syscall", side_effect=exchange_then_commit
+        ):
+            result = publisher.generate_report(self.manifest_path, self.root)
+
+        current = publication_snapshot(self.output())
+        self.assertEqual(result["export_status"], "complete")
+        self.assertEqual(result["publication_snapshot"], current)
+        self.assertEqual(result["publication_digest"], snapshot_digest(current))
+
+    def test_pre_syscall_root_exchange_fails_without_touching_sentinel(self):
+        publisher = load_module("qa_report_exact_root_window")
+        real_syscall = publisher._rename_no_replace_syscall
+        reports = self.output().parent
+        preserved = self.root / "preserved-exact-reports"
+
+        def exchange_then_commit(parent_fd, source, destination):
+            reports.rename(preserved)
+            reports.mkdir()
+            self.output().mkdir()
+            (self.output() / "sentinel").write_bytes(b"exact-window sentinel")
+            return real_syscall(parent_fd, source, destination)
+
+        with mock.patch.object(publisher, "render_pdf", side_effect=self.fake_pdf), mock.patch.object(
+            publisher, "_rename_no_replace_syscall", side_effect=exchange_then_commit
+        ):
+            with self.assertRaisesRegex(
+                publisher.PublicationError, "reports root identity changed at commit"
+            ):
+                publisher.generate_report(self.manifest_path, self.root)
+
+        self.assertEqual(
+            (self.output() / "sentinel").read_bytes(), b"exact-window sentinel"
+        )
+        self.assertFalse((preserved / "cli-run").exists())
+
     def test_post_commit_pdf_exchange_is_external_and_digest_detects_it(self):
         publisher = load_module("qa_report_pdf_exchange")
-        real_rename = publisher._atomic_rename_exclusive
+        real_verify = publisher._verify_nominal_commit
 
-        def exchange_pdf(parent_fd, source, destination, *commit_context):
-            result = real_rename(parent_fd, source, destination, *commit_context)
+        def verify_then_exchange(*args, **kwargs):
+            result = real_verify(*args, **kwargs)
             pdf = self.output() / "report.pdf"
             pdf.unlink()
             pdf.write_bytes(b"ATTACKER-PDF")
             return result
 
         with mock.patch.object(publisher, "render_pdf", side_effect=self.fake_pdf), mock.patch.object(
-            publisher, "_atomic_rename_exclusive", side_effect=exchange_pdf
+            publisher, "_verify_nominal_commit", side_effect=verify_then_exchange
         ):
             result = publisher.generate_report(self.manifest_path, self.root)
 
@@ -378,18 +514,18 @@ class QaReportCliTest(unittest.TestCase):
 
     def test_post_commit_run_exchange_is_external_and_digest_detects_it(self):
         publisher = load_module("qa_report_run_exchange")
-        real_rename = publisher._atomic_rename_exclusive
+        real_verify = publisher._verify_nominal_commit
         displaced = self.root / "displaced-owned-package"
 
-        def exchange_run(parent_fd, source, destination, *commit_context):
-            result = real_rename(parent_fd, source, destination, *commit_context)
+        def verify_then_exchange(*args, **kwargs):
+            result = real_verify(*args, **kwargs)
             self.output().rename(displaced)
             self.output().mkdir()
             (self.output() / "sentinel").write_bytes(b"attacker run")
             return result
 
         with mock.patch.object(publisher, "render_pdf", side_effect=self.fake_pdf), mock.patch.object(
-            publisher, "_atomic_rename_exclusive", side_effect=exchange_run
+            publisher, "_verify_nominal_commit", side_effect=verify_then_exchange
         ):
             result = publisher.generate_report(self.manifest_path, self.root)
 

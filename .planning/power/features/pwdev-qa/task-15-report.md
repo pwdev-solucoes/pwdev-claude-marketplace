@@ -171,3 +171,48 @@ OK
 The ReportLab 4.4.9 integration was repeated with bundled Python 3.12: strict pypdf reopened all
 7 pages, the attachment was identical, and an independently rebuilt snapshot produced the exact
 returned publication digest. No parser dependency was added to export.
+
+## Correction round 3
+
+The staging descriptor now remains open across the no-replace rename. Snapshot and digest are
+computed from that same descriptor only after commit, so a mutation in the last pre-syscall window
+is represented by the returned attestation. One immediate nominal no-follow check then binds the
+retained reports/run identities to `output_dir`; a root swap spanning the syscall fails and cleanup
+removes only the package in the retained reports directory, leaving the nominal sentinel intact.
+Mutation injected after this final check remains external under the controller ruling and is
+detected by a consumer rebuilding the returned snapshot/digest.
+
+PDF validation now walks nested Pages nodes recursively. Each Kid must dereference to a dictionary
+with exactly one `/Type /Page` or `/Type /Pages`; ancestor cycles, duplicate Pages nodes, duplicate
+Page leaves, invalid children, and recursive `/Count` mismatches are rejected. A nested two-leaf
+tree is accepted, and the real ReportLab tree remains compatible.
+
+TDD and explicit reversal/restoration:
+
+```text
+RED: garbage child and self-cycle published; exact pre-syscall staging/root probes diverged
+GREEN: recursive tree and retained-descriptor commit probes passed
+
+# recursive walk, post-commit snapshot, and nominal commit check temporarily reverted
+python3 -m unittest <three round-3 regression probes>
+Ran 3 tests — FAILED (failures=7 across subtests)
+
+# protections restored
+python3 -m unittest <three round-3 regression probes>
+Ran 3 tests — OK
+
+python3 -m unittest tests.test_qa_report_cli
+Ran 19 tests in 0.099s — OK
+
+<bundled-python-3.12> -m unittest discover -s tests -p 'test_qa*.py'
+Ran 135 tests in 6.106s — OK
+
+python3 -m py_compile plugins/pwdev-qa/scripts/qa_report.py tests/test_qa_report_cli.py
+OK
+
+git diff --check
+OK
+```
+
+The final ReportLab 4.4.9 integration published 7 pages, reopened them with pypdf strict mode,
+verified the attachment, and independently reproduced the committed snapshot and digest.

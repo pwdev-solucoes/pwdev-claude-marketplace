@@ -286,28 +286,54 @@ def _validate_pdf_structure(raw: bytes) -> None:
         raise RuntimeError("report.pdf Catalog has no valid /Pages reference")
     pages_id = int(pages_match.group(1))
     pages_generation = int(pages_match.group(2))
-    pages = dictionary(
-        object_body(pages_id, pages_generation, "Pages"), "Pages"
-    )
-    if re.search(rb"/Type\s*/Pages\b", pages) is None:
-        raise RuntimeError("report.pdf Pages dictionary is not /Type /Pages")
-    count_matches = re.findall(rb"/Count\s+(-?[0-9]+)(?![0-9.])", pages)
-    kids_matches = re.findall(rb"/Kids\s*\[(.*?)\]", pages, re.DOTALL)
-    if len(count_matches) != 1 or int(count_matches[0]) < 0:
-        raise RuntimeError("report.pdf Pages /Count is not a non-negative integer")
-    if len(kids_matches) != 1:
-        raise RuntimeError("report.pdf Pages /Kids is not an array")
-    kids = kids_matches[0]
-    references = list(re.finditer(rb"([0-9]+)\s+([0-9]+)\s+R\b", kids))
-    remainder = re.sub(rb"[0-9]+\s+[0-9]+\s+R\b", b"", kids)
-    if remainder.strip():
-        raise RuntimeError("report.pdf Pages /Kids contains a malformed reference")
-    if int(count_matches[0]) != len(references):
-        raise RuntimeError("report.pdf Pages /Count does not match /Kids")
-    for reference in references:
-        object_body(
-            int(reference.group(1)), int(reference.group(2)), "page tree child"
+    visited_pages = set()
+    visited_leaves = set()
+
+    def walk_page_tree(
+        object_id: int, object_generation: int, ancestors: set
+    ) -> int:
+        reference = (object_id, object_generation)
+        node = dictionary(
+            object_body(object_id, object_generation, "page tree child"),
+            "page tree child",
         )
+        types = re.findall(rb"/Type\s*/(Page|Pages)\b", node)
+        if len(types) != 1:
+            raise RuntimeError("report.pdf page tree child has no unique Page/Pages type")
+        if types[0] == b"Page":
+            if reference in visited_leaves:
+                raise RuntimeError("report.pdf page tree contains a duplicate Page")
+            visited_leaves.add(reference)
+            return 1
+
+        if reference in ancestors:
+            raise RuntimeError("report.pdf page tree contains a cycle")
+        if reference in visited_pages:
+            raise RuntimeError("report.pdf page tree contains a duplicate Pages node")
+        visited_pages.add(reference)
+        count_matches = re.findall(rb"/Count\s+(-?[0-9]+)(?![0-9.])", node)
+        kids_matches = re.findall(rb"/Kids\s*\[(.*?)\]", node, re.DOTALL)
+        if len(count_matches) != 1 or int(count_matches[0]) < 0:
+            raise RuntimeError("report.pdf Pages /Count is not a non-negative integer")
+        if len(kids_matches) != 1:
+            raise RuntimeError("report.pdf Pages /Kids is not an array")
+        kids = kids_matches[0]
+        references = list(re.finditer(rb"([0-9]+)\s+([0-9]+)\s+R\b", kids))
+        remainder = re.sub(rb"[0-9]+\s+[0-9]+\s+R\b", b"", kids)
+        if remainder.strip():
+            raise RuntimeError("report.pdf Pages /Kids contains a malformed reference")
+        descendants = ancestors | {reference}
+        leaf_count = sum(
+            walk_page_tree(
+                int(child.group(1)), int(child.group(2)), descendants
+            )
+            for child in references
+        )
+        if int(count_matches[0]) != leaf_count:
+            raise RuntimeError("report.pdf Pages /Count does not match leaf count")
+        return leaf_count
+
+    walk_page_tree(pages_id, pages_generation, set())
 
 
 def _publication_snapshot_fd(directory_fd: int, prefix: str = "") -> Dict[str, Any]:
@@ -562,29 +588,7 @@ def _copy_revalidated(
             os.close(attachments_fd)
 
 
-def _atomic_rename_exclusive(
-    parent_fd: int,
-    source: str,
-    destination: str,
-    project_root: Path,
-    reports_identity: Tuple[int, int],
-    expected_snapshot: Dict[str, Any],
-) -> None:
-    _assert_nominal_reports_root(project_root, reports_identity)
-    staging_fd, _ = _open_existing_directory(
-        parent_fd, source, "staging directory"
-    )
-    try:
-        try:
-            current_snapshot = _publication_snapshot_fd(staging_fd)
-        except (OSError, RuntimeError, EvidenceError) as error:
-            raise PublicationError(
-                "staging package changed before commit"
-            ) from error
-        if current_snapshot != expected_snapshot:
-            raise PublicationError("staging package changed before commit")
-    finally:
-        os.close(staging_fd)
+def _rename_no_replace_syscall(parent_fd: int, source: str, destination: str) -> None:
     libc = ctypes.CDLL(None, use_errno=True)
     encoded_source = os.fsencode(source)
     encoded_destination = os.fsencode(destination)
@@ -625,6 +629,32 @@ def _atomic_rename_exclusive(
         )
 
 
+def _atomic_rename_exclusive(
+    parent_fd: int,
+    source: str,
+    destination: str,
+    project_root: Path,
+    reports_identity: Tuple[int, int],
+    expected_snapshot: Dict[str, Any],
+) -> None:
+    _assert_nominal_reports_root(project_root, reports_identity)
+    staging_fd, _ = _open_existing_directory(
+        parent_fd, source, "staging directory"
+    )
+    try:
+        try:
+            current_snapshot = _publication_snapshot_fd(staging_fd)
+        except (OSError, RuntimeError, EvidenceError) as error:
+            raise PublicationError(
+                "staging package changed before commit"
+            ) from error
+        if current_snapshot != expected_snapshot:
+            raise PublicationError("staging package changed before commit")
+    finally:
+        os.close(staging_fd)
+    _rename_no_replace_syscall(parent_fd, source, destination)
+
+
 def _assert_nominal_reports_root(
     project_root: Path, expected_identity: Tuple[int, int]
 ) -> None:
@@ -648,6 +678,60 @@ def _assert_nominal_reports_root(
         for descriptor in reversed(opened_children):
             os.close(descriptor)
         os.close(root_fd)
+
+
+def _verify_nominal_commit(
+    project_root: Path,
+    reports_identity: Tuple[int, int],
+    run_id: str,
+    run_identity: Tuple[int, int],
+) -> None:
+    """Bind the just-committed directory to the nominal output path once."""
+
+    root_fd, _ = _open_directory(project_root, "project root")
+    opened_children: List[int] = []
+    try:
+        current_fd = root_fd
+        for name, label in (
+            (".planning", "output component .planning"),
+            ("pwdev-qa", "output component pwdev-qa"),
+            ("reports", "reports root"),
+        ):
+            next_fd, identity = _open_existing_directory(current_fd, name, label)
+            opened_children.append(next_fd)
+            current_fd = next_fd
+        if identity != reports_identity:
+            raise PublicationError("reports root identity changed at commit")
+        run_fd, identity = _open_existing_directory(
+            current_fd, run_id, "published report directory"
+        )
+        try:
+            if identity != run_identity:
+                raise PublicationError("published report directory changed at commit")
+        finally:
+            os.close(run_fd)
+    finally:
+        for descriptor in reversed(opened_children):
+            os.close(descriptor)
+        os.close(root_fd)
+
+
+def _remove_committed_package_if_owned(
+    reports_fd: int, run_id: str, run_identity: Tuple[int, int]
+) -> None:
+    try:
+        descriptor, identity = _open_existing_directory(
+            reports_fd, run_id, "published report directory"
+        )
+    except PublicationError:
+        return
+    os.close(descriptor)
+    if identity != run_identity:
+        return
+    try:
+        _remove_tree(reports_fd, run_id)
+    except OSError:
+        pass
 
 
 def _preserve_partial(
@@ -713,17 +797,40 @@ def generate_report(manifest_path: Path, project_root: Path) -> dict:
             render_pdf(report, reports_path / staging_name / "report.pdf")
             _validate_stage(reports_fd, staging_name, staging_fd, report, html)
             os.fsync(staging_fd)
-            publication_snapshot = _publication_snapshot_fd(staging_fd)
-            publication_digest = _publication_digest(publication_snapshot)
+            validated_snapshot = _publication_snapshot_fd(staging_fd)
             _atomic_rename_exclusive(
                 reports_fd,
                 staging_name,
                 run_id,
                 root,
                 reports_identity,
-                publication_snapshot,
+                validated_snapshot,
             )
             staging_name = ""
+            committed_metadata = os.fstat(staging_fd)
+            committed_identity = (committed_metadata.st_dev, committed_metadata.st_ino)
+            try:
+                publication_snapshot = _publication_snapshot_fd(staging_fd)
+            except (OSError, RuntimeError, EvidenceError) as error:
+                _remove_committed_package_if_owned(
+                    reports_fd, run_id, committed_identity
+                )
+                raise PublicationError(
+                    "committed package could not be safely attested"
+                ) from error
+            publication_digest = _publication_digest(publication_snapshot)
+            try:
+                _verify_nominal_commit(
+                    root,
+                    reports_identity,
+                    run_id,
+                    committed_identity,
+                )
+            except PublicationError:
+                _remove_committed_package_if_owned(
+                    reports_fd, run_id, committed_identity
+                )
+                raise
             return {
                 "run_id": run_id,
                 "verdict": report["verdict"],
