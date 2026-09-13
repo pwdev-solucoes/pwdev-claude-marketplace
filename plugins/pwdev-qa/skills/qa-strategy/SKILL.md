@@ -12,7 +12,8 @@ This workflow does not execute tests or external effects. Read
 
 ## Inputs
 
-- Project root, target identity, contract source/hash, and the complete supplied criterion catalog.
+- Project root, target identity, explicit objective or intent, contract source/hash, and the
+  complete supplied criterion catalog.
 - Product changes, surfaces, dependencies, users, known defects, incidents, likelihood and impact
   scales, expected observable behavior, and existing coverage.
 - Environments, browsers/devices, test data restrictions, CI, time, budget, evidence needs, and
@@ -22,8 +23,9 @@ This workflow does not execute tests or external effects. Read
 
 ## Procedure
 
-1. Preserve the target, contract, criterion IDs and text, applicability, external state, and
-   approvals exactly. Do not infer a criterion catalog, relax an oracle, or grant authorization.
+1. Preserve the target, explicit objective or intent, contract, criterion IDs and text,
+   applicability, external state, approvals, and authorization boundaries exactly. Do not infer
+   a criterion catalog, relax an oracle, or grant authorization.
 2. Consult `qa-specialist-requirements` for ambiguous or non-observable criteria and
    `qa-specialist-strategy` for risk priority and traceable coverage. Add other installed
    specialists only for surfaces present in scope; unavailable specialists are limitations.
@@ -52,10 +54,11 @@ criterion IDs/text and distinguish observed facts, assumptions, proposals, and l
 
 ```text
 TARGET: <target identity>
+OBJECTIVE: <preserved explicit objective or intent>
 CONTRACT: <source identity and hash when supplied>
 CRITERIA: <preserved IDs/text and applicability, or missing>
 OPERATION: strategy (write plan only; no test execution)
-AUTHORIZATION: <supplied scopes and explicit missing approvals>
+AUTHORIZATION: <preserved supplied scopes and explicit missing approvals>
 RISK_REGISTER: <risk, consequence, likelihood, impact, priority, criterion IDs, oracle, assumptions>
 COVERAGE_MATRIX: <risk, criterion IDs, conditions, environment, data, tool, expected observation, evidence need>
 ENVIRONMENTS: <required/available/missing/unverified environments and prerequisites>

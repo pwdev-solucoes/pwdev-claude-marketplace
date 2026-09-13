@@ -36,6 +36,30 @@ class QaWorkflowContractTest(unittest.TestCase):
                 ):
                     self.assertIn(f"## {section}", text)
 
+    def test_explicit_objective_and_authorization_are_preserved_end_to_end(self) -> None:
+        for name in ("qa-init", "qa-strategy"):
+            with self.subTest(name=name):
+                text = read_required(SKILLS / name / "SKILL.md")
+                inputs, procedure, output = re.split(
+                    r"(?m)^## (?:Inputs|Procedure|Output)\n", text
+                )[1:4]
+                self.assertRegex(inputs, r"(?is)explicit.*(?:objective|intent)")
+                self.assertRegex(inputs, r"(?is)(?:explicit )?authorization")
+                self.assertRegex(
+                    procedure,
+                    r"(?is)preserve.*(?:objective|intent).*authorization",
+                )
+                self.assertRegex(output, r"(?m)^OBJECTIVE: <preserved explicit .+>$")
+                self.assertRegex(output, r"(?m)^AUTHORIZATION: <preserved .+>$")
+
+    def test_shared_workflow_bodies_have_no_claude_only_dependencies(self) -> None:
+        forbidden = ("CLAUDE.md", "AGENTS.md", "${CLAUDE_PLUGIN_ROOT}", "$ARGUMENTS")
+        for name in ("qa-init", "qa-strategy"):
+            with self.subTest(name=name):
+                text = read_required(SKILLS / name / "SKILL.md")
+                for token in forbidden:
+                    self.assertNotIn(token, text)
+
     def test_init_is_project_confined_non_destructive_and_probe_driven(self) -> None:
         text = read_required(SKILLS / "qa-init" / "SKILL.md")
         self.assertIn(".planning/pwdev-qa/context.md", text)

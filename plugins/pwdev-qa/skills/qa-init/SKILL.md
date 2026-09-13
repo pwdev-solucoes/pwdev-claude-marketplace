@@ -29,9 +29,10 @@ tests. Read [workflow](../../references/workflow.md), [safety](../../references/
    non-regular existing path. Preserve and never overwrite an existing context file. If it is
    absent, create its parent directories and the context file only inside the project, using an
    exclusive create so a concurrent or newly appearing file is preserved.
-3. Record only observed project facts: target, contract identity, criterion IDs and text,
-   surfaces, stack, existing test entry points, CI, environments, data restrictions, approvals,
-   and unknowns. Do not infer approval, a complete catalog, or an installed tool.
+3. Preserve the explicit objective and authorization boundaries exactly. Record only observed
+   project facts: target, contract identity, criterion IDs and text, surfaces, stack, existing
+   test entry points, CI, environments, data restrictions, approvals, and unknowns. Do not infer
+   approval, a complete catalog, or an installed tool.
 4. Run only safe, read-only probes that the user or project context permits. Record a skipped
    probe as `not_run`. A probe result is observation, not authorization to run tests or contact
    an external service.
@@ -52,9 +53,11 @@ Markdown tables below their label; do not rename or omit labels.
 
 ```text
 TARGET: <target identity>
+OBJECTIVE: <preserved explicit objective or intent>
 CONTRACT: <source identity and hash when supplied>
 CRITERIA: <preserved IDs/text and applicability, or missing>
 OPERATION: init (observe and create missing project-local context only)
+AUTHORIZATION: <preserved supplied scopes and explicit missing approvals>
 CONTEXT: <path, created|preserved|blocked, and observed project facts>
 TOOLS_AVAILABLE: <qa-tooling rows classified available, or none>
 TOOLS_MISSING: <qa-tooling rows classified missing, or none>

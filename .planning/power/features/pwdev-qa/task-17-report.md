@@ -31,6 +31,20 @@ Date: 2026-09-13
   `tests.test_qa_*` modules.
 - `python3 -m compileall -q tests/test_qa_workflows.py` and `git diff --check` passed.
 
+## Correction round 1
+
+- Root cause: the exact output templates were designed from common workflow fields, while tests
+  checked their shape but not lossless propagation from inputs through procedure to output. That
+  omission allowed explicit objective to disappear from both workflows and authorization from
+  `qa-init`.
+- RED: the new end-to-end preservation test failed twice: `qa-init` lacked objective/authorization
+  preservation and fields, while `qa-strategy` lacked an explicit objective input.
+- GREEN: both skills now preserve `OBJECTIVE` and `AUTHORIZATION` explicitly; the focused suite
+  passes 9 tests. Removing the correction made the regression test fail again, and restoring it
+  returned the test to green.
+- Added a portability guard that rejects `CLAUDE.md`, `AGENTS.md`, `${CLAUDE_PLUGIN_ROOT}`, and
+  `$ARGUMENTS` in shared workflow bodies; the Claude-only tokens remain in thin wrappers.
+
 ## Limitations and safety
 
 - These workflow contracts plan or observe; they do not execute product tests, evidence commands,
