@@ -52,3 +52,11 @@ Thumbs.db
 .planning/power/fleet-logs/
 .planning/power/fleet-results/
 .planning/power/features/*/review-*.diff
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Review diff packages are disposable evidence, regenerated on demand
+review-*.diff
+.planning/power/features/*/review-packages/
