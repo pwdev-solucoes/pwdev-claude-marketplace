@@ -38,8 +38,8 @@ with 3 of 3 runtimes VERIFIED; preliminary partial attempts remain historical di
 
 | runtime | exact version | result | decisive evidence |
 |---|---|---|---|
-| Claude Code | `2.1.269 (Claude Code)` | VERIFIED | session `b522acbc-c139-4dec-af75-abb245a7f905` invoked `pwdev-qa:qa-tooling`, preserved the negative probe as missing/NOT_RUN/BLOCKED, exported complete/FAIL, inspected HTML and parsed 171 PDF pages with CA-000..099 and the defect |
-| Codex | `codex-cli 0.153.4` | VERIFIED | thread `01a09a22-f2ce-7a70-84ae-97f2b14b126e` used installed-plugin discovery to invoke `pwdev-qa:qa-tooling`; the same negative probe and complete/FAIL 171-page fixture validation succeeded |
+| Claude Code | `2.1.270 (Claude Code)` | VERIFIED | session `b522acbc-c139-4dec-af75-abb245a7f905` invoked `pwdev-qa:qa-tooling`, preserved the negative probe as missing/NOT_RUN/BLOCKED, exported complete/FAIL, inspected HTML and parsed 171 PDF pages with CA-000..099 and the defect |
+| Codex | `codex-cli 0.153.4` | VERIFIED | thread `01a09a22-f2ce-7a70-84ae-97f2b14b126e` used installed-plugin discovery to invoke `pwdev-qa:qa-tooling`; bundled Python 3.11.16 completed the same negative probe and complete/FAIL 171-page fixture validation |
 | Hermes Agent | `Hermes Agent v0.21.1 (2026.9.7) · upstream 564aef29` | VERIFIED | session `20260913_064516_ed1c02` preloaded the skill from authorized commit `a80b97b`, then completed the probe and fixture inspection after doctor passed |
 
 Structured affirmative observations, exact commands, session/transcript locators and hashes,

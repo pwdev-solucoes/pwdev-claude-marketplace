@@ -10,7 +10,7 @@ VERIFIED only after successful `qa-tooling discovery`, real invocation producing
 
 | runtime | exact version | status | discovery | invocation/missing-tool | fixture report | limitations |
 |---|---|---|---|---|---|---|
-| Claude Code | `2.1.269 (Claude Code)` | VERIFIED | PASS — loaded `pwdev-qa:qa-tooling` in the authorized session | PASS — negative probe produced missing/NOT_RUN/BLOCKED | PASS — export complete/FAIL; HTML and 171-page PDF inspected | no limitation in the authoritative run; preliminary authentication failure retained below |
+| Claude Code | `2.1.270 (Claude Code)` | VERIFIED | PASS — loaded `pwdev-qa:qa-tooling` in the authorized session | PASS — negative probe produced missing/NOT_RUN/BLOCKED | PASS — export complete/FAIL; HTML and 171-page PDF inspected | no limitation in the authoritative run; preliminary authentication failure retained below |
 | Codex | `codex-cli 0.153.4` | VERIFIED | PASS — installed plugin exposed `pwdev-qa:qa-tooling` | PASS — negative probe produced missing/NOT_RUN/BLOCKED | PASS — export complete/FAIL; HTML and 171-page PDF inspected | no limitation in the authoritative run; preliminary ephemeral discovery failure retained below |
 | Hermes Agent | `Hermes Agent v0.21.1 (2026.9.7) · upstream 564aef29` | VERIFIED | PASS — commit `a80b97b` installed/enabled and skill preloaded | PASS — negative probe produced missing/NOT_RUN/BLOCKED | PASS — export complete/FAIL; manifest, HTML and 171-page PDF inspected | authorized local install used flattened layout; preliminary doctor-only result retained below |
 
@@ -19,7 +19,7 @@ all three steps; preliminary partial attempts below are non-authoritative diagno
 
 ## Claude Code
 
-- Version command/probe: `claude --version` → `2.1.269 (Claude Code)`.
+- Version command/probe: `claude --version` → `2.1.270 (Claude Code)`.
 
 ### Structured observations
 
@@ -60,7 +60,7 @@ Artifact SHA-256/size: `manifest.json` `bc02eb690bb82a07d1d94757c5f355b6f5503bc3
 |---|---|---|---|
 | discovery | OBSERVED — thread `01a09a22-f2ce-7a70-84ae-97f2b14b126e` invoked `pwdev-qa:qa-tooling` through installed-plugin discovery. | Installed source `/Users/paulosoares/.codex/plugins/cache/pwdev-flow/pwdev-qa/0.1.0` exposed the skill and tooling reference. | restricted transcript lines `35` and `62-66` |
 | missing-tool | OBSERVED — the invoked skill classified the probe as `missing`, preserved execution as `NOT_RUN` and outcome as `BLOCKED`, and returned a safe alternative. | `command -v pwdev-qa-missing-tool` → empty output, exit `1`; no install ran. | restricted transcript lines `67-69` and `101` |
-| fixture-report | OBSERVED — the session inspected `manifest.json`, `report.html` and `report.pdf`, then confirmed `CA-000..CA-099` and `BUG-OPEN-UNMAPPED`. | bundled Python 3.12 `qa_demo.py --output-dir /tmp/pwdev-qa-evidence-codex/report` → exit `0`, `export_status=complete`, `verdict=FAIL`; PDF 171 pages. | restricted transcript lines `95-101` |
+| fixture-report | OBSERVED — the session inspected `manifest.json`, `report.html` and `report.pdf`, then confirmed `CA-000..CA-099` and `BUG-OPEN-UNMAPPED`. | bundled Python 3.11.16 `qa_demo.py --output-dir /tmp/pwdev-qa-evidence-codex/report` → exit `0`, `export_status=complete`, `verdict=FAIL`; PDF 171 pages. | restricted transcript lines `95-101` |
 
 Provenance: thread `01a09a22-f2ce-7a70-84ae-97f2b14b126e`; restricted local source
 `/tmp/pwdev-qa-evidence-codex/transcript.jsonl`, SHA-256

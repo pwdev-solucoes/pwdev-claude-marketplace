@@ -47,7 +47,7 @@ SPECIALISTS = {
 }
 
 RUNTIME_VERSIONS = {
-    "Claude Code": "`2.1.269 (Claude Code)`",
+    "Claude Code": "`2.1.270 (Claude Code)`",
     "Codex": "`codex-cli 0.153.4`",
     "Hermes Agent": "`Hermes Agent v0.21.1 (2026.9.7) · upstream 564aef29`",
 }
@@ -405,7 +405,7 @@ class TestRuntimeSmokeLedger(unittest.TestCase):
             "VERIFIED",
         )
         required = {
-            "Claude Code": ("claude --version", "2.1.269 (Claude Code)", *shared),
+            "Claude Code": ("claude --version", "2.1.270 (Claude Code)", *shared),
             "Codex": ("codex --version", "codex-cli 0.153.4", "installed plugin discovery", *shared),
             "Hermes Agent": ("hermes --version", "a80b97b", "flattened layout", "doctor passed", *shared),
         }
@@ -446,6 +446,7 @@ class TestRuntimeSmokeLedger(unittest.TestCase):
                 self.assertIn("not publishable", sections[runtime])
 
         authoritative = "\n".join(sections.values())
+        self.assertGreaterEqual(authoritative.count("exit `1`"), 3)
         self.assertNotRegex(authoritative, r"never invoked `pwdev-qa:qa-tooling`|no real skill invocation")
         self.assertNotRegex(authoritative, r"never classified .*`missing`|never preserved .*`NOT_RUN`/`BLOCKED`|never provided a safe alternative")
         self.assertNotRegex(authoritative, r"were not inspected|were never confirmed")
@@ -524,6 +525,10 @@ class TestRuntimeSmokeLedger(unittest.TestCase):
                 "were inspected; `CA-000..CA-099` and `BUG-OPEN-UNMAPPED` were confirmed.",
                 "were not inspected; `CA-000..CA-099` and `BUG-OPEN-UNMAPPED` were never confirmed.",
                 1,
+            ),
+            "probe exit was not negative": text.replace(
+                "exit `1`",
+                "exit `0`",
             ),
         }
         for label, mutated in mutations.items():
