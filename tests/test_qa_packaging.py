@@ -15,7 +15,7 @@ CODEX_MANIFEST = PLUGIN / ".codex-plugin" / "plugin.json"
 HERMES_MANIFEST = PLUGIN / ".hermes-plugin" / "plugin.yaml"
 HERMES_INIT = PLUGIN / ".hermes-plugin" / "__init__.py"
 
-EXPECTED_SKILLS = {
+EXPECTED_SKILLS = tuple(sorted({
     "qa",
     "qa-tooling",
     "qa-init",
@@ -45,7 +45,7 @@ EXPECTED_SKILLS = {
     "qa-specialist-security",
     "qa-specialist-strategy",
     "qa-specialist-web",
-}
+}))
 
 
 def load_adapter(path, module_name):
@@ -66,12 +66,12 @@ def parse_flat_yaml(path):
 
 class RecordingContext:
     def __init__(self):
-        self.skills = {}
+        self.calls = []
 
     def register_skill(self, name, path):
         if not isinstance(path, Path):
             raise AttributeError("register_skill requires pathlib.Path")
-        self.skills[name] = path
+        self.calls.append((name, path))
 
     def register_hook(self, *args, **kwargs):
         raise AssertionError("PWDEV QA must not register intrusive hooks")
@@ -108,6 +108,14 @@ class TestManifests(unittest.TestCase):
 
 
 class TestHermesRegistration(unittest.TestCase):
+    def stage_adapter(self, root, layout="clone"):
+        plugin_root = root / "pwdev-qa"
+        adapter_root = plugin_root / ".hermes-plugin" if layout == "clone" else plugin_root
+        adapter_root.mkdir(parents=True)
+        shutil.copytree(PLUGIN / "skills", plugin_root / "skills")
+        shutil.copy(HERMES_INIT, adapter_root / "__init__.py")
+        return plugin_root, adapter_root / "__init__.py"
+
     def test_repository_layout_registers_exactly_the_29_installed_skills(self):
         self.assertTrue(HERMES_INIT.is_file(), f"missing adapter: {HERMES_INIT}")
         module = load_adapter(HERMES_INIT, "qa_hermes_repository")
@@ -116,9 +124,10 @@ class TestHermesRegistration(unittest.TestCase):
         result = module.register(context)
 
         self.assertIsNone(result)
-        self.assertEqual(set(context.skills), EXPECTED_SKILLS)
-        self.assertEqual(len(context.skills), 29)
-        for name, path in context.skills.items():
+        expected_calls = [(name, PLUGIN / "skills" / name / "SKILL.md") for name in EXPECTED_SKILLS]
+        self.assertEqual(context.calls, expected_calls)
+        self.assertEqual(len(context.calls), 29)
+        for name, path in context.calls:
             self.assertIsInstance(path, Path)
             self.assertEqual(path, PLUGIN / "skills" / name / "SKILL.md")
             self.assertTrue(path.is_file())
@@ -129,17 +138,16 @@ class TestHermesRegistration(unittest.TestCase):
             temporary_root = Path(temporary_directory)
             for layout in ("clone", "flattened"):
                 with self.subTest(layout=layout):
-                    plugin_root = temporary_root / layout / "pwdev-qa"
-                    adapter_root = plugin_root / ".hermes-plugin" if layout == "clone" else plugin_root
-                    adapter_root.mkdir(parents=True)
-                    shutil.copytree(PLUGIN / "skills", plugin_root / "skills")
-                    shutil.copy(HERMES_INIT, adapter_root / "__init__.py")
-
-                    module = load_adapter(adapter_root / "__init__.py", f"qa_hermes_{layout}")
+                    plugin_root, adapter = self.stage_adapter(temporary_root / layout, layout)
+                    module = load_adapter(adapter, f"qa_hermes_{layout}")
                     context = RecordingContext()
                     self.assertIsNone(module.register(context))
-                    self.assertEqual(set(context.skills), EXPECTED_SKILLS)
-                    self.assertTrue(all(isinstance(path, Path) for path in context.skills.values()))
+                    expected = [
+                        (name, plugin_root.resolve() / "skills" / name / "SKILL.md")
+                        for name in EXPECTED_SKILLS
+                    ]
+                    self.assertEqual(context.calls, expected)
+                    self.assertTrue(all(isinstance(path, Path) for _, path in context.calls))
 
     def test_missing_skills_tree_fails_safely_without_partial_registration(self):
         self.assertTrue(HERMES_INIT.is_file(), f"missing adapter: {HERMES_INIT}")
@@ -153,7 +161,77 @@ class TestHermesRegistration(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "skills directory not found"):
                 module.register(context)
 
-            self.assertEqual(context.skills, {})
+            self.assertEqual(context.calls, [])
+
+    def test_incomplete_or_extra_inventory_fails_before_registration(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary_root = Path(temporary_directory)
+            for variant in ("missing", "extra"):
+                with self.subTest(variant=variant):
+                    plugin_root, adapter = self.stage_adapter(temporary_root / variant)
+                    if variant == "missing":
+                        shutil.rmtree(plugin_root / "skills" / EXPECTED_SKILLS[0])
+                    else:
+                        unexpected = plugin_root / "skills" / "qa-unexpected"
+                        unexpected.mkdir()
+                        (unexpected / "SKILL.md").write_text("---\nname: qa-unexpected\n---\n", encoding="utf-8")
+                    module = load_adapter(adapter, f"qa_hermes_inventory_{variant}")
+                    context = RecordingContext()
+
+                    with self.assertRaisesRegex(RuntimeError, "invalid skills inventory"):
+                        module.register(context)
+
+                    self.assertEqual(context.calls, [])
+
+    def test_symlinked_root_directory_or_file_is_rejected_before_registration(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary_root = Path(temporary_directory)
+            for variant in ("root", "directory", "file"):
+                with self.subTest(variant=variant):
+                    external = temporary_root / f"external-{variant}"
+                    shutil.copytree(PLUGIN / "skills", external)
+                    plugin_root, adapter = self.stage_adapter(temporary_root / variant)
+                    skills_root = plugin_root / "skills"
+                    target_name = EXPECTED_SKILLS[0]
+                    if variant == "root":
+                        shutil.rmtree(skills_root)
+                        skills_root.symlink_to(external, target_is_directory=True)
+                    elif variant == "directory":
+                        shutil.rmtree(skills_root / target_name)
+                        (skills_root / target_name).symlink_to(
+                            external / target_name,
+                            target_is_directory=True,
+                        )
+                    else:
+                        skill_file = skills_root / target_name / "SKILL.md"
+                        skill_file.unlink()
+                        skill_file.symlink_to(external / target_name / "SKILL.md")
+                    module = load_adapter(adapter, f"qa_hermes_symlink_{variant}")
+                    context = RecordingContext()
+
+                    with self.assertRaisesRegex(RuntimeError, "unsafe skills tree"):
+                        module.register(context)
+
+                    self.assertEqual(context.calls, [])
+
+    def test_callback_failure_stops_without_claiming_impossible_rollback(self):
+        class FailingContext(RecordingContext):
+            def register_skill(self, name, path):
+                super().register_skill(name, path)
+                if len(self.calls) == 2:
+                    raise RuntimeError("callback failed")
+
+        module = load_adapter(HERMES_INIT, "qa_hermes_callback_failure")
+        context = FailingContext()
+
+        with self.assertRaisesRegex(RuntimeError, "callback failed"):
+            module.register(context)
+
+        expected = [
+            (name, PLUGIN / "skills" / name / "SKILL.md")
+            for name in EXPECTED_SKILLS[:2]
+        ]
+        self.assertEqual(context.calls, expected)
 
 
 if __name__ == "__main__":

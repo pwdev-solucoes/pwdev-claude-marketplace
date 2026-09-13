@@ -45,3 +45,34 @@ It does not claim a real runtime smoke; discovery and invocation in Claude Code,
 Agent remain assigned to Task 24. The system Python 3.9 environment does not include the PDF test
 dependency `pdfplumber`; the approved packaged Python 3.12 runtime provides it and passed the full
 QA suite.
+
+## Fix round 1
+
+### Root cause
+
+The first adapter treated directory discovery as the runtime inventory and interleaved that
+discovery with registration callbacks. It therefore accepted 28 or 30 skills and could expose a
+partial result before discovering a later problem. Its `is_dir()` and `is_file()` checks also
+followed symlinks, while the test context stored calls in a dictionary and compared sets, erasing
+observable order and duplicate registrations.
+
+### Correction and evidence
+
+- Added a closed 29-name inventory and a deterministic, confined preflight before the first
+  callback. Missing, extra, non-directory, missing-file, root-symlink, directory-symlink, and
+  file-symlink states now fail explicitly without any registration call.
+- Registration paths are canonical `pathlib.Path` instances below the canonical skills root.
+- A callback exception propagates immediately and prevents later callbacks. The adapter documents
+  that Hermes exposes no transaction for rolling back callbacks that already succeeded.
+- Replaced dictionary/set recording with an ordered call list and exact comparison of all 29
+  `(name, path)` pairs.
+- RED: focused suite ran 7 tests with 5 failures, all in the previously accepted 28/30 and symlink
+  cases. Clone/flattened, manifest, missing-tree, normal inventory, and callback-stop scenarios
+  remained valid.
+- GREEN: `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v tests.test_qa_packaging` — 7 tests ran,
+  all passed.
+- Packaged suite: Python 3.12 `unittest discover -s tests -p 'test_qa_*.py'` — 180 tests ran, all
+  passed.
+- Mutation probe removing deterministic sorting failed the focused suite; mutation probe
+  duplicating each callback failed exact sequence/cardinality assertions. Both mutations were
+  reverted and the focused suite returned to green.
