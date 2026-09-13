@@ -39,6 +39,8 @@ Task F03-15: fix round 5 — semântica de commit ADDRESSED; corrigindo os valor
 Task F03-15: complete (commits 3185b7b..dcd096e, review clean after fix rounds 1-5)
 Task F03-16: fix round 1 — finding Important confirmado no oráculo E2E: cardinalidade/truncamento/expected-observed não eram comprovados integralmente.
 Task F03-16: complete (commits dcd096e..b8b5ab6, review clean after fix round 1; Python 3.9 sem dependências dev classificado como limitação de ambiente)
+Task F04-17: fix round 1 — finding Major confirmado: os templates podiam descartar objetivo/intenção e autorização; teste de portabilidade Hermes também não protegia quatro tokens exclusivos do wrapper Claude.
+Task F04-17: complete (commits eee8386..7017f18, review clean after fix round 1)
 
 Baseline 2026-09-12: `python3 -m unittest discover -s tests` executou 670 testes em 404.209s; 7 falhas preexistentes antes de qualquer código PWDEV QA.
 - 2 falhas `test_flow_claude_compat`: READMEs raiz não contêm `claude -p`.
