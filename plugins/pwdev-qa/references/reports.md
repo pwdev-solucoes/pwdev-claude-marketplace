@@ -29,7 +29,17 @@ is withheld, and prevents `PASS`. Unsafe evidence or invalid schema refuses expo
 
 Staging is an exclusive sibling directory. Every component of the project/output path is opened
 without following symlinks. HTML, PDF, the public manifest, and every attachment are reopened and
-validated before the exclusive atomic rename. An existing run directory is never replaced.
+validated before the exclusive atomic rename. PDF validation uses the standard library to verify
+the numeric `startxref`, classic xref entries, trailer `/Size` and `/Root`, referenced root object,
+and final EOF produced by ReportLab; marker-only or malformed files are incomplete exports.
+
+After rename, the exporter reopens the reports root and run directory through the nominal project
+path without following symlinks. It compares their identities and the recursive inventory,
+identities, sizes, and SHA-256 hashes of every artifact with the staging snapshot, then repeats the
+whole nominal check. Any root, run-directory, file, or attachment exchange fails explicitly.
+Cleanup removes only entries still matching the owned snapshot; attacker replacements and
+sentinels are never deleted. An existing run directory is never replaced, and `complete` is
+returned only while the nominal `output_dir` contains the exact validated package.
 
 ## Results and failures
 

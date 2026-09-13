@@ -71,3 +71,52 @@ partial and returns exit code 3 in that environment. No dependency was installed
 Only the three implementation files authorized by the brief and this task report are included
 in the task commit. Pre-existing ledger, review-package, and earlier-task changes remain
 untouched and uncommitted.
+
+## Correction round 1
+
+The two Important findings in `task-15-review.md` were reproduced before correction:
+
+```text
+python3 -m unittest <malformed-pdf> <reports-root-exchange> <published-pdf-exchange>
+Ran 3 tests — FAILED (failures=3)
+```
+
+The correction now snapshots the complete staging tree and, after the atomic rename, twice
+reopens the reports root and run directory through the nominal no-follow path. Directory
+identities plus the recursive inventory, file identities, sizes, and SHA-256 hashes must match.
+On mismatch, cleanup removes only unchanged owned artifacts; replacement files, directories, and
+sentinels remain untouched. A run-directory exchange probe was added as a separate boundary case.
+
+PDF validation no longer accepts header/EOF markers alone. A standard-library parser validates
+the numeric `startxref`, classic xref subsections and entries, trailer `/Size` and `/Root`, live
+root object reference, and terminal EOF. No verification library became an export dependency.
+
+GREEN, explicit regression reversal, and restoration:
+
+```text
+python3 -m unittest <three reviewer probes>
+Ran 3 tests — OK
+
+# protections temporarily reverted
+python3 -m unittest <three reviewer probes>
+Ran 3 tests — FAILED (failures=3)
+
+# protections restored
+python3 -m unittest <three reviewer probes>
+Ran 3 tests — OK
+
+python3 -m unittest tests.test_qa_report_cli
+Ran 12 tests in 0.055s — OK
+
+<bundled-python-3.12> -m unittest discover -s tests -p 'test_qa*.py'
+Ran 128 tests in 6.278s — OK
+
+python3 -m py_compile plugins/pwdev-qa/scripts/qa_report.py tests/test_qa_report_cli.py
+OK
+
+git diff --check
+OK
+```
+
+The ReportLab 4.4.9 integration was repeated with bundled Python 3.12: publication returned
+`complete`, pypdf strict mode reopened all 7 pages, and the copied attachment remained identical.

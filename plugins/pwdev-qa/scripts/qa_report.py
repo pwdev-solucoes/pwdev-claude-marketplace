@@ -8,6 +8,7 @@ import errno
 import hashlib
 import json
 import os
+import re
 import secrets
 import stat
 from pathlib import Path
@@ -107,6 +108,29 @@ def _ensure_directory(parent_fd: int, name: str, label: str) -> Tuple[int, Tuple
     return descriptor, identity
 
 
+def _open_existing_directory(
+    parent_fd: int, name: str, label: str
+) -> Tuple[int, Tuple[int, int]]:
+    try:
+        observed = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+    except OSError as error:
+        raise PublicationError(f"{label}: directory is missing or inaccessible") from error
+    if stat.S_ISLNK(observed.st_mode):
+        raise PublicationError(f"{label}: symlink is refused")
+    if not stat.S_ISDIR(observed.st_mode):
+        raise PublicationError(f"{label}: expected a directory")
+    try:
+        descriptor = os.open(name, _DIRECTORY_FLAGS, dir_fd=parent_fd)
+    except OSError as error:
+        raise PublicationError(f"{label}: directory cannot be opened safely") from error
+    opened = os.fstat(descriptor)
+    identity = (opened.st_dev, opened.st_ino)
+    if identity != (observed.st_dev, observed.st_ino):
+        os.close(descriptor)
+        raise PublicationError(f"{label}: directory changed during safe open")
+    return descriptor, identity
+
+
 def _reports_root(project_root: Path) -> Tuple[int, Tuple[int, int]]:
     current_fd, _ = _open_directory(project_root, "project root")
     try:
@@ -166,6 +190,109 @@ def _read_regular_at(directory_fd: int, name: str, label: str) -> bytes:
         os.close(descriptor)
 
 
+def _validate_pdf_structure(raw: bytes) -> None:
+    """Validate the classic cross-reference structure emitted by ReportLab."""
+
+    if not re.match(rb"%PDF-1\.[0-9](?:\r?\n|\r)", raw):
+        raise RuntimeError("report.pdf has an invalid PDF header")
+    ending = re.search(rb"startxref\s+([0-9]+)\s+%%EOF\s*\Z", raw)
+    if ending is None:
+        raise RuntimeError("report.pdf has no valid startxref and EOF")
+    xref_offset = int(ending.group(1))
+    if xref_offset <= 0 or xref_offset >= ending.start():
+        raise RuntimeError("report.pdf startxref is outside the PDF body")
+    if not raw.startswith(b"xref", xref_offset):
+        raise RuntimeError("report.pdf startxref does not point to xref")
+
+    position = xref_offset + 4
+    newline = re.match(rb"(?:\r?\n|\r)", raw[position:])
+    if newline is None:
+        raise RuntimeError("report.pdf xref header is malformed")
+    position += newline.end()
+    entries: Dict[int, Tuple[int, int, bytes]] = {}
+    while not raw.startswith(b"trailer", position):
+        subsection = re.match(rb"([0-9]+) ([0-9]+)(?:\r?\n|\r)", raw[position:])
+        if subsection is None:
+            raise RuntimeError("report.pdf xref subsection is malformed")
+        first = int(subsection.group(1))
+        count = int(subsection.group(2))
+        if count <= 0:
+            raise RuntimeError("report.pdf xref subsection is empty")
+        position += subsection.end()
+        for index in range(count):
+            entry = re.match(
+                rb"([0-9]{10}) ([0-9]{5}) ([nf]) ?(?:\r?\n|\r)",
+                raw[position:],
+            )
+            if entry is None:
+                raise RuntimeError("report.pdf xref entry is malformed")
+            object_id = first + index
+            if object_id in entries:
+                raise RuntimeError("report.pdf xref contains duplicate object entries")
+            entries[object_id] = (
+                int(entry.group(1)),
+                int(entry.group(2)),
+                entry.group(3),
+            )
+            position += entry.end()
+
+    trailer_match = re.match(
+        rb"trailer\s*<<(.*?)>>\s*\Z", raw[position : ending.start()], re.DOTALL
+    )
+    if trailer_match is None:
+        raise RuntimeError("report.pdf trailer is malformed")
+    trailer = trailer_match.group(1)
+    size_match = re.search(rb"/Size\s+([0-9]+)\b", trailer)
+    root_match = re.search(rb"/Root\s+([0-9]+)\s+([0-9]+)\s+R\b", trailer)
+    if size_match is None or root_match is None:
+        raise RuntimeError("report.pdf trailer has no Size or Root")
+    declared_size = int(size_match.group(1))
+    root_id = int(root_match.group(1))
+    root_generation = int(root_match.group(2))
+    if declared_size <= root_id or root_id not in entries:
+        raise RuntimeError("report.pdf trailer Root is outside the xref")
+
+    for object_id, (offset, generation, state) in entries.items():
+        if state != b"n":
+            continue
+        marker = f"{object_id} {generation} obj".encode("ascii")
+        if offset <= 0 or offset >= xref_offset or not raw.startswith(marker, offset):
+            raise RuntimeError("report.pdf xref entry does not point to its object")
+    root_offset, generation, state = entries[root_id]
+    if state != b"n" or generation != root_generation or root_offset >= xref_offset:
+        raise RuntimeError("report.pdf trailer Root is not a live xref object")
+
+
+def _snapshot_tree(directory_fd: int, prefix: str = "") -> Dict[str, Tuple[Any, ...]]:
+    snapshot: Dict[str, Tuple[Any, ...]] = {}
+    for name in sorted(os.listdir(directory_fd)):
+        relative = f"{prefix}/{name}" if prefix else name
+        metadata = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+        identity = (metadata.st_dev, metadata.st_ino)
+        if stat.S_ISDIR(metadata.st_mode) and not stat.S_ISLNK(metadata.st_mode):
+            child_fd = os.open(name, _DIRECTORY_FLAGS, dir_fd=directory_fd)
+            try:
+                opened = os.fstat(child_fd)
+                if identity != (opened.st_dev, opened.st_ino):
+                    raise RuntimeError(f"published report directory {relative} changed")
+                snapshot[relative] = ("directory",) + identity
+                snapshot.update(_snapshot_tree(child_fd, relative))
+            finally:
+                os.close(child_fd)
+        elif stat.S_ISREG(metadata.st_mode):
+            raw = _read_regular_at(directory_fd, name, f"published artifact {relative}")
+            snapshot[relative] = (
+                "file",
+                metadata.st_dev,
+                metadata.st_ino,
+                len(raw),
+                hashlib.sha256(raw).hexdigest(),
+            )
+        else:
+            raise RuntimeError(f"published artifact {relative} is unsafe")
+    return snapshot
+
+
 def _validate_stage(
     reports_fd: int,
     staging_name: str,
@@ -204,8 +331,7 @@ def _validate_stage(
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise RuntimeError("manifest.json is not valid UTF-8 JSON") from error
     pdf = _read_regular_at(staging_fd, "report.pdf", "report.pdf")
-    if not pdf.startswith(b"%PDF-") or b"%%EOF" not in pdf[-1024:]:
-        raise RuntimeError("report.pdf is not a complete PDF artifact")
+    _validate_pdf_structure(pdf)
 
     if not report["verified_evidence"]:
         return
@@ -424,16 +550,124 @@ def _atomic_rename_exclusive(parent_fd: int, source: str, destination: str) -> N
 
 
 def _verify_published_identity(
-    reports_fd: int, run_id: str, expected: Tuple[int, int]
+    project_root: Path,
+    reports_identity: Tuple[int, int],
+    run_id: str,
+    run_identity: Tuple[int, int],
+    expected_snapshot: Dict[str, Tuple[Any, ...]],
 ) -> None:
+    """Verify the package through its nominal path twice before reporting success."""
+
     for _ in range(2):
-        descriptor = os.open(run_id, _DIRECTORY_FLAGS, dir_fd=reports_fd)
+        root_fd, _ = _open_directory(project_root, "project root")
+        opened_children: List[int] = []
         try:
-            metadata = os.fstat(descriptor)
-            if (metadata.st_dev, metadata.st_ino) != expected:
+            current_fd = root_fd
+            for name, label in (
+                (".planning", "output component .planning"),
+                ("pwdev-qa", "output component pwdev-qa"),
+                ("reports", "reports root"),
+            ):
+                next_fd, identity = _open_existing_directory(current_fd, name, label)
+                opened_children.append(next_fd)
+                current_fd = next_fd
+            if identity != reports_identity:
+                raise PublicationError("reports root identity changed at nominal path")
+            run_fd, identity = _open_existing_directory(
+                current_fd, run_id, "published report directory"
+            )
+            if identity != run_identity:
+                os.close(run_fd)
                 raise PublicationError("published report directory identity changed")
+            try:
+                try:
+                    current_snapshot = _snapshot_tree(run_fd)
+                except (OSError, RuntimeError, EvidenceError) as error:
+                    raise PublicationError(
+                        "published report artifacts changed or became unsafe"
+                    ) from error
+                if current_snapshot != expected_snapshot:
+                    raise PublicationError("published report artifacts changed")
+            finally:
+                os.close(run_fd)
         finally:
-            os.close(descriptor)
+            for descriptor in reversed(opened_children):
+                os.close(descriptor)
+            os.close(root_fd)
+
+
+def _cleanup_owned_package(
+    reports_fd: int,
+    run_id: str,
+    run_identity: Tuple[int, int],
+    expected_snapshot: Dict[str, Tuple[Any, ...]],
+) -> None:
+    """Remove only entries whose inode, size, and hash still match our snapshot."""
+
+    try:
+        run_fd, identity = _open_existing_directory(
+            reports_fd, run_id, "published report directory"
+        )
+    except PublicationError:
+        return
+    if identity != run_identity:
+        os.close(run_fd)
+        return
+
+    def clean(directory_fd: int, prefix: str = "") -> None:
+        for name in list(os.listdir(directory_fd)):
+            relative = f"{prefix}/{name}" if prefix else name
+            expected = expected_snapshot.get(relative)
+            if expected is None:
+                continue
+            try:
+                metadata = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+            except OSError:
+                continue
+            identity_now = (metadata.st_dev, metadata.st_ino)
+            if expected[0] == "directory":
+                if not stat.S_ISDIR(metadata.st_mode) or identity_now != expected[1:3]:
+                    continue
+                try:
+                    child_fd = os.open(name, _DIRECTORY_FLAGS, dir_fd=directory_fd)
+                except OSError:
+                    continue
+                try:
+                    clean(child_fd, relative)
+                finally:
+                    os.close(child_fd)
+                try:
+                    os.rmdir(name, dir_fd=directory_fd)
+                except OSError:
+                    pass
+            elif expected[0] == "file" and stat.S_ISREG(metadata.st_mode):
+                try:
+                    raw = _read_regular_at(
+                        directory_fd, name, f"cleanup candidate {relative}"
+                    )
+                except RuntimeError:
+                    continue
+                current = (
+                    "file",
+                    metadata.st_dev,
+                    metadata.st_ino,
+                    len(raw),
+                    hashlib.sha256(raw).hexdigest(),
+                )
+                if current == expected:
+                    try:
+                        os.unlink(name, dir_fd=directory_fd)
+                    except OSError:
+                        pass
+
+    try:
+        clean(run_fd)
+    finally:
+        os.close(run_fd)
+    try:
+        os.rmdir(run_id, dir_fd=reports_fd)
+    except OSError:
+        pass
 
 
 def _preserve_partial(
@@ -464,7 +698,7 @@ def generate_report(manifest_path: Path, project_root: Path) -> dict:
     manifest = load_manifest(Path(manifest_path))
     root = Path(project_root)
     inspections = inspect_evidence(root, manifest)
-    reports_fd, _ = _reports_root(root)
+    reports_fd, reports_identity = _reports_root(root)
     reports_path = root / ".planning" / "pwdev-qa" / "reports"
     run_id = manifest["run_id"]
     try:
@@ -501,9 +735,22 @@ def generate_report(manifest_path: Path, project_root: Path) -> dict:
             os.fsync(staging_fd)
             staging_metadata = os.fstat(staging_fd)
             staging_identity = (staging_metadata.st_dev, staging_metadata.st_ino)
+            staging_snapshot = _snapshot_tree(staging_fd)
             _atomic_rename_exclusive(reports_fd, staging_name, run_id)
             staging_name = ""
-            _verify_published_identity(reports_fd, run_id, staging_identity)
+            try:
+                _verify_published_identity(
+                    root,
+                    reports_identity,
+                    run_id,
+                    staging_identity,
+                    staging_snapshot,
+                )
+            except PublicationError:
+                _cleanup_owned_package(
+                    reports_fd, run_id, staging_identity, staging_snapshot
+                )
+                raise
             return {
                 "run_id": run_id,
                 "verdict": report["verdict"],

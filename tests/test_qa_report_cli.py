@@ -63,7 +63,28 @@ class QaReportCliTest(unittest.TestCase):
 
     @staticmethod
     def fake_pdf(_report, destination):
-        Path(destination).write_bytes(b"%PDF-1.4\n%%EOF\n")
+        chunks = [
+            b"%PDF-1.4\n",
+            b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
+            b"2 0 obj\n<< /Type /Pages /Count 0 /Kids [] >>\nendobj\n",
+        ]
+        offsets = [0]
+        position = len(chunks[0])
+        for chunk in chunks[1:]:
+            offsets.append(position)
+            position += len(chunk)
+        xref = position
+        chunks.extend(
+            [
+                b"xref\n0 3\n",
+                b"0000000000 65535 f \n",
+                f"{offsets[1]:010d} 00000 n \n".encode("ascii"),
+                f"{offsets[2]:010d} 00000 n \n".encode("ascii"),
+                b"trailer\n<< /Size 3 /Root 1 0 R >>\n",
+                f"startxref\n{xref}\n%%EOF\n".encode("ascii"),
+            ]
+        )
+        Path(destination).write_bytes(b"".join(chunks))
 
     def test_publishes_complete_allowlisted_package_without_executing_command(self):
         publisher = load_module()
@@ -147,6 +168,19 @@ class QaReportCliTest(unittest.TestCase):
         self.assertFalse(self.output().exists())
         self.assertIn("report.pdf", " ".join(result["diagnostics"]))
 
+    def test_superficial_pdf_markers_without_xref_are_rejected(self):
+        publisher = load_module("qa_report_malformed_pdf")
+
+        def malformed(_report, destination):
+            Path(destination).write_bytes(b"%PDF-1.4\n%%EOF\n")
+
+        with mock.patch.object(publisher, "render_pdf", side_effect=malformed):
+            result = publisher.generate_report(self.manifest_path, self.root)
+
+        self.assertEqual(result["export_status"], "incomplete")
+        self.assertFalse(self.output().exists())
+        self.assertIn("startxref", " ".join(result["diagnostics"]))
+
     def test_source_replaced_by_symlink_after_inspection_refuses_export(self):
         publisher = load_module("qa_report_source_symlink")
         real_inspect = publisher.inspect_evidence
@@ -194,6 +228,70 @@ class QaReportCliTest(unittest.TestCase):
 
         self.assertEqual({item.name for item in self.output().iterdir()}, {"attacker-marker"})
         self.assertFalse(any("staging" in item.name for item in self.output().parent.iterdir()))
+
+    def test_nominal_reports_root_exchange_is_detected_and_sentinel_is_preserved(self):
+        publisher = load_module("qa_report_root_exchange")
+        reports = self.output().parent
+        preserved = self.root / "preserved-reports"
+        real_rename = publisher._atomic_rename_exclusive
+
+        def exchange_root(parent_fd, source, destination):
+            reports.rename(preserved)
+            reports.mkdir()
+            self.output().mkdir()
+            (self.output() / "sentinel").write_bytes(b"attacker sentinel")
+            return real_rename(parent_fd, source, destination)
+
+        with mock.patch.object(publisher, "render_pdf", side_effect=self.fake_pdf), mock.patch.object(
+            publisher, "_atomic_rename_exclusive", side_effect=exchange_root
+        ):
+            with self.assertRaisesRegex(publisher.PublicationError, "reports root.*changed"):
+                publisher.generate_report(self.manifest_path, self.root)
+
+        self.assertEqual((self.output() / "sentinel").read_bytes(), b"attacker sentinel")
+        self.assertFalse((preserved / "cli-run").exists())
+
+    def test_published_pdf_exchange_is_detected_without_deleting_attacker_file(self):
+        publisher = load_module("qa_report_pdf_exchange")
+        real_rename = publisher._atomic_rename_exclusive
+
+        def exchange_pdf(parent_fd, source, destination):
+            result = real_rename(parent_fd, source, destination)
+            pdf = self.output() / "report.pdf"
+            pdf.unlink()
+            pdf.write_bytes(b"ATTACKER-PDF")
+            return result
+
+        with mock.patch.object(publisher, "render_pdf", side_effect=self.fake_pdf), mock.patch.object(
+            publisher, "_atomic_rename_exclusive", side_effect=exchange_pdf
+        ):
+            with self.assertRaisesRegex(publisher.PublicationError, "published report.*changed"):
+                publisher.generate_report(self.manifest_path, self.root)
+
+        self.assertEqual((self.output() / "report.pdf").read_bytes(), b"ATTACKER-PDF")
+
+    def test_published_run_directory_exchange_preserves_attacker_sentinel(self):
+        publisher = load_module("qa_report_run_exchange")
+        real_rename = publisher._atomic_rename_exclusive
+        displaced = self.root / "displaced-owned-package"
+
+        def exchange_run(parent_fd, source, destination):
+            result = real_rename(parent_fd, source, destination)
+            self.output().rename(displaced)
+            self.output().mkdir()
+            (self.output() / "sentinel").write_bytes(b"attacker run")
+            return result
+
+        with mock.patch.object(publisher, "render_pdf", side_effect=self.fake_pdf), mock.patch.object(
+            publisher, "_atomic_rename_exclusive", side_effect=exchange_run
+        ):
+            with self.assertRaisesRegex(
+                publisher.PublicationError, "published report directory identity changed"
+            ):
+                publisher.generate_report(self.manifest_path, self.root)
+
+        self.assertEqual((self.output() / "sentinel").read_bytes(), b"attacker run")
+        self.assertTrue((displaced / "manifest.json").is_file())
 
     def test_main_exit_codes_distinguish_input_and_export_failures(self):
         publisher = load_module("qa_report_main")
