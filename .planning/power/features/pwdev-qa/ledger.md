@@ -48,6 +48,9 @@ Task F04-19: complete (commits 6060a73..f8ddbcd, review clean after fix round 1)
 Task F04-20: fix round 1 — dois findings Major confirmados: o oráculo não protegia todas as superfícies somente leitura nem os cinco campos auditáveis e todas as pendências que impedem PASS.
 Task F04-20: fix round 2 — contradições adversativas `may mutate` e `Never record` ainda passavam por regexes baseadas apenas em vocabulário.
 Task F04-20: complete (commits 16c5c78..b070d5f, review clean after fix rounds 1-2)
+Task F04-21: fix round 1 — dois findings Major confirmados: oráculos aceitavam execução armazenada, segundo export, bypass de evidência e mutações/descartes no status.
+Task F04-21: fix round 2 — variantes flexionadas e passivas de skip/discard ainda escapavam do scanner de contradições.
+Task F04-21: complete (commits 75f7335..98046b8, review clean after fix rounds 1-2)
 
 Baseline 2026-09-12: `python3 -m unittest discover -s tests` executou 670 testes em 404.209s; 7 falhas preexistentes antes de qualquer código PWDEV QA.
 - 2 falhas `test_flow_claude_compat`: READMEs raiz não contêm `claude -p`.
