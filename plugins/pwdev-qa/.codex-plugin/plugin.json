@@ -1,0 +1,39 @@
+{
+  "name": "pwdev-qa",
+  "version": "0.1.0",
+  "description": "Portable quality assurance workflows, specialist guidance, evidence handling, and verifiable HTML and PDF reporting for Claude Code, Codex, and Hermes Agent.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "codex",
+    "quality-assurance",
+    "testing",
+    "evidence",
+    "reporting",
+    "verification",
+    "hermes",
+    "portable"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "PWDEV QA",
+    "shortDescription": "Portable quality assurance workflows",
+    "longDescription": "Plan and execute bounded quality assurance work, route requests to focused specialists, preserve verifiable evidence, and export equivalent offline HTML and PDF reports across supported runtimes.",
+    "developerName": "PWDEV Solucoes",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Plan a bounded QA strategy and recommend suitable tools for this project.",
+      "Execute an authorized QA workflow and preserve verifiable evidence.",
+      "Review QA readiness and produce an equivalent HTML and PDF report."
+    ]
+  }
+}
