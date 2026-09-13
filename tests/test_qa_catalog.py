@@ -1,5 +1,6 @@
 """Documentation and local catalog contracts for the PWDEV QA plugin."""
 
+import hashlib
 import json
 import re
 import unittest
@@ -71,6 +72,33 @@ CLAUDE_EXISTING_ORDER = (
     "pwdev-obsidian",
     "pwdev-brain",
 )
+CLAUDE_EXISTING_DIGESTS = (
+    "a7bae3f539ee7311f396da48aeba36a8b0ac1a77586cb92eac77109f0ad18658",
+    "4fedf976f5ab35a55d8e61307517e370e1e1396816e50eebf08f73fa4c4a1634",
+    "29682dd6eed0918853e4854a0defcc687e2fe36f8f40c5aa55c4370f1e7330ed",
+    "c1ef5068d662c6692af9ae4b0935955acc7dad6692990a1fa85c597f6ba935a5",
+    "f9d53f05aaf7e7556925200c930fa8c433fe472f93927fc0f77aad643a9c9f9f",
+    "39ac01f72c24f15c8df207739ce226c20e1fa3a694a8f934f187ba29f3ebae1a",
+    "e8f09de7012e4f104180a44066e67b891b2838710a601f7d543d556cdf617e7f",
+    "fcf382868e4706cb53f020566e82cc2b80372a0070e6a3d64b837fee8b722f82",
+    "5bf2b3edf26a2bb99e3fb4ea9f7bb027c662e365cc1ede3cefcc8ac49332d4c3",
+    "19aa4ed22e18d8dd09d7766a225a0029019687f5346b5b7759302cee9a6b92d7",
+    "0c64a804bd8e32b3328148a7a69d39d13e366db397f7619f78f6aec1270ecacb",
+    "0c24b7a311e7fcdfe250cfa17ab052f1bf110196ea4eafa3c2d937023a308ed0",
+    "0b1343e2d1a0d8358d6475626182bc9caa17f1d885a97b3837b3d955908684b6",
+    "679602b6bb871bc6665c81323a5e28b8230825153726996c6ee5d4b7fd6c058b",
+    "7ee1b1ae7d4664fa6412c51d79fb1f0438db972c31130ecd1fe275f003b14348",
+    "eaf96f952d0cbe005a2502b397b68fbedfd0115efda9aa394baed4bcd51a0ff4",
+)
+CLAUDE_TOP_LEVEL = {
+    "name": "pwdev-claude-marketplace",
+    "description": (
+        "PWDEV plugins for Claude Code — spec-driven development, feature planning, PRD "
+        "creation, UI/UX engineering, copywriting, social media creatives, DevOps, and "
+        "terminal status line"
+    ),
+    "owner": {"name": "Paulo Soares"},
+}
 CODEX_EXISTING = (
     {
         "name": "sdd-composy",
@@ -97,13 +125,63 @@ def load_json(relative_path):
     return json.loads((ROOT / relative_path).read_text(encoding="utf-8"))
 
 
+def canonical_digest(value):
+    serialized = json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def forbidden_documentation_claims(text):
+    """Return explicit contradictions to the README safety contract."""
+    patterns = {
+        "automatic installation": (
+            r"\b(?:plugin\s+)?(?<!not )installs?\s+automatically\b",
+            r"\b(?:plugin\s+)?(?<!não )instala\s+automaticamente\b",
+        ),
+        "verified without real smoke": (
+            r"\bverified\b[^.\n]{0,100}\bwithout\b[^.\n]{0,60}\b(?:real\s+)?smoke\b",
+            r"\bverificad[oa]\b[^.\n]{0,100}\bsem\b[^.\n]{0,60}\bsmoke\b",
+        ),
+        "export executes tests or evidence commands": (
+            r"\bexport(?:ation)?\b[^.\n]{0,100}\b(?:runs?|reruns?|executes?)\b[^.\n]{0,80}\b(?:tests?|commands?)\b",
+            r"\bexport(?:ação|ar|a)\b[^.\n]{0,100}\b(?:roda|executa|reexecuta)\b[^.\n]{0,80}\b(?:testes?|comandos?)\b",
+        ),
+        "verification dependencies used for runtime export": (
+            r"\b(?:pypdf|pdfplumber)\b[^.\n]{0,120}\bruntime\s+export\s+dependenc(?:y|ies)\b",
+            r"\b(?:pypdf|pdfplumber)\b[^.\n]{0,120}\bdependências?\s+de\s+exportação\s+em\s+runtime\b",
+            r"\breportlab\b[^.\n]{0,80}\bdevelopment[- ]only\b",
+            r"\breportlab\b[^.\n]{0,80}\bsó\s+de\s+desenvolvimento\b",
+        ),
+        "universal sanitization guarantee": (
+            r"\bsanitization\b[^.\n]{0,100}\b(?<!cannot )guarantees?\b[^.\n]{0,80}\buniversal\b",
+            r"\bsanitização\b[^.\n]{0,100}\bgarante\b[^.\n]{0,80}\buniversal\b",
+        ),
+        "no-install probe downloads or installs": (
+            r"\bnpx\s+--no-install\s+playwright\s+--version\b[^.\n]{0,120}\b(?:downloads?|installs?)\b",
+            r"\bnpx\s+--no-install\s+playwright\s+--version\b[^.\n]{0,120}\b(?:baixa|instala)\b",
+        ),
+    }
+    lowered = text.lower()
+    return [
+        label
+        for label, alternatives in patterns.items()
+        if any(re.search(pattern, lowered) for pattern in alternatives)
+    ]
+
+
 class TestQaCatalog(unittest.TestCase):
     def test_catalogs_append_qa_without_reordering_or_changing_marketplace_identity(self):
         claude = load_json(".claude-plugin/marketplace.json")
-        self.assertEqual(claude["name"], "pwdev-claude-marketplace")
+        self.assertEqual(
+            {key: value for key, value in claude.items() if key != "plugins"},
+            CLAUDE_TOP_LEVEL,
+        )
         self.assertEqual(
             tuple(plugin["name"] for plugin in claude["plugins"]),
             CLAUDE_EXISTING_ORDER + ("pwdev-qa",),
+        )
+        self.assertEqual(
+            tuple(canonical_digest(plugin) for plugin in claude["plugins"][:-1]),
+            CLAUDE_EXISTING_DIGESTS,
         )
         qa_claude = claude["plugins"][-1]
         self.assertEqual(qa_claude["source"], "./plugins/pwdev-qa")
@@ -233,6 +311,56 @@ class TestQaCatalog(unittest.TestCase):
                     text.lower(),
                     r"(?s)sanitization.{0,180}(?:cannot guarantee|não pode garantir)",
                 )
+                self.assertEqual(forbidden_documentation_claims(text), [])
+
+    def assert_bilingual_mutation_is_rejected(self, english, portuguese):
+        for readme, mutation in zip(READMES, (english, portuguese)):
+            with self.subTest(readme=readme.name):
+                mutated = readme.read_text(encoding="utf-8") + "\n\n" + mutation + "\n"
+                self.assertTrue(
+                    forbidden_documentation_claims(mutated),
+                    f"contradictory claim survived in {readme.name}: {mutation}",
+                )
+
+    def test_rejects_automatic_installation_claims_in_both_languages(self):
+        self.assert_bilingual_mutation_is_rejected(
+            "The plugin installs automatically and changes personal configuration.",
+            "O plugin instala automaticamente e altera configuração pessoal.",
+        )
+
+    def test_rejects_verified_runtime_without_real_smoke_in_both_languages(self):
+        self.assert_bilingual_mutation_is_rejected(
+            "The runtime is verified without a real smoke.",
+            "O runtime está verificado sem smoke real.",
+        )
+
+    def test_rejects_export_that_reruns_tests_in_both_languages(self):
+        self.assert_bilingual_mutation_is_rejected(
+            "Export reruns the stored tests and evidence commands.",
+            "A exportação reexecuta os testes e comandos de evidência armazenados.",
+        )
+
+    def test_rejects_inverted_runtime_and_development_dependencies(self):
+        self.assert_bilingual_mutation_is_rejected(
+            "pypdf and pdfplumber are runtime export dependencies; "
+            "ReportLab is development-only.",
+            "pypdf e pdfplumber são dependências de exportação em runtime; "
+            "ReportLab é só de desenvolvimento.",
+        )
+
+    def test_rejects_universal_sanitization_claims_in_both_languages(self):
+        self.assert_bilingual_mutation_is_rejected(
+            "Sanitization guarantees universal detection of every secret and personal datum.",
+            "A sanitização garante detecção universal de todo segredo e dado pessoal.",
+        )
+
+    def test_rejects_no_install_probe_that_downloads_playwright(self):
+        self.assert_bilingual_mutation_is_rejected(
+            "npx --no-install playwright --version downloads and installs Playwright "
+            "when missing.",
+            "npx --no-install playwright --version baixa e instala Playwright quando "
+            "ausente.",
+        )
 
 
 if __name__ == "__main__":

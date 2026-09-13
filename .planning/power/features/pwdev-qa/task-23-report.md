@@ -68,3 +68,35 @@ Claude Code, Codex, or Hermes smoke is claimed; that is explicitly assigned to T
 README integration is also Task 24, so the pre-existing marketplace/root-README coverage suite is
 expected to remain pending until that sequential task adds the new catalog entry to both root
 READMEs.
+
+## Fix round 1
+
+### Root cause
+
+The original README tests treated the presence of a required sentence as proof of an unambiguous
+contract. A later contradictory sentence therefore survived because the positive substring still
+existed. The Claude catalog test projected every historical object down to its `name`, so nested
+or unknown fields and values such as `description` and `strict` were outside the oracle.
+
+### Correction and evidence
+
+- Added bilingual mutation fixtures for six prohibited claims: automatic installation/personal
+  configuration mutation, verification without real smoke, export rerunning tests/evidence
+  commands, inverted ReportLab versus pypdf/pdfplumber roles, universal sanitization guarantees,
+  and `npx --no-install` downloading or installing Playwright.
+- Added explicit contradiction detection while preserving both valid READMEs unchanged. Negative
+  clauses such as “does not install” and “cannot guarantee” remain valid controls.
+- Added exact top-level Claude catalog comparison and canonical SHA-256 snapshots for every
+  complete historical plugin object. Canonical serialization includes every nested key/value and
+  any unknown field; order is checked separately.
+- RED: the focused suite ran 11 tests with 12 assertion failures, one per language for each of the
+  six documentary mutations. Existing positive-contract and catalog tests remained green.
+- Catalog mutation RED: changing both `description` and `strict` on the first historical Claude
+  entry made the focused catalog test fail on its first canonical object digest. The catalog was
+  restored before final verification.
+- GREEN: `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v tests.test_qa_catalog` — 11 tests ran,
+  all passed.
+- Packaged QA suite: Python 3.12 `unittest discover -s tests -p 'test_qa_*.py' -q` — 191 tests
+  ran, all passed.
+- Both marketplace files passed `python3 -m json.tool`; `git diff --check` passed. No README or
+  catalog production content changed in this correction round.
