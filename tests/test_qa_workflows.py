@@ -1,4 +1,4 @@
-"""Behavioural contract tests for the PWDEV QA init and strategy workflows."""
+"""Behavioural contract tests for the PWDEV QA workflows."""
 
 import re
 import unittest
@@ -158,6 +158,130 @@ class QaWorkflowContractTest(unittest.TestCase):
                     f"${{CLAUDE_PLUGIN_ROOT}}/skills/{skill_name}/SKILL.md", text
                 )
                 self.assertIn("$ARGUMENTS", text)
+                self.assertIn("return the shared skill's result unchanged", text)
+                self.assertNotIn("qa_report.py", text)
+                self.assertLessEqual(len(text.splitlines()), 12)
+
+    def test_test_and_explore_have_the_complete_portable_contract(self) -> None:
+        for name in ("qa-test", "qa-explore"):
+            with self.subTest(name=name):
+                text = read_required(SKILLS / name / "SKILL.md")
+                self.assertRegex(
+                    text,
+                    rf"(?s)^---\nname: {re.escape(name)}\ndescription: .+?\n---\n",
+                )
+                for section in (
+                    "Inputs",
+                    "Procedure",
+                    "Output",
+                    "Failure modes",
+                    "Safety",
+                    "Related skills",
+                ):
+                    self.assertIn(f"## {section}", text)
+                for token in (
+                    "CLAUDE.md",
+                    "AGENTS.md",
+                    "${CLAUDE_PLUGIN_ROOT}",
+                    "$ARGUMENTS",
+                ):
+                    self.assertNotIn(token, text)
+
+    def test_test_materializes_traceable_execution_and_verdict(self) -> None:
+        text = read_required(SKILLS / "qa-test" / "SKILL.md")
+        inputs, procedure, output = re.split(
+            r"(?m)^## (?:Inputs|Procedure|Output)\n", text
+        )[1:4]
+        self.assertRegex(inputs, r"(?is)explicit.*(?:objective|intent)")
+        self.assertRegex(inputs, r"(?is)explicit.*authorization")
+        self.assertRegex(
+            procedure,
+            r"(?is)preserve.*(?:objective|intent).*authorization",
+        )
+        for phrase in (
+            "criterion IDs",
+            "case IDs",
+            "expected",
+            "observed",
+            "evidence",
+            "PASS",
+            "FAIL",
+            "BLOCKED",
+            "NOT_RUN",
+            "NOT_APPLICABLE",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, text)
+        for field in (
+            "TARGET",
+            "OBJECTIVE",
+            "CONTRACT",
+            "CRITERIA",
+            "OPERATION",
+            "AUTHORIZATION",
+            "CASES",
+            "RESULTS",
+            "LIMITATIONS",
+            "EVIDENCE_REFERENCES",
+            "CURRENT_DEFECTS",
+            "VERDICT",
+            "NEXT",
+        ):
+            self.assertRegex(output, rf"(?m)^{field}: ")
+        self.assertRegex(text, r"(?is)load.*penetration.*production.*external effects.*explicit")
+        self.assertRegex(text, r"(?is)product (?:code|corrections?).*only.*requested")
+        self.assertRegex(text, r"(?is)report.*does not (?:run|execute|re-run).*tests")
+
+    def test_explore_keeps_charter_notes_findings_and_follow_up_without_false_pass(self) -> None:
+        text = read_required(SKILLS / "qa-explore" / "SKILL.md")
+        inputs, procedure, output = re.split(
+            r"(?m)^## (?:Inputs|Procedure|Output)\n", text
+        )[1:4]
+        self.assertRegex(inputs, r"(?is)explicit.*(?:objective|intent)")
+        self.assertRegex(inputs, r"(?is)explicit.*authorization")
+        self.assertRegex(
+            procedure,
+            r"(?is)preserve.*(?:objective|intent).*authorization",
+        )
+        for phrase in ("charter", "notes", "findings", "follow-up"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, text.lower())
+        for field in (
+            "TARGET",
+            "OBJECTIVE",
+            "CONTRACT",
+            "CRITERIA",
+            "OPERATION",
+            "AUTHORIZATION",
+            "CHARTER",
+            "NOTES",
+            "FINDINGS",
+            "FOLLOW_UP",
+            "RESULTS",
+            "LIMITATIONS",
+            "EVIDENCE_REFERENCES",
+            "CURRENT_DEFECTS",
+            "VERDICT",
+            "NEXT",
+        ):
+            self.assertRegex(output, rf"(?m)^{field}: ")
+        self.assertRegex(text, r"(?is)explor(?:ation|atory).*does not.*`PASS`")
+        self.assertRegex(text, r"(?is)findings?.*(?:expected|oracle).*observed.*evidence")
+        self.assertRegex(text, r"(?is)load.*penetration.*production.*external effects.*explicit")
+
+    def test_test_and_explore_claude_commands_are_thin_adapters(self) -> None:
+        for command_name, skill_name in (("test", "qa-test"), ("explore", "qa-explore")):
+            with self.subTest(command=command_name):
+                text = read_required(COMMANDS / f"{command_name}.md")
+                self.assertRegex(
+                    text,
+                    r"(?s)^---\ndescription: .+\nargument-hint: .+\n---\n",
+                )
+                self.assertIn(
+                    f"${{CLAUDE_PLUGIN_ROOT}}/skills/{skill_name}/SKILL.md", text
+                )
+                self.assertIn("$ARGUMENTS", text)
+                self.assertIn("current repository context", text)
                 self.assertIn("return the shared skill's result unchanged", text)
                 self.assertNotIn("qa_report.py", text)
                 self.assertLessEqual(len(text.splitlines()), 12)
