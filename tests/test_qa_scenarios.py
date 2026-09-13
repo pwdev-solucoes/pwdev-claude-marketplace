@@ -221,8 +221,8 @@ class TestAcceptanceScenarios(unittest.TestCase):
             "SCN-QA-TOOLING-MISSING",
             "qa-tooling",
             "missing",
-            "playwright-cli-does-not-exist",
-            "command -v playwright-cli-does-not-exist",
+            "pwdev-qa-missing-tool",
+            "command -v pwdev-qa-missing-tool",
             "Playwright Test",
             "not installed",
             "NOT_RUN",
@@ -258,8 +258,9 @@ class TestAcceptanceScenarios(unittest.TestCase):
         for criterion, row in rows.items():
             self.assertIn(row["result"], {"PASS", "FAIL", "BLOCKED"}, criterion)
             self.assertTrue(row["limitations"], criterion)
-        self.assertEqual(rows["CA-003"]["result"], "BLOCKED")
-        self.assertIn("0 of 3", rows["CA-003"]["limitations"])
+        self.assertEqual(rows["CA-003"]["result"], "PASS")
+        self.assertIn("3 of 3", rows["CA-003"]["scenario/evidence"])
+        self.assertIn("preliminary", rows["CA-003"]["limitations"])
         self.assertEqual(rows["CA-023"]["result"], "PASS")
         report_text = TASK_REPORT.read_text(encoding="utf-8")
         for document in (self.text, report_text):
@@ -328,11 +329,12 @@ class TestRuntimeSmokeLedger(unittest.TestCase):
         for runtime, expected_version in RUNTIME_VERSIONS.items():
             row = rows[runtime]
             self.assertEqual(row["exact version"], expected_version)
-            self.assertEqual(row["status"], "UNVERIFIED")
-            for field in ("discovery", "invocation/missing-tool", "fixture report", "limitations"):
+            self.assertEqual(row["status"], "VERIFIED")
+            for field in ("discovery", "invocation/missing-tool", "fixture report"):
                 self.assertGreaterEqual(len(row[field]), 12, f"{runtime}: weak {field}")
-            self.assertNotRegex(row["discovery"], r"^successful$")
-        self.assertIn("Aggregate status: BLOCKED — 0 of 3 runtimes VERIFIED", text)
+                self.assertTrue(row[field].startswith("PASS —"), f"{runtime}: {field}")
+            self.assertGreaterEqual(len(row["limitations"]), 12, runtime)
+        self.assertIn("Aggregate status: PASS — 3 of 3 runtimes VERIFIED", text)
 
         sections = {}
         for runtime in RUNTIME_VERSIONS:
@@ -343,14 +345,39 @@ class TestRuntimeSmokeLedger(unittest.TestCase):
             )
             self.assertIsNotNone(match, f"missing detailed section for {runtime}")
             sections[runtime] = match.group("body")
+        shared = (
+            "authoritative one-session smoke",
+            "pwdev-qa:qa-tooling",
+            "command -v pwdev-qa-missing-tool",
+            "exit `1`",
+            "missing",
+            "NOT_RUN",
+            "BLOCKED",
+            "qa_demo.py",
+            "exit `0`",
+            "export_status=complete",
+            "verdict=FAIL",
+            "report.html",
+            "171 pages",
+            "CA-000..CA-099",
+            "BUG-OPEN-UNMAPPED",
+            "VERIFIED",
+        )
         required = {
-            "Claude Code": ("claude --version", "Discovery command/probe", "qa-tooling", "Invocation command/probe", "OAuth", "fixture report", "UNVERIFIED"),
-            "Codex": ("codex --version", "Discovery command/probe", "qa-tooling", "Missing tool command/probe", "Fixture report command/probe", "export_status=complete", "UNVERIFIED"),
-            "Hermes Agent": ("hermes --version", "Discovery command/probe", "qa-tooling", "Invocation/missing-tool", "Fixture report", "NOT_RUN", "UNVERIFIED"),
+            "Claude Code": ("claude --version", "2.1.269 (Claude Code)", *shared),
+            "Codex": ("codex --version", "codex-cli 0.153.4", "installed plugin discovery", *shared),
+            "Hermes Agent": ("hermes --version", "a80b97b", "flattened layout", "doctor passed", *shared),
         }
         for runtime, tokens in required.items():
             for token in tokens:
                 self.assertIn(token, sections[runtime], f"{runtime}: missing {token}")
+        for diagnostic in (
+            "Historical preliminary diagnostics",
+            "OAuth session expired",
+            "npm cache",
+            "non-authoritative",
+        ):
+            self.assertIn(diagnostic, text)
         return rows
 
     def test_real_runtime_results_are_versioned_reproducible_and_honest(self):
@@ -367,7 +394,7 @@ class TestRuntimeSmokeLedger(unittest.TestCase):
             "evidence",
             "limitations",
             "VERIFIED",
-            "UNVERIFIED",
+            "3 of 3",
             "isolated temporary directory",
             "npx --no-install playwright --version",
             "npx playwright cli",
@@ -378,13 +405,15 @@ class TestRuntimeSmokeLedger(unittest.TestCase):
 
     def test_false_verification_and_removed_runtime_evidence_are_rejected(self):
         text = RUNTIME_SMOKE.read_text(encoding="utf-8")
-        promoted = text.replace(
-            "| Codex | `codex-cli 0.153.4` | UNVERIFIED |",
-            "| Codex | `codex-cli 0.153.4` | VERIFIED |",
+        incomplete = re.sub(
+            r"^(\| Codex \| `codex-cli 0\.153\.4` \| VERIFIED \| [^|]+ \|)[^|]+(\| [^|]+ \| [^|]+ \|)$",
+            r"\1 NOT_RUN — invocation evidence removed \2",
+            text,
             1,
+            flags=re.MULTILINE,
         )
         with self.assertRaises(AssertionError):
-            self.assert_runtime_contract(promoted)
+            self.assert_runtime_contract(incomplete)
 
         removed = re.sub(
             r"^## Claude Code\n.*?(?=^## Codex)",

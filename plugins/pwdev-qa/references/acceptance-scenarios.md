@@ -56,18 +56,18 @@ than treating section presence as behavioral proof.
 ## SCN-QA-TOOLING-MISSING — unavailable Web/UI tool
 
 Input is a Web/UI request with the explicit negative probe
-`command -v playwright-cli-does-not-exist` (exit `1`, empty output). `qa-tooling` must preserve the
+`command -v pwdev-qa-missing-tool` (exit `1`, empty output). `qa-tooling` must preserve the
 probe rather than infer availability:
 
 | tool | purpose | availability | evidence | prerequisites | alternative | reason |
 |---|---|---|---|---|---|---|
-| `playwright-cli-does-not-exist` | interactive Web/UI exploration | missing | `command -v playwright-cli-does-not-exist` → exit 1, empty output | executable absent; browser and authorization unverified | existing Playwright Test suite or authorized manual inspection | useful surface, but the named tool is not installed |
+| `pwdev-qa-missing-tool` | interactive Web/UI exploration | missing | `command -v pwdev-qa-missing-tool` → exit 1, empty output | executable absent; browser and authorization unverified | existing Playwright Test suite or authorized manual inspection | useful surface, but the named tool is not installed |
 
 Expected and observed: execution is `NOT_RUN`, the scenario outcome is `BLOCKED`, and the response
 states no automatic installation. No installation command is executed and no result is fabricated.
-The Codex executable smoke reproduced the negative probe; because `qa-tooling` itself was not
-discoverable in that isolated session, the runtime stays UNVERIFIED rather than taking credit for
-the hand-specified fallback.
+All three authoritative runtime sessions invoked `qa-tooling` and reproduced this negative probe.
+Each runtime preserved the missing-tool limitation while completing its independent fixture report;
+tool absence never became fabricated tool execution.
 
 ## SCN-REPORT-FIXTURE — HTML/PDF acceptance validation
 
@@ -92,8 +92,8 @@ browser-console error and does not affect the offline document contract.
 |---|---|---|---|
 | CA-001 | SCN-WORKFLOWS covers all 10 workflow procedures and wrappers | PASS | Runtime portability is assessed independently by CA-003. |
 | CA-002 | SCN-SPECIALISTS covers positive and failure/limitation scenarios for all 17 specialties | PASS | External tools remain subject to each scenario's explicit probes and authorization. |
-| CA-003 | Runtime ledger records actual discovery/invocation/report attempts without fabricated verification. | BLOCKED | 0 of 3 runtimes completed all three steps in one session. |
-| CA-004 | SCN-QA-TOOLING-MISSING preserves negative evidence and refuses invented execution. | PASS | The missing tool remains NOT_RUN and its runtime skill invocation remains unavailable. |
+| CA-003 | Runtime ledger records 3 of 3 real runtime sessions completing discovery, invocation/missing-tool response and fixture report inspection. | PASS | Failed preliminary attempts remain non-authoritative diagnostics and do not replace the successful sessions. |
+| CA-004 | SCN-QA-TOOLING-MISSING preserves negative evidence and refuses invented execution. | PASS | The missing tool remains NOT_RUN/BLOCKED even though all runtime skill invocations succeeded. |
 | CA-018 | Bilingual plugin and root documentation is present and catalogued. | PASS | The legacy superseded root README-format suite remains a baseline limitation. |
-| CA-022 | Missing-tool recommendation includes availability, evidence, prerequisites, alternative and reason. | PASS | The Codex smoke reproduced the probe but could not invoke the undiscovered skill. |
-| CA-023 | Global and local Playwright paths, task-owned isolation and v1 evidence limits are exercised/documented. | PASS | Runtime skill invocation limitations remain documented in `runtime-smoke.md`. |
+| CA-022 | Missing-tool recommendation includes availability, evidence, prerequisites, alternative and reason. | PASS | The named missing executable remains unavailable; no runtime installed it. |
+| CA-023 | Global and local Playwright paths, task-owned isolation and v1 evidence limits are exercised/documented. | PASS | The initial non-authoritative npx probe may have populated the npm cache; loopback serving was required because the CLI refused the report's `file:` URL. |

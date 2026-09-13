@@ -1,81 +1,75 @@
 # Runtime smoke evidence
 
-Observed on 2026-09-13 in an authorized isolated test. Plugin source was always the repository-local
-`plugins/pwdev-qa` directory; report outputs used a newly created isolated temporary directory.
-No runtime was installed, enabled, trusted, or copied into personal configuration. A runtime is
+Observed on 2026-09-13 under explicit user authorization. Each report used a new
+isolated temporary directory. Claude Code loaded the repository-local plugin, Codex used its installed plugin, and
+Hermes used the explicitly authorized local installation pinned to commit `a80b97b`. A runtime is
 VERIFIED only after successful `qa-tooling discovery`, real invocation producing the
-`missing-tool response`, and the `fixture report` generation/inspection in that same runtime.
+`missing-tool response`, and `fixture report` generation/inspection in that same runtime session.
 
 ## Result summary
 
 | runtime | exact version | status | discovery | invocation/missing-tool | fixture report | limitations |
 |---|---|---|---|---|---|---|
-| Claude Code | `2.1.269 (Claude Code)` | UNVERIFIED | successful session-only inventory found `qa-tooling`; see discovery probe below | NOT_RUN — OAuth failed before the model could invoke the skill | NOT_RUN — no report artifact was created | non-interactive invocation stopped before a model turn because OAuth refresh failed |
-| Codex | `codex-cli 0.153.4` | UNVERIFIED | effective ephemeral skill catalog did not expose `qa-tooling` | probe ran, but the skill response was BLOCKED | successful export, parse and inspection | report succeeded, but required skill discovery/invocation did not |
-| Hermes Agent | `Hermes Agent v0.21.1 (2026.9.7) · upstream 564aef29` | UNVERIFIED | successful doctor passed manifest/import/registration only, not skill loading | NOT_RUN — no compliant session-local `qa-tooling` invocation path | NOT_RUN — no report artifact was created | installed help exposes no session-local plugin-path load; safe isolation disables plugins and the remaining mode may load an existing `.env`, which this task must not read |
+| Claude Code | `2.1.269 (Claude Code)` | VERIFIED | PASS — loaded `pwdev-qa:qa-tooling` in the authorized session | PASS — negative probe produced missing/NOT_RUN/BLOCKED | PASS — export complete/FAIL; HTML and 171-page PDF inspected | no limitation in the authoritative run; preliminary authentication failure retained below |
+| Codex | `codex-cli 0.153.4` | VERIFIED | PASS — installed plugin exposed `pwdev-qa:qa-tooling` | PASS — negative probe produced missing/NOT_RUN/BLOCKED | PASS — export complete/FAIL; HTML and 171-page PDF inspected | no limitation in the authoritative run; preliminary ephemeral discovery failure retained below |
+| Hermes Agent | `Hermes Agent v0.21.1 (2026.9.7) · upstream 564aef29` | VERIFIED | PASS — commit `a80b97b` installed/enabled and skill preloaded | PASS — negative probe produced missing/NOT_RUN/BLOCKED | PASS — export complete/FAIL; manifest, HTML and 171-page PDF inspected | authorized local install used flattened layout; preliminary doctor-only result retained below |
 
-Aggregate status: BLOCKED — 0 of 3 runtimes VERIFIED. `successful` below describes an individual
-probe only and never upgrades a runtime whose complete three-step smoke did not pass.
+Aggregate status: PASS — 3 of 3 runtimes VERIFIED. Each row is backed by one session that completed
+all three steps; preliminary partial attempts below are non-authoritative diagnostics.
 
 ## Claude Code
 
 - Version command/probe: `claude --version` → `2.1.269 (Claude Code)`.
-- Local help used: `claude --help`, `claude plugin --help`, and
-  `claude plugin details --help`. Help documents `--plugin-dir`, `-p/--print`,
-  `--no-session-persistence`, `--permission-mode dontAsk`, and session-only plugins.
-- Discovery command/probe: `claude --plugin-dir plugins/pwdev-qa plugin details pwdev-qa` was
-  successful. It reported PWDEV QA 0.1.0, `qa-tooling`, `qa-report`, zero agents, zero hooks and zero
-  MCP servers. The same output also exposed the 10 command wrappers as invocable components, so its
-  39-item UI inventory is 29 skills plus 10 wrappers, not 39 shipped skill files.
-- Invocation command/probe: a `claude --plugin-dir <absolute-plugin-path> ... -p <bounded-smoke>`
-  run used `dontAsk`, no session persistence, strict MCP configuration and only the required local
-  paths. Result: `Failed to authenticate: OAuth session expired and could not be refreshed`.
-- Evidence/result: discovery succeeded; no model turn invoked `qa-tooling`, no missing-tool table
-  was produced, and no fixture report was created. Status is UNVERIFIED.
-- Fixture report result/evidence: NOT_RUN because authentication failed before any model turn; no
-  output directory or report artifact was created by Claude Code.
+- The authoritative one-session smoke loaded `pwdev-qa:qa-tooling`; this was real skill invocation,
+  not manifest-only discovery.
+- Invocation/missing-tool result/evidence: `command -v pwdev-qa-missing-tool` returned exit `1`.
+  The loaded skill classified the tool `missing`, kept execution `NOT_RUN`, returned outcome
+  `BLOCKED`, supplied a safe alternative, and did not install or fabricate execution.
+- Fixture report command/evidence: repository-local `qa_demo.py` ran in that same session and
+  returned exit `0`, `export_status=complete`, and `verdict=FAIL`.
+- Report inspection/evidence: `report.html` was inspected; `report.pdf` parsed as 171 pages; the
+  complete range `CA-000..CA-099` and `BUG-OPEN-UNMAPPED` were confirmed. Status: VERIFIED.
 
 ## Codex
 
 - Version command/probe: `codex --version` → `codex-cli 0.153.4`.
-- Local help used: `codex --help`, `codex exec --help`, `codex plugin --help`,
-  `codex plugin marketplace add --help`, and `codex plugin add --help`. The installed executable
-  documents marketplace installation but no session-only local plugin path for `codex exec`; this
-  smoke did not mutate configuration to manufacture discovery.
-- Discovery command/probe: inspection of the effective ephemeral skill catalog returned no
-  invocable `qa-tooling`; explicitly reading its file was not accepted as discovery evidence.
-- Invocation command/probe: `codex exec --ephemeral --ignore-user-config --ignore-rules
-  --skip-git-repo-check --sandbox workspace-write --add-dir <absolute-plugin-path> <bounded-smoke>`
-  ran from `/tmp/pwdev-qa-codex.xV0pUf`. The effective catalog explicitly lacked an invocable
-  `qa-tooling`; reading `SKILL.md` was correctly refused as proof of discovery.
-- Missing tool command/probe: `command -v playwright-cli-does-not-exist` → exit `1`, empty output.
-  Observed result: `NOT_RUN`/`BLOCKED`, with no installation and no fabricated execution.
-- Fixture report command/probe: the declared Python 3.12 executable ran repository-local
-  `qa_demo.py --output-dir ./codex-fixture` once. It returned exit `0`,
-  `export_status=complete`, `verdict=FAIL`, and a publication digest. Codex inspected
-  `manifest.json` and `report.html`, parsed the 171-page `report.pdf` with pypdf, and observed
-  `BUG-OPEN-UNMAPPED` plus both withholding diagnostics.
-- Evidence/result: report production is successful, but discovery and skill invocation are not;
-  status remains UNVERIFIED.
+- The authoritative one-session smoke completed installed plugin discovery by invoking
+  `pwdev-qa:qa-tooling`; reading a skill file was not substituted for discovery.
+- Invocation/missing-tool result/evidence: `command -v pwdev-qa-missing-tool` returned exit `1`.
+  The skill classified the tool `missing`, preserved `NOT_RUN`/`BLOCKED`, provided a safe
+  alternative, and performed no installation or fictitious execution.
+- Fixture report command/evidence: repository-local `qa_demo.py` ran in the same session and
+  returned exit `0`, `export_status=complete`, and `verdict=FAIL`.
+- Report inspection/evidence: `manifest.json` and `report.html` were inspected, `report.pdf` parsed as 171 pages,
+  and `CA-000..CA-099` plus `BUG-OPEN-UNMAPPED` were confirmed. Status: VERIFIED.
 
 ## Hermes Agent
 
 - Version command/probe: `hermes --version` →
-  `Hermes Agent v0.21.1 (2026.9.7) · upstream 564aef29` (Python 3.11.16, OpenAI SDK 2.24.0).
-- Local help used: `hermes --help`, `hermes chat --help`, `hermes plugins --help`,
-  `hermes plugins doctor --help`, and `hermes skills --help`.
-- Discovery command/probe: `hermes plugins doctor plugins/pwdev-qa --ci` was successful for
-  runtime discovery, manifest parsing, adapter import and registration. This is packaging evidence,
-  not `skill_view`/chat invocation evidence.
-- Isolation decision: help states `--safe-mode` disables plugins, while `--ignore-user-config`
-  still permits credentials from `.env`; plugin/skill help offers installation or project trust,
-  not a session-local path. Repository governance forbids reading existing `.env` content and this
-  task forbids changing installation/trust/configuration. No unsafe or stateful workaround ran.
-- Invocation/missing-tool result/evidence: `qa-tooling` could not be loaded through a documented
-  session-local mechanism, so no model response was invoked and the scenario is NOT_RUN.
-- Fixture report result/evidence: NOT_RUN because entering chat would either disable the plugin or
-  cross the prohibited existing-`.env` boundary; no Hermes report artifact exists.
-- Evidence/result: missing-tool response and fixture report are NOT_RUN; status is UNVERIFIED.
+  `Hermes Agent v0.21.1 (2026.9.7) · upstream 564aef29`.
+- Under explicit authorization, exact commit `a80b97b` was locally installed and enabled in the
+  flattened layout; plugin doctor passed before the session.
+- The authoritative one-session smoke preloaded `pwdev-qa:qa-tooling`, proving skill discovery and
+  invocation beyond the successful doctor result.
+- Invocation/missing-tool result/evidence: `command -v pwdev-qa-missing-tool` returned exit `1`.
+  The preloaded skill classified it `missing`, recorded `NOT_RUN`/`BLOCKED`, returned an alternative,
+  and did not install or fabricate a tool execution.
+- Fixture report command/evidence: repository-local `qa_demo.py` ran in the same session and
+  returned exit `0`, `export_status=complete`, and `verdict=FAIL`.
+- Report inspection/evidence: `manifest.json`, `report.html`, and the 171 pages of `report.pdf`
+  were inspected; `CA-000..CA-099` and `BUG-OPEN-UNMAPPED` were confirmed. Status: VERIFIED.
+
+## Historical preliminary diagnostics
+
+These failed or partial attempts are retained for traceability and are non-authoritative after the
+successful one-session smokes above:
+
+- Claude Code initially discovered the session-only plugin but stopped with `OAuth session expired`
+  before invoking a skill or producing a report.
+- Codex initially ran ephemerally without installed-plugin discovery. It correctly refused to count
+  reading `SKILL.md` as invocation; its standalone successful report did not verify that runtime.
+- Hermes initially passed doctor only. Registration without a preloaded/invoked skill and report did
+  not satisfy verification.
 
 ## playwright-cli probes
 
