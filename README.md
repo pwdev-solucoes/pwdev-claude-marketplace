@@ -20,6 +20,7 @@ Restart the runtime after installation. Read each plugin README for its setup an
 | Spec-driven development | [pwdev-power](./plugins/pwdev-power/), [pwdev-flow](./plugins/pwdev-flow/), [sdd-composy](./plugins/sdd-composy/) |
 | Coding and delegation | [pwdev-code](./plugins/pwdev-code/), [pwdev-feat](./plugins/pwdev-feat/) |
 | Requirements and UI/UX | [pwdev-prd](./plugins/pwdev-prd/), [pwdev-uiux](./plugins/pwdev-uiux/) |
+| Quality assurance (QA) | [pwdev-qa](./plugins/pwdev-qa/) |
 | Copy and social content | [pwdev-copy](./plugins/pwdev-copy/), [pwdev-social-media](./plugins/pwdev-social-media/) |
 | DevOps and operations | [pwdev-devops](./plugins/pwdev-devops/) |
 | Knowledge and integrations | [pwdev-brain](./plugins/pwdev-brain/), [pwdev-glpi](./plugins/pwdev-glpi/), [pwdev-obsidian](./plugins/pwdev-obsidian/), [pwdev-postgres](./plugins/pwdev-postgres/), [pwdev-youtrack](./plugins/pwdev-youtrack/) |
@@ -39,6 +40,7 @@ Restart the runtime after installation. Read each plugin README for its setup an
 | [pwdev-obsidian](./plugins/pwdev-obsidian/) | 1.0.0 | Obsidian vault operations |
 | [pwdev-postgres](./plugins/pwdev-postgres/) | 1.0.0 | Safe PostgreSQL operations |
 | [pwdev-power](./plugins/pwdev-power/) | 0.1.0 | Approval-gated development and cmux fleets |
+| [pwdev-qa](./plugins/pwdev-qa/) | 0.1.0 | Portable QA workflows, specialists and verifiable reports |
 | [pwdev-prd](./plugins/pwdev-prd/) | 2.0.1 | Interview-driven requirements |
 | [pwdev-social-media](./plugins/pwdev-social-media/) | 2.0.1 | AI social creative production |
 | [pwdev-statusline](./plugins/pwdev-statusline/) | 1.1.0 | Configurable terminal status |
