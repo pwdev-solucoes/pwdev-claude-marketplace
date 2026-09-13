@@ -1,34 +1,51 @@
 #!/usr/bin/env bash
-# tmux is presentation only; it never owns fleet lifecycle state.
 set -Eeuo pipefail
-
-fleet_ui_tmux_start() {
-  local handle=$1 cwd=$2 session=$3; shift 3
-  [[ $# -gt 0 ]] || { echo "fleet tmux: command is required" >&2; return 2; }
-  command -v tmux >/dev/null 2>&1 || { echo "fleet tmux: tmux unavailable" >&2; return 127; }
-  [[ -d "$cwd" && ! -L "$cwd" ]] || { echo "fleet tmux: unsafe cwd" >&2; return 1; }
-  [[ ! -e "$handle" && ! -L "$handle" ]] || { echo "fleet tmux: handle already exists" >&2; return 1; }
-  if tmux has-session -t "$session" 2>/dev/null; then
-    echo "fleet tmux: session collision: $session" >&2; return 1
-  fi
-  tmux new-session -d -s "$session" -c "$cwd" -- "$@"
-  python3 - "$handle" "$session" "$cwd" <<'PY'
-import json,sys
-from pathlib import Path
-Path(sys.argv[1]).write_text(json.dumps({'driver':'tmux','session':sys.argv[2],'cwd':sys.argv[3]},sort_keys=True)+'\n')
+fleet_tmux_nonce(){ python3 - <<'PY'
+import secrets
+print(secrets.token_hex(12))
 PY
 }
-
-fleet_ui_teardown() {
-  local handle=$1 session
-  [[ -f "$handle" && ! -L "$handle" ]] || return 1
-  session=$(python3 - "$handle" <<'PY'
-import json,sys
-try: print(json.load(open(sys.argv[1]))['session'])
-except Exception: raise SystemExit(1)
+fleet_tmux_write_handle(){ python3 - "$@" <<'PY'
+import json,os,sys,tempfile
+p,state,socket,session,pane,fleet,member,cwd,marker=sys.argv[1:]; parent=os.path.dirname(p) or '.'; os.makedirs(parent,exist_ok=True)
+d={'driver':'tmux','state':state,'socket_name':socket,'session_name':session,'pane_id':pane,'fleet_id':fleet,'member_id':member,'cwd':cwd,'ownership_marker':marker}
+fd,tmp=tempfile.mkstemp(prefix='.'+os.path.basename(p)+'.',dir=parent,text=True)
+try:
+ with os.fdopen(fd,'w') as out:json.dump(d,out,sort_keys=True);out.write('\n');out.flush();os.fsync(out.fileno())
+ os.replace(tmp,p)
+finally:
+ if os.path.exists(tmp):os.unlink(tmp)
 PY
-  ) || return 1
-  command -v tmux >/dev/null 2>&1 || return 1
-  tmux kill-session -t "$session" 2>/dev/null || true
-  rm -f -- "$handle"
 }
+fleet_tmux_handle_read(){ local h=$1; [[ -f "$h" && ! -L "$h" ]] || return 1; python3 - "$h" <<'PY'
+import json,sys
+try:d=json.load(open(sys.argv[1]))
+except Exception:raise SystemExit(1)
+keys=('state','socket_name','session_name','pane_id','fleet_id','member_id','cwd','ownership_marker')
+if d.get('driver')!='tmux' or any(not isinstance(d.get(k),str) for k in keys) or d['state'] not in ('recovering','active'):raise SystemExit(1)
+if any(not d[k] for k in ('socket_name','session_name','fleet_id','member_id','cwd','ownership_marker')):raise SystemExit(1)
+if d['state']=='active' and not d['pane_id']:raise SystemExit(1)
+print(*(d[k] for k in keys),sep='|')
+PY
+}
+fleet_ui_tmux_start(){
+ local handle=$1 cwd=$2 fleet_id=$3 member_id=$4; shift 4
+ [[ $# -gt 0 ]] || { echo 'fleet tmux: command is required' >&2; return 2; }; command -v tmux >/dev/null 2>&1 || { echo 'fleet tmux: tmux unavailable' >&2; return 127; }; [[ -d "$cwd" && ! -L "$cwd" ]] || { echo 'fleet tmux: unsafe cwd' >&2; return 1; }; [[ ! -e "$handle" && ! -L "$handle" ]] || { echo 'fleet tmux: handle already exists' >&2; return 1; }
+ local nonce socket session marker identity actual_session pane; nonce=$(fleet_tmux_nonce); socket="sdd-composy-${nonce}"; session="sdd-composy-${fleet_id}-${member_id}"; marker="sdd-composy-fleet:${nonce}:${fleet_id}:${member_id}"
+ fleet_tmux_write_handle "$handle" recovering "$socket" "$session" '' "$fleet_id" "$member_id" "$cwd" "$marker"
+ if tmux -L "$socket" has-session -t "$session" 2>/dev/null; then echo "fleet tmux: session collision: $session" >&2; return 1; fi
+ # A dedicated server lets remain-on-exit become effective before new-session
+ # starts the member command, without changing another user's tmux defaults.
+ identity=$(tmux -L "$socket" start-server \; set-option -g @sdd-composy-owner "$marker" \; set-option -g remain-on-exit on \; new-session -d -P -F '#{session_name}|#{pane_id}' -s "$session" -c "$cwd" -- "$@") || return 1
+ IFS='|' read -r actual_session pane <<<"$identity"; [[ -n "$actual_session" && -n "$pane" ]] || { echo 'fleet tmux: pane identity unavailable' >&2; return 1; }
+ fleet_tmux_write_handle "$handle" recovering "$socket" "$actual_session" "$pane" "$fleet_id" "$member_id" "$cwd" "$marker"
+ tmux -L "$socket" set-option -p -t "$pane" @sdd-composy-owner sdd-composy-fleet >/dev/null || return 1
+ tmux -L "$socket" set-option -p -t "$pane" @sdd-composy-fleet "$fleet_id" >/dev/null || return 1
+ tmux -L "$socket" set-option -p -t "$pane" @sdd-composy-member "$member_id" >/dev/null || return 1
+ fleet_tmux_write_handle "$handle" active "$socket" "$actual_session" "$pane" "$fleet_id" "$member_id" "$cwd" "$marker"
+}
+fleet_tmux_server_owned(){ local socket=$1 session=$2 marker=$3 actual; actual=$(tmux -L "$socket" show-options -gqv @sdd-composy-owner 2>/dev/null) || return 1; [[ "$actual" == "$marker" ]] || return 1; tmux -L "$socket" has-session -t "$session" 2>/dev/null; }
+fleet_tmux_inspection(){ tmux -L "$1" display-message -p -t "$2" '#{@sdd-composy-owner}|#{@sdd-composy-fleet}|#{@sdd-composy-member}|#{pane_dead}|#{pane_dead_status}'; }
+fleet_ui_tmux_inspect(){ local handle=$1 state socket session pane fleet member cwd marker raw owner live_fleet live_member dead exit_code; IFS='|' read -r state socket session pane fleet member cwd marker < <(fleet_tmux_handle_read "$handle") || return 1; fleet_tmux_server_owned "$socket" "$session" "$marker" || return 1; if [[ "$state" == recovering ]]; then printf '{"alive":true,"driver":"tmux","exit_status":null,"recoverable":true,"pane_id":null,"session_name":"%s"}\n' "$session"; return 0; fi; raw=$(fleet_tmux_inspection "$socket" "$pane" 2>/dev/null) || return 1; IFS='|' read -r owner live_fleet live_member dead exit_code <<<"$raw"; [[ "$owner" == sdd-composy-fleet && "$live_fleet" == "$fleet" && "$live_member" == "$member" ]] || return 1; [[ "$dead" == 0 || "$dead" == 1 ]] || return 1; if [[ "$dead" == 0 ]]; then exit_code=null; else [[ "$exit_code" =~ ^-?[0-9]+$ ]] || return 1; fi; printf '{"alive":%s,"driver":"tmux","exit_status":%s,"recoverable":true,"pane_id":"%s","session_name":"%s"}\n' "$([[ $dead == 0 ]] && printf true || printf false)" "$exit_code" "$pane" "$session"; }
+fleet_ui_tmux_teardown(){ local handle=$1 state socket session pane fleet member cwd marker; IFS='|' read -r state socket session pane fleet member cwd marker < <(fleet_tmux_handle_read "$handle") || return 1; fleet_tmux_server_owned "$socket" "$session" "$marker" || return 1; if [[ "$state" == active ]]; then fleet_ui_tmux_inspect "$handle" >/dev/null || return 1; fi; tmux -L "$socket" kill-server >/dev/null 2>&1 || return 1; rm -f -- "$handle"; }
+fleet_ui_teardown(){ fleet_ui_tmux_teardown "$@"; }

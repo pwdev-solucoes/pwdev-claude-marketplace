@@ -28,6 +28,9 @@ Created: 2026-09-09T17:13:28Z
 - Task 07: review rejected — Compose ownership documentation exposed a cross-task implementation defect; Hermes mapping contradicted Kanban limitation.
 - Task 05/06 cross-contract: complete (commits 5999fa1, 49dc00a, 1ef7adb, 70d1228; producer and consumer reviews approved).
 - Task 07: complete (commits ef59026..3e491f8, review clean after fix round 1).
+- Task 08: offline review rejected — cinco Important devolvidos ao implementador; nenhuma inferência real autorizada/executada nesta rodada.
+- Task 08: minor (deferred): budget exhaustion deve publicar resultado BLOCKED recuperável em vez de abortar sem summary.
+- Task 08: fix round 2 — handoff deve atravessar adaptadores e cópia deve recusar nomes de credenciais adicionais.
 
 ## Pre-flight scan
 

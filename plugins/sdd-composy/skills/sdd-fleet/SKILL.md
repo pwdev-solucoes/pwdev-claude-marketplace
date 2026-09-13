@@ -21,6 +21,11 @@ dependencies, explicit acceptance criteria, known verification commands, and no
 confirmed path overlap. It never infers approval and never merges fleet
 branches automatically.
 
+Interactivity belongs only to fleet. Each member owns one task, one isolated
+worktree, and exactly one existing bound LOOP. An isolated LOOP remains
+non-interactive when it is not launched as a fleet member. UI presentation never
+changes that binding or grants lifecycle authority.
+
 ## Operations
 
 - `launch`: validate contracts and create recoverable branches/worktrees.
@@ -34,8 +39,17 @@ it must not own process lifecycle truth, and cmux operations stay inside the
 workspace created by this fleet. Prefer cmux when available, with tmux or
 headless as explicit fallbacks.
 
+`status` is read-only. Project runtime, UI, member, task, bound LOOP ID, the
+complete recorded handle (including unknown fields), interaction state, timestamps,
+and `next_action` from authoritative member JSON without filling in missing optional
+fields. Sanitize every displayed value recursively. Even with `--handle`, status
+does not call UI status, flash, or other presentation mutations. Terminal capture
+is diagnostic only: it never satisfies witness,
+evidence, review, verification, or an approval gate.
+
 Before launch, report the selected tasks, runtime, UI adapter, branch/worktree
 paths, verification commands, and safety checks. Never read or adopt an
 existing `.env.fleet`; preserve recoverable branches and worktrees after any
 failure. A merge requires an explicit confirmation token and successful
-identity/result verification.
+identity/result verification. Human approval remains required; the fleet never
+merges a branch or treats a pane, terminal capture, or UI state as completion.

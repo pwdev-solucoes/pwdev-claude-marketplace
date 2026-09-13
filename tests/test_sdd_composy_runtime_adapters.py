@@ -155,6 +155,63 @@ class FleetHermesAdapterTests(unittest.TestCase):
                          ["hermes", "-z", "quote ' ; $HOME", "--in", "/work tree"])
 
 
+class FleetInteractiveAdapterTests(unittest.TestCase):
+    FORBIDDEN = (
+        "--yolo",
+        "--accept-hooks",
+        "--dangerously-bypass-approvals-and-sandbox",
+        "--dangerously-skip-permissions",
+    )
+
+    def interactive_command(self, runtime, prompt="quote ' ; $HOME"):
+        script = PLUGIN / "scripts/fleet" / f"engine-{runtime}.sh"
+        with tempfile.TemporaryDirectory() as directory:
+            prompt_file = Path(directory) / "prompt.txt"
+            prompt_file.write_text(prompt, encoding="utf-8")
+            shell = (f'source "{script}"\n'
+                     f'sdd_engine_{runtime}_interactive_command "/work tree" '
+                     f'"{prompt_file}" "/plugin root"\n'
+                     'printf "cwd=%s\\n" "$SDD_ENGINE_CWD"\n'
+                     'printf "%s\\n" "${SDD_ENGINE_COMMAND[@]}"\n')
+            completed = subprocess.run(
+                ["/bin/bash", "-c", shell], env=os.environ,
+                text=True, capture_output=True, check=False)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        lines = completed.stdout.splitlines()
+        return lines[0].removeprefix("cwd="), lines[1:]
+
+    def assert_safe(self, argv):
+        for flag in self.FORBIDDEN:
+            self.assertNotIn(flag, argv)
+
+    def test_hermes_interactive_vector_uses_query_file_and_worktree(self):
+        cwd, argv = self.interactive_command("hermes")
+        self.assertEqual(cwd, "")
+        self.assertEqual(argv[:2], ["hermes", "chat"])
+        self.assertEqual(argv[2], "--query-file")
+        self.assertTrue(argv[3].endswith("/prompt.txt"))
+        self.assertEqual(argv[4:], ["--cli", "--in", "/work tree"])
+        self.assert_safe(argv)
+
+    def test_codex_interactive_vector_uses_prompt_argument_and_safe_sandbox(self):
+        cwd, argv = self.interactive_command("codex")
+        self.assertEqual(cwd, "")
+        self.assertEqual(argv, [
+            "codex", "--cd", "/work tree", "--sandbox", "workspace-write",
+            "quote ' ; $HOME",
+        ])
+        self.assert_safe(argv)
+
+    def test_claude_interactive_vector_uses_prompt_argument_and_plugin_root(self):
+        cwd, argv = self.interactive_command("claude")
+        self.assertEqual(cwd, "")
+        self.assertEqual(argv, [
+            "claude", "--add-dir", "/work tree", "--plugin-dir", "/plugin root",
+            "quote ' ; $HOME",
+        ])
+        self.assert_safe(argv)
+
+
 class HermesBootstrapTests(unittest.TestCase):
     def test_registers_exact_skills_as_paths_and_small_routing_context(self):
         module = load(PLUGIN / ".hermes-plugin/__init__.py", "sdd_hermes_bootstrap_test")

@@ -51,10 +51,35 @@ fleet_select_ui() {
   case "$requested" in
     headless) printf 'headless\n' ;;
     tmux) command -v tmux >/dev/null 2>&1 || { echo 'fleet: tmux unavailable' >&2; return 1; }; printf 'tmux\n' ;;
-    cmux) if command -v "$cmux_bin" >/dev/null 2>&1; then printf 'cmux\n'; elif command -v tmux >/dev/null 2>&1; then printf 'tmux\n'; else printf 'headless\n'; fi ;;
+    cmux) command -v "$cmux_bin" >/dev/null 2>&1 || { echo 'fleet: cmux unavailable' >&2; return 1; }; printf 'cmux\n' ;;
     auto) if command -v "$cmux_bin" >/dev/null 2>&1; then printf 'cmux\n'; elif command -v tmux >/dev/null 2>&1; then printf 'tmux\n'; else printf 'headless\n'; fi ;;
     *) echo "fleet: unsupported UI driver: $requested" >&2; return 2 ;;
   esac
+}
+# True only when a newly-created driver handle proves that the adapter crossed
+# its recoverable resource/process boundary. A merely "recovering" preflight
+# handle with no provider identity is deliberately insufficient.
+fleet_ui_resource_established() {
+  local driver=$1 handle=$2
+  [[ -f "$handle" && ! -L "$handle" ]] || return 1
+  python3 - "$driver" "$handle" <<'PY'
+import json,os,sys
+try: data=json.load(open(sys.argv[2]))
+except Exception: raise SystemExit(1)
+driver=sys.argv[1]
+if data.get('driver') != driver: raise SystemExit(1)
+if driver == 'cmux':
+    ok=isinstance(data.get('workspace_id'),str) and data['workspace_id'] not in ('','-')
+elif driver == 'tmux':
+    ok=isinstance(data.get('pane_id'),str) and bool(data['pane_id'])
+elif driver == 'headless':
+    pid=data.get('pid'); ok=isinstance(pid,int) and not isinstance(pid,bool) and pid > 0
+    if ok:
+        try: os.kill(pid,0)
+        except OSError: ok=False
+else: ok=False
+raise SystemExit(0 if ok else 1)
+PY
 }
 fleet_port_available() {
   python3 - "$1" <<'PY'

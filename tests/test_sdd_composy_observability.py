@@ -299,6 +299,136 @@ class StatusContractTest(unittest.TestCase):
             self.assertEqual(before, after)
 
 
+class FleetInteractiveDashboardTest(unittest.TestCase):
+    DASHBOARD = ROOT / "plugins" / "sdd-composy" / "scripts" / "fleet" / "dashboard.sh"
+
+    def invoke(self, root, *extra):
+        return subprocess.run(
+            [str(self.DASHBOARD), "--root", str(root), "--fleet-id", "demo", "--json", *extra],
+            capture_output=True, text=True)
+
+    def test_projects_authoritative_interaction_and_bound_loop(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); members = root / ".planning/sdd-composy/fleet/demo/members"
+            members.mkdir(parents=True)
+            record = {
+                "id": "MEMBER-01", "task_id": "TASK-006", "runtime": "codex", "ui": "tmux",
+                "status": "pending", "started_at": "top-level-is-not-authoritative",
+                "interaction": {
+                    "state": "awaiting_human", "started_at": "2026-09-12T00:00:00Z",
+                    "updated_at": "2026-09-12T00:05:00Z", "next_action": "Approve LOOP evidence",
+                    "loop": {"id": "loop-demo-task-006", "task_id": "TASK-006"},
+                    "handle": {"driver": "tmux", "session_name": "fleet-demo", "pane_id": "%6"},
+                },
+            }
+            (members / "MEMBER-01.json").write_text(json.dumps(record), encoding="utf-8")
+            result = self.invoke(root)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            member = json.loads(result.stdout)["members"][0]
+            self.assertEqual(member, {
+                "runtime": "codex", "ui": "tmux", "member": "MEMBER-01", "task": "TASK-006",
+                "loop": "loop-demo-task-006", "state": "awaiting_human",
+                "handle": {"driver": "tmux", "session_name": "fleet-demo", "pane_id": "%6"},
+                "timestamps": {"started_at": "2026-09-12T00:00:00Z", "updated_at": "2026-09-12T00:05:00Z"},
+                "next_action": "Approve LOOP evidence",
+            })
+
+    def test_missing_optional_fields_remain_absent_and_values_are_sanitized(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); members = root / ".planning/sdd-composy/fleet/demo/members"
+            members.mkdir(parents=True)
+            record = {
+                "id": "MEMBER\n01", "task_id": "TASK\t006", "runtime": "co\u001bdex", "ui": "cmux\r",
+                "interaction": {"state": "running\nforged", "started_at": "2026-09-12T00:00:00Z\nBAD"},
+            }
+            (members / "member.json").write_text(json.dumps(record), encoding="utf-8")
+            before = (members / "member.json").read_bytes()
+            result = self.invoke(root)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            member = json.loads(result.stdout)["members"][0]
+            self.assertEqual(member["member"], "MEMBER 01")
+            self.assertEqual(member["task"], "TASK 006")
+            self.assertEqual(member["runtime"], "co dex")
+            self.assertEqual(member["ui"], "cmux")
+            self.assertEqual(member["state"], "running forged")
+            self.assertEqual(member["timestamps"], {"started_at": "2026-09-12T00:00:00Z BAD"})
+            self.assertNotIn("loop", member)
+            self.assertNotIn("handle", member)
+            self.assertNotIn("next_action", member)
+            self.assertEqual(before, (members / "member.json").read_bytes())
+
+    def test_handle_projection_is_complete_and_recursively_sanitized(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); members = root / ".planning/sdd-composy/fleet/demo/members"
+            members.mkdir(parents=True)
+            record = {"id": "MEMBER-01", "task_id": "TASK-006", "interaction": {
+                "state": "running", "handle": {
+                    "driver": "tmux", "id": "pane\n1", "socket_name": "socket\u001bname",
+                    "session_name": "session-1", "pane_id": "%6",
+                    "extension": {"owner": "fleet\towner", "sequence": ["one\r", 2, True, None]},
+                }}}
+            (members / "member.json").write_text(json.dumps(record), encoding="utf-8")
+            result = self.invoke(root); self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout)["members"][0]["handle"], {
+                "driver": "tmux", "id": "pane 1", "socket_name": "socket name",
+                "session_name": "session-1", "pane_id": "%6",
+                "extension": {"owner": "fleet owner", "sequence": ["one", 2, True, None]},
+            })
+
+    def test_handle_projection_preserves_colliding_unsafe_key_names(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); members = root / ".planning/sdd-composy/fleet/demo/members"
+            members.mkdir(parents=True)
+            record = {"id": "MEMBER-01", "interaction": {"state": "running", "handle": {
+                "owner\nid": {"value": "control-key"}, "owner id": {"value": "space-key"},
+                "literal%U00000A": "percent-key",
+            }}}
+            (members / "member.json").write_text(json.dumps(record), encoding="utf-8")
+            result = self.invoke(root); self.assertEqual(result.returncode, 0, result.stderr)
+            handle = json.loads(result.stdout)["members"][0]["handle"]
+            self.assertEqual(handle, {
+                "owner%U00000Aid": {"value": "control-key"},
+                "owner id": {"value": "space-key"},
+                "literal%U000025U00000A": "percent-key",
+            })
+            human = subprocess.run([str(self.DASHBOARD), "--root", str(root), "--fleet-id", "demo"],
+                                   capture_output=True, text=True, check=True)
+            self.assertNotIn("owner\nid", human.stdout)
+            self.assertIn("owner%U00000Aid", human.stdout)
+
+    def test_handle_option_is_observational_and_human_output_omits_missing_fields(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); fleet_id = "demo\nunsafe"
+            members = root / ".planning/sdd-composy/fleet" / fleet_id / "members"; members.mkdir(parents=True)
+            (members / "member.json").write_text(json.dumps({
+                "id": "MEMBER-01", "interaction": {"state": "running"}}), encoding="utf-8")
+            handle = root / "handle.json"; handle.write_text(json.dumps({"driver": "cmux"}))
+            fake = root / "cmux"; log = root / "calls.log"
+            fake.write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$CMUX_LOG\"\n", encoding="utf-8"); fake.chmod(0o755)
+            result = subprocess.run(
+                [str(self.DASHBOARD), "--root", str(root), "--fleet-id", fleet_id, "--handle", str(handle)],
+                capture_output=True, text=True, env={**os.environ, "SDD_CMUX_BIN": str(fake), "CMUX_LOG": str(log)})
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse(log.exists(), "status must not call presentation transports")
+            self.assertIn("fleet demo unsafe:", result.stdout)
+            self.assertIn("MEMBER-01: state=running", result.stdout)
+            for empty in ("runtime=", "ui=", "task=", "loop=", "next_action="):
+                self.assertNotIn(empty, result.stdout)
+
+    def test_legacy_fleet_status_and_message_are_sanitized(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); fleet_id = "legacy\u001bfleet"
+            members = root / ".planning/sdd-composy/fleet" / fleet_id / "members"; members.mkdir(parents=True)
+            (members / "member.json").write_text(json.dumps({
+                "id": "MEMBER\n01", "status": "RUN\u001bNING", "message": "line\none\u001bhidden"}))
+            result = subprocess.run([str(self.DASHBOARD), "--root", str(root), "--fleet-id", fleet_id],
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn("\u001b", result.stdout)
+            self.assertEqual(result.stdout.splitlines()[0], "fleet legacy fleet: run ning=1")
+            self.assertIn("MEMBER 01: run ning — line one hidden", result.stdout)
+
+
 class QuickContractTest(unittest.TestCase):
     BASE = ROOT / "plugins" / "sdd-composy"
 

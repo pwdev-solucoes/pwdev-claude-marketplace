@@ -3,7 +3,7 @@ type: EVIDENCE_REPORT
 okf_version: "0.2"
 generated:
   by: agent:codex
-  at: "2026-09-10T01:11:08Z"
+  at: "2026-09-10T19:37:05Z"
 lifecycle:
   status: INCOMPLETE
 sources:
@@ -29,7 +29,7 @@ Este documento não aprova a aceitação global nem marca evidência como `VERIF
   `771c07d5a360515384b9e5f20b075873dfbc091e5bc6c599e0af5dfa3746e3f4`.
 - Snapshot Git inicial: alterações administrativas preexistentes em `ledger.md`, relatório e
   revisões das Tasks 05–07; nenhum diff em `sdd_status.py` ou no baseline Hermes.
-- Disponíveis, exit code 0: Hermes Agent `0.20.4`, Codex CLI `0.153.4`, Claude Code `2.1.267`,
+- Disponíveis, exit code 0: Hermes Agent `0.21.1`, Codex CLI `0.153.4`, Claude Code `2.1.267`,
   Git `2.50.1`, jq `1.7.1`, Docker Compose `5.1.3`, cmux `0.64.22`.
 - `hermes --help`, `hermes plugins doctor plugins/sdd-composy --ci`, `codex exec --help`,
   `claude --help` e `cmux --help`: exit code 0. O preflight não realizou inferência.
@@ -44,12 +44,18 @@ python3 scripts/sdd_runtime_smoke.py --mode offline --runtime all --language bot
 
 - Resultado: `PASS`; 36/36 combinações `PASS`.
 - Cobertura: 3 runtimes × 2 idiomas × read-only, lifecycle, fleet, handoff, evidence e compose.
+- Cada combinação usou repositório Git temporário exclusivo e cópia local fail-closed do plugin.
+- Os cenários executaram: `sdd-status` com sentinelas; init→map→import→next e LOOP real de cinco
+  estágios com engine local; launcher fleet com dois worktrees e runtime mismatch; handoff durável;
+  evidência ausente/antiga/adulterada e status divergente; Compose, cmux e merge em fixtures.
 - Chamadas de provider: Hermes 0, Codex 0, Claude 0.
 - Timeout máximo contratado: 300 segundos por chamada.
 - Orçamento contratado: máximo 28 chamadas por runtime.
 - Uso/tokens/custo: `null` (indisponível; nenhum zero foi inventado).
 - Hash do plugin copiado: `d101d5fb9b03048a1342a104c9786b0e210e329c190239b6f805e52282d0b9e3`.
-- Hash do sumário: `be2d3e6dfe324c5951c5005294d3c2a74f10b9f7aa9bc222913e74ada3b75364`.
+- Duração por cenário: 0.000587s–1.371612s; exit codes, hashes, task/worktree e recursos estão
+  preservados individualmente no sumário.
+- Hash do sumário: `da6e4153c7ba495e09dbc22e568535b420ce223f5dea9e23049969cb4ad26d15`.
 
 | Cenário | Hermes offline | Codex offline | Claude offline | Hermes real | Codex real | Claude real |
 |---|---|---|---|---|---|---|
@@ -65,7 +71,14 @@ Campos de duração e exit code por cenário real são `null` porque os cenário
 
 ## Verificação
 
-- `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py' -v`: 362 testes, PASS.
+Re-review round 2 fechou os dois Important remanescentes: o handoff usa consumidores/adapters
+offline reais sobre arquivos persistidos e valida aprovação sintética escopada; a cópia isolada
+recusa famílias de token/auth, `id_*`, chaves privadas, keystore e certificados, preservando
+somente amostras documentais. A execução renovada produziu 36/36 `PASS` sem chamadas de provider.
+
+- `python3 -m unittest tests.test_sdd_composy_runtime_smoke tests.test_sdd_composy_hermes -v`:
+  21 testes, PASS.
+- `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py' -v`: 367 testes, PASS.
 - `python3 scripts/validate_readme_plugins.py`: 16 plugins validados, PASS.
 - `python3 -m unittest tests.test_readme_marketplace -v`: 1 teste, PASS.
 - `bash -n plugins/sdd-composy/scripts/fleet/*.sh`: PASS.

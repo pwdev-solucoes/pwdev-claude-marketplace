@@ -30,9 +30,10 @@ git -C "$root" show-ref --verify --quiet "refs/heads/$base_branch" || fleet_die 
 
 python3 - "$root" "$state" "$fleet_id" "$base_branch" "$ui" "$record_runtime" "${tasks[@]}" <<'PY'
 import json,sys,hashlib,re,os,tempfile
+from datetime import datetime,timezone
 from pathlib import Path
 root,state=map(Path,sys.argv[1:3]); fleet_id=sys.argv[3]; base_branch=sys.argv[4]; ui=sys.argv[5]; runtime=sys.argv[6]; files=[Path(x) for x in sys.argv[7:]]
-seen=[]; records=[]
+seen=[]; records=[]; now=datetime.now(timezone.utc).isoformat().replace('+00:00','Z')
 for f in files:
     if f.is_symlink(): raise SystemExit(f"fleet: task symlink rejected: {f}")
     try: data=json.loads(f.read_text())
@@ -67,7 +68,7 @@ for f in files:
       contract=Path(str(task.get('contract_path', f)))
       if contract.is_symlink() or not contract.exists(): raise SystemExit(f'fleet: dirty contract {tid}')
       blob=contract.read_bytes(); h=hashlib.sha256(blob).hexdigest()
-      records.append({'schema_version':'2','id':tid,'task_id':tid,'slug':tid.lower(),'contract_path':str(contract.absolute()),'contract_sha256':h,'allowed_paths':norm,'verification_commands':task['verification_commands'],'state':'locked','status':'pending','runtime':runtime,'ui':ui,'repository_root':str(root.resolve()),'owner':{'kind':'sdd-composy-fleet','fleet_id':fleet_id,'member_id':tid}})
+      records.append({'schema_version':'2','id':tid,'task_id':tid,'slug':tid.lower(),'contract_path':str(contract.absolute()),'contract_sha256':h,'allowed_paths':norm,'verification_commands':task['verification_commands'],'state':'locked','status':'pending','runtime':runtime,'ui':ui,'repository_root':str(root.resolve()),'owner':{'kind':'sdd-composy-fleet','fleet_id':fleet_id,'member_id':tid},'interaction':{'state':'starting','started_at':now,'updated_at':now}})
 out=state/'members'; out.mkdir(parents=True,exist_ok=True)
 if (state/'fleet.json').exists() or (state/'fleet.json').is_symlink(): raise SystemExit('fleet: fleet metadata already exists')
 destinations=[out/(r['id']+'.json') for r in records]
@@ -84,13 +85,15 @@ for r,destination in zip(records,destinations): publish(destination,r)
 publish(state/'fleet.json',{'schema_version':'2','fleet_id':fleet_id,'base_branch':base_branch,'runtime':runtime,'ui':ui,'owner':{'kind':'sdd-composy-fleet','fleet_id':fleet_id},'members':[r['id'] for r in records]})
 PY
 
-created=(); branches=(); ports=(); port=; runtime_created=0; state_created=1; compose_created=0; compose_started=0; base="sdd-fleet/$fleet_id"
+created=(); branches=(); ports=(); loops=(); handles=(); port=; runtime_created=0; state_created=1; compose_created=0; compose_started=0; base="sdd-fleet/$fleet_id"
 cleanup(){ local rc=$?; set +e; if ((rc!=0)); then
   if ((compose_started)); then docker compose --project-name "sdd_fleet_$fleet_id" --env-file "$state/runtime.env" -f "$state/docker-compose.yml" down >/dev/null 2>&1 || true; fi
   if ((compose_created)); then rm -f "$state/docker-compose.yml"; fi
   [[ -n "$port" ]] && rm -f "$state/port-$port"
   if ((${#ports[@]})); then for allocated in "${ports[@]}"; do rm -f "$state/port-$allocated"; done; fi
   if ((runtime_created)); then rm -f "$state/runtime.env"; fi
+  if ((${#loops[@]})); then for loop in "${loops[@]}"; do rm -f -- "$loop"; done; fi
+  if ((${#handles[@]})); then for handle in "${handles[@]}"; do rm -f -- "$handle"; done; fi
   if ((state_created)); then
     if ((fleet_preexisting == 0)); then
       rm -f "$state/fleet.json"
@@ -162,14 +165,57 @@ if ((prepare == 0)); then
       [[ $(awk '/^Status: APPROVED$/ {n++} END {print n+0}' "$file") == 1 ]] || fleet_die 'phase requires existing approval'
     done
   done
-  # Once processes start, preserve all recovery resources on any dispatch failure.
-  trap 'fleet_unlock "$lock"' EXIT
+  # Establish exactly one canonical LOOP per member only after every fleet and
+  # approval validation has succeeded, but before any presentation process exists.
+  for member_file in "$state"/members/*.json; do
+    task_id=$(fleet_json_string "$member_file" task_id); slug=$(fleet_json_string "$member_file" slug)
+    loop_id="loop-$fleet_id-$slug"
+    loop_path=$(python3 - "$HERE/../sdd_loop.py" "$HERE/interactive_state.py" "$root" "$member_file" "$task_id" "$loop_id" <<'PY'
+import importlib.util,sys
+from datetime import datetime,timezone
+from pathlib import Path
+def load(name,path):
+    spec=importlib.util.spec_from_file_location(name,path); module=importlib.util.module_from_spec(spec)
+    assert spec.loader; spec.loader.exec_module(module); return module
+sdd_loop=load('sdd_fleet_launch_loop',sys.argv[1])
+interactive_state=load('sdd_fleet_launch_state',sys.argv[2])
+root=Path(sys.argv[3]); member_path=Path(sys.argv[4]); task_id=sys.argv[5]; loop_id=sys.argv[6]
+sdd_loop.start(root, task_id, max_iterations=3, loop_id=loop_id)
+try:
+    now=datetime.now(timezone.utc).isoformat().replace('+00:00','Z')
+    interactive_state.bind_loop(member_path, loop_id, task_id, now)
+except Exception:
+    (root/'.planning'/'sdd-composy'/'loops'/(loop_id+'.json')).unlink(missing_ok=True)
+    raise
+print(root/'.planning'/'sdd-composy'/'loops'/(loop_id+'.json'))
+PY
+    ) || fleet_die "unable to create and bind member LOOP"
+    loops+=("$loop_path")
+  done
+  [[ "${SDD_FLEET_FAIL_AFTER_LOOP:-}" == 1 ]] && fleet_die "injected post-LOOP failure"
   for member_file in "$state"/members/*.json; do
     work=$(fleet_json_string "$member_file" worktree); slug=$(fleet_json_string "$member_file" slug)
+    member_id=$(jq -er '.owner.member_id | select(type == "string" and length > 0)' "$member_file") || fleet_die "member owner identity is unavailable"
     handle="$state/$slug.ui.json"
-    cmd=(env "SDD_FLEET_RUNTIME=$record_runtime" "SDD_FLEET_MEMBER_FILE=$member_file" "$HERE/run.sh" "$slug" "$work")
-    if [[ $ui == headless ]]; then fleet_ui_headless_start "$handle" "$work" "${cmd[@]}"
-    else "fleet_ui_${ui}_start" "$handle" "$work" "$fleet_id-$slug" "${cmd[@]}"; fi
+    [[ ! -e "$handle" && ! -L "$handle" ]] || fleet_die "UI handle already exists: $handle"
+    handles+=("$handle")
+    if [[ $ui == headless ]]; then
+      cmd=(env "SDD_FLEET_RUNTIME=$record_runtime" "SDD_FLEET_MEMBER_FILE=$member_file" "$HERE/run.sh" "$slug" "$work")
+      if ! fleet_ui_headless_start "$handle" "$work" "${cmd[@]}"; then
+        fleet_ui_resource_established "$ui" "$handle" && trap 'fleet_unlock "$lock"' EXIT
+        fleet_die "headless runner creation failed"
+      fi
+    else
+      cmd=("$HERE/interactive-run.sh" "$member_file" "$work")
+      if ! "fleet_ui_${ui}_start" "$handle" "$work" "$fleet_id" "$member_id" "${cmd[@]}"; then
+        fleet_ui_resource_established "$ui" "$handle" && trap 'fleet_unlock "$lock"' EXIT
+        fleet_die "$ui runner creation failed"
+      fi
+    fi
+    # From the first successful adapter creation onward, every failure preserves
+    # all recovery state. There is never retry or fallback to another driver.
+    fleet_ui_resource_established "$ui" "$handle" || fleet_die "$ui adapter returned without recoverable resource evidence"
+    trap 'fleet_unlock "$lock"' EXIT
   done
 fi
 printf '%s\n' "$(cat "$state/fleet.json")"

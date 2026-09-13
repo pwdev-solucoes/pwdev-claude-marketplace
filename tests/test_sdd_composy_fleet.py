@@ -1,9 +1,152 @@
-import hashlib, json, os, subprocess, tempfile, unittest
+import fcntl, hashlib, importlib.util, json, os, shutil, subprocess, tempfile, time, unittest
 from pathlib import Path
 from tests.test_sdd_composy import assert_schema_valid
 
 ROOT = Path(__file__).parents[1]
 LAUNCH = ROOT / "plugins/sdd-composy/scripts/fleet/launch.sh"
+INTERACTIVE_STATE_PATH = ROOT / "plugins/sdd-composy/scripts/fleet/interactive_state.py"
+INTERACTIVE_RUN = ROOT / "plugins/sdd-composy/scripts/fleet/interactive-run.sh"
+
+def _load_interactive_state():
+    spec = importlib.util.spec_from_file_location("sdd_fleet_interactive_state", INTERACTIVE_STATE_PATH)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+class FleetInteractiveStateTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.path = Path(self.tmp.name).resolve() / "member.json"
+        self.member = {
+            "schema_version": "2", "id": "TASK-001", "task_id": "TASK-001",
+            "status": "running", "runtime": "codex", "ui": "headless",
+            "branch": "fleet/task-001", "worktree_path": "/tmp/task-001",
+            "repository_root": "/tmp/repo", "started_at": "2026-09-11T12:00:00Z",
+            "updated_at": "2026-09-11T12:00:00Z",
+            "owner": {"kind": "sdd-composy-fleet", "fleet_id": "demo", "member_id": "TASK-001"},
+            "resources": {"branch": "fleet/task-001", "worktree_path": "/tmp/task-001", "port": 43001,
+                          "compose_project": "fleet-demo", "compose_file": "fleet/docker-compose.yml",
+                          "compose_allocated": False},
+            "interaction": {
+                "state": "starting", "started_at": "2026-09-11T12:00:00Z",
+                "updated_at": "2026-09-11T12:00:00Z"
+            },
+            "extension": {"preserve": True}
+        }
+        self.path.write_text(json.dumps(self.member))
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_load_rejects_missing_interaction_fields_and_symlink(self):
+        state = _load_interactive_state()
+        for missing in ("state", "started_at", "updated_at"):
+            with self.subTest(missing=missing):
+                broken = json.loads(json.dumps(self.member)); del broken["interaction"][missing]
+                self.path.write_text(json.dumps(broken))
+                with self.assertRaises(state.InteractiveStateError): state.load_member(self.path)
+        real = Path(self.tmp.name) / "real.json"; real.write_text(json.dumps(self.member))
+        self.path.unlink(); self.path.symlink_to(real)
+        with self.assertRaises(state.InteractiveStateError): state.load_member(self.path)
+
+    def test_load_rejects_symlinked_ancestor(self):
+        state = _load_interactive_state()
+        real = Path(self.tmp.name) / "real"; real.mkdir()
+        member = real / "member.json"; member.write_text(json.dumps(self.member))
+        linked = Path(self.tmp.name) / "linked"; linked.symlink_to(real, target_is_directory=True)
+        with self.assertRaises(state.InteractiveStateError): state.load_member(linked / "member.json")
+
+    def test_load_rejects_non_immediate_symlinked_ancestor(self):
+        state = _load_interactive_state()
+        real = Path(self.tmp.name) / "real"; nested = real / "nested"; nested.mkdir(parents=True)
+        member = nested / "member.json"; member.write_text(json.dumps(self.member))
+        linked = Path(self.tmp.name) / "linked"; linked.symlink_to(real, target_is_directory=True)
+        with self.assertRaises(state.InteractiveStateError): state.load_member(linked / "nested" / "member.json")
+
+    def test_load_rejects_member_invalid_against_complete_v2_contract(self):
+        state = _load_interactive_state()
+        for missing in ("status", "runtime", "ui", "resources"):
+            with self.subTest(missing=missing):
+                broken = json.loads(json.dumps(self.member)); del broken[missing]
+                self.path.write_text(json.dumps(broken))
+                with self.assertRaises(state.InteractiveStateError): state.load_member(self.path)
+        for mutate in (
+            lambda value: value.__setitem__("runtime", []),
+            lambda value: value["resources"].__setitem__("compose_sha256", "not-a-digest"),
+        ):
+            broken = json.loads(json.dumps(self.member)); mutate(broken); self.path.write_text(json.dumps(broken))
+            with self.assertRaises(state.InteractiveStateError): state.load_member(self.path)
+
+    def test_schema_accepts_interaction_contract_and_rejects_missing_state(self):
+        schema = json.loads((ROOT / "plugins/sdd-composy/schemas/fleet-member.schema.json").read_text())
+        # Existing v2 records remain compatible; interaction is additive.
+        legacy = json.loads(json.dumps(self.member)); legacy.pop("interaction")
+        legacy.update({
+            "status": "running", "runtime": "codex", "ui": "headless", "branch": "fleet/task-001",
+            "worktree_path": "/tmp/task-001", "repository_root": "/tmp/repo",
+            "started_at": "2026-09-11T12:00:00Z", "updated_at": "2026-09-11T12:00:00Z",
+            "resources": {"branch": "fleet/task-001", "worktree_path": "/tmp/task-001", "port": 43001,
+                          "compose_project": "fleet-demo", "compose_file": "fleet/docker-compose.yml",
+                          "compose_allocated": False}
+        })
+        assert_schema_valid(self, schema, legacy)
+        current = json.loads(json.dumps(legacy)); current["interaction"] = self.member["interaction"]
+        assert_schema_valid(self, schema, current)
+        del current["interaction"]["state"]
+        with self.assertRaises(AssertionError): assert_schema_valid(self, schema, current)
+
+    def test_transition_rejects_invalid_edge_and_preserves_unknown_fields(self):
+        state = _load_interactive_state()
+        with self.assertRaises(state.InteractiveStateError):
+            state.transition(self.path, "starting", "completed", {}, "2026-09-11T12:01:00Z")
+        result = state.transition(
+            self.path, "starting", "running", {"handle": {"driver": "tmux", "id": "pane-1"}},
+            "2026-09-11T12:01:00Z")
+        self.assertEqual(result["extension"], {"preserve": True})
+        self.assertEqual(result["interaction"]["handle"]["id"], "pane-1")
+        self.assertEqual(json.loads(self.path.read_text()), result)
+
+    def test_transition_is_compare_and_set(self):
+        state = _load_interactive_state()
+        with self.assertRaises(state.InteractiveStateError):
+            state.transition(self.path, "running", "awaiting_human", {}, "2026-09-11T12:01:00Z")
+        self.assertEqual(json.loads(self.path.read_text()), self.member)
+
+    def test_concurrent_compare_and_set_allows_exactly_one_writer(self):
+        lock_path = self.path.with_name(f".{self.path.name}.lock")
+        lock = open(lock_path, "a+")
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        script = """
+import importlib.util, sys
+spec=importlib.util.spec_from_file_location('state',sys.argv[1]); state=importlib.util.module_from_spec(spec); spec.loader.exec_module(state)
+try:
+ state.transition(sys.argv[2], 'starting', sys.argv[3], {}, '2026-09-11T12:01:00Z'); print('ok')
+except state.InteractiveStateError:
+ print('lost'); raise SystemExit(3)
+"""
+        writers = [subprocess.Popen(
+            ["python3", "-c", script, str(INTERACTIVE_STATE_PATH), str(self.path), target],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            for target in ("running", "blocked")]
+        try:
+            time.sleep(.2)
+            blocked = all(process.poll() is None for process in writers)
+        finally:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_UN); lock.close()
+        results = [process.communicate(timeout=5) for process in writers]
+        self.assertTrue(blocked, "writers must wait on the member lock")
+        self.assertEqual(sorted(process.returncode for process in writers), [0, 3], results)
+
+    def test_bind_loop_is_immutable_and_rejects_task_divergence(self):
+        state = _load_interactive_state()
+        with self.assertRaises(state.InteractiveStateError):
+            state.bind_loop(self.path, "loop-task-001", "TASK-002", "2026-09-11T12:01:00Z")
+        bound = state.bind_loop(self.path, "loop-task-001", "TASK-001", "2026-09-11T12:01:00Z")
+        self.assertEqual(bound["interaction"]["loop"], {"id": "loop-task-001", "task_id": "TASK-001"})
+        self.assertEqual(bound["extension"], {"preserve": True})
+        with self.assertRaises(state.InteractiveStateError):
+            state.bind_loop(self.path, "loop-second", "TASK-001", "2026-09-11T12:02:00Z")
+        self.assertEqual(json.loads(self.path.read_text()), bound)
 
 class FleetLaunchTest(unittest.TestCase):
     def setUp(self):
@@ -51,6 +194,193 @@ class FleetLaunchTest(unittest.TestCase):
             if runtime: args[2:2]=["--runtime",runtime]
             r=subprocess.run(args,capture_output=True,text=True)
             self.assertNotEqual(r.returncode,0); self.assertFalse((self.repo/".planning").exists())
+
+    def test_prepare_only_records_resolved_ui_and_starting_interaction(self):
+        self.task()
+        fake=Path(self.tmp.name)/"ui-bin"; fake.mkdir()
+        cmux=fake/"cmux"; cmux.write_text("#!/bin/sh\nexit 0\n"); cmux.chmod(0o755)
+        r=self.invoke(self.contract,extra={"PATH":str(fake)+":/usr/bin:/bin","SDD_CMUX_BIN":str(cmux)})
+        self.assertEqual(r.returncode,0,r.stderr)
+        member=json.loads((self.repo/".planning/sdd-composy/fleet/demo/members/TASK-001.json").read_text())
+        self.assertEqual(member["ui"],"cmux")
+        self.assertEqual(member["interaction"]["state"],"starting")
+        self.assertNotIn("loop",member["interaction"])
+
+    def _approved_launch_fixture(self):
+        phase=self.repo/'.planning/sdd-composy/phases/task-001'; phase.mkdir(parents=True)
+        for name in ('spec.md','decisions.md'): (phase/name).write_text('Status: APPROVED\n')
+        subprocess.run(['git','-C',str(self.repo),'add','.'],check=True)
+        subprocess.run(['git','-C',str(self.repo),'commit','-qm','approved phase'],check=True)
+        self.task()
+
+    def _cmux_launch(self, fake, state, log):
+        return subprocess.run(
+            [str(LAUNCH),'--runtime','codex','--ui','auto','--root',str(self.repo),
+             '--fleet-id','demo','--base-branch',self.base,'--task',str(self.contract)],
+            capture_output=True,text=True,env={**os.environ,'PATH':str(fake)+':/usr/bin:/bin',
+            'SDD_CMUX_BIN':str(fake/'cmux'),'CMUX_STATE':str(state),'CMUX_LOG':str(log)})
+
+    def test_launch_failure_before_ui_resource_rolls_back_every_created_artifact(self):
+        self._approved_launch_fixture(); fake=Path(self.tmp.name)/'fake-pre'; fake.mkdir()
+        (fake/'codex').write_text('#!/bin/sh\nexit 0\n'); (fake/'codex').chmod(0o755)
+        (fake/'cmux').write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$CMUX_LOG"\nexit 9\n'); (fake/'cmux').chmod(0o755)
+        result=self._cmux_launch(fake,fake/'state.json',fake/'calls.log')
+        self.assertNotEqual(result.returncode,0)
+        fleet=self.repo/'.planning/sdd-composy/fleet/demo'
+        self.assertFalse((fleet/'fleet.json').exists()); self.assertEqual(list((fleet/'members').glob('*.json')),[])
+        self.assertEqual(list((self.repo/'.planning/sdd-composy/loops').glob('*.json')),[])
+        self.assertFalse((fleet/'task-001.ui.json').exists())
+        self.assertNotIn('.sddcomposy-fleet-demo-',subprocess.check_output(['git','-C',str(self.repo),'worktree','list'],text=True))
+        self.assertNotEqual(subprocess.run(['git','-C',str(self.repo),'show-ref','--verify','--quiet','refs/heads/sdd-fleet/demo/TASK-001']).returncode,0)
+
+    def test_launch_failure_after_cmux_resource_preserves_once_without_fallback(self):
+        self._approved_launch_fixture(); fake=Path(self.tmp.name)/'fake-post'; fake.mkdir()
+        (fake/'codex').write_text('#!/bin/sh\nexit 0\n'); (fake/'codex').chmod(0o755)
+        (fake/'tmux').write_text('#!/bin/sh\nprintf called >> "$CMUX_LOG"\nexit 88\n'); (fake/'tmux').chmod(0o755)
+        (fake/'cmux').write_text("""#!/usr/bin/env python3
+import json,os,sys
+a=sys.argv[1:]; open(os.environ['CMUX_LOG'],'a').write(' '.join(a)+'\\n')
+state=os.environ['CMUX_STATE']
+if 'list-workspaces' in a: print('')
+elif 'new-workspace' in a:
+ json.dump({'title':a[a.index('--name')+1],'marker':a[a.index('--description')+1]},open(state,'w'))
+elif 'tree' in a:
+ d=json.load(open(state)); print(json.dumps({'windows':[{'workspaces':[{'id':'11111111-1111-1111-1111-111111111111','title':d['title'],'description':d['marker'],'panes':[]}]}]}))
+elif 'set-status' in a: raise SystemExit(23)
+"""); (fake/'cmux').chmod(0o755)
+        log=fake/'calls.log'; result=self._cmux_launch(fake,fake/'state.json',log)
+        self.assertNotEqual(result.returncode,0)
+        fleet=self.repo/'.planning/sdd-composy/fleet/demo'; member_file=fleet/'members/TASK-001.json'
+        member=json.loads(member_file.read_text()); work=Path(member['worktree_path']); handle=fleet/'task-001.ui.json'
+        self.assertTrue(work.is_dir()); self.assertTrue(handle.is_file())
+        published=json.loads(handle.read_text())
+        self.assertEqual(published['workspace_id'],'11111111-1111-1111-1111-111111111111')
+        self.assertEqual(published['fleet_id'],member['owner']['fleet_id'])
+        self.assertEqual(published['member_id'],member['owner']['member_id'])
+        loops=list((self.repo/'.planning/sdd-composy/loops').glob('*.json')); self.assertEqual(len(loops),1)
+        self.assertEqual(member['interaction']['loop']['id'],json.loads(loops[0].read_text())['id'])
+        calls=log.read_text(); self.assertEqual(calls.count('new-workspace'),1); self.assertNotIn('called',calls)
+        self.assertIn('interactive-run.sh',calls); self.assertNotIn('/run.sh task-001',calls)
+
+    def test_launch_tmux_publishes_exact_owners_and_keeps_runner_as_first_command_argv(self):
+        self._approved_launch_fixture(); fake=Path(self.tmp.name)/'fake-tmux-launch'; fake.mkdir(); log=fake/'calls.log'
+        (fake/'codex').write_text('#!/bin/sh\nexit 0\n'); (fake/'codex').chmod(0o755)
+        (fake/'tmux').write_text("""#!/bin/sh
+printf '%s\n' "$*" >> "$TMUX_LOG"
+case "$*" in
+ *has-session*) exit 1;;
+ *new-session*) printf 'sdd-composy-acceptance-task-001|%%19\n';;
+esac
+exit 0
+"""); (fake/'tmux').chmod(0o755)
+        result=subprocess.run(
+            [str(LAUNCH),'--runtime','codex','--ui','tmux','--root',str(self.repo),
+             '--fleet-id','acceptance','--base-branch',self.base,'--task',str(self.contract)],
+            capture_output=True,text=True,env={**os.environ,'PATH':str(fake)+':/usr/bin:/bin','TMUX_LOG':str(log)})
+        self.assertEqual(result.returncode,0,result.stderr)
+        handle=self.repo/'.planning/sdd-composy/fleet/acceptance/task-001.ui.json'
+        member=json.loads((self.repo/'.planning/sdd-composy/fleet/acceptance/members/TASK-001.json').read_text())
+        published=json.loads(handle.read_text())
+        self.assertEqual(published['fleet_id'],member['owner']['fleet_id'])
+        self.assertEqual(published['member_id'],member['owner']['member_id'])
+        creation=next(line for line in log.read_text().splitlines() if 'new-session' in line)
+        command=creation.split(' -- ',1)[1].split()
+        self.assertTrue(command[0].endswith('/interactive-run.sh'),creation)
+        self.assertTrue(command[1].endswith('/members/TASK-001.json'),creation)
+
+    def test_interactive_prompt_delivers_exact_protected_content_boundary_to_every_adapter(self):
+        source = INTERACTIVE_RUN.read_text()
+        generator = source.split("<<'PY'\n", 2)[2].split("\nPY\nstate_action running", 1)[0]
+        marker = "SHOULD-NOT-ENTER-PROVIDER-PROMPT"
+        preflight = json.dumps({
+            "fleet_id": "demo", "member_id": "TASK-001", "task_id": "TASK-001",
+            "loop_id": "loop-task-001", "runtime": "codex", "protected_content": marker,
+        })
+        prompt = subprocess.check_output(
+            ["python3", "-c", generator, preflight, "/safe/worktree"], text=True)
+        expected = (
+            "Protected-content boundary: Do not discover, search for, locate, open, read, print, "
+            "copy, or inspect runtime.env, .env, any .env* file, credentials, tokens, secrets, "
+            "private keys, certificates, or protected environment files."
+        )
+        self.assertIn(expected, prompt)
+        self.assertIn(
+            "Before approval, read only the already-sanitized named fleet member, task contract, "
+            "and LOOP context identified above.",
+            prompt,
+        )
+        self.assertIn(
+            "If protected content appears necessary, stop and request human direction without accessing it.",
+            prompt,
+        )
+        self.assertNotIn(marker, prompt)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            prompt_file = Path(tmp) / "prompt"; prompt_file.write_text(prompt)
+            for runtime in ("codex", "hermes", "claude"):
+                with self.subTest(runtime=runtime):
+                    adapter = ROOT / f"plugins/sdd-composy/scripts/fleet/engine-{runtime}.sh"
+                    command = subprocess.check_output([
+                        "bash", "-c",
+                        'source "$1"; sdd_engine_' + runtime +
+                        '_interactive_command "$2" "$3" "$4"; printf "%s\\n" "${SDD_ENGINE_COMMAND[@]}"',
+                        "", str(adapter), "/safe/worktree", str(prompt_file), "/safe/plugin",
+                    ], text=True)
+                    if runtime == "hermes":
+                        self.assertIn(str(prompt_file), command.splitlines())
+                    else:
+                        self.assertIn(prompt.rstrip("\n"), command)
+
+    def test_interactive_prompt_requires_explicit_native_loop_approval_before_every_mutation(self):
+        source = INTERACTIVE_RUN.read_text()
+        generator = source.split("<<'PY'\n", 2)[2].split("\nPY\nstate_action running", 1)[0]
+        marker = "SENSITIVE-CONTENT-MUST-NOT-BE-INTERPOLATED"
+        preflight = json.dumps({
+            "fleet_id": "demo", "member_id": "TASK-001", "task_id": "TASK-001",
+            "loop_id": "loop-task-001", "runtime": "codex", "secret": marker,
+        })
+        prompt = subprocess.check_output(
+            ["python3", "-c", generator, preflight, "/safe/worktree"], text=True)
+
+        required = (
+            "The contract/hash authorization, runtime:UI authorization, directory trust, hook trust, "
+            "and any fleet launch or resume command are not lifecycle approval.",
+            "Before any mutation, write, edit, test, or lifecycle continuation, "
+            "explicitly ask the human operator for native LOOP approval and wait for their answer.",
+            "Never invoke, pass, simulate, or infer --human-approved yourself.",
+            "If explicit native LOOP approval is unavailable or times out, stop with zero mutation.",
+        )
+        for boundary in required:
+            self.assertIn(boundary, prompt)
+        self.assertNotIn(marker, prompt)
+        self.assertIn(
+            "Before approval, read only the already-sanitized named fleet member, task contract, "
+            "and LOOP context identified above.",
+            prompt,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            prompt_file = Path(tmp) / "prompt"; prompt_file.write_text(prompt)
+            for runtime in ("codex", "hermes", "claude"):
+                with self.subTest(runtime=runtime):
+                    adapter = ROOT / f"plugins/sdd-composy/scripts/fleet/engine-{runtime}.sh"
+                    raw = subprocess.check_output([
+                        "bash", "-c",
+                        'source "$1"; sdd_engine_' + runtime +
+                        '_interactive_command "$2" "$3" "$4"; printf "%s\\0" "${SDD_ENGINE_COMMAND[@]}"',
+                        "", str(adapter), "/safe/worktree", str(prompt_file), "/safe/plugin",
+                    ])
+                    argv = [value.decode() for value in raw.split(b"\0") if value]
+                    if runtime == "hermes":
+                        self.assertEqual(
+                            argv,
+                            ["hermes", "chat", "--query-file", str(prompt_file), "--cli", "--in", "/safe/worktree"],
+                        )
+                    else:
+                        self.assertEqual(argv[-1], prompt.rstrip("\n"))
+                        for boundary in required:
+                            self.assertIn(boundary, argv[-1])
+                    self.assertNotIn("--human-approved", argv)
 
     def test_symlinked_state_ancestor_is_rejected_without_external_write(self):
         self.task(); outside=Path(self.tmp.name+"-outside"); outside.mkdir(); (self.repo/".planning").symlink_to(outside,target_is_directory=True)
@@ -106,14 +436,16 @@ class FleetLaunchTest(unittest.TestCase):
         self.assertEqual(result.returncode,0,result.stderr)
         state=self.repo/'.planning/sdd-composy/fleet/demo'; member=json.loads((state/'members/TASK-001.json').read_text()); work=Path(member['worktree'])
         deadline=time.monotonic()+10
-        while time.monotonic()<deadline:
-            status=work/'.planning/sdd-composy/fleet-status.json'
-            if status.exists() and json.loads(status.read_text()).get('status')=='NEEDS_HUMAN': break
-            time.sleep(.05)
+        while time.monotonic()<deadline and not called.exists(): time.sleep(.05)
         self.assertTrue(called.exists())
-        args=called.read_text(); self.assertIn('TASK-001',args); self.assertIn(str(self.contract),args)
+        args=called.read_text(); self.assertIn('TASK-001',args)
         self.assertNotIn('--dangerously-bypass',args)
-        self.assertEqual(json.loads(status.read_text())['status'],'NEEDS_HUMAN')
+        self.assertEqual(member['interaction']['loop']['task_id'],'TASK-001')
+        loop=self.repo/'.planning/sdd-composy/loops'/(member['interaction']['loop']['id']+'.json')
+        self.assertTrue(loop.is_file())
+        deadline=time.monotonic()+10
+        while time.monotonic()<deadline and json.loads(loop.read_text())['status']=='running': time.sleep(.05)
+        self.assertEqual(json.loads(loop.read_text())['status'],'environment_failure')
     def test_eligibility_and_required_contract_fields(self):
         for key,val in (("state","pending"),("acceptance_criteria",[]),("verification_commands",[]),("dependencies_complete",False)):
             self.task(**{key:val}); self.assertNotEqual(self.invoke(self.contract).returncode,0)
@@ -327,17 +659,96 @@ class FleetLaunchTest(unittest.TestCase):
             self.assertEqual(subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_teardown "$1"',"",str(handle)]).returncode,0)
             self.assertFalse(handle.exists())
 
-    def test_ui_tmux_collision_and_missing_tool_are_explicit(self):
+    def test_ui_tmux_creates_once_records_real_pane_and_inspects_exit(self):
         ui=ROOT/"plugins/sdd-composy/scripts/fleet/ui-tmux.sh"
         with tempfile.TemporaryDirectory() as tmp:
             tmp=Path(tmp); fake=tmp/"tmux"; log=tmp/"log"
-            fake.write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$UI_LOG\"\ncase $1 in has-session) exit ${UI_COLLISION:-1};; esac\n") ; fake.chmod(0o755)
-            env={**os.environ,"PATH":str(tmp)+":"+os.environ["PATH"],"UI_LOG":str(log)}
+            fake.write_text("""#!/bin/sh
+printf '%s\n' "$*" >> "$UI_LOG"
+for arg in "$@"; do [ "${prev:-}" = @sdd-composy-owner ] && case "$arg" in sdd-composy-fleet:*) printf '%s' "$arg" > "$UI_STATE";; esac; prev=$arg; done
+case "$*" in
+ *has-session*) if [ -n "${UI_COLLISION+x}" ]; then exit "$UI_COLLISION"; else test -f "$UI_STATE"; fi;;
+ *new-session*) printf 'fleet-demo|%%17\n';;
+ *show-options*) cat "$UI_STATE";;
+ *set-option*) exit 0;;
+ *display-message*) printf 'sdd-composy-fleet|demo|TASK-001|1|23\n';;
+ *kill-server*) exit 0;;
+esac
+""") ; fake.chmod(0o755)
+            env={**os.environ,"PATH":str(tmp)+":"+os.environ["PATH"],"UI_LOG":str(log),"UI_STATE":str(tmp/"owner")}
             h=tmp/"h.json"
-            r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_start "$1" "$2" "$3" "$4"',"",str(h),str(tmp),"fleet-demo","printf hi"],capture_output=True,text=True,env=env)
-            self.assertEqual(r.returncode,0,r.stderr); self.assertIn("new-session",log.read_text()); self.assertEqual(json.loads(h.read_text())["driver"],"tmux")
-            r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_start "$1" "$2" "$3" "$4"',"",str(tmp/"x.json"),str(tmp),"fleet-demo","printf hi"],capture_output=True,text=True,env={**env,"UI_COLLISION":"0"})
+            r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_start "$1" "$2" "$3" "$4" "$5" "$6"',"",str(h),str(tmp),"demo","TASK-001","printf","a b"],capture_output=True,text=True,env=env)
+            self.assertEqual(r.returncode,0,r.stderr)
+            calls=log.read_text().splitlines(); creates=[x for x in calls if "new-session " in x]
+            self.assertEqual(len(creates),1); self.assertIn("-- printf a b",creates[0])
+            d=json.loads(h.read_text()); self.assertEqual(d["pane_id"],"%17"); self.assertEqual(d["fleet_id"],"demo"); self.assertEqual(d["member_id"],"TASK-001")
+            inspected=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_inspect "$1"',"",str(h)],capture_output=True,text=True,env=env)
+            self.assertEqual(inspected.returncode,0,inspected.stderr); self.assertEqual(json.loads(inspected.stdout)["exit_status"],23)
+            r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_start "$1" "$2" "$3" "$4" "$5"',"",str(tmp/"x.json"),str(tmp),"demo","TASK-001","true"],capture_output=True,text=True,env={**env,"UI_COLLISION":"0"})
             self.assertNotEqual(r.returncode,0); self.assertIn("collision",r.stderr)
+
+    @unittest.skipUnless(shutil.which("tmux"), "tmux is unavailable")
+    def test_tmux_immediate_exit_is_preserved_without_race(self):
+        ui=ROOT/"plugins/sdd-composy/scripts/fleet/ui-tmux.sh"
+        with tempfile.TemporaryDirectory() as tmp:
+            h=Path(tmp)/"h.json"
+            r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_start "$1" "$2" demo TASK-FAST sh -c "exit 23"; fleet_ui_tmux_inspect "$1"',"",str(h),tmp],capture_output=True,text=True)
+            self.assertEqual(r.returncode,0,r.stderr)
+            self.assertEqual(json.loads(r.stdout)["exit_status"],23)
+            self.assertEqual(subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_teardown "$1"',"",str(h)],capture_output=True,text=True).returncode,0)
+            self.assertFalse(h.exists())
+
+    def test_ui_creation_failure_after_resource_preserves_recovery_handle(self):
+        cmux_ui=ROOT/"plugins/sdd-composy/scripts/fleet/ui-cmux.sh"; tmux_ui=ROOT/"plugins/sdd-composy/scripts/fleet/ui-tmux.sh"
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp=Path(tmp); log=tmp/"log"
+            cmux=tmp/"cmux"; cmux.write_text("""#!/usr/bin/env python3
+import json,os,sys
+a=sys.argv[1:]; open(os.environ['UI_LOG'],'a').write(' '.join(a)+'\\n')
+if 'new-workspace' in a: open(os.environ['CMUX_STATE'],'w').write(json.dumps({'title':a[a.index('--name')+1],'marker':a[a.index('--description')+1]})); print('OK workspace:10')
+elif 'tree' in a and os.path.exists(os.environ['CMUX_STATE']):
+ state=json.load(open(os.environ['CMUX_STATE'])); print(json.dumps({'windows':[{'workspaces':[{'id':'11111111-1111-1111-1111-111111111111','title':state['title'],'description':state['marker'],'panes':[]}]}]}))
+elif 'set-status' in a: raise SystemExit(9)
+"""); cmux.chmod(0o755)
+            ch=tmp/"cmux.json"; env={**os.environ,"SDD_CMUX_BIN":str(cmux),"UI_LOG":str(log),"CMUX_STATE":str(tmp/"cmux-state")}
+            r=subprocess.run(["bash","-c",f'source "{cmux_ui}"; fleet_ui_cmux_start "$1" "$2" demo TASK-001 true',"",str(ch),str(tmp)],env=env,capture_output=True,text=True)
+            self.assertNotEqual(r.returncode,0); self.assertTrue(ch.exists()); self.assertEqual(json.loads(ch.read_text())["state"],"recovering")
+            self.assertEqual(subprocess.run(["bash","-c",f'source "{cmux_ui}"; fleet_ui_cmux_teardown "$1"',"",str(ch)],env=env,capture_output=True,text=True).returncode,0); self.assertFalse(ch.exists())
+            tmux=tmp/"tmux"; tmux.write_text("""#!/bin/sh
+printf '%s\n' "$*" >> "$UI_LOG"
+for arg in "$@"; do [ "${prev:-}" = @sdd-composy-owner ] && case "$arg" in sdd-composy-fleet:*) printf '%s' "$arg" > "$UI_STATE";; esac; prev=$arg; done
+case "$*" in *has-session*) test -f "$UI_STATE";; *new-session*) printf 'fleet-demo|%%17\n';; *show-options*) cat "$UI_STATE";; *'set-option -p'*) exit 9;; esac
+"""); tmux.chmod(0o755)
+            th=tmp/"tmux.json"; env={**os.environ,"PATH":str(tmp)+":/usr/bin:/bin","UI_LOG":str(log),"UI_STATE":str(tmp/"tmux-owner")}
+            r=subprocess.run(["bash","-c",f'source "{tmux_ui}"; fleet_ui_tmux_start "$1" "$2" demo TASK-001 true',"",str(th),str(tmp)],env=env,capture_output=True,text=True)
+            self.assertNotEqual(r.returncode,0); self.assertTrue(th.exists()); self.assertEqual(json.loads(th.read_text())["state"],"recovering")
+            self.assertEqual(subprocess.run(["bash","-c",f'source "{tmux_ui}"; fleet_ui_tmux_teardown "$1"',"",str(th)],env=env,capture_output=True,text=True).returncode,0); self.assertFalse(th.exists())
+
+    def test_cmux_forged_recovering_handle_cannot_close_foreign_workspace(self):
+        ui=ROOT/"plugins/sdd-composy/scripts/fleet/ui-cmux.sh"
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp=Path(tmp); fake=tmp/"cmux"; log=tmp/"log"
+            fake.write_text("""#!/usr/bin/env python3
+import json,os,sys
+a=sys.argv[1:]; open(os.environ['UI_LOG'],'a').write(' '.join(a)+'\\n')
+if 'list-workspaces' in a: print('11111111-1111-1111-1111-111111111111 claimed-title')
+elif 'tree' in a: print(json.dumps({'windows':[{'workspaces':[{'id':'11111111-1111-1111-1111-111111111111','title':'claimed-title','description':'foreign-owner','panes':[]}]}]}))
+"""); fake.chmod(0o755)
+            h=tmp/"h.json"; h.write_text(json.dumps({'driver':'cmux','state':'recovering','workspace_id':'11111111-1111-1111-1111-111111111111','surface_id':'-','fleet_id':'demo','member_id':'TASK-001','cwd':str(tmp),'title':'claimed-title','nonce':'claimed-nonce','ownership_marker':'sdd-composy-fleet:claimed-nonce:demo:TASK-001'}))
+            r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_cmux_teardown "$1"',"",str(h)],env={**os.environ,"SDD_CMUX_BIN":str(fake),"UI_LOG":str(log)},capture_output=True,text=True)
+            self.assertNotEqual(r.returncode,0); self.assertTrue(h.exists()); self.assertNotIn('close-workspace',log.read_text())
+
+    def test_tmux_forged_recovering_handle_cannot_kill_foreign_server(self):
+        ui=ROOT/"plugins/sdd-composy/scripts/fleet/ui-tmux.sh"
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp=Path(tmp); fake=tmp/"tmux"; log=tmp/"log"
+            fake.write_text("""#!/bin/sh
+printf '%s\n' "$*" >> "$UI_LOG"
+case "$*" in *show-options*) printf 'foreign-owner\n';; *has-session*) exit 0;; esac
+"""); fake.chmod(0o755)
+            h=tmp/"h.json"; h.write_text(json.dumps({'driver':'tmux','state':'recovering','socket_name':'foreign-socket','session_name':'foreign-session','pane_id':'','fleet_id':'demo','member_id':'TASK-001','cwd':str(tmp),'ownership_marker':'sdd-composy-fleet:claimed:demo:TASK-001'}))
+            r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_teardown "$1"',"",str(h)],env={**os.environ,"PATH":str(tmp)+":/usr/bin:/bin","UI_LOG":str(log)},capture_output=True,text=True)
+            self.assertNotEqual(r.returncode,0); self.assertTrue(h.exists()); self.assertNotIn('kill-server',log.read_text())
 
     def test_ui_selection_matrix_and_missing_tool_fallback(self):
         common=ROOT/"plugins/sdd-composy/scripts/fleet/common.sh"
@@ -352,7 +763,7 @@ class FleetLaunchTest(unittest.TestCase):
                 return subprocess.run(["bash","-c",f'source "{common}"; fleet_select_ui "$1"',"",requested],capture_output=True,text=True,env=env)
             self.assertEqual(select("headless").stdout.strip(),"headless")
             self.assertEqual(select("cmux",("cmux",)).stdout.strip(),"cmux")
-            self.assertEqual(select("cmux").stdout.strip(),"headless")
+            explicit=select("cmux"); self.assertNotEqual(explicit.returncode,0); self.assertIn("cmux unavailable",explicit.stderr)
             self.assertEqual(select("auto").stdout.strip(),"headless")
             self.assertNotEqual(select("tmux").returncode,0)
 
@@ -365,15 +776,20 @@ class FleetLaunchTest(unittest.TestCase):
             self.assertEqual(subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_teardown "$1"',"",str(h)]).returncode,0)
             self.assertFalse(h.exists()); self.assertNotEqual(subprocess.run(["kill","-0",str(pid)]).returncode,0)
 
-    def test_tmux_teardown_removes_session_and_handle(self):
+    def test_tmux_foreign_ownership_and_dead_pane_preserve_handle(self):
         ui=ROOT/"plugins/sdd-composy/scripts/fleet/ui-tmux.sh"
         with tempfile.TemporaryDirectory() as tmp:
-            tmp=Path(tmp); fake=tmp/"tmux"; state=tmp/"session"; log=tmp/"log"
-            fake.write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$UI_LOG\"\ncase $1 in has-session) test -f \"$UI_STATE\";; new-session) touch \"$UI_STATE\";; kill-session) rm -f \"$UI_STATE\";; esac\n") ; fake.chmod(0o755)
-            env={**os.environ,"PATH":str(tmp)+":/usr/bin:/bin","UI_LOG":str(log),"UI_STATE":str(state)}; h=tmp/"h.json"
-            self.assertEqual(subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_start "$1" "$2" "$3" "$4"',"",str(h),str(tmp),"fleet-demo","printf hi"],env=env,capture_output=True,text=True).returncode,0)
-            self.assertEqual(subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_teardown "$1"',"",str(h)],env=env,capture_output=True,text=True).returncode,0)
-            self.assertFalse(state.exists()); self.assertFalse(h.exists()); self.assertIn("kill-session",log.read_text())
+            tmp=Path(tmp); fake=tmp/"tmux"; log=tmp/"log"
+            fake.write_text("""#!/bin/sh
+printf '%s\n' "$*" >> "$UI_LOG"
+case "$*" in *show-options*) printf 'expected-marker\n';; *has-session*) exit 0;; *display-message*) [ "${UI_DEAD:-0}" = 1 ] && exit 1; printf 'foreign|demo|TASK-001|0|\n';; esac
+"""); fake.chmod(0o755)
+            env={**os.environ,"PATH":str(tmp)+":/usr/bin:/bin","UI_LOG":str(log)}; h=tmp/"h.json"
+            h.write_text(json.dumps({"driver":"tmux","state":"active","socket_name":"sdd-composy-owned","session_name":"fleet-demo","pane_id":"%17","fleet_id":"demo","member_id":"TASK-001","cwd":str(tmp),"ownership_marker":"expected-marker"}))
+            for extra in ({},{"UI_DEAD":"1"}):
+                r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_tmux_teardown "$1"',"",str(h)],env={**env,**extra},capture_output=True,text=True)
+                self.assertNotEqual(r.returncode,0); self.assertTrue(h.exists())
+            self.assertNotIn("kill-server",log.read_text())
 
     def test_launch_persists_selected_ui_without_changing_member_lifecycle(self):
         self.task(); env={**os.environ,"PATH":"/usr/bin:/bin","SDD_FLEET_PORT_START":"43400","SDD_FLEET_PORT_END":"43400"}
@@ -390,22 +806,49 @@ class FleetLaunchTest(unittest.TestCase):
 import json, os, sys
 log=os.environ['CMUX_LOG']; a=sys.argv[1:]
 with open(log,'a') as f: f.write(json.dumps(a)+'\\n')
-if a[:1]==['new-workspace']: print(json.dumps({'id':'ws-1'}))
-elif a[:1]==['new-split']: print(json.dumps({'surface_id':'surf-1'}))
-elif a[:1]==['list-workspaces']:
- print(json.dumps({'workspaces':[{'id':'ws-1','owner':'sdd-composy','sdd_composy_fleet':'demo'}]}))
-elif a[:1] in (['set-workspace-meta'],['set-status'],['flash'],['close-surface']): print('{}')
-else: print('{}')
+if 'new-workspace' in a:
+ title=a[a.index('--name')+1]
+ marker=a[a.index('--description')+1]
+ open(os.environ['CMUX_STATE'],'w').write(json.dumps({'title':title,'marker':marker}))
+ print('OK workspace:10')
+elif 'list-pane-surfaces' in a: print('* 22222222-2222-2222-2222-222222222222 terminal')
+elif 'tree' in a:
+ state=json.load(open(os.environ['CMUX_STATE']))
+ print(json.dumps({'windows':[{'workspaces':[{'id':'11111111-1111-1111-1111-111111111111','title':state['title'],'description':state['marker'],'panes':[{'surfaces':[{'id':'22222222-2222-2222-2222-222222222222','type':'terminal'}]}]}]}]}))
+elif 'list-workspaces' in a and os.path.exists(os.environ['CMUX_STATE']): print('* 11111111-1111-1111-1111-111111111111 '+json.load(open(os.environ['CMUX_STATE']))['title'])
+elif 'list-status' in a: print('sdd-composy-owner=sdd-composy-fleet\\nsdd-composy-fleet=demo\\nsdd-composy-member=TASK-001')
+else: print('ok')
 """); fake.chmod(0o755)
-            env={**os.environ,"SDD_CMUX_BIN":str(fake),"CMUX_LOG":str(log)}; h=td/"handle.json"
-            r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_cmux_start "$1" "$2" demo echo hi',"",str(h),str(td)],env=env,capture_output=True,text=True)
-            self.assertEqual(r.returncode,0,r.stderr); d=json.loads(h.read_text()); self.assertEqual(d["workspace_id"],"ws-1"); self.assertEqual(d["surface_id"],"surf-1")
+            env={**os.environ,"SDD_CMUX_BIN":str(fake),"CMUX_LOG":str(log),"CMUX_STATE":str(td/"state")}; h=td/"handle.json"
+            r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_cmux_start "$1" "$2" demo TASK-001 echo "a b"',"",str(h),str(td)],env=env,capture_output=True,text=True)
+            self.assertEqual(r.returncode,0,r.stderr); d=json.loads(h.read_text()); self.assertEqual(d["workspace_id"],"11111111-1111-1111-1111-111111111111"); self.assertEqual(d["surface_id"],"22222222-2222-2222-2222-222222222222")
+            create=[x for x in map(json.loads,log.read_text().splitlines()) if 'new-workspace' in x]
+            self.assertEqual(len(create),1); self.assertIn('--command',create[0]); self.assertFalse(any(x in ('send','send-key') for row in map(json.loads,log.read_text().splitlines()) for x in row))
+            inspected=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_cmux_inspect "$1"',"",str(h)],env=env,capture_output=True,text=True)
+            self.assertEqual(inspected.returncode,0,inspected.stderr); self.assertTrue(json.loads(inspected.stdout)["alive"])
             self.assertEqual(subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_cmux_status "$1" ok green; fleet_ui_cmux_flash "$1"; fleet_ui_cmux_teardown "$1"',"",str(h)],env=env,capture_output=True,text=True).returncode,0)
-            calls=''.join(log.read_text().splitlines()); self.assertIn('set-workspace-meta',calls); self.assertIn('set-status',calls); self.assertIn('flash',calls); self.assertIn('close-surface',calls); self.assertFalse(h.exists())
+            calls=''.join(log.read_text().splitlines()); self.assertIn('set-status',calls); self.assertIn('trigger-flash',calls); self.assertIn('close-workspace',calls); self.assertFalse(h.exists())
             h.write_text(json.dumps({'driver':'cmux','workspace_id':'foreign','surface_id':'s'}))
             self.assertNotEqual(subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_cmux_flash "$1"',"",str(h)],env=env,capture_output=True,text=True).returncode,0)
-            before=log.read_text(); self.assertNotEqual(subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_cmux_teardown "$1"',"",str(h)],env=env,capture_output=True,text=True).returncode,0); after=log.read_text(); self.assertEqual([x for x in after.splitlines() if 'close-surface' in x],[x for x in before.splitlines() if 'close-surface' in x])
+            before=log.read_text(); self.assertNotEqual(subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_cmux_teardown "$1"',"",str(h)],env=env,capture_output=True,text=True).returncode,0); after=log.read_text(); self.assertEqual([x for x in after.splitlines() if 'close-workspace' in x],[x for x in before.splitlines() if 'close-workspace' in x])
             self.assertEqual(subprocess.run(["bash","-c",f'source "{common}"; fleet_select_ui cmux',""],env={**env,"PATH":"/usr/bin:/bin"},capture_output=True,text=True).stdout.strip(),"cmux")
+
+    def test_cmux_multiple_surfaces_never_selects_first_by_position(self):
+        ui=ROOT/"plugins/sdd-composy/scripts/fleet/ui-cmux.sh"
+        with tempfile.TemporaryDirectory() as td:
+            td=Path(td); fake=td/"cmux"
+            fake.write_text("""#!/usr/bin/env python3
+import json,os,sys
+a=sys.argv[1:]
+if 'list-workspaces' in a: print('')
+elif 'new-workspace' in a:
+ open(os.environ['CMUX_STATE'],'w').write(json.dumps({'title':a[a.index('--name')+1],'marker':a[a.index('--description')+1]})); print('OK workspace:10')
+elif 'set-status' in a: print('ok')
+elif 'tree' in a:
+ state=json.load(open(os.environ['CMUX_STATE'])); print(json.dumps({'windows':[{'workspaces':[{'id':'11111111-1111-1111-1111-111111111111','title':state['title'],'description':state['marker'],'panes':[{'surfaces':[{'id':'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa','type':'terminal'},{'id':'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb','type':'terminal'}]}]}]}]}))
+"""); fake.chmod(0o755)
+            h=td/"h.json"; r=subprocess.run(["bash","-c",f'source "{ui}"; fleet_ui_cmux_start "$1" "$2" demo TASK-001 true',"",str(h),str(td)],env={**os.environ,"SDD_CMUX_BIN":str(fake),"CMUX_STATE":str(td/"state")},capture_output=True,text=True)
+            self.assertNotEqual(r.returncode,0); self.assertTrue(h.exists()); self.assertNotIn(json.loads(h.read_text()).get("surface_id"),("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"))
 
     def test_cmux_stale_handle_and_override_fallback(self):
         ui=ROOT/"plugins/sdd-composy/scripts/fleet/ui-cmux.sh"; common=ROOT/"plugins/sdd-composy/scripts/fleet/common.sh"

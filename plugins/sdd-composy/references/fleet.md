@@ -12,6 +12,25 @@ contracts, then starts the requested provider through the selected `cmux`, `tmux
 `headless` adapter. UI handles are presentation only and never own lifecycle truth. The fleet
 never merges automatically. `.env.fleet` is never read.
 
+## Interactive boundary and status
+
+Interactivity belongs only to fleet. There is exactly one task and one isolated worktree per
+member, and exactly one existing bound LOOP per interactive member. An isolated LOOP remains
+non-interactive outside fleet; neither a cmux/tmux pane nor a headless process creates another
+LOOP or changes its identity.
+
+`dashboard.sh` is read-only. For an interactive member it projects runtime, UI, member ID,
+task ID, bound LOOP ID, the complete recorded handle including unknown fields, interaction state,
+timestamps, and `next_action` directly from authoritative member JSON. Missing optional fields
+remain absent and displayed values are sanitized recursively. Status does not call UI status,
+flash, or other presentation mutations, even with `--handle`. Terminal capture is diagnostic only
+and never satisfies a witness, evidence, review, verification, or approval gate.
+
+Launch may create only the selected presentation resource for the already-bound LOOP. Status
+may observe it without mutation. Finalization remains governed by recorded JSON and evidence;
+the fleet never merges automatically, and merge and completion require human approval. A pane,
+terminal capture, or UI state is never completion evidence.
+
 ## Record authority and migration
 
 Fleet metadata lives under `.planning/sdd-composy/fleet/<fleet-id>/`. Schema v2 member records
