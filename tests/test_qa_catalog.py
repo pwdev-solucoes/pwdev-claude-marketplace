@@ -134,30 +134,41 @@ def forbidden_documentation_claims(text):
     """Return explicit contradictions to the README safety contract."""
     patterns = {
         "automatic installation": (
-            r"\b(?:plugin\s+)?(?<!not )installs?\s+automatically\b",
-            r"\b(?:plugin\s+)?(?<!não )instala\s+automaticamente\b",
+            r"\b(?:the\s+)?plugin\s+(?!(?:never|does\s+not|cannot|must\s+not)\b)"
+            r"installs?\s+automatically\b",
+            r"\b(?:o\s+)?plugin\s+(?!(?:nunca|não)\b)instala\s+automaticamente\b",
         ),
         "verified without real smoke": (
-            r"\bverified\b[^.\n]{0,100}\bwithout\b[^.\n]{0,60}\b(?:real\s+)?smoke\b",
-            r"\bverificad[oa]\b[^.\n]{0,100}\bsem\b[^.\n]{0,60}\bsmoke\b",
+            r"\bruntime\s+(?!(?:cannot|must\s+not|is\s+not|never)\b)"
+            r"(?:is\s+)?verified\b[^.\n]{0,80}\bwithout\b[^.\n]{0,40}\b(?:real\s+)?smoke\b",
+            r"\bruntime\s+(?!(?:não|nunca)\b)(?:está\s+|é\s+)?verificad[oa]\b"
+            r"[^.\n]{0,80}\bsem\b[^.\n]{0,40}\bsmoke\b",
         ),
         "export executes tests or evidence commands": (
-            r"\bexport(?:ation)?\b[^.\n]{0,100}\b(?:runs?|reruns?|executes?)\b[^.\n]{0,80}\b(?:tests?|commands?)\b",
-            r"\bexport(?:ação|ar|a)\b[^.\n]{0,100}\b(?:roda|executa|reexecuta)\b[^.\n]{0,80}\b(?:testes?|comandos?)\b",
+            r"\bexport(?:ation)?\s+(?!(?:never|does\s+not|cannot|must\s+not)\b)"
+            r"(?:runs?|reruns?|executes?)\b[^.\n]{0,80}\b(?:tests?|commands?)\b",
+            r"\b(?:a\s+)?exportação\s+(?!(?:nunca|não)\b)"
+            r"(?:roda|executa|reexecuta)\b[^.\n]{0,80}\b(?:testes?|comandos?)\b",
         ),
         "verification dependencies used for runtime export": (
-            r"\b(?:pypdf|pdfplumber)\b[^.\n]{0,120}\bruntime\s+export\s+dependenc(?:y|ies)\b",
-            r"\b(?:pypdf|pdfplumber)\b[^.\n]{0,120}\bdependências?\s+de\s+exportação\s+em\s+runtime\b",
-            r"\breportlab\b[^.\n]{0,80}\bdevelopment[- ]only\b",
-            r"\breportlab\b[^.\n]{0,80}\bsó\s+de\s+desenvolvimento\b",
+            r"\b(?:pypdf|pdfplumber)\b[^.\n]{0,80}\b(?:are|is)\s+"
+            r"(?!not\b)runtime\s+export\s+dependenc(?:y|ies)\b",
+            r"\b(?:pypdf|pdfplumber)\b[^.\n]{0,80}(?<!não\s)\bsão\s+"
+            r"dependências?\s+de\s+exportação\s+em\s+runtime\b",
+            r"\breportlab\b[^.\n]{0,40}\bis\s+(?!not\b)development[- ]only\b",
+            r"\breportlab\b[^.\n]{0,40}(?<!não\s)\bé\s+só\s+de\s+desenvolvimento\b",
         ),
         "universal sanitization guarantee": (
-            r"\bsanitization\b[^.\n]{0,100}\b(?<!cannot )guarantees?\b[^.\n]{0,80}\buniversal\b",
-            r"\bsanitização\b[^.\n]{0,100}\bgarante\b[^.\n]{0,80}\buniversal\b",
+            r"\bsanitization\s+(?!(?:does\s+not|cannot|never)\b)guarantees?\b"
+            r"[^.\n]{0,80}\buniversal\b",
+            r"\b(?:a\s+)?sanitização\s+(?!(?:não|nunca)\b)garante\b"
+            r"[^.\n]{0,80}\buniversal\b",
         ),
         "no-install probe downloads or installs": (
-            r"\bnpx\s+--no-install\s+playwright\s+--version\b[^.\n]{0,120}\b(?:downloads?|installs?)\b",
-            r"\bnpx\s+--no-install\s+playwright\s+--version\b[^.\n]{0,120}\b(?:baixa|instala)\b",
+            r"\bnpx\s+--no-install\s+playwright\s+--version\s+"
+            r"(?!(?:cannot|does\s+not|never)\b)(?:downloads?|installs?)\b",
+            r"\bnpx\s+--no-install\s+playwright\s+--version\s+"
+            r"(?!(?:não|nunca)\b)(?:baixa|instala)\b",
         ),
     }
     lowered = text.lower()
@@ -322,10 +333,24 @@ class TestQaCatalog(unittest.TestCase):
                     f"contradictory claim survived in {readme.name}: {mutation}",
                 )
 
+    def assert_bilingual_control_is_accepted(self, english, portuguese):
+        for readme, control in zip(READMES, (english, portuguese)):
+            with self.subTest(readme=readme.name):
+                controlled = readme.read_text(encoding="utf-8") + "\n\n" + control + "\n"
+                self.assertEqual(
+                    forbidden_documentation_claims(controlled),
+                    [],
+                    f"valid prohibition was rejected in {readme.name}: {control}",
+                )
+
     def test_rejects_automatic_installation_claims_in_both_languages(self):
         self.assert_bilingual_mutation_is_rejected(
             "The plugin installs automatically and changes personal configuration.",
             "O plugin instala automaticamente e altera configuração pessoal.",
+        )
+        self.assert_bilingual_control_is_accepted(
+            "The plugin never installs automatically or changes personal configuration.",
+            "O plugin nunca instala automaticamente nem altera configuração pessoal.",
         )
 
     def test_rejects_verified_runtime_without_real_smoke_in_both_languages(self):
@@ -333,11 +358,19 @@ class TestQaCatalog(unittest.TestCase):
             "The runtime is verified without a real smoke.",
             "O runtime está verificado sem smoke real.",
         )
+        self.assert_bilingual_control_is_accepted(
+            "The runtime cannot be verified without a real smoke.",
+            "O runtime não pode ser verificado sem smoke real.",
+        )
 
     def test_rejects_export_that_reruns_tests_in_both_languages(self):
         self.assert_bilingual_mutation_is_rejected(
             "Export reruns the stored tests and evidence commands.",
             "A exportação reexecuta os testes e comandos de evidência armazenados.",
+        )
+        self.assert_bilingual_control_is_accepted(
+            "Export never runs tests or stored evidence commands.",
+            "A exportação nunca executa testes nem comandos de evidência armazenados.",
         )
 
     def test_rejects_inverted_runtime_and_development_dependencies(self):
@@ -347,11 +380,21 @@ class TestQaCatalog(unittest.TestCase):
             "pypdf e pdfplumber são dependências de exportação em runtime; "
             "ReportLab é só de desenvolvimento.",
         )
+        self.assert_bilingual_control_is_accepted(
+            "pypdf and pdfplumber are not runtime export dependencies; "
+            "ReportLab is not development-only.",
+            "pypdf e pdfplumber não são dependências de exportação em runtime; "
+            "ReportLab não é só de desenvolvimento.",
+        )
 
     def test_rejects_universal_sanitization_claims_in_both_languages(self):
         self.assert_bilingual_mutation_is_rejected(
             "Sanitization guarantees universal detection of every secret and personal datum.",
             "A sanitização garante detecção universal de todo segredo e dado pessoal.",
+        )
+        self.assert_bilingual_control_is_accepted(
+            "Sanitization does not guarantee universal detection of secrets or personal data.",
+            "A sanitização não garante detecção universal de segredos ou dados pessoais.",
         )
 
     def test_rejects_no_install_probe_that_downloads_playwright(self):
@@ -360,6 +403,10 @@ class TestQaCatalog(unittest.TestCase):
             "when missing.",
             "npx --no-install playwright --version baixa e instala Playwright quando "
             "ausente.",
+        )
+        self.assert_bilingual_control_is_accepted(
+            "npx --no-install playwright --version cannot download or install Playwright.",
+            "npx --no-install playwright --version não baixa nem instala Playwright.",
         )
 
 

@@ -100,3 +100,30 @@ or unknown fields and values such as `description` and `strict` were outside the
   ran, all passed.
 - Both marketplace files passed `python3 -m json.tool`; `git diff --check` passed. No README or
   catalog production content changed in this correction round.
+
+## Fix round 2
+
+### Root cause
+
+The first contradiction scanner matched a positive predicate anywhere inside a bounded lexical
+window. Negators such as `never`, `cannot`, `not`, `nunca`, and `não pode` were inside that window
+but were not attached to the predicate they governed. Consequently, a stronger valid prohibition
+contained the same positive tokens as a harmful permission and was classified identically.
+
+### Correction and evidence
+
+- Paired every harmful mutation with an explicit valid negative control for all six rules in both
+  English and Portuguese: 12 harmful cases and 12 valid controls.
+- Replaced broad lexical windows with subject → polarity → predicate patterns. The scanner now
+  evaluates the negator immediately before the relevant installation, verification, execution,
+  dependency, guarantee, or download predicate.
+- Kept all harmful probes active; none was weakened or removed. Existing valid READMEs remain an
+  additional control and no production documentation or catalog content changed.
+- RED: `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v tests.test_qa_catalog` — 11 tests ran with
+  12 assertion failures, one for every valid EN/PT-BR control falsely classified by the old
+  scanner. All 12 harmful mutations continued to be rejected.
+- GREEN: `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v tests.test_qa_catalog` — 11 tests ran,
+  all passed, covering both polarities for all 12 bilingual rules.
+- Packaged QA suite: Python 3.12 `unittest discover -s tests -p 'test_qa_*.py' -q` — 191 tests
+  ran, all passed.
+- Both marketplace files passed `python3 -m json.tool`; `git diff --check` passed.
