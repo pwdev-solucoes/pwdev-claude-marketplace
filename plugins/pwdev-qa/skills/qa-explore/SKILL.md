@@ -30,9 +30,13 @@ covered. Exploration does not by itself prove complete acceptance coverage. Read
 2. Validate a bounded charter: name the mission, in-scope and out-of-scope surfaces, risks,
    questions, time box, stop conditions, data, environment, and authorized effects. Missing or
    ambiguous boundaries block the affected exploration.
-3. Confirm tools and prerequisites from observed probes. Use only isolated task-owned sessions
-   and synthetic or reviewed data. Leave unavailable or unverified coverage explicit; never
-   install a tool, reuse personal state, or simulate an observation.
+3. Identify the surfaces present in the charter and consult the installed applicable
+   `qa-specialist-*` skills before refining heuristics or executing actions. An unavailable
+   applicable specialist is a limitation; record it instead of omitting its coverage silently.
+   Specialist guidance cannot expand authorization. Confirm tools and prerequisites from
+   observed probes. Use only isolated task-owned sessions and synthetic or reviewed data. Leave
+   unavailable or unverified coverage explicit; never install a tool, reuse personal state, or
+   simulate an observation.
 4. Execute only charter actions inside the preserved authorization. Stop at the time box, stop
    condition, changed target, or boundary requiring new permission. Record blocked actions as
    `NOT_RUN`, not as explored behavior.
@@ -46,10 +50,9 @@ covered. Exploration does not by itself prove complete acceptance coverage. Read
 7. Admit evidence only when it is a local regular confined file with verified size/hash, target
    and contract binding, and completed sanitization. Unreviewed images, unsafe/missing/changed
    files, symlinks, and unsupported media are not attached and prevent evidence-based `PASS`.
-8. Summarize coverage touched and not touched, questions, findings, and follow-up. Exploration
-   does not establish `PASS`: use the shared verdict only from a complete applicable criterion
-   inventory with sufficient execution evidence and no current in-scope defects. A proven current
-   failure is `FAIL`; otherwise missing completeness or evidence is `BLOCKED`.
+8. Summarize coverage touched and not touched, questions, findings, and follow-up. This workflow
+   never declares `PASS`. A proven current failure is `FAIL`; otherwise return `BLOCKED` and
+   direct complete criterion verification to a separately selected deterministic workflow.
 
 ## Output
 
@@ -71,7 +74,7 @@ RESULTS: <only evidence-supported case/criterion statuses: PASS|FAIL|BLOCKED|NOT
 LIMITATIONS: <untouched coverage, time/tool/device/browser/data/access/evidence gaps, or none>
 EVIDENCE_REFERENCES: <verified local evidence IDs, paths, hashes, target/contract binding, or none>
 CURRENT_DEFECTS: <proven current defects and findings still needing investigation, explicitly separated>
-VERDICT: <PASS|FAIL|BLOCKED under the shared contract; never PASS from exploration alone>
+VERDICT: <FAIL|BLOCKED under the shared contract; this workflow never declares PASS>
 NEXT: <smallest separately selected and authorized follow-up>
 ```
 

@@ -62,3 +62,42 @@ are not delivery artifacts.
   Claude Code, Codex, and Hermes smoke remains a later F05 responsibility and is not claimed.
 - The repository-wide suite was not rerun for this bounded task. The approved ledger records
   seven unrelated pre-existing baseline failures; the complete `test_qa_*` regression is green.
+
+## Correction round 1 — 2026-09-13
+
+### ROOT_CAUSE
+
+The workflow bodies mentioned specialists only under `Related skills`, so their procedures did
+not require surface-driven F02 consultation. The tests also searched labels and the exploration
+rule as unrelated substrings across broad sections: this proved vocabulary presence, but not
+specialist integration, exact ordered/unique output, or the local operational prohibition on an
+exploration workflow declaring `PASS`.
+
+### RED
+
+After adding section-confined structural assertions, the focused suite ran 14 tests with three
+failures: missing specialist consultation in both procedures and no explicit local rule that
+`qa-explore` never declares `PASS`.
+
+Regression mutation probes were then run against the corrected tests:
+
+- `drop-all-specialist-linkage`: two deterministic failures, one per workflow;
+- `reorder-exact-output`: one deterministic failure showing `OBJECTIVE` before `TARGET`;
+- `contradict-explore-pass-rule`: one deterministic failure in the Procedure-only assertion.
+
+### GREEN
+
+The procedures now identify actual surfaces, consult only installed applicable
+`qa-specialist-*` skills, record unavailable applicable specialists as limitations, and state
+that specialist guidance cannot expand authorization. `qa-explore` now returns only `FAIL` or
+`BLOCKED` and never declares `PASS`.
+
+Fresh results after restoring the production contract:
+
+```text
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tests.test_qa_workflows
+14 tests ran; all passed.
+
+PYTHONDONTWRITEBYTECODE=1 /Users/paulosoares/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m unittest discover -s tests -p 'test_qa_*.py'
+156 tests ran in 10.689 seconds; all passed.
+```

@@ -17,6 +17,13 @@ def read_required(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def exact_output_labels(output_section: str) -> list[str]:
+    match = re.search(r"```text\n(?P<record>.*?)\n```", output_section, re.DOTALL)
+    if match is None:
+        raise AssertionError("Output section must contain one exact text record")
+    return re.findall(r"(?m)^([A-Z][A-Z_]*): ", match.group("record"))
+
+
 class QaWorkflowContractTest(unittest.TestCase):
     def test_workflows_have_the_complete_portable_contract(self) -> None:
         for name in ("qa-init", "qa-strategy"):
@@ -212,7 +219,7 @@ class QaWorkflowContractTest(unittest.TestCase):
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, text)
-        for field in (
+        expected_labels = [
             "TARGET",
             "OBJECTIVE",
             "CONTRACT",
@@ -226,8 +233,8 @@ class QaWorkflowContractTest(unittest.TestCase):
             "CURRENT_DEFECTS",
             "VERDICT",
             "NEXT",
-        ):
-            self.assertRegex(output, rf"(?m)^{field}: ")
+        ]
+        self.assertEqual(exact_output_labels(output), expected_labels)
         self.assertRegex(text, r"(?is)load.*penetration.*production.*external effects.*explicit")
         self.assertRegex(text, r"(?is)product (?:code|corrections?).*only.*requested")
         self.assertRegex(text, r"(?is)report.*does not (?:run|execute|re-run).*tests")
@@ -246,7 +253,7 @@ class QaWorkflowContractTest(unittest.TestCase):
         for phrase in ("charter", "notes", "findings", "follow-up"):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, text.lower())
-        for field in (
+        expected_labels = [
             "TARGET",
             "OBJECTIVE",
             "CONTRACT",
@@ -263,11 +270,38 @@ class QaWorkflowContractTest(unittest.TestCase):
             "CURRENT_DEFECTS",
             "VERDICT",
             "NEXT",
-        ):
-            self.assertRegex(output, rf"(?m)^{field}: ")
-        self.assertRegex(text, r"(?is)explor(?:ation|atory).*does not.*`PASS`")
+        ]
+        self.assertEqual(exact_output_labels(output), expected_labels)
+        self.assertRegex(
+            procedure,
+            r"(?is)(?:exploration|this workflow).*never (?:establishes|declares) `PASS`",
+        )
+        self.assertNotRegex(
+            procedure,
+            r"(?is)(?:exploration|this workflow)\s+(?:does establish|declares) `PASS`",
+        )
         self.assertRegex(text, r"(?is)findings?.*(?:expected|oracle).*observed.*evidence")
         self.assertRegex(text, r"(?is)load.*penetration.*production.*external effects.*explicit")
+
+    def test_test_and_explore_consult_only_applicable_installed_specialists(self) -> None:
+        for name in ("qa-test", "qa-explore"):
+            with self.subTest(name=name):
+                text = read_required(SKILLS / name / "SKILL.md")
+                procedure = re.split(r"(?m)^## Procedure\n", text, maxsplit=1)[1].split(
+                    "\n## Output\n", 1
+                )[0]
+                self.assertRegex(
+                    procedure,
+                    r"(?is)identify.*surfaces.*consult.*installed.*applicable.*`qa-specialist-",
+                )
+                self.assertRegex(
+                    procedure,
+                    r"(?is)(?:unavailable|absent|missing).*specialist.*limitation",
+                )
+                self.assertRegex(
+                    procedure,
+                    r"(?is)specialist.*(?:does not|cannot|never).*expand.*authorization",
+                )
 
     def test_test_and_explore_claude_commands_are_thin_adapters(self) -> None:
         for command_name, skill_name in (("test", "qa-test"), ("explore", "qa-explore")):

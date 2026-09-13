@@ -28,9 +28,13 @@ not authorize a product correction. Read [workflow](../../references/workflow.md
 1. Preserve the explicit objective or intent, contract, criterion IDs/text, selected case IDs,
    existing state, and authorization exactly. Do not infer missing criteria, expected behavior,
    approval, or permission from a tool's availability.
-2. Confirm each case is in scope and has traceability, an observable oracle, prerequisites, safe
-   data, an available tool, and explicit authorization for its actual effects. Leave an
-   applicable but unexecuted case `NOT_RUN`; use `NOT_APPLICABLE` only with a recorded reason.
+2. Identify the surfaces present in the selected cases and consult the installed applicable
+   `qa-specialist-*` skills before refining or executing them. An unavailable applicable
+   specialist is a limitation; record it instead of omitting its coverage silently. Specialist
+   guidance cannot expand authorization. Confirm each case has traceability, an observable
+   oracle, prerequisites, safe data, an available tool, and explicit authorization for its
+   actual effects. Leave an applicable but unexecuted case `NOT_RUN`; use `NOT_APPLICABLE` only
+   with a recorded reason.
 3. Before every execution, bind the exact target, environment/build, case ID, criterion IDs,
    expected value, command or action, permitted effects, and evidence destination. Refuse a
    changed target or stale, ambiguous, missing, or broader authorization.
