@@ -10,6 +10,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import List, Optional
 
 import pdfplumber
 from pypdf import PdfReader
@@ -45,6 +46,22 @@ def extracted_pdf(path: Path) -> tuple[str, str]:
     return reader_text, plumber_text
 
 
+def criterion_pdf_block(
+    rendered: str, index: int, identifier: str, next_identifier: Optional[str]
+) -> str:
+    start = rendered.index(f"Criterion {index}: {identifier}")
+    if next_identifier is None:
+        end = rendered.index("Cases and attempts", start)
+    else:
+        end = rendered.index(f"Criterion {index + 1}: {next_identifier}", start)
+    return rendered[start:end]
+
+
+def criterion_sentinels(text: str, identifier: str) -> List[str]:
+    prefix = re.escape(f"c{identifier[-3:]}")
+    return re.findall(rf"{prefix}w\d{{4}}á?", text)
+
+
 class QaReportsE2ETest(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
@@ -63,7 +80,14 @@ class QaReportsE2ETest(unittest.TestCase):
         pypdf_text, plumber_text = extracted_pdf(output / "report.pdf")
 
         self.assertEqual(len(source["criteria"]), 100)
+        self.assertEqual(len(public["criteria"]), 100)
+        self.assertEqual(len(public["criterion_results"]), 100)
         self.assertTrue(all(len(item["text"]) == 2000 for item in source["criteria"]))
+        source_ids = [item["id"] for item in source["criteria"]]
+        public_ids = [item["id"] for item in public["criteria"]]
+        result_ids = [item["id"] for item in public["criterion_results"]]
+        self.assertEqual(public_ids, source_ids)
+        self.assertEqual(result_ids, source_ids)
         self.assertEqual(public["verdict"], "FAIL")
         self.assertEqual(public["criteria"], source["criteria"])
         self.assertEqual(public["cases"], source["cases"])
@@ -72,24 +96,52 @@ class QaReportsE2ETest(unittest.TestCase):
             [item["id"] for item in public["verified_evidence"]], ["ev-safe"]
         )
 
-        rendered_texts = (pypdf_text, plumber_text)
-        for criterion, criterion_result in zip(
-            source["criteria"], public["criterion_results"]
-        ):
-            self.assertIn(html.escape(criterion["text"], quote=True), html_report)
-            complete_tokens = re.findall(r"c\d{3}w\d{4}á", criterion["text"])
-            for rendered in rendered_texts:
-                self.assertEqual(
-                    re.findall(rf"c{criterion['id'][-3:]}w\d{{4}}á", rendered),
-                    complete_tokens,
+        rendered_texts = {"pypdf": pypdf_text, "pdfplumber": plumber_text}
+        results_by_id = {
+            item["id"]: item["result"] for item in public["criterion_results"]
+        }
+        for position, criterion in enumerate(source["criteria"]):
+            index = position + 1
+            identifier = criterion["id"]
+            next_identifier = (
+                source["criteria"][position + 1]["id"]
+                if position + 1 < len(source["criteria"])
+                else None
+            )
+            html_match = re.search(
+                rf'<tr id="criterion-{index}">(.*?)</tr>', html_report, re.DOTALL
+            )
+            self.assertIsNotNone(html_match, f"HTML criterion row missing: {identifier}")
+            assert html_match is not None
+            html_block = html_match.group(1)
+            expected_fields = {
+                "id": identifier,
+                "expected": criterion["assessment"]["expected"],
+                "observed": criterion["assessment"]["observed"],
+                "result": results_by_id[identifier],
+            }
+            self.assertIn(html.escape(criterion["text"], quote=True), html_block)
+            for field, value in expected_fields.items():
+                with self.subTest(format="html", criterion=identifier, field=field):
+                    self.assertIn(html.escape(value, quote=True), html_block)
+
+            expected_sentinels = criterion_sentinels(criterion["text"], identifier)
+            self.assertTrue(expected_sentinels)
+            self.assertEqual(" ".join(expected_sentinels), criterion["text"])
+            self.assertEqual(len(expected_sentinels[-1]), 9)
+            self.assertFalse(expected_sentinels[-1].endswith("á"))
+            for format_name, rendered in rendered_texts.items():
+                pdf_block = criterion_pdf_block(
+                    rendered, index, identifier, next_identifier
                 )
-                for value in (
-                    criterion["id"],
-                    criterion["assessment"]["expected"],
-                    criterion["assessment"]["observed"],
-                    criterion_result["result"],
-                ):
-                    self.assertIn(value, rendered)
+                self.assertEqual(
+                    criterion_sentinels(pdf_block, identifier), expected_sentinels
+                )
+                for field, value in expected_fields.items():
+                    with self.subTest(
+                        format=format_name, criterion=identifier, field=field
+                    ):
+                        self.assertIn(value, pdf_block)
 
         for case in source["cases"]:
             for value in (
@@ -100,16 +152,16 @@ class QaReportsE2ETest(unittest.TestCase):
                 case["status"],
             ):
                 self.assertIn(html.escape(value, quote=True), html_report)
-                for rendered in rendered_texts:
+                for rendered in rendered_texts.values():
                     self.assertIn(value, rendered)
         self.assertGreaterEqual(html_report.count("ev-safe"), len(source["cases"]) + 2)
-        for rendered in rendered_texts:
+        for rendered in rendered_texts.values():
             self.assertGreaterEqual(rendered.count("ev-safe"), len(source["cases"]) + 2)
 
         defect = source["defects"][0]
         for value in (defect["id"], defect["summary"], "ev-safe", "FAIL"):
             self.assertIn(html.escape(value, quote=True), html_report)
-            for rendered in rendered_texts:
+            for rendered in rendered_texts.values():
                 self.assertIn(value, rendered)
 
         package_files = [path for path in output.rglob("*") if path.is_file()]
