@@ -281,12 +281,40 @@ class QaPdfTest(unittest.TestCase):
             "_staged_image_bytes",
             side_effect=exchange_after_revalidation,
         ):
-            self.renderer.render_pdf(report, self.destination)
+            with self.assertRaisesRegex(RuntimeError, "destination root.*changed"):
+                self.renderer.render_pdf(report, self.destination)
 
         self.assertEqual(
             (root / "report.pdf").read_bytes(), b"attacker-controlled-root"
         )
-        self.assertTrue((preserved / "report.pdf").read_bytes().startswith(b"%PDF-"))
+        self.assertFalse((preserved / "report.pdf").exists())
+
+    def test_final_file_exchange_is_detected_without_removing_attacker_file(self) -> None:
+        staged = self.destination.parent / "capture.png"
+        staged.write_bytes(PNG_BYTES)
+        report = self.image_report(
+            "capture.png",
+            digest=hashlib.sha256(PNG_BYTES).hexdigest(),
+            size=len(PNG_BYTES),
+            media_type="image/png",
+        )
+        original_replace = self.renderer.os.replace
+
+        def exchange_after_publish(*args, **kwargs):
+            result = original_replace(*args, **kwargs)
+            self.destination.unlink()
+            self.destination.write_bytes(b"attacker-file-after-publication")
+            return result
+
+        with mock.patch.object(
+            self.renderer.os, "replace", side_effect=exchange_after_publish
+        ):
+            with self.assertRaisesRegex(RuntimeError, "published PDF.*changed"):
+                self.renderer.render_pdf(report, self.destination)
+
+        self.assertEqual(
+            self.destination.read_bytes(), b"attacker-file-after-publication"
+        )
 
     def test_lists_only_verified_evidence_as_approved_references(self) -> None:
         data = valid_manifest()

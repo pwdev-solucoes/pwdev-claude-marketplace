@@ -2,6 +2,40 @@
 
 Status: DONE
 
+## Review fix — round 3
+
+- Closed the remaining Important success-semantics gap. After descriptor-relative publication,
+  the currently named destination root is reopened twice with `O_DIRECTORY|O_NOFOLLOW` and
+  compared to the retained device/inode identity.
+- The published PDF is likewise reopened relative to each freshly named root with
+  `O_NOFOLLOW`; regular-file type, device/inode, exact size, and SHA-256 are compared to the
+  synchronized temporary PDF. Success therefore requires the nominal destination to contain
+  exactly the published PDF during final verification.
+- A detected root rename/exchange raises an explicit error and removes the PDF only from the
+  retained original inode. A replaced final file is never removed when its inode differs, so
+  attacker sentinels and replacement roots remain untouched.
+- Root-symlink refusal, descriptor-relative exclusive temp/replace, image revalidation and
+  captioning, A4/margins/pagination, and earlier failure cases remain covered. The deferred
+  100 × 2000 Minor was not changed.
+
+### Round 3 TDD, adversarial probes, and fresh verification
+
+- RED: root exchange still returned success without a PDF at the nominal destination, and a
+  post-publication file exchange also returned success (2 expected failures).
+- GREEN: 10 PDF tests passed; full QA regression passed 116 tests.
+- Regression proof: stashed only the production fix, observed both new tests fail again,
+  restored it, then observed both pass and reran all QA regressions.
+- Adversarial probes passed for root symlink, root exchange, post-publication file exchange,
+  missing leaf, leaf symlink, SHA-256 mismatch, and MIME mismatch. Root exchange leaves the
+  replacement-root sentinel intact and cleans the old-inode PDF; file exchange preserves the
+  attacker file while reporting failure.
+- Fresh nominal artifact `/tmp/pwdev-qa-f03-14-fix3.YCPmmC/report.pdf`: 54,947 bytes,
+  SHA-256 `2157e6a7f5efc9d3ea3ddacbb89e009a1bb228aa1e1fb3b2f53d958d845121fe`, 7 pages,
+  one embedded image, and caption extracted intact by pypdf and pdfplumber.
+- Pages 1, 6, and 7 rendered with bundled `pdftoppm` were inspected with no clipping,
+  overlap, margin, pagination, image, or caption regression. All temporary artifacts and
+  generated caches were removed.
+
 ## Review fix — round 2
 
 - Addressed the remaining Important root-identity finding. `destination.parent` is now opened

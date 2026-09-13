@@ -129,6 +129,92 @@ def _exclusive_temporary(root_fd: int, destination_name: str):
     raise RuntimeError("could not create an exclusive PDF temporary file")
 
 
+def _stream_snapshot(stream):
+    metadata = os.fstat(stream.fileno())
+    stream.seek(0)
+    digest = hashlib.sha256()
+    while True:
+        chunk = stream.read(1024 * 1024)
+        if not chunk:
+            break
+        digest.update(chunk)
+    return (metadata.st_dev, metadata.st_ino), metadata.st_size, digest.hexdigest()
+
+
+def _published_snapshot(root_fd: int, name: str):
+    flags = (
+        os.O_RDONLY
+        | getattr(os, "O_CLOEXEC", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_NONBLOCK", 0)
+    )
+    try:
+        descriptor = os.open(name, flags, dir_fd=root_fd)
+    except OSError as error:
+        raise RuntimeError("published PDF is missing, changed, or unsafe") from error
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode):
+            raise RuntimeError("published PDF changed into a non-regular file")
+        digest = hashlib.sha256()
+        while True:
+            chunk = os.read(descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+        return (
+            (metadata.st_dev, metadata.st_ino),
+            metadata.st_size,
+            digest.hexdigest(),
+        )
+    finally:
+        os.close(descriptor)
+
+
+def _verify_named_publication(
+    root: Path, root_identity, destination_name: str, expected_snapshot
+) -> None:
+    for _ in range(2):
+        try:
+            named_fd, named_identity = _open_destination_root(root)
+        except RuntimeError as error:
+            raise RuntimeError(
+                "destination root changed during PDF publication"
+            ) from error
+        try:
+            if named_identity != root_identity:
+                raise RuntimeError("destination root changed during PDF publication")
+            if _published_snapshot(named_fd, destination_name) != expected_snapshot:
+                raise RuntimeError("published PDF identity or content changed")
+        finally:
+            os.close(named_fd)
+
+
+def _remove_published_inode(root_fd: int, name: str, expected_identity) -> None:
+    flags = (
+        os.O_RDONLY
+        | getattr(os, "O_CLOEXEC", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_NONBLOCK", 0)
+    )
+    try:
+        descriptor = os.open(name, flags, dir_fd=root_fd)
+    except OSError:
+        return
+    try:
+        metadata = os.fstat(descriptor)
+        if (
+            stat.S_ISREG(metadata.st_mode)
+            and (metadata.st_dev, metadata.st_ino) == expected_identity
+        ):
+            try:
+                os.unlink(name, dir_fd=root_fd)
+            except OSError:
+                pass
+    finally:
+        os.close(descriptor)
+
+
 def _staged_image_bytes(root_fd: int, root_identity, evidence: dict, image_reader):
     identifier = _value(evidence.get("id"))
     relative = Path(_value(evidence.get("path")))
@@ -578,6 +664,9 @@ def render_pdf(report: dict, destination: Path) -> None:
 
     root_fd, root_identity = _open_destination_root(destination.parent)
     temporary_name = None
+    expected_publication = None
+    published = False
+    publication_verified = False
     try:
         section("Approved evidence")
         if not report["verified_evidence"]:
@@ -639,6 +728,7 @@ def render_pdf(report: dict, destination: Path) -> None:
             document.multiBuild(story, canvasmaker=NumberedCanvas)
             temporary.flush()
             os.fsync(temporary.fileno())
+            expected_publication = _stream_snapshot(temporary)
         _assert_root_identity(root_fd, root_identity)
         try:
             os.replace(
@@ -651,11 +741,23 @@ def render_pdf(report: dict, destination: Path) -> None:
             raise RuntimeError(
                 "destination root: descriptor-relative replace is unavailable"
             ) from error
+        published = True
         temporary_name = None
+        _verify_named_publication(
+            destination.parent,
+            root_identity,
+            destination.name,
+            expected_publication,
+        )
+        publication_verified = True
     finally:
         if temporary_name is not None:
             try:
                 os.unlink(temporary_name, dir_fd=root_fd)
             except FileNotFoundError:
                 pass
+        if published and not publication_verified and expected_publication is not None:
+            _remove_published_inode(
+                root_fd, destination.name, expected_publication[0]
+            )
         os.close(root_fd)
