@@ -262,9 +262,58 @@ def _validate_pdf_structure(raw: bytes) -> None:
     if state != b"n" or generation != root_generation or root_offset >= xref_offset:
         raise RuntimeError("report.pdf trailer Root is not a live xref object")
 
+    def object_body(object_id: int, object_generation: int, label: str) -> bytes:
+        entry = entries.get(object_id)
+        if entry is None or entry[1] != object_generation or entry[2] != b"n":
+            raise RuntimeError(f"report.pdf {label} reference is not live")
+        marker = f"{object_id} {object_generation} obj".encode("ascii")
+        start = entry[0] + len(marker)
+        end = raw.find(b"endobj", start, xref_offset)
+        if end < 0:
+            raise RuntimeError(f"report.pdf {label} object is incomplete")
+        return raw[start:end].strip()
 
-def _snapshot_tree(directory_fd: int, prefix: str = "") -> Dict[str, Tuple[Any, ...]]:
-    snapshot: Dict[str, Tuple[Any, ...]] = {}
+    def dictionary(body: bytes, label: str) -> bytes:
+        if not body.startswith(b"<<") or not body.endswith(b">>"):
+            raise RuntimeError(f"report.pdf {label} is not a dictionary")
+        return body[2:-2]
+
+    catalog = dictionary(object_body(root_id, root_generation, "Catalog"), "Catalog")
+    if re.search(rb"/Type\s*/Catalog\b", catalog) is None:
+        raise RuntimeError("report.pdf Root dictionary is not /Type /Catalog")
+    pages_match = re.search(rb"/Pages\s+([0-9]+)\s+([0-9]+)\s+R\b", catalog)
+    if pages_match is None:
+        raise RuntimeError("report.pdf Catalog has no valid /Pages reference")
+    pages_id = int(pages_match.group(1))
+    pages_generation = int(pages_match.group(2))
+    pages = dictionary(
+        object_body(pages_id, pages_generation, "Pages"), "Pages"
+    )
+    if re.search(rb"/Type\s*/Pages\b", pages) is None:
+        raise RuntimeError("report.pdf Pages dictionary is not /Type /Pages")
+    count_matches = re.findall(rb"/Count\s+(-?[0-9]+)(?![0-9.])", pages)
+    kids_matches = re.findall(rb"/Kids\s*\[(.*?)\]", pages, re.DOTALL)
+    if len(count_matches) != 1 or int(count_matches[0]) < 0:
+        raise RuntimeError("report.pdf Pages /Count is not a non-negative integer")
+    if len(kids_matches) != 1:
+        raise RuntimeError("report.pdf Pages /Kids is not an array")
+    kids = kids_matches[0]
+    references = list(re.finditer(rb"([0-9]+)\s+([0-9]+)\s+R\b", kids))
+    remainder = re.sub(rb"[0-9]+\s+[0-9]+\s+R\b", b"", kids)
+    if remainder.strip():
+        raise RuntimeError("report.pdf Pages /Kids contains a malformed reference")
+    if int(count_matches[0]) != len(references):
+        raise RuntimeError("report.pdf Pages /Count does not match /Kids")
+    for reference in references:
+        object_body(
+            int(reference.group(1)), int(reference.group(2)), "page tree child"
+        )
+
+
+def _publication_snapshot_fd(directory_fd: int, prefix: str = "") -> Dict[str, Any]:
+    """Return the deterministic, inode-independent public package snapshot."""
+
+    snapshot: Dict[str, Any] = {}
     for name in sorted(os.listdir(directory_fd)):
         relative = f"{prefix}/{name}" if prefix else name
         metadata = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
@@ -275,22 +324,27 @@ def _snapshot_tree(directory_fd: int, prefix: str = "") -> Dict[str, Tuple[Any, 
                 opened = os.fstat(child_fd)
                 if identity != (opened.st_dev, opened.st_ino):
                     raise RuntimeError(f"published report directory {relative} changed")
-                snapshot[relative] = ("directory",) + identity
-                snapshot.update(_snapshot_tree(child_fd, relative))
+                snapshot[relative] = {"kind": "directory"}
+                snapshot.update(_publication_snapshot_fd(child_fd, relative))
             finally:
                 os.close(child_fd)
         elif stat.S_ISREG(metadata.st_mode):
             raw = _read_regular_at(directory_fd, name, f"published artifact {relative}")
-            snapshot[relative] = (
-                "file",
-                metadata.st_dev,
-                metadata.st_ino,
-                len(raw),
-                hashlib.sha256(raw).hexdigest(),
-            )
+            snapshot[relative] = {
+                "kind": "file",
+                "size_bytes": len(raw),
+                "sha256": hashlib.sha256(raw).hexdigest(),
+            }
         else:
             raise RuntimeError(f"published artifact {relative} is unsafe")
     return snapshot
+
+
+def _publication_digest(snapshot: Dict[str, Any]) -> str:
+    canonical = json.dumps(
+        snapshot, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
 
 
 def _validate_stage(
@@ -508,7 +562,29 @@ def _copy_revalidated(
             os.close(attachments_fd)
 
 
-def _atomic_rename_exclusive(parent_fd: int, source: str, destination: str) -> None:
+def _atomic_rename_exclusive(
+    parent_fd: int,
+    source: str,
+    destination: str,
+    project_root: Path,
+    reports_identity: Tuple[int, int],
+    expected_snapshot: Dict[str, Any],
+) -> None:
+    _assert_nominal_reports_root(project_root, reports_identity)
+    staging_fd, _ = _open_existing_directory(
+        parent_fd, source, "staging directory"
+    )
+    try:
+        try:
+            current_snapshot = _publication_snapshot_fd(staging_fd)
+        except (OSError, RuntimeError, EvidenceError) as error:
+            raise PublicationError(
+                "staging package changed before commit"
+            ) from error
+        if current_snapshot != expected_snapshot:
+            raise PublicationError("staging package changed before commit")
+    finally:
+        os.close(staging_fd)
     libc = ctypes.CDLL(None, use_errno=True)
     encoded_source = os.fsencode(source)
     encoded_destination = os.fsencode(destination)
@@ -549,125 +625,29 @@ def _atomic_rename_exclusive(parent_fd: int, source: str, destination: str) -> N
         )
 
 
-def _verify_published_identity(
-    project_root: Path,
-    reports_identity: Tuple[int, int],
-    run_id: str,
-    run_identity: Tuple[int, int],
-    expected_snapshot: Dict[str, Tuple[Any, ...]],
+def _assert_nominal_reports_root(
+    project_root: Path, expected_identity: Tuple[int, int]
 ) -> None:
-    """Verify the package through its nominal path twice before reporting success."""
+    """Reject a reports-root exchange observed before the atomic commit."""
 
-    for _ in range(2):
-        root_fd, _ = _open_directory(project_root, "project root")
-        opened_children: List[int] = []
-        try:
-            current_fd = root_fd
-            for name, label in (
-                (".planning", "output component .planning"),
-                ("pwdev-qa", "output component pwdev-qa"),
-                ("reports", "reports root"),
-            ):
-                next_fd, identity = _open_existing_directory(current_fd, name, label)
-                opened_children.append(next_fd)
-                current_fd = next_fd
-            if identity != reports_identity:
-                raise PublicationError("reports root identity changed at nominal path")
-            run_fd, identity = _open_existing_directory(
-                current_fd, run_id, "published report directory"
-            )
-            if identity != run_identity:
-                os.close(run_fd)
-                raise PublicationError("published report directory identity changed")
-            try:
-                try:
-                    current_snapshot = _snapshot_tree(run_fd)
-                except (OSError, RuntimeError, EvidenceError) as error:
-                    raise PublicationError(
-                        "published report artifacts changed or became unsafe"
-                    ) from error
-                if current_snapshot != expected_snapshot:
-                    raise PublicationError("published report artifacts changed")
-            finally:
-                os.close(run_fd)
-        finally:
-            for descriptor in reversed(opened_children):
-                os.close(descriptor)
-            os.close(root_fd)
-
-
-def _cleanup_owned_package(
-    reports_fd: int,
-    run_id: str,
-    run_identity: Tuple[int, int],
-    expected_snapshot: Dict[str, Tuple[Any, ...]],
-) -> None:
-    """Remove only entries whose inode, size, and hash still match our snapshot."""
-
+    root_fd, _ = _open_directory(project_root, "project root")
+    opened_children: List[int] = []
     try:
-        run_fd, identity = _open_existing_directory(
-            reports_fd, run_id, "published report directory"
-        )
-    except PublicationError:
-        return
-    if identity != run_identity:
-        os.close(run_fd)
-        return
-
-    def clean(directory_fd: int, prefix: str = "") -> None:
-        for name in list(os.listdir(directory_fd)):
-            relative = f"{prefix}/{name}" if prefix else name
-            expected = expected_snapshot.get(relative)
-            if expected is None:
-                continue
-            try:
-                metadata = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
-            except OSError:
-                continue
-            identity_now = (metadata.st_dev, metadata.st_ino)
-            if expected[0] == "directory":
-                if not stat.S_ISDIR(metadata.st_mode) or identity_now != expected[1:3]:
-                    continue
-                try:
-                    child_fd = os.open(name, _DIRECTORY_FLAGS, dir_fd=directory_fd)
-                except OSError:
-                    continue
-                try:
-                    clean(child_fd, relative)
-                finally:
-                    os.close(child_fd)
-                try:
-                    os.rmdir(name, dir_fd=directory_fd)
-                except OSError:
-                    pass
-            elif expected[0] == "file" and stat.S_ISREG(metadata.st_mode):
-                try:
-                    raw = _read_regular_at(
-                        directory_fd, name, f"cleanup candidate {relative}"
-                    )
-                except RuntimeError:
-                    continue
-                current = (
-                    "file",
-                    metadata.st_dev,
-                    metadata.st_ino,
-                    len(raw),
-                    hashlib.sha256(raw).hexdigest(),
-                )
-                if current == expected:
-                    try:
-                        os.unlink(name, dir_fd=directory_fd)
-                    except OSError:
-                        pass
-
-    try:
-        clean(run_fd)
+        current_fd = root_fd
+        for name, label in (
+            (".planning", "output component .planning"),
+            ("pwdev-qa", "output component pwdev-qa"),
+            ("reports", "reports root"),
+        ):
+            next_fd, identity = _open_existing_directory(current_fd, name, label)
+            opened_children.append(next_fd)
+            current_fd = next_fd
+        if identity != expected_identity:
+            raise PublicationError("reports root identity changed before publication commit")
     finally:
-        os.close(run_fd)
-    try:
-        os.rmdir(run_id, dir_fd=reports_fd)
-    except OSError:
-        pass
+        for descriptor in reversed(opened_children):
+            os.close(descriptor)
+        os.close(root_fd)
 
 
 def _preserve_partial(
@@ -733,30 +713,25 @@ def generate_report(manifest_path: Path, project_root: Path) -> dict:
             render_pdf(report, reports_path / staging_name / "report.pdf")
             _validate_stage(reports_fd, staging_name, staging_fd, report, html)
             os.fsync(staging_fd)
-            staging_metadata = os.fstat(staging_fd)
-            staging_identity = (staging_metadata.st_dev, staging_metadata.st_ino)
-            staging_snapshot = _snapshot_tree(staging_fd)
-            _atomic_rename_exclusive(reports_fd, staging_name, run_id)
+            publication_snapshot = _publication_snapshot_fd(staging_fd)
+            publication_digest = _publication_digest(publication_snapshot)
+            _atomic_rename_exclusive(
+                reports_fd,
+                staging_name,
+                run_id,
+                root,
+                reports_identity,
+                publication_snapshot,
+            )
             staging_name = ""
-            try:
-                _verify_published_identity(
-                    root,
-                    reports_identity,
-                    run_id,
-                    staging_identity,
-                    staging_snapshot,
-                )
-            except PublicationError:
-                _cleanup_owned_package(
-                    reports_fd, run_id, staging_identity, staging_snapshot
-                )
-                raise
             return {
                 "run_id": run_id,
                 "verdict": report["verdict"],
                 "export_status": "complete",
                 "output_dir": str(reports_path / run_id),
                 "diagnostics": list(report["diagnostics"]),
+                "publication_digest": publication_digest,
+                "publication_snapshot": publication_snapshot,
             }
         except (EvidenceError, ValidationError, PublicationError):
             raise
@@ -769,6 +744,8 @@ def generate_report(manifest_path: Path, project_root: Path) -> dict:
                 "export_status": "incomplete",
                 "output_dir": "",
                 "diagnostics": diagnostics,
+                "publication_digest": None,
+                "publication_snapshot": {},
             }
             if staging_fd >= 0:
                 os.close(staging_fd)

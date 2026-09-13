@@ -31,19 +31,28 @@ Staging is an exclusive sibling directory. Every component of the project/output
 without following symlinks. HTML, PDF, the public manifest, and every attachment are reopened and
 validated before the exclusive atomic rename. PDF validation uses the standard library to verify
 the numeric `startxref`, classic xref entries, trailer `/Size` and `/Root`, referenced root object,
-and final EOF produced by ReportLab; marker-only or malformed files are incomplete exports.
+and final EOF produced by ReportLab. It also dereferences `/Root` as a `/Type /Catalog`
+dictionary, dereferences its `/Pages` dictionary, and checks non-negative `/Count`, `/Kids`, and
+live child references. Marker-only, xref-only, garbage-root, or malformed files are incomplete.
 
-After rename, the exporter reopens the reports root and run directory through the nominal project
-path without following symlinks. It compares their identities and the recursive inventory,
-identities, sizes, and SHA-256 hashes of every artifact with the staging snapshot, then repeats the
-whole nominal check. Any root, run-directory, file, or attachment exchange fails explicitly.
-Cleanup removes only entries still matching the owned snapshot; attacker replacements and
-sentinels are never deleted. An existing run directory is never replaced, and `complete` is
-returned only while the nominal `output_dir` contains the exact validated package.
+Immediately before commit, the exporter reopens the nominal reports root without following
+symlinks and confirms its identity, then re-snapshots staging and compares it with the validated
+snapshot. A root/staging exchange or destination collision observed before the syscall fails and
+does not overwrite sentinels. The no-overwrite directory rename is the publication commit point.
+
+No finite sequence of reads can make files immutable after that commit. Mutation by another actor
+after the rename is external to exporter success, even when it occurs before the caller consumes
+the return value. For consumer revalidation, every complete result includes
+`publication_snapshot`—a path-keyed inventory of directory kinds and file byte sizes/SHA-256—and
+`publication_digest`, the lowercase SHA-256 of its canonical UTF-8 JSON (`ensure_ascii=false`,
+keys sorted, separators `,` and `:`). A consumer that needs current integrity must rebuild the
+snapshot from `output_dir`, recompute the digest, and compare it with the returned digest.
 
 ## Results and failures
 
-The result object contains `run_id`, `verdict`, `export_status`, `output_dir`, and `diagnostics`.
+The result object contains `run_id`, `verdict`, `export_status`, `output_dir`, `diagnostics`,
+`publication_snapshot`, and `publication_digest`. Incomplete results use an empty snapshot and a
+null digest.
 Exit code `0` means both formats were published, independently of a QA verdict of `PASS`, `FAIL`,
 or `BLOCKED`. Exit code `2` means invalid or unsafe input/output. Exit code `3` means export was
 incomplete, including an unavailable `reportlab==4.4.9` or a write/render failure.

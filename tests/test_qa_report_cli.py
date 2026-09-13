@@ -36,6 +36,30 @@ def load_module(name="qa_report"):
     return module
 
 
+def publication_snapshot(path):
+    root = Path(path)
+    result = {}
+    for item in sorted(root.rglob("*")):
+        relative = item.relative_to(root).as_posix()
+        if item.is_dir():
+            result[relative] = {"kind": "directory"}
+        else:
+            raw = item.read_bytes()
+            result[relative] = {
+                "kind": "file",
+                "size_bytes": len(raw),
+                "sha256": hashlib.sha256(raw).hexdigest(),
+            }
+    return result
+
+
+def snapshot_digest(snapshot):
+    canonical = json.dumps(
+        snapshot, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
 class QaReportCliTest(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -95,6 +119,10 @@ class QaReportCliTest(unittest.TestCase):
         self.assertEqual(result["export_status"], "complete")
         self.assertEqual(result["verdict"], "PASS")
         self.assertEqual(Path(result["output_dir"]), self.output())
+        self.assertEqual(result["publication_snapshot"], publication_snapshot(self.output()))
+        self.assertEqual(
+            result["publication_digest"], snapshot_digest(result["publication_snapshot"])
+        )
         self.assertEqual(
             {item.name for item in self.output().iterdir()},
             {"attachments", "manifest.json", "report.html", "report.pdf"},
@@ -181,6 +209,49 @@ class QaReportCliTest(unittest.TestCase):
         self.assertFalse(self.output().exists())
         self.assertIn("startxref", " ".join(result["diagnostics"]))
 
+    def test_xref_coherent_pdf_with_garbage_root_is_rejected(self):
+        publisher = load_module("qa_report_garbage_root")
+
+        def garbage_root(report, destination):
+            self.fake_pdf(report, destination)
+            path = Path(destination)
+            raw = path.read_bytes()
+            valid = b"<< /Type /Catalog /Pages 2 0 R >>"
+            raw = raw.replace(valid, b"garbage".ljust(len(valid), b" "))
+            path.write_bytes(raw)
+
+        with mock.patch.object(publisher, "render_pdf", side_effect=garbage_root):
+            result = publisher.generate_report(self.manifest_path, self.root)
+
+        self.assertEqual(result["export_status"], "incomplete")
+        self.assertFalse(self.output().exists())
+        self.assertIn("Catalog", " ".join(result["diagnostics"]))
+
+    def test_semantically_invalid_catalog_pages_graphs_are_rejected(self):
+        substitutions = {
+            "catalog-type": (b"/Type /Catalog", b"/Type /Garbage"),
+            "pages-reference": (b"/Pages 2 0 R", b"/Pages 9 0 R"),
+            "pages-type": (b"/Type /Pages", b"/Type /Garba"),
+            "negative-count": (b"/Count 0", b"/Count -"),
+            "malformed-kids": (b"/Kids []", b"/Kids[x]"),
+        }
+        for label, (valid, invalid) in substitutions.items():
+            with self.subTest(label=label):
+                publisher = load_module(f"qa_report_semantic_{label}")
+
+                def corrupt(report, destination, valid=valid, invalid=invalid):
+                    self.fake_pdf(report, destination)
+                    path = Path(destination)
+                    raw = path.read_bytes()
+                    self.assertEqual(len(valid), len(invalid))
+                    self.assertIn(valid, raw)
+                    path.write_bytes(raw.replace(valid, invalid, 1))
+
+                with mock.patch.object(publisher, "render_pdf", side_effect=corrupt):
+                    result = publisher.generate_report(self.manifest_path, self.root)
+                self.assertEqual(result["export_status"], "incomplete")
+                self.assertFalse(self.output().exists())
+
     def test_source_replaced_by_symlink_after_inspection_refuses_export(self):
         publisher = load_module("qa_report_source_symlink")
         real_inspect = publisher.inspect_evidence
@@ -203,7 +274,7 @@ class QaReportCliTest(unittest.TestCase):
         publisher = load_module("qa_report_collision_race")
         real_rename = publisher._atomic_rename_exclusive
 
-        def attacker_wins(parent_fd, source, destination):
+        def attacker_wins(parent_fd, source, destination, *commit_context):
             os.mkdir(destination, dir_fd=parent_fd)
             destination_fd = os.open(
                 destination, os.O_RDONLY | os.O_DIRECTORY, dir_fd=parent_fd
@@ -218,7 +289,7 @@ class QaReportCliTest(unittest.TestCase):
                 os.close(marker_fd)
             finally:
                 os.close(destination_fd)
-            return real_rename(parent_fd, source, destination)
+            return real_rename(parent_fd, source, destination, *commit_context)
 
         with mock.patch.object(publisher, "render_pdf", side_effect=self.fake_pdf), mock.patch.object(
             publisher, "_atomic_rename_exclusive", side_effect=attacker_wins
@@ -235,12 +306,12 @@ class QaReportCliTest(unittest.TestCase):
         preserved = self.root / "preserved-reports"
         real_rename = publisher._atomic_rename_exclusive
 
-        def exchange_root(parent_fd, source, destination):
+        def exchange_root(parent_fd, source, destination, *commit_context):
             reports.rename(preserved)
             reports.mkdir()
             self.output().mkdir()
             (self.output() / "sentinel").write_bytes(b"attacker sentinel")
-            return real_rename(parent_fd, source, destination)
+            return real_rename(parent_fd, source, destination, *commit_context)
 
         with mock.patch.object(publisher, "render_pdf", side_effect=self.fake_pdf), mock.patch.object(
             publisher, "_atomic_rename_exclusive", side_effect=exchange_root
@@ -251,12 +322,44 @@ class QaReportCliTest(unittest.TestCase):
         self.assertEqual((self.output() / "sentinel").read_bytes(), b"attacker sentinel")
         self.assertFalse((preserved / "cli-run").exists())
 
-    def test_published_pdf_exchange_is_detected_without_deleting_attacker_file(self):
+    def test_staging_file_exchange_before_commit_is_exporter_failure(self):
+        publisher = load_module("qa_report_staging_exchange")
+        real_rename = publisher._atomic_rename_exclusive
+
+        def exchange_staging(parent_fd, source, destination, *commit_context):
+            staging_fd = os.open(
+                source, os.O_RDONLY | os.O_DIRECTORY, dir_fd=parent_fd
+            )
+            try:
+                os.unlink("report.html", dir_fd=staging_fd)
+                replacement = os.open(
+                    "report.html",
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                    0o600,
+                    dir_fd=staging_fd,
+                )
+                os.write(replacement, b"attacker pre-commit")
+                os.close(replacement)
+            finally:
+                os.close(staging_fd)
+            return real_rename(parent_fd, source, destination, *commit_context)
+
+        with mock.patch.object(publisher, "render_pdf", side_effect=self.fake_pdf), mock.patch.object(
+            publisher, "_atomic_rename_exclusive", side_effect=exchange_staging
+        ):
+            with self.assertRaisesRegex(
+                publisher.PublicationError, "staging package changed before commit"
+            ):
+                publisher.generate_report(self.manifest_path, self.root)
+
+        self.assertFalse(self.output().exists())
+
+    def test_post_commit_pdf_exchange_is_external_and_digest_detects_it(self):
         publisher = load_module("qa_report_pdf_exchange")
         real_rename = publisher._atomic_rename_exclusive
 
-        def exchange_pdf(parent_fd, source, destination):
-            result = real_rename(parent_fd, source, destination)
+        def exchange_pdf(parent_fd, source, destination, *commit_context):
+            result = real_rename(parent_fd, source, destination, *commit_context)
             pdf = self.output() / "report.pdf"
             pdf.unlink()
             pdf.write_bytes(b"ATTACKER-PDF")
@@ -265,18 +368,21 @@ class QaReportCliTest(unittest.TestCase):
         with mock.patch.object(publisher, "render_pdf", side_effect=self.fake_pdf), mock.patch.object(
             publisher, "_atomic_rename_exclusive", side_effect=exchange_pdf
         ):
-            with self.assertRaisesRegex(publisher.PublicationError, "published report.*changed"):
-                publisher.generate_report(self.manifest_path, self.root)
+            result = publisher.generate_report(self.manifest_path, self.root)
 
+        self.assertEqual(result["export_status"], "complete")
         self.assertEqual((self.output() / "report.pdf").read_bytes(), b"ATTACKER-PDF")
+        self.assertNotEqual(
+            result["publication_digest"], snapshot_digest(publication_snapshot(self.output()))
+        )
 
-    def test_published_run_directory_exchange_preserves_attacker_sentinel(self):
+    def test_post_commit_run_exchange_is_external_and_digest_detects_it(self):
         publisher = load_module("qa_report_run_exchange")
         real_rename = publisher._atomic_rename_exclusive
         displaced = self.root / "displaced-owned-package"
 
-        def exchange_run(parent_fd, source, destination):
-            result = real_rename(parent_fd, source, destination)
+        def exchange_run(parent_fd, source, destination, *commit_context):
+            result = real_rename(parent_fd, source, destination, *commit_context)
             self.output().rename(displaced)
             self.output().mkdir()
             (self.output() / "sentinel").write_bytes(b"attacker run")
@@ -285,13 +391,14 @@ class QaReportCliTest(unittest.TestCase):
         with mock.patch.object(publisher, "render_pdf", side_effect=self.fake_pdf), mock.patch.object(
             publisher, "_atomic_rename_exclusive", side_effect=exchange_run
         ):
-            with self.assertRaisesRegex(
-                publisher.PublicationError, "published report directory identity changed"
-            ):
-                publisher.generate_report(self.manifest_path, self.root)
+            result = publisher.generate_report(self.manifest_path, self.root)
 
+        self.assertEqual(result["export_status"], "complete")
         self.assertEqual((self.output() / "sentinel").read_bytes(), b"attacker run")
         self.assertTrue((displaced / "manifest.json").is_file())
+        self.assertNotEqual(
+            result["publication_digest"], snapshot_digest(publication_snapshot(self.output()))
+        )
 
     def test_main_exit_codes_distinguish_input_and_export_failures(self):
         publisher = load_module("qa_report_main")

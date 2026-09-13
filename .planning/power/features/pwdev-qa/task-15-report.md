@@ -120,3 +120,54 @@ OK
 
 The ReportLab 4.4.9 integration was repeated with bundled Python 3.12: publication returned
 `complete`, pypdf strict mode reopened all 7 pages, and the copied attachment remained identical.
+
+## Correction round 2
+
+The controller ruling defines the atomic no-overwrite rename as the publication commit. The
+finite post-rename snapshots from round 1 were removed: they could not prove future immutability
+and incorrectly classified external post-commit mutation as exporter failure. Root and staging
+identity/content are revalidated immediately before the commit; collisions remain non-overwrite.
+
+Every complete result now returns a deterministic, inode-independent `publication_snapshot` of
+the staged directory/file inventory, sizes, and SHA-256 values, plus `publication_digest`, the
+SHA-256 of canonical JSON. Independent tests mutate the PDF or replace the run directory after
+commit, classify those changes as external, and prove the recomputed consumer digest diverges.
+
+The standard-library PDF parser now dereferences `/Root` into a `/Type /Catalog` dictionary,
+dereferences its live `/Pages` dictionary, validates non-negative integer `/Count`, parses the
+`/Kids` reference array, checks count consistency, and dereferences each child. A coherent xref
+whose root body is garbage is refused as an incomplete export.
+
+TDD and regression reversal:
+
+```text
+python3 -m unittest <catalog-pages> <digest> <post-commit> <pre-commit-staging>
+RED: semantic garbage accepted; digest absent; post-commit misclassified; staging swap accepted
+
+python3 -m unittest <six correction probes>
+GREEN: Ran 6 tests — OK
+
+# semantic parser, digest calculation, and staging comparison temporarily reverted
+python3 -m unittest <three regression probes>
+Ran 3 tests — FAILED (failures=3)
+
+# protections restored
+python3 -m unittest <three regression probes>
+Ran 3 tests — OK
+
+python3 -m unittest tests.test_qa_report_cli
+Ran 15 tests in 0.076s — OK
+
+<bundled-python-3.12> -m unittest discover -s tests -p 'test_qa*.py'
+Ran 131 tests in 6.174s — OK
+
+python3 -m py_compile plugins/pwdev-qa/scripts/qa_report.py tests/test_qa_report_cli.py
+OK
+
+git diff --check
+OK
+```
+
+The ReportLab 4.4.9 integration was repeated with bundled Python 3.12: strict pypdf reopened all
+7 pages, the attachment was identical, and an independently rebuilt snapshot produced the exact
+returned publication digest. No parser dependency was added to export.
