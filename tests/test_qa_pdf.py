@@ -21,10 +21,11 @@ from tests.test_qa_verdict import inspections
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS = ROOT / "plugins" / "pwdev-qa" / "scripts"
+PLUGIN = ROOT / "plugins" / "pwdev-qa"
+SCRIPTS = PLUGIN / "scripts"
 PDF_SCRIPT = SCRIPTS / "qa_pdf.py"
 VERDICT_SCRIPT = SCRIPTS / "qa_verdict.py"
-REQUIREMENTS = ROOT / "plugins" / "pwdev-qa" / "requirements.txt"
+REQUIREMENTS = PLUGIN / "requirements.txt"
 
 
 def png_fixture(width: int = 40, height: int = 24) -> bytes:
@@ -349,15 +350,18 @@ class QaPdfTest(unittest.TestCase):
         self.assertEqual(sum(len(page.images) for page in PdfReader(self.destination).pages), 0)
 
     def test_declares_exact_runtime_and_verification_dependencies(self) -> None:
-        lines = [
+        runtime_lines = [
             line.strip()
             for line in REQUIREMENTS.read_text(encoding="utf-8").splitlines()
             if line.strip() and not line.lstrip().startswith("#")
         ]
-        self.assertEqual(
-            lines,
-            ["reportlab==4.4.9", "pypdf==6.10.0", "pdfplumber==0.11.9"],
-        )
+        dev_lines = [
+            line.strip()
+            for line in (PLUGIN / "requirements-dev.txt").read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+        self.assertEqual(runtime_lines, ["reportlab==4.4.9"])
+        self.assertEqual(dev_lines, ["pypdf==6.10.0", "pdfplumber==0.11.9"])
 
 
 if __name__ == "__main__":

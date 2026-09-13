@@ -101,6 +101,12 @@ class QaReportCliTest(unittest.TestCase):
             sha256=hashlib.sha256(self.raw).hexdigest(),
             size_bytes=len(self.raw),
         )
+        self.contract_raw = b"CA-001: O relat\xc3\xb3rio \xc3\xa9 exportado.\n"
+        (self.root / "contract.md").write_bytes(self.contract_raw)
+        self.manifest["contract"].update(
+            path="contract.md",
+            sha256=hashlib.sha256(self.contract_raw).hexdigest(),
+        )
         self.manifest["x-private"] = {"secret-note": "PRIVATE-ONLY"}
         self.manifest["cases"][0]["command"] = (
             "python3 -c 'open(\"COMMAND-RAN\", \"w\").write(\"bad\")'"
@@ -145,6 +151,74 @@ class QaReportCliTest(unittest.TestCase):
         self.assertEqual(attachment.read_bytes(), self.raw)
         self.assertFalse((self.root / "COMMAND-RAN").exists())
         self.assertIn("Command (inert)", (self.output() / "report.html").read_text("utf-8"))
+
+    def test_missing_changed_or_unpaired_contract_blocks_pass(self):
+        scenarios = {
+            "missing": None,
+            "changed": b"CA-001: Conteudo diferente.\n",
+            "unpaired": b"CA-001: Outro texto.\nCA-999: O relat\xc3\xb3rio \xc3\xa9 exportado.\n",
+        }
+        for label, contract_raw in scenarios.items():
+            with self.subTest(label=label):
+                run_id = f"contract-{label}"
+                data = copy.deepcopy(self.manifest)
+                data["run_id"] = run_id
+                contract = self.root / "contract.md"
+                if contract_raw is None:
+                    contract.unlink(missing_ok=True)
+                else:
+                    contract.write_bytes(contract_raw)
+                self.manifest_path.write_text(json.dumps(data), encoding="utf-8")
+                publisher = load_module(f"qa_report_contract_{label}")
+                with mock.patch.object(publisher, "render_pdf", side_effect=self.fake_pdf):
+                    result = publisher.generate_report(self.manifest_path, self.root)
+                self.assertEqual(result["export_status"], "complete")
+                self.assertEqual(result["verdict"], "BLOCKED")
+                public = json.loads((self.output(run_id) / "manifest.json").read_text("utf-8"))
+                self.assertTrue(any("acceptance contract" in item for item in public["diagnostics"]))
+                (self.root / "contract.md").write_bytes(self.contract_raw)
+
+    def test_symlinked_contract_is_refused_without_publication(self):
+        actual = self.root / "actual-contract.md"
+        actual.write_bytes(self.contract_raw)
+        (self.root / "contract.md").unlink()
+        (self.root / "contract.md").symlink_to(actual)
+        publisher = load_module("qa_report_contract_symlink")
+
+        with self.assertRaisesRegex(publisher.EvidenceError, "unsafe"):
+            publisher.generate_report(self.manifest_path, self.root)
+
+        self.assertFalse(self.output().exists())
+
+    def test_known_credentials_in_each_public_text_surface_refuse_all_artifacts(self):
+        unsafe = "Authorization: Bearer SYNTHETIC_REVIEW_TOKEN_123456"
+        mutations = {
+            "project": lambda data: data.__setitem__("project", unsafe),
+            "actor": lambda data: data["criteria"][0]["assessment"].__setitem__("actor", unsafe),
+            "expected": lambda data: data["cases"][0].__setitem__("expected", unsafe),
+            "observed": lambda data: data["cases"][0].__setitem__("observed", unsafe),
+            "command": lambda data: data["cases"][0].__setitem__("command", unsafe),
+            "diagnostic-identity": lambda data: data["cases"][0].__setitem__("id", unsafe),
+        }
+        for label, mutate in mutations.items():
+            with self.subTest(label=label):
+                data = copy.deepcopy(self.manifest)
+                data["run_id"] = f"unsafe-{label}"
+                if label == "diagnostic-identity":
+                    data["defects"] = []
+                    data["cases"][0]["status"] = "NOT_RUN"
+                    data["cases"][0]["required"] = False
+                    data["criteria"][0]["case_ids"] = []
+                mutate(data)
+                self.manifest_path.write_text(json.dumps(data), encoding="utf-8")
+                publisher = load_module(f"qa_report_public_{label}")
+                with self.assertRaisesRegex(publisher.EvidenceError, "public report") as raised:
+                    publisher.generate_report(self.manifest_path, self.root)
+                self.assertNotIn("SYNTHETIC_REVIEW_TOKEN", str(raised.exception))
+                output = self.output(data["run_id"])
+                self.assertFalse(output.exists())
+                for name in ("manifest.json", "report.html", "report.pdf"):
+                    self.assertFalse((output / name).exists())
 
     def test_collision_and_symlinked_output_component_are_refused(self):
         publisher = load_module("qa_report_collision")

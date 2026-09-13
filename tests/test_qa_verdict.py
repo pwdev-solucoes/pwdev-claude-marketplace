@@ -171,6 +171,42 @@ class QaVerdictTest(unittest.TestCase):
                 self.assertEqual(report["verdict"], "BLOCKED")
                 self.assertTrue(any(label in item for item in report["diagnostics"]))
 
+    def test_applicable_criterion_requires_substantive_assessment_without_equality(self) -> None:
+        for field, value in (("expected", "  \n"), ("observed", "")):
+            with self.subTest(field=field):
+                data = valid_manifest()
+                data["defects"] = []
+                data["criteria"][0]["assessment"][field] = value
+                report = self.build(data)
+                self.assertEqual(report["verdict"], "BLOCKED")
+                self.assertEqual(report["criterion_results"][0]["result"], "BLOCKED")
+                self.assertTrue(any("substantive assessment" in d for d in report["diagnostics"]))
+
+        unequal = valid_manifest()
+        unequal["defects"] = []
+        unequal["criteria"][0]["assessment"].update(
+            expected="A pagina responde",
+            observed="A pagina respondeu em 120 ms",
+        )
+        self.assertEqual(self.build(unequal)["verdict"], "PASS")
+
+    def test_executed_required_case_requires_expected_and_observed_but_not_run_may_omit(self) -> None:
+        for field, value in (("expected", ""), ("observed", " \t")):
+            with self.subTest(field=field):
+                data = valid_manifest()
+                data["defects"] = []
+                data["cases"][0][field] = value
+                report = self.build(data)
+                self.assertEqual(report["verdict"], "BLOCKED")
+                self.assertTrue(any("executed required case" in d for d in report["diagnostics"]))
+
+        not_run = valid_manifest()
+        not_run["defects"] = []
+        not_run["cases"][0].update(status="NOT_RUN", expected="", observed="")
+        report = self.build(not_run)
+        self.assertEqual(report["verdict"], "BLOCKED")
+        self.assertFalse(any("executed required case" in d for d in report["diagnostics"]))
+
     def test_pending_states_invalid_waiver_and_blocked_evidence_never_pass(self) -> None:
         for status, expected_result, diagnostic in (
             ("BLOCKED", "BLOCKED", "terminal status BLOCKED"),
