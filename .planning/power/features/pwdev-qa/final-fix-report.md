@@ -68,3 +68,47 @@ Implementation commit: `9da1b03` (`fix(pwdev-qa): enforce final publication gate
 - `final-review.md` and the pre-existing untracked review packages were left untouched.
 - No dependency was installed, no runtime or personal configuration changed, no external smoke
   was attempted, and no finish/merge/push action was performed.
+
+## Final-fix round 2 — FR-03 criterion consistency
+
+Date: 2026-09-13
+Status: IMPLEMENTED_AND_VERIFIED; limited to the remaining FR-03 Major.
+
+### Root cause
+
+The first FR-03 correction set global `pending` when an executed required case lacked
+substantive expected/observed content, but the criterion derivation independently classified a
+PASS from status and evidence alone. In the same decision chain, blank criterion assessment was
+checked before a verified required-case failure, incorrectly downgrading the matrix result from
+FAIL to BLOCKED.
+
+### RED evidence
+
+- Blank `expected` and blank/whitespace `observed` on an executed required PASS case each left
+  `criterion_results[CA-001]` at PASS: two expected assertion failures.
+- A verified required FAIL case with a blank/whitespace criterion assessment produced criterion
+  BLOCKED instead of FAIL: one expected assertion failure.
+- With only the production correction temporarily removed after GREEN, the same three
+  assertions failed again, proving the regressions exercise the corrected branches.
+
+### Implemented correction
+
+The consolidator now uses one substantive-observation predicate for both case and assessment
+records. Criterion derivation detects incomplete executed required cases and returns BLOCKED
+before its PASS branch. Verified required-case failures are evaluated first and retain criterion
+FAIL even when the criterion assessment is blank. NOT_RUN and NOT_APPLICABLE remain exempt from
+the executed-case content requirement; global verdict precedence is unchanged.
+
+### GREEN evidence
+
+- Focused FR-03 and legitimate-state regressions: 5 tests, OK.
+- Complete verdict module: 19 tests, OK.
+- Bundled Python 3.12, all `test_qa_*.py`: 208 tests, OK in 14.124 s.
+- System Python 3.9.6 compatible contract/core group: 64 tests, OK in 3.838 s.
+- `git diff --check`: OK.
+
+### Preserved boundaries
+
+The deferred exact-pair mutation-test Minor and flaky-quarantine example were not changed.
+Runtime acceptance remains BLOCKED at 0/3 VERIFIED. No dependency, runtime configuration,
+external smoke, finish, merge, push, or publication action was performed.

@@ -248,6 +248,11 @@ def build_report(
     def any_evidence_verified(item: Dict[str, Any]) -> bool:
         return any(ref in verified_by_id for ref in item.get("evidence_ids", []))
 
+    def has_substantive_observation(item: Dict[str, Any]) -> bool:
+        return bool(item.get("expected", "").strip()) and bool(
+            item.get("observed", "").strip()
+        )
+
     def valid_not_applicable(case: Dict[str, Any]) -> bool:
         criterion_ids = case.get("criterion_ids", [])
         if not criterion_ids:
@@ -265,13 +270,10 @@ def build_report(
     pending = bool(diagnostics) or invalid_case_history or blocked_evidence > 0
     for case in terminal_cases:
         status = case.get("status")
-        substantive_case = bool(case.get("expected", "").strip()) and bool(
-            case.get("observed", "").strip()
-        )
         if (
             case.get("required")
             and status not in ("NOT_RUN", "NOT_APPLICABLE")
-            and not substantive_case
+            and not has_substantive_observation(case)
         ):
             diagnostic(
                 f"case {case['id']}: executed required case lacks expected or observed content"
@@ -318,9 +320,7 @@ def build_report(
             result = "NOT_APPLICABLE"
         else:
             assessment = criterion["assessment"]
-            substantive_assessment = bool(assessment["expected"].strip()) and bool(
-                assessment["observed"].strip()
-            )
+            substantive_assessment = has_substantive_observation(assessment)
             required_cases = []
             missing_cases = []
             non_reciprocal = []
@@ -343,12 +343,21 @@ def build_report(
                 for case in required_cases
                 if case.get("status") == "FAIL" and any_evidence_verified(case)
             ]
-            if not substantive_assessment:
+            incomplete_executed_cases = [
+                case
+                for case in required_cases
+                if case.get("status") not in ("NOT_RUN", "NOT_APPLICABLE")
+                and not has_substantive_observation(case)
+            ]
+            if proven_failures:
+                result = "FAIL"
+            elif not substantive_assessment:
                 result = "BLOCKED"
                 diagnostic(f"criterion {identifier}: substantive assessment is incomplete")
                 pending = True
-            elif proven_failures:
-                result = "FAIL"
+            elif incomplete_executed_cases:
+                result = "BLOCKED"
+                pending = True
             elif non_reciprocal:
                 result = "BLOCKED"
                 diagnostic(f"criterion {identifier}: non-reciprocal case links")

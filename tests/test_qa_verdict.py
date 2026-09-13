@@ -198,6 +198,12 @@ class QaVerdictTest(unittest.TestCase):
                 data["cases"][0][field] = value
                 report = self.build(data)
                 self.assertEqual(report["verdict"], "BLOCKED")
+                self.assertEqual(
+                    report["criterion_results"],
+                    [{"id": "CA-001", "result": "BLOCKED"}],
+                )
+                self.assertEqual(report["counts"]["criteria_pass"], 0)
+                self.assertEqual(report["counts"]["criteria_blocked"], 1)
                 self.assertTrue(any("executed required case" in d for d in report["diagnostics"]))
 
         not_run = valid_manifest()
@@ -206,6 +212,22 @@ class QaVerdictTest(unittest.TestCase):
         report = self.build(not_run)
         self.assertEqual(report["verdict"], "BLOCKED")
         self.assertFalse(any("executed required case" in d for d in report["diagnostics"]))
+
+    def test_proven_criterion_failure_precedes_blank_assessment(self) -> None:
+        data = valid_manifest()
+        data["defects"] = []
+        data["cases"][0]["status"] = "FAIL"
+        data["criteria"][0]["assessment"].update(expected="", observed=" \n")
+
+        report = self.build(data)
+
+        self.assertEqual(report["verdict"], "FAIL")
+        self.assertEqual(
+            report["criterion_results"],
+            [{"id": "CA-001", "result": "FAIL"}],
+        )
+        self.assertEqual(report["counts"]["criteria_fail"], 1)
+        self.assertEqual(report["counts"]["criteria_blocked"], 0)
 
     def test_pending_states_invalid_waiver_and_blocked_evidence_never_pass(self) -> None:
         for status, expected_result, diagnostic in (
