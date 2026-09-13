@@ -148,6 +148,15 @@
       "category": "workflow",
       "tags": ["second-brain", "knowledge-base", "okf", "llm-wiki", "markdown", "agents", "mcp", "pt-br"],
       "strict": true
+    },
+    {
+      "name": "pwdev-qa",
+      "displayName": "PWDEV QA — Portable Quality Assurance",
+      "source": "./plugins/pwdev-qa",
+      "description": "Portable QA workflows for Claude Code, Codex, and Hermes Agent with contextual tool recommendations, bounded execution, verifiable evidence, acceptance validation, and equivalent offline HTML/PDF reports; 29 skills and 10 Claude commands",
+      "category": "workflow",
+      "tags": ["quality-assurance", "testing", "evidence", "reporting", "claude", "codex", "hermes", "portable"],
+      "strict": true
     }
   ]
 }
