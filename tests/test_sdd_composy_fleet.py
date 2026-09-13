@@ -305,7 +305,8 @@ exit 0
         )
         self.assertIn(expected, prompt)
         self.assertIn(
-            "Use only the already-sanitized fleet member, task contract, and LOOP context identified above.",
+            "Before approval, read only the already-sanitized named fleet member, task contract, "
+            "and LOOP context identified above.",
             prompt,
         )
         self.assertIn(
@@ -329,6 +330,57 @@ exit 0
                         self.assertIn(str(prompt_file), command.splitlines())
                     else:
                         self.assertIn(prompt.rstrip("\n"), command)
+
+    def test_interactive_prompt_requires_explicit_native_loop_approval_before_every_mutation(self):
+        source = INTERACTIVE_RUN.read_text()
+        generator = source.split("<<'PY'\n", 2)[2].split("\nPY\nstate_action running", 1)[0]
+        marker = "SENSITIVE-CONTENT-MUST-NOT-BE-INTERPOLATED"
+        preflight = json.dumps({
+            "fleet_id": "demo", "member_id": "TASK-001", "task_id": "TASK-001",
+            "loop_id": "loop-task-001", "runtime": "codex", "secret": marker,
+        })
+        prompt = subprocess.check_output(
+            ["python3", "-c", generator, preflight, "/safe/worktree"], text=True)
+
+        required = (
+            "The contract/hash authorization, runtime:UI authorization, directory trust, hook trust, "
+            "and any fleet launch or resume command are not lifecycle approval.",
+            "Before any mutation, write, edit, potentially mutating test, or lifecycle continuation, "
+            "explicitly ask the human operator for native LOOP approval and wait for their answer.",
+            "Never invoke, pass, simulate, or infer --human-approved yourself.",
+            "If explicit native LOOP approval is unavailable or times out, stop with zero mutation.",
+        )
+        for boundary in required:
+            self.assertIn(boundary, prompt)
+        self.assertNotIn(marker, prompt)
+        self.assertIn(
+            "Before approval, read only the already-sanitized named fleet member, task contract, "
+            "and LOOP context identified above.",
+            prompt,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            prompt_file = Path(tmp) / "prompt"; prompt_file.write_text(prompt)
+            for runtime in ("codex", "hermes", "claude"):
+                with self.subTest(runtime=runtime):
+                    adapter = ROOT / f"plugins/sdd-composy/scripts/fleet/engine-{runtime}.sh"
+                    raw = subprocess.check_output([
+                        "bash", "-c",
+                        'source "$1"; sdd_engine_' + runtime +
+                        '_interactive_command "$2" "$3" "$4"; printf "%s\\0" "${SDD_ENGINE_COMMAND[@]}"',
+                        "", str(adapter), "/safe/worktree", str(prompt_file), "/safe/plugin",
+                    ])
+                    argv = [value.decode() for value in raw.split(b"\0") if value]
+                    if runtime == "hermes":
+                        self.assertEqual(
+                            argv,
+                            ["hermes", "chat", "--query-file", str(prompt_file), "--cli", "--in", "/safe/worktree"],
+                        )
+                    else:
+                        self.assertEqual(argv[-1], prompt.rstrip("\n"))
+                        for boundary in required:
+                            self.assertIn(boundary, argv[-1])
+                    self.assertNotIn("--human-approved", argv)
 
     def test_symlinked_state_ancestor_is_rejected_without_external_write(self):
         self.task(); outside=Path(self.tmp.name+"-outside"); outside.mkdir(); (self.repo/".planning").symlink_to(outside,target_is_directory=True)
