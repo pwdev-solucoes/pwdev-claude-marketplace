@@ -320,6 +320,197 @@ class QaWorkflowContractTest(unittest.TestCase):
                 self.assertNotIn("qa_report.py", text)
                 self.assertLessEqual(len(text.splitlines()), 12)
 
+    def test_regression_and_bug_have_the_complete_portable_contract(self) -> None:
+        for name in ("qa-regression", "qa-bug"):
+            with self.subTest(name=name):
+                text = read_required(SKILLS / name / "SKILL.md")
+                self.assertRegex(
+                    text,
+                    rf"(?s)^---\nname: {re.escape(name)}\ndescription: .+?\n---\n",
+                )
+                for section in (
+                    "Inputs",
+                    "Procedure",
+                    "Output",
+                    "Failure modes",
+                    "Safety",
+                    "Related skills",
+                ):
+                    self.assertIn(f"## {section}", text)
+                for token in (
+                    "CLAUDE.md",
+                    "AGENTS.md",
+                    "${CLAUDE_PLUGIN_ROOT}",
+                    "$ARGUMENTS",
+                ):
+                    self.assertNotIn(token, text)
+
+    def test_regression_selects_by_impact_with_materialized_traceability(self) -> None:
+        text = read_required(SKILLS / "qa-regression" / "SKILL.md")
+        inputs, procedure, output = re.split(
+            r"(?m)^## (?:Inputs|Procedure|Output)\n", text
+        )[1:4]
+        self.assertRegex(inputs, r"(?is)explicit.*(?:objective|intent)")
+        self.assertRegex(inputs, r"(?is)(?:explicit )?authorization")
+        self.assertRegex(
+            procedure,
+            r"(?is)preserve.*(?:objective|intent).*authorization",
+        )
+        self.assertRegex(procedure, r"(?is)select.*impact.*(?:rationale|justification)")
+        self.assertRegex(
+            procedure,
+            r"(?is)change ID.*risk ID.*criterion ID.*defect ID.*case ID",
+        )
+        self.assertRegex(procedure, r"(?is)selected.*excluded.*(?:rationale|reason)")
+        for token in (
+            "CHG-AUTH-017",
+            "RISK-AUTH-04",
+            "AC-LOGIN-01",
+            "DEF-SESSION-09",
+            "TC-LOGIN",
+            "TC-PROFILE",
+        ):
+            self.assertIn(token, text)
+        expected_labels = [
+            "TARGET",
+            "OBJECTIVE",
+            "CONTRACT",
+            "CRITERIA",
+            "OPERATION",
+            "AUTHORIZATION",
+            "CHANGE_IMPACT",
+            "SELECTED_CASES",
+            "EXCLUDED_CASES",
+            "RESULTS",
+            "LIMITATIONS",
+            "EVIDENCE_REFERENCES",
+            "CURRENT_DEFECTS",
+            "VERDICT",
+            "NEXT",
+        ]
+        self.assertEqual(exact_output_labels(output), expected_labels)
+        self.assertRegex(text, r"(?is)convenience.*(?:never|not).*impact")
+
+    def test_bug_records_reproduction_triage_scope_evidence_and_terminal_retest(self) -> None:
+        text = read_required(SKILLS / "qa-bug" / "SKILL.md")
+        inputs, procedure, output = re.split(
+            r"(?m)^## (?:Inputs|Procedure|Output)\n", text
+        )[1:4]
+        self.assertRegex(inputs, r"(?is)explicit.*(?:objective|intent)")
+        self.assertRegex(inputs, r"(?is)(?:explicit )?authorization")
+        self.assertRegex(
+            procedure,
+            r"(?is)preserve.*(?:objective|intent).*authorization",
+        )
+        for phrase in (
+            "reproduction",
+            "environment",
+            "expected",
+            "observed",
+            "evidence",
+            "severity",
+            "scope",
+            "retest",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, text.lower())
+        self.assertRegex(
+            procedure,
+            r"(?is)`PASS`.*terminal.*retest.*valid.*evidence.*all applicable criteria.*`PASS`.*no (?:other )?current in-scope defects",
+        )
+        for token in (
+            "ATT-LOGIN-01",
+            "ATT-LOGIN-02",
+            "CASE-LOGIN-LOCK",
+            "DEF-LOGIN-01",
+            "AC-LOGIN-01",
+        ):
+            self.assertIn(token, text)
+        expected_labels = [
+            "TARGET",
+            "OBJECTIVE",
+            "CONTRACT",
+            "CRITERIA",
+            "OPERATION",
+            "AUTHORIZATION",
+            "DEFECT",
+            "REPRODUCTION",
+            "TRIAGE",
+            "ATTEMPT_HISTORY",
+            "RETEST",
+            "RESULTS",
+            "LIMITATIONS",
+            "EVIDENCE_REFERENCES",
+            "CURRENT_DEFECTS",
+            "VERDICT",
+            "NEXT",
+        ]
+        self.assertEqual(exact_output_labels(output), expected_labels)
+
+    def test_regression_and_bug_consult_applicable_installed_specialists(self) -> None:
+        expected = {
+            "qa-regression": "qa-specialist-regression",
+            "qa-bug": "qa-specialist-defects",
+        }
+        for name, primary_specialist in expected.items():
+            with self.subTest(name=name):
+                text = read_required(SKILLS / name / "SKILL.md")
+                procedure = re.split(r"(?m)^## Procedure\n", text, maxsplit=1)[1].split(
+                    "\n## Output\n", 1
+                )[0]
+                self.assertIn(f"`{primary_specialist}`", procedure)
+                self.assertRegex(
+                    procedure,
+                    r"(?is)identify.*surfaces.*consult.*installed.*applicable.*`qa-specialist-",
+                )
+                self.assertRegex(
+                    procedure,
+                    r"(?is)(?:unavailable|absent|missing).*specialist.*limitation",
+                )
+                self.assertRegex(
+                    procedure,
+                    r"(?is)specialist.*(?:does not|cannot|never).*expand.*authorization",
+                )
+
+    def test_regression_and_bug_keep_safety_and_report_commands_inert(self) -> None:
+        command = "qa_report.py report --manifest PATH --project-root PATH"
+        for name in ("qa-regression", "qa-bug"):
+            with self.subTest(name=name):
+                text = read_required(SKILLS / name / "SKILL.md")
+                self.assertRegex(
+                    text,
+                    r"(?is)load.*penetration.*production.*external effects.*explicit",
+                )
+                self.assertRegex(
+                    text,
+                    r"(?is)product (?:code|corrections?).*only.*requested",
+                )
+                self.assertIn(command, text)
+                self.assertRegex(
+                    text,
+                    r"(?is)report.*does not (?:run|execute|re-run).*tests",
+                )
+
+    def test_regression_and_bug_claude_commands_are_thin_adapters(self) -> None:
+        for command_name, skill_name in (
+            ("regression", "qa-regression"),
+            ("bug", "qa-bug"),
+        ):
+            with self.subTest(command=command_name):
+                text = read_required(COMMANDS / f"{command_name}.md")
+                self.assertRegex(
+                    text,
+                    r"(?s)^---\ndescription: .+\nargument-hint: .+\n---\n",
+                )
+                self.assertIn(
+                    f"${{CLAUDE_PLUGIN_ROOT}}/skills/{skill_name}/SKILL.md", text
+                )
+                self.assertIn("$ARGUMENTS", text)
+                self.assertIn("current repository context", text)
+                self.assertIn("return the shared skill's result unchanged", text)
+                self.assertNotIn("qa_report.py", text)
+                self.assertLessEqual(len(text.splitlines()), 12)
+
 
 if __name__ == "__main__":
     unittest.main()
