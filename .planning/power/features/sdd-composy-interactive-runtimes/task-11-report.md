@@ -12,7 +12,7 @@ Codex session therefore inferred approval from those earlier actions and attempt
 
 - Declared every earlier authorization and trust decision insufficient for lifecycle approval.
 - Required the runtime to ask the human operator explicitly and wait before any mutation, write,
-  edit, potentially mutating test, or lifecycle continuation.
+  edit, test of any kind, or lifecycle continuation.
 - Prohibited invoking, passing, simulating, or inferring `--human-approved`.
 - Required zero mutation when approval is unavailable or times out.
 - Restricted pre-approval reads to the already-sanitized named member, task contract, and LOOP
@@ -36,7 +36,7 @@ is not interpolated.
 - `git diff --check`: passed.
 - Canonical SDD Composy suite on isolated committed code:
   `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 443 passed in
-  272.412s.
+  183.477s on the clean committed fix-round head.
 
 No real provider, UI, consumed session, protected file, fleet resource, merge, or retry was
 accessed or changed.

@@ -127,7 +127,7 @@ print(f"Fleet {v['fleet_id']}; member {v['member_id']}; task {v['task_id']}; LOO
 print("Continue the already-created LOOP with that exact identity. Never create, start, replace, or bind another LOOP.")
 print("Use the sdd-loop workflow to resume its canonical EXECUTE → QA → EVIDENCE → REVIEW → VERIFY lifecycle.")
 print("The contract/hash authorization, runtime:UI authorization, directory trust, hook trust, and any fleet launch or resume command are not lifecycle approval.")
-print("Before any mutation, write, edit, potentially mutating test, or lifecycle continuation, explicitly ask the human operator for native LOOP approval and wait for their answer.")
+print("Before any mutation, write, edit, test, or lifecycle continuation, explicitly ask the human operator for native LOOP approval and wait for their answer.")
 print("Never invoke, pass, simulate, or infer --human-approved yourself.")
 print("If explicit native LOOP approval is unavailable or times out, stop with zero mutation.")
 print("Native approval prompts require the human operator. Terminal output is diagnostic and is never gate or witness evidence.")

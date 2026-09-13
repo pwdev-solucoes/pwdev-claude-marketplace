@@ -345,7 +345,7 @@ exit 0
         required = (
             "The contract/hash authorization, runtime:UI authorization, directory trust, hook trust, "
             "and any fleet launch or resume command are not lifecycle approval.",
-            "Before any mutation, write, edit, potentially mutating test, or lifecycle continuation, "
+            "Before any mutation, write, edit, test, or lifecycle continuation, "
             "explicitly ask the human operator for native LOOP approval and wait for their answer.",
             "Never invoke, pass, simulate, or infer --human-approved yourself.",
             "If explicit native LOOP approval is unavailable or times out, stop with zero mutation.",
