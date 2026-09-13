@@ -24,6 +24,33 @@ def exact_output_labels(output_section: str) -> list[str]:
     return re.findall(r"(?m)^([A-Z][A-Z_]*): ", match.group("record"))
 
 
+def destructive_clauses(
+    text: str, *, verb_pattern: str, object_pattern: str
+) -> list[str]:
+    """Find affirmative destructive clauses while preserving explicit negations."""
+
+    normalized = " ".join(text.split())
+    clauses = re.split(
+        r"(?<=[.!?])\s+|;|\b(?:but|however|yet|although|nevertheless)\b",
+        normalized,
+        flags=re.IGNORECASE,
+    )
+    negation = re.compile(
+        r"\b(?:never|not|cannot|can't|doesn't|does not|don't|do not|"
+        r"mustn't|must not|shouldn't|should not)\b",
+        re.IGNORECASE,
+    )
+    verb = re.compile(verb_pattern, re.IGNORECASE)
+    protected_object = re.compile(object_pattern, re.IGNORECASE)
+    return [
+        clause.strip()
+        for clause in clauses
+        if verb.search(clause)
+        and protected_object.search(clause)
+        and not negation.search(clause)
+    ]
+
+
 class QaWorkflowContractTest(unittest.TestCase):
     def test_workflows_have_the_complete_portable_contract(self) -> None:
         for name in ("qa-init", "qa-strategy"):
@@ -871,6 +898,27 @@ class QaWorkflowContractTest(unittest.TestCase):
             r"(?i)\b(?:may|can|is allowed to|is permitted to)\s+"
             r"(?:skip|ignore|bypass|omit)\b[^.]*\bevidence\b",
         )
+        evidence_bypass_verbs = (
+            r"\b(?:skip(?:s|ped|ping)?|ignor(?:e|es|ed|ing)|"
+            r"bypass(?:es|ed|ing)?|omit(?:s|ted|ting)?)\b"
+        )
+        self.assertEqual(
+            [],
+            destructive_clauses(
+                normalized_procedure,
+                verb_pattern=evidence_bypass_verbs,
+                object_pattern=r"\bevidence validation\b",
+            ),
+        )
+        self.assertEqual(
+            [],
+            destructive_clauses(
+                "It never skips evidence validation. "
+                "Evidence validation must not be skipped.",
+                verb_pattern=evidence_bypass_verbs,
+                object_pattern=r"\bevidence validation\b",
+            ),
+        )
         expected_labels = [
             "TARGET",
             "OBJECTIVE",
@@ -960,28 +1008,41 @@ class QaWorkflowContractTest(unittest.TestCase):
             r"(?i)\b(?:may|can|is allowed to|is permitted to)\s+(?:also\s+)?"
             r"(?:export|generate)\b[^.]*\breport",
         )
-        destructive_sentences = [
-            sentence
-            for sentence in re.split(r"[.!?](?:\s+|$)", normalized_procedure.lower())
-            if re.search(r"\b(?:discard|drop|omit|ignore|remove)\b", sentence)
-        ]
-        for protected_term in (
-            "id",
-            "status",
-            "expected",
-            "observed",
-            "evidence reference",
-            "sanitization",
-            "current",
-            "superseded",
-            "scope decision",
-            "missing item",
-        ):
+        destructive_verbs = (
+            r"\b(?:discard(?:s|ed|ing)?|drop(?:s|ped|ping)?|"
+            r"omit(?:s|ted|ting)?|ignor(?:e|es|ed|ing)|remov(?:e|es|ed|ing))\b"
+        )
+        protected_fields = {
+            "ID": r"\bIDs?\b",
+            "status": r"\bstatus(?:es)?\b",
+            "expected": r"\bexpected\b",
+            "observed": r"\bobserved\b",
+            "evidence reference": r"\bevidence references?\b",
+            "sanitization": r"\bsanitization(?: outcomes?)?\b",
+            "current": r"\bcurrent\b",
+            "superseded": r"\bsuperseded\b",
+            "scope decision": r"\bscope decisions?\b",
+            "missing item": r"\bmissing items?\b",
+        }
+        for protected_term, object_pattern in protected_fields.items():
             with self.subTest(discarded_field=protected_term):
-                self.assertFalse(
-                    any(protected_term in sentence for sentence in destructive_sentences),
+                self.assertEqual(
+                    [],
+                    destructive_clauses(
+                        normalized_procedure,
+                        verb_pattern=destructive_verbs,
+                        object_pattern=object_pattern,
+                    ),
                     f"status procedure permits discarding {protected_term}",
                 )
+        self.assertEqual(
+            [],
+            destructive_clauses(
+                "It preserves fields instead of dropping them. It does not discard ID.",
+                verb_pattern=destructive_verbs,
+                object_pattern=r"\bIDs?\b",
+            ),
+        )
         self.assertNotRegex(
             normalized_procedure,
             r"(?i)\b(?:may|can|is allowed to|is permitted to)\s+(?:also\s+)?"

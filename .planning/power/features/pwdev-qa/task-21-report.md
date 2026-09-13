@@ -161,3 +161,65 @@ exit 0
 git diff --check
 exit 0
 ```
+
+## Correction round 2
+
+Review source: `.planning/power/features/pwdev-qa/task-21-review.md` (quality review round 2).
+
+### Root cause
+
+The round-1 negative scans recognized only base-form destructive verbs. They rejected modal
+phrases such as `may skip` and imperatives such as `Discard`, but missed third-person active forms
+(`skips`, `discards`) and passive forms (`may be skipped`). Because the valid positive clauses
+remained present, their exact assertions could not expose an additional contradictory sentence.
+
+The correction introduces a shared structural clause scanner. It splits sentences and
+adversative clauses, recognizes active/passive inflections of skip/ignore/bypass/omit and
+discard/drop/omit/ignore/remove, binds each destructive verb to its protected object, and accepts
+explicitly negated clauses. Protected status fields use word-bounded singular/plural patterns, so
+valid prose such as `justified` cannot accidentally match `ID`.
+
+### Reproduction and mutation RED
+
+Before changing the oracle, both evidence-validation contradictions survived together:
+
+```text
+It skips evidence validation. Evidence validation may be skipped.
+Ran 1 test in 0.002s
+OK
+```
+
+Likewise, a probe containing the ten independent `It discards <field>` sentences survived the
+old status test:
+
+```text
+Ran 1 test in 0.001s
+OK
+```
+
+After strengthening the oracle, the same report probe failed once and identified both invalid
+clauses. The same status probe failed ten subtests independently for `ID`, `status`, `expected`,
+`observed`, `evidence reference`, `sanitization`, `current`, `superseded`, `scope decision`, and
+`missing item`. Both mutations were reverted after their RED runs.
+
+Valid negative controls remained accepted: `It never skips evidence validation`, `Evidence
+validation must not be skipped`, `It does not discard ID`, and the existing `instead of dropping
+them` language. The unmodified contracts also remained green.
+
+### Correction GREEN
+
+```text
+/Users/paulosoares/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m unittest tests.test_qa_workflows
+Ran 31 tests in 0.012s
+OK
+
+/Users/paulosoares/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m unittest discover -s tests -p 'test_qa_*.py'
+Ran 173 tests in 10.261s
+OK
+
+/Users/paulosoares/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m compileall -q plugins/pwdev-qa/scripts tests/test_qa_workflows.py
+exit 0
+
+git diff --check
+exit 0
+```
