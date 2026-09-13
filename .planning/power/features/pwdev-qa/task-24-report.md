@@ -38,19 +38,20 @@ with 3 of 3 runtimes VERIFIED; preliminary partial attempts remain historical di
 
 | runtime | exact version | result | decisive evidence |
 |---|---|---|---|
-| Claude Code | `2.1.269 (Claude Code)` | VERIFIED | one session loaded `pwdev-qa:qa-tooling`, preserved the negative probe as missing/NOT_RUN/BLOCKED, exported complete/FAIL, inspected HTML and parsed 171 PDF pages with CA-000..099 and the defect |
-| Codex | `codex-cli 0.153.4` | VERIFIED | installed plugin discovery invoked `pwdev-qa:qa-tooling`; the same negative probe and complete/FAIL 171-page fixture validation succeeded in one session |
-| Hermes Agent | `Hermes Agent v0.21.1 (2026.9.7) · upstream 564aef29` | VERIFIED | exact commit `a80b97b` was authorized, locally installed/enabled in flattened layout, doctor passed, and one preloaded-skill session completed the probe and fixture inspection |
+| Claude Code | `2.1.269 (Claude Code)` | VERIFIED | session `b522acbc-c139-4dec-af75-abb245a7f905` invoked `pwdev-qa:qa-tooling`, preserved the negative probe as missing/NOT_RUN/BLOCKED, exported complete/FAIL, inspected HTML and parsed 171 PDF pages with CA-000..099 and the defect |
+| Codex | `codex-cli 0.153.4` | VERIFIED | thread `01a09a22-f2ce-7a70-84ae-97f2b14b126e` used installed-plugin discovery to invoke `pwdev-qa:qa-tooling`; the same negative probe and complete/FAIL 171-page fixture validation succeeded |
+| Hermes Agent | `Hermes Agent v0.21.1 (2026.9.7) · upstream 564aef29` | VERIFIED | session `20260913_064516_ed1c02` preloaded the skill from authorized commit `a80b97b`, then completed the probe and fixture inspection after doctor passed |
 
-Full commands, output summaries and limitations are in
+Structured affirmative observations, exact commands, session/transcript locators and hashes,
+artifact paths/digests, output summaries and limitations are in
 `plugins/pwdev-qa/references/runtime-smoke.md`.
 
 ## Verification evidence
 
-- All QA tests: Python 3.12 `unittest discover -s tests -p 'test_qa_*.py' -q` — 208 tests ran,
-  all passed in 14.979s.
+- All QA tests: Python 3.12 `unittest discover -s tests -p 'test_qa_*.py' -q` — 209 tests ran,
+  all passed in 14.654s.
 - Focused/root validator: `tests.test_qa_scenarios`, `tests.test_readme_marketplace` and
-  `scripts/validate_readme_plugins.py` — 11 tests passed in 4.031s; 17 plugins validated in both
+  `scripts/validate_readme_plugins.py` — 12 tests passed in 4.041s; 17 plugins validated in both
   READMEs.
 - Legacy root README suite: 5 checks passed and 4 failed. These are the four pre-existing
   `test_marketplace_readmes` failures recorded in the baseline: it requires the superseded
@@ -82,6 +83,10 @@ Full commands, output summaries and limitations are in
   later complete one-session smoke supersede it for verification.
 - A preliminary Hermes attempt proved doctor/registration only; the authorized install of exact
   commit `a80b97b` and complete preloaded-skill session are authoritative.
+- The authoritative raw transcripts remain restricted temporary local sources and were not
+  versioned. The plugin scanner reported `known_credential_pattern=true` for Claude and Codex, so
+  those two logs are not publishable; Hermes reported `false`. The runtime ledger contains only the
+  sanitized IDs, commands/results, line locators, paths, hashes and sizes needed for review.
 - The first exploratory local-entry probe was mistakenly run from `/tmp` as
   `npx playwright cli --version`; npx warned that it would install Playwright 1.63.0 and may have
   populated the npm cache. This probe is excluded from evidence. It was not repeated or silently
@@ -170,3 +175,37 @@ not a plugin behavior regression.
 - Complete `test_qa_*` suite: 208 tests passed in 14.979s.
 - Runtime-promotion and semantic-destruction mutation tests remain green by rejecting their
   adversarial variants.
+
+## Post-authorization review correction (PA-01/PA-02)
+
+### Root cause
+
+The runtime ledger used narrative summaries without durable session/transcript/artifact locators,
+and its oracle checked vocabulary rather than the affirmative relationship between each runtime
+and the three required smoke steps. Explicit denials could therefore retain all required tokens
+and still satisfy the contract.
+
+### RED
+
+- A regression test introduced the three review mutations verbatim. Before the fix, its Claude,
+  Codex and Hermes subcases all failed because `assert_runtime_contract` raised no assertion for
+  the contradictory denial.
+- Replaying the prior committed ledger against the strengthened contract is rejected for its
+  missing structured observations, confirming the regression test does not merely fit the new
+  prose.
+
+### Correction
+
+- Each authoritative runtime now has exactly three structured observations: discovery/invocation,
+  missing-tool classification, and fixture report inspection. Every row states an affirmative
+  observation, exact command/result, and transcript line locator.
+- Each section binds the observation rows to the authoritative session/thread ID, temporary
+  transcript path/hash/size and artifact root/hash/size. Raw logs are not versioned; scanner status
+  and the Claude/Codex publication block are explicit.
+- The oracle validates affirmative semantics per runtime and rejects the three targeted denials
+  only inside authoritative sections, leaving legitimate historical failure diagnostics intact.
+
+### GREEN
+
+- Focused runtime/scenario validation and the complete QA suite passed; final command counts and
+  timings are recorded in `Verification evidence` above.

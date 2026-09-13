@@ -67,7 +67,10 @@ Expected and observed: execution is `NOT_RUN`, the scenario outcome is `BLOCKED`
 states no automatic installation. No installation command is executed and no result is fabricated.
 All three authoritative runtime sessions invoked `qa-tooling` and reproduced this negative probe.
 Each runtime preserved the missing-tool limitation while completing its independent fixture report;
-tool absence never became fabricated tool execution.
+tool absence never became fabricated tool execution. `runtime-smoke.md` binds those affirmative
+observations to the Claude session, Codex thread and Hermes session, exact commands, restricted
+temporary transcript hashes/line locators, and artifact paths/digests. The raw Claude and Codex
+logs failed the credential-pattern publication gate and are not versioned.
 
 ## SCN-REPORT-FIXTURE — HTML/PDF acceptance validation
 
@@ -92,7 +95,7 @@ browser-console error and does not affect the offline document contract.
 |---|---|---|---|
 | CA-001 | SCN-WORKFLOWS covers all 10 workflow procedures and wrappers | PASS | Runtime portability is assessed independently by CA-003. |
 | CA-002 | SCN-SPECIALISTS covers positive and failure/limitation scenarios for all 17 specialties | PASS | External tools remain subject to each scenario's explicit probes and authorization. |
-| CA-003 | Runtime ledger records 3 of 3 real runtime sessions completing discovery, invocation/missing-tool response and fixture report inspection. | PASS | Failed preliminary attempts remain non-authoritative diagnostics and do not replace the successful sessions. |
+| CA-003 | Runtime ledger records 3 of 3 real runtime sessions completing discovery, invocation/missing-tool response and fixture report inspection, with structured affirmative observations and session/transcript/artifact provenance. | PASS | Failed preliminary attempts remain non-authoritative diagnostics; temporary raw transcripts are restricted local sources, and Claude/Codex logs are not publishable because their credential-pattern scans were positive. |
 | CA-004 | SCN-QA-TOOLING-MISSING preserves negative evidence and refuses invented execution. | PASS | The missing tool remains NOT_RUN/BLOCKED even though all runtime skill invocations succeeded. |
 | CA-018 | Bilingual plugin and root documentation is present and catalogued. | PASS | The legacy superseded root README-format suite remains a baseline limitation. |
 | CA-022 | Missing-tool recommendation includes availability, evidence, prerequisites, alternative and reason. | PASS | The named missing executable remains unavailable; no runtime installed it. |

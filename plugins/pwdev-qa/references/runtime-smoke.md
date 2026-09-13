@@ -20,6 +20,26 @@ all three steps; preliminary partial attempts below are non-authoritative diagno
 ## Claude Code
 
 - Version command/probe: `claude --version` → `2.1.269 (Claude Code)`.
+
+### Structured observations
+
+| step | affirmative observation | command/result | source locator |
+|---|---|---|---|
+| discovery | OBSERVED — session `b522acbc-c139-4dec-af75-abb245a7f905` invoked `pwdev-qa:qa-tooling` from the repository-local plugin. | Skill load completed and the session applied the returned tooling contract. | restricted transcript lines `16-21` |
+| missing-tool | OBSERVED — the invoked skill classified the probe as `missing`, preserved execution as `NOT_RUN` and outcome as `BLOCKED`, and returned a safe alternative. | `command -v pwdev-qa-missing-tool` → empty output, exit `1`; no install ran. | restricted transcript lines `27` and `63-64` |
+| fixture-report | OBSERVED — the session inspected `manifest.json`, `report.html` and `report.pdf`, then confirmed `CA-000..CA-099` and `BUG-OPEN-UNMAPPED`. | bundled Python 3.12 `qa_demo.py --output-dir /tmp/pwdev-qa-evidence-claude/report` → exit `0`, `export_status=complete`, `verdict=FAIL`; PDF 171 pages. | restricted transcript lines `52`, `55-56` and `63-64` |
+
+Provenance: session `b522acbc-c139-4dec-af75-abb245a7f905`; restricted local source
+`/tmp/pwdev-qa-evidence-claude/transcript.jsonl`, SHA-256
+`172ea6119c70e633967e26d4194a19f82c75827b302c051d31e1bb93bf88f2a5`, `153890 bytes`,
+scan `known_credential_pattern=true`. The raw transcript is not publishable and was not versioned;
+the table above is the sanitized, consultable record. Artifact root:
+`/tmp/pwdev-qa-evidence-claude/report/.planning/pwdev-qa/reports/qa-report-demo`.
+Artifact SHA-256/size: `manifest.json` `bc02eb690bb82a07d1d94757c5f355b6f5503bc3281511ef336208605270aa98`
+(`321416 bytes`); `report.html` `0005e8da8befe1e2115697067fdcc21b685ebec40eae899b3e631d050eac4f02`
+(`348246 bytes`); `report.pdf` `7f5b9d18bcb26070dbd3a841da5f5d7a460a0523527d0fa9f27fcbf55666fbfb`
+(`328935 bytes`).
+
 - The authoritative one-session smoke loaded `pwdev-qa:qa-tooling`; this was real skill invocation,
   not manifest-only discovery.
 - Invocation/missing-tool result/evidence: `command -v pwdev-qa-missing-tool` returned exit `1`.
@@ -33,6 +53,26 @@ all three steps; preliminary partial attempts below are non-authoritative diagno
 ## Codex
 
 - Version command/probe: `codex --version` → `codex-cli 0.153.4`.
+
+### Structured observations
+
+| step | affirmative observation | command/result | source locator |
+|---|---|---|---|
+| discovery | OBSERVED — thread `01a09a22-f2ce-7a70-84ae-97f2b14b126e` invoked `pwdev-qa:qa-tooling` through installed-plugin discovery. | Installed source `/Users/paulosoares/.codex/plugins/cache/pwdev-flow/pwdev-qa/0.1.0` exposed the skill and tooling reference. | restricted transcript lines `35` and `62-66` |
+| missing-tool | OBSERVED — the invoked skill classified the probe as `missing`, preserved execution as `NOT_RUN` and outcome as `BLOCKED`, and returned a safe alternative. | `command -v pwdev-qa-missing-tool` → empty output, exit `1`; no install ran. | restricted transcript lines `67-69` and `101` |
+| fixture-report | OBSERVED — the session inspected `manifest.json`, `report.html` and `report.pdf`, then confirmed `CA-000..CA-099` and `BUG-OPEN-UNMAPPED`. | bundled Python 3.12 `qa_demo.py --output-dir /tmp/pwdev-qa-evidence-codex/report` → exit `0`, `export_status=complete`, `verdict=FAIL`; PDF 171 pages. | restricted transcript lines `95-101` |
+
+Provenance: thread `01a09a22-f2ce-7a70-84ae-97f2b14b126e`; restricted local source
+`/tmp/pwdev-qa-evidence-codex/transcript.jsonl`, SHA-256
+`eed80c343749042ac6591dd1231069e594a42e17a70fe8fb3f9fc6d0b8ef2624`, `80963 bytes`, scan
+`known_credential_pattern=true`. The raw transcript is not publishable and was not versioned; the
+table above is the sanitized, consultable record. Artifact root:
+`/tmp/pwdev-qa-evidence-codex/report/.planning/pwdev-qa/reports/qa-report-demo`.
+Artifact SHA-256/size: `manifest.json` `bc02eb690bb82a07d1d94757c5f355b6f5503bc3281511ef336208605270aa98`
+(`321416 bytes`); `report.html` `0005e8da8befe1e2115697067fdcc21b685ebec40eae899b3e631d050eac4f02`
+(`348246 bytes`); `report.pdf` `28edb6ffb046e2db788bc0889ad8c30fc6e7a0cef382eae8901a2e456024d2b5`
+(`328935 bytes`).
+
 - The authoritative one-session smoke completed installed plugin discovery by invoking
   `pwdev-qa:qa-tooling`; reading a skill file was not substituted for discovery.
 - Invocation/missing-tool result/evidence: `command -v pwdev-qa-missing-tool` returned exit `1`.
@@ -47,6 +87,26 @@ all three steps; preliminary partial attempts below are non-authoritative diagno
 
 - Version command/probe: `hermes --version` →
   `Hermes Agent v0.21.1 (2026.9.7) · upstream 564aef29`.
+
+### Structured observations
+
+| step | affirmative observation | command/result | source locator |
+|---|---|---|---|
+| discovery | OBSERVED — preloaded session `20260913_064516_ed1c02` invoked `pwdev-qa:qa-tooling` from the enabled flattened plugin at commit `a80b97b`. | Authorized local install and doctor succeeded before the single-query session accepted the bound skill contract. | restricted transcript lines `75` and structured conclusion lines `490-556` |
+| missing-tool | OBSERVED — the invoked skill classified the probe as `missing`, preserved execution as `NOT_RUN` and outcome as `BLOCKED`, and returned a safe alternative. | `command -v pwdev-qa-missing-tool` → empty output, `REAL_EXIT=1`; no install ran. | restricted transcript lines `114-139` and `499-510` |
+| fixture-report | OBSERVED — the session inspected `manifest.json`, `report.html` and `report.pdf`, then confirmed `CA-000..CA-099` and `BUG-OPEN-UNMAPPED`. | bundled Python 3.12 `qa_demo.py --output-dir /tmp/pwdev-qa-evidence-hermes-2/report` → `QA_DEMO_EXIT=0`, `export_status=complete`, `verdict=FAIL`; PDF 171 pages. | restricted transcript lines `153`, `177`, `364` and `512-556` |
+
+Provenance: session `20260913_064516_ed1c02`; restricted local source
+`/tmp/pwdev-qa-evidence-hermes-2/transcript.log`, SHA-256
+`836e6b0d3c563ec047c78cfd6c68203e48833ee410cf34a500898b89c1ac3d38`, `92903 bytes`, scan
+`known_credential_pattern=false`. The raw transcript remains temporary and was not versioned; the
+table above is the sanitized, consultable record. Artifact root:
+`/tmp/pwdev-qa-evidence-hermes-2/report/.planning/pwdev-qa/reports/qa-report-demo`.
+Artifact SHA-256/size: `manifest.json` `bc02eb690bb82a07d1d94757c5f355b6f5503bc3281511ef336208605270aa98`
+(`321416 bytes`); `report.html` `0005e8da8befe1e2115697067fdcc21b685ebec40eae899b3e631d050eac4f02`
+(`348246 bytes`); `report.pdf` `e95e48bc2f1195d5e0449db228a25219f1f2330dbe0dddfb1b50b66a487b09fe`
+(`328935 bytes`).
+
 - Under explicit authorization, exact commit `a80b97b` was locally installed and enabled in the
   flattened layout; plugin doctor passed before the session.
 - The authoritative one-session smoke preloaded `pwdev-qa:qa-tooling`, proving skill discovery and

@@ -51,6 +51,47 @@ RUNTIME_VERSIONS = {
     "Codex": "`codex-cli 0.153.4`",
     "Hermes Agent": "`Hermes Agent v0.21.1 (2026.9.7) · upstream 564aef29`",
 }
+RUNTIME_PROVENANCE = {
+    "Claude Code": {
+        "session": "b522acbc-c139-4dec-af75-abb245a7f905",
+        "transcript": "/tmp/pwdev-qa-evidence-claude/transcript.jsonl",
+        "sha256": "172ea6119c70e633967e26d4194a19f82c75827b302c051d31e1bb93bf88f2a5",
+        "size": "153890 bytes",
+        "scan": "known_credential_pattern=true",
+    },
+    "Codex": {
+        "session": "01a09a22-f2ce-7a70-84ae-97f2b14b126e",
+        "transcript": "/tmp/pwdev-qa-evidence-codex/transcript.jsonl",
+        "sha256": "eed80c343749042ac6591dd1231069e594a42e17a70fe8fb3f9fc6d0b8ef2624",
+        "size": "80963 bytes",
+        "scan": "known_credential_pattern=true",
+    },
+    "Hermes Agent": {
+        "session": "20260913_064516_ed1c02",
+        "transcript": "/tmp/pwdev-qa-evidence-hermes-2/transcript.log",
+        "sha256": "836e6b0d3c563ec047c78cfd6c68203e48833ee410cf34a500898b89c1ac3d38",
+        "size": "92903 bytes",
+        "scan": "known_credential_pattern=false",
+    },
+}
+RUNTIME_ARTIFACTS = {
+    "Claude Code": (
+        "/tmp/pwdev-qa-evidence-claude/report/.planning/pwdev-qa/reports/qa-report-demo",
+        "7f5b9d18bcb26070dbd3a841da5f5d7a460a0523527d0fa9f27fcbf55666fbfb",
+    ),
+    "Codex": (
+        "/tmp/pwdev-qa-evidence-codex/report/.planning/pwdev-qa/reports/qa-report-demo",
+        "28edb6ffb046e2db788bc0889ad8c30fc6e7a0cef382eae8901a2e456024d2b5",
+    ),
+    "Hermes Agent": (
+        "/tmp/pwdev-qa-evidence-hermes-2/report/.planning/pwdev-qa/reports/qa-report-demo",
+        "e95e48bc2f1195d5e0449db228a25219f1f2330dbe0dddfb1b50b66a487b09fe",
+    ),
+}
+COMMON_ARTIFACT_HASHES = (
+    "bc02eb690bb82a07d1d94757c5f355b6f5503bc3281511ef336208605270aa98",
+    "0005e8da8befe1e2115697067fdcc21b685ebec40eae899b3e631d050eac4f02",
+)
 FORBIDDEN_PLACEHOLDERS = {"nonsense", "fabricated", "no evidence", "none", "n/a"}
 SEMANTIC_TOKENS = {
     "qa-init": {"preconditions": ("objective", "target", "contract", "project root"), "actions": ("inspect", "probe", "inventory"), "oracle": ("TARGET", "CONTRACT", "CAPABILITIES", "LIMITATIONS"), "safety/limitation": ("no mutation", "BLOCKED")},
@@ -371,6 +412,43 @@ class TestRuntimeSmokeLedger(unittest.TestCase):
         for runtime, tokens in required.items():
             for token in tokens:
                 self.assertIn(token, sections[runtime], f"{runtime}: missing {token}")
+            self.assertIn("### Structured observations", sections[runtime], runtime)
+            observations = named_rows(
+                sections[runtime],
+                "### Structured observations",
+                ["step", "affirmative observation", "command/result", "source locator"],
+            )
+            self.assertEqual(set(observations), {"discovery", "missing-tool", "fixture-report"})
+            for step, observation in observations.items():
+                self.assertTrue(
+                    observation["affirmative observation"].startswith("OBSERVED —"),
+                    f"{runtime}/{step}: observation is not affirmative",
+                )
+                self.assertIn("transcript", observation["source locator"])
+                self.assertRegex(observation["source locator"], r"lines? `?[0-9]")
+
+            joined = " ".join(
+                value for observation in observations.values() for value in observation.values()
+            )
+            self.assertRegex(joined, r"invoked `pwdev-qa:qa-tooling`")
+            self.assertRegex(joined, r"classified .*`missing`.*preserved .*`NOT_RUN`.*`BLOCKED`.*safe alternative")
+            self.assertRegex(joined, r"inspected .*`manifest\.json`.*`report\.html`.*`report\.pdf`.*confirmed .*`CA-000\.\.CA-099`.*`BUG-OPEN-UNMAPPED`")
+
+            provenance = RUNTIME_PROVENANCE[runtime]
+            for value in provenance.values():
+                self.assertIn(value, sections[runtime], f"{runtime}: missing provenance {value}")
+            self.assertIn("restricted local source", sections[runtime])
+            self.assertIn("not versioned", sections[runtime])
+            artifact_root, pdf_hash = RUNTIME_ARTIFACTS[runtime]
+            for value in (artifact_root, pdf_hash, *COMMON_ARTIFACT_HASHES):
+                self.assertIn(value, sections[runtime], f"{runtime}: missing artifact binding {value}")
+            if provenance["scan"] == "known_credential_pattern=true":
+                self.assertIn("not publishable", sections[runtime])
+
+        authoritative = "\n".join(sections.values())
+        self.assertNotRegex(authoritative, r"never invoked `pwdev-qa:qa-tooling`|no real skill invocation")
+        self.assertNotRegex(authoritative, r"never classified .*`missing`|never preserved .*`NOT_RUN`/`BLOCKED`|never provided a safe alternative")
+        self.assertNotRegex(authoritative, r"were not inspected|were never confirmed")
         for diagnostic in (
             "Historical preliminary diagnostics",
             "OAuth session expired",
@@ -424,6 +502,35 @@ class TestRuntimeSmokeLedger(unittest.TestCase):
         )
         with self.assertRaises(AssertionError):
             self.assert_runtime_contract(removed)
+
+    def test_explicit_runtime_behavior_denials_are_rejected(self):
+        text = RUNTIME_SMOKE.read_text(encoding="utf-8")
+        mutations = {
+            "Claude Code never invoked the skill": text.replace(
+                "The authoritative one-session smoke loaded `pwdev-qa:qa-tooling`; this was real skill invocation,\n"
+                "  not manifest-only discovery.",
+                "The authoritative one-session smoke never invoked `pwdev-qa:qa-tooling`; there was\n"
+                "  no real skill invocation.",
+                1,
+            ),
+            "Codex never handled the missing tool": text.replace(
+                "The skill classified the tool `missing`, preserved `NOT_RUN`/`BLOCKED`, provided a safe\n"
+                "  alternative, and performed no installation or fictitious execution.",
+                "The skill never classified the tool `missing`, never preserved `NOT_RUN`/`BLOCKED`,\n"
+                "  and never provided a safe alternative.",
+                1,
+            ),
+            "Hermes never inspected the report": text.replace(
+                "were inspected; `CA-000..CA-099` and `BUG-OPEN-UNMAPPED` were confirmed.",
+                "were not inspected; `CA-000..CA-099` and `BUG-OPEN-UNMAPPED` were never confirmed.",
+                1,
+            ),
+        }
+        for label, mutated in mutations.items():
+            with self.subTest(label=label):
+                self.assertNotEqual(mutated, text, f"mutation did not apply: {label}")
+                with self.assertRaises(AssertionError):
+                    self.assert_runtime_contract(mutated)
 
 
 if __name__ == "__main__":
