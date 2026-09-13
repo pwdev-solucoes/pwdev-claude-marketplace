@@ -309,6 +309,50 @@ class QaReportCliTest(unittest.TestCase):
                 self.assertEqual(result["export_status"], "incomplete")
                 self.assertFalse(self.output(run_id).exists())
 
+    def test_page_tree_ignores_fake_type_in_string_and_rejects_unterminated_string(self):
+        scenarios = {
+            "fake-type-in-string": {
+                1: b"<< /Type /Catalog /Pages 2 0 R >>",
+                2: b"<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+                3: b"<< /Type /Garbage /Note (/Type /Page) >>",
+            },
+            "fake-type-in-comment": {
+                1: b"<< /Type /Catalog /Pages 2 0 R >>",
+                2: b"<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+                3: b"<< /Type /Garbage % /Type /Page\n >>",
+            },
+            "fake-type-in-stream": {
+                1: b"<< /Type /Catalog /Pages 2 0 R >>",
+                2: b"<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+                3: b"<< /Type /Garbage >>\nstream\n/Type /Page\nendstream",
+            },
+            "unterminated-page-string": {
+                1: b"<< /Type /Catalog /Pages 2 0 R >>",
+                2: b"<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+                3: b"<< /Type /Page /Bad (unterminated >>",
+            },
+            "unbalanced-page-dictionary": {
+                1: b"<< /Type /Catalog /Pages 2 0 R >>",
+                2: b"<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+                3: b"<< /Type /Page /Bad << /Nested 1 >>",
+            },
+        }
+        for label, bodies in scenarios.items():
+            with self.subTest(label=label):
+                run_id = f"cli-run-{label}"
+                data = copy.deepcopy(self.manifest)
+                data["run_id"] = run_id
+                self.manifest_path.write_text(json.dumps(data), encoding="utf-8")
+                publisher = load_module(f"qa_report_lexical_{label}")
+
+                def invalid_page(_report, destination, bodies=bodies):
+                    write_classic_pdf(destination, bodies)
+
+                with mock.patch.object(publisher, "render_pdf", side_effect=invalid_page):
+                    result = publisher.generate_report(self.manifest_path, self.root)
+                self.assertEqual(result["export_status"], "incomplete")
+                self.assertFalse(self.output(run_id).exists())
+
     def test_recursive_page_tree_accepts_nested_pages_with_matching_leaf_counts(self):
         publisher = load_module("qa_report_tree_nested_valid")
 
@@ -490,48 +534,58 @@ class QaReportCliTest(unittest.TestCase):
         )
         self.assertFalse((preserved / "cli-run").exists())
 
-    def test_post_commit_pdf_exchange_is_external_and_digest_detects_it(self):
-        publisher = load_module("qa_report_pdf_exchange")
-        real_verify = publisher._verify_nominal_commit
+    def test_immediate_post_syscall_pdf_exchange_cannot_change_returned_attestation(self):
+        publisher = load_module("qa_report_exact_post_syscall_pdf")
+        real_syscall = publisher._rename_no_replace_syscall
+        fixed = {}
 
-        def verify_then_exchange(*args, **kwargs):
-            result = real_verify(*args, **kwargs)
+        def commit_then_exchange(parent_fd, source, destination):
+            commit_result = real_syscall(parent_fd, source, destination)
+            fixed["snapshot"], fixed["digest"] = commit_result
             pdf = self.output() / "report.pdf"
             pdf.unlink()
-            pdf.write_bytes(b"ATTACKER-PDF")
-            return result
+            pdf.write_bytes(b"ATTACKER-AFTER-SYSCALL")
+            return commit_result
 
         with mock.patch.object(publisher, "render_pdf", side_effect=self.fake_pdf), mock.patch.object(
-            publisher, "_verify_nominal_commit", side_effect=verify_then_exchange
+            publisher, "_rename_no_replace_syscall", side_effect=commit_then_exchange
         ):
             result = publisher.generate_report(self.manifest_path, self.root)
 
         self.assertEqual(result["export_status"], "complete")
-        self.assertEqual((self.output() / "report.pdf").read_bytes(), b"ATTACKER-PDF")
+        self.assertEqual(result["publication_snapshot"], fixed["snapshot"])
+        self.assertEqual(result["publication_digest"], fixed["digest"])
+        self.assertEqual((self.output() / "report.pdf").read_bytes(), b"ATTACKER-AFTER-SYSCALL")
         self.assertNotEqual(
             result["publication_digest"], snapshot_digest(publication_snapshot(self.output()))
         )
 
-    def test_post_commit_run_exchange_is_external_and_digest_detects_it(self):
-        publisher = load_module("qa_report_run_exchange")
-        real_verify = publisher._verify_nominal_commit
-        displaced = self.root / "displaced-owned-package"
+    def test_immediate_post_syscall_root_exchange_is_external(self):
+        publisher = load_module("qa_report_exact_post_syscall_root")
+        real_syscall = publisher._rename_no_replace_syscall
+        reports = self.output().parent
+        displaced = self.root / "post-syscall-reports"
+        fixed = {}
 
-        def verify_then_exchange(*args, **kwargs):
-            result = real_verify(*args, **kwargs)
-            self.output().rename(displaced)
+        def commit_then_exchange(parent_fd, source, destination):
+            commit_result = real_syscall(parent_fd, source, destination)
+            fixed["snapshot"], fixed["digest"] = commit_result
+            reports.rename(displaced)
+            reports.mkdir()
             self.output().mkdir()
-            (self.output() / "sentinel").write_bytes(b"attacker run")
-            return result
+            (self.output() / "sentinel").write_bytes(b"external-after-commit")
+            return commit_result
 
         with mock.patch.object(publisher, "render_pdf", side_effect=self.fake_pdf), mock.patch.object(
-            publisher, "_verify_nominal_commit", side_effect=verify_then_exchange
+            publisher, "_rename_no_replace_syscall", side_effect=commit_then_exchange
         ):
             result = publisher.generate_report(self.manifest_path, self.root)
 
         self.assertEqual(result["export_status"], "complete")
-        self.assertEqual((self.output() / "sentinel").read_bytes(), b"attacker run")
-        self.assertTrue((displaced / "manifest.json").is_file())
+        self.assertEqual(result["publication_snapshot"], fixed["snapshot"])
+        self.assertEqual(result["publication_digest"], fixed["digest"])
+        self.assertEqual((self.output() / "sentinel").read_bytes(), b"external-after-commit")
+        self.assertTrue((displaced / "cli-run" / "manifest.json").is_file())
         self.assertNotEqual(
             result["publication_digest"], snapshot_digest(publication_snapshot(self.output()))
         )

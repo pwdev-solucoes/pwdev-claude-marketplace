@@ -38,21 +38,19 @@ with exactly one `/Type /Page` or `/Type /Pages`, cycles and duplicate Page/Page
 rejected, and every Pages `/Count` must equal its descendant leaf count. Marker-only, xref-only,
 garbage-root, garbage-child, cyclic, or malformed files are incomplete.
 
-Immediately before commit, the exporter reopens the nominal reports root without following
-symlinks and confirms its identity, then re-snapshots staging and compares it with the validated
-snapshot. A root/staging exchange or destination collision observed before the syscall fails and
-does not overwrite sentinels. The no-overwrite directory rename is the publication commit point.
+Immediately before the commit syscall, the exporter reopens the nominal reports root without
+following symlinks and confirms its identity, flushes every staged regular file and directory,
+and fixes the returned snapshot/digest from the staging descriptor. A root/staging exchange or
+destination collision observed before the syscall fails and does not overwrite sentinels. A
+staging mutation performed by a pre-syscall probe is represented by this final fixed attestation.
+The no-overwrite directory rename is the publication commit point.
 
-The staging directory descriptor remains open across the rename. Immediately after commit, the
-exporter calculates the returned snapshot/digest from that committed descriptor—not from the
-earlier validation snapshot—and performs one nominal no-follow root/run identity check. Therefore,
-a staging mutation in the final pre-syscall window is either refused by the last comparison or is
-represented by the committed digest, while a root/run exchange spanning the syscall fails without
-deleting a different directory or sentinel.
-
-No finite sequence of reads can make files immutable after that commit. Mutation by another actor
-after the final nominal check is external to exporter success, even when it occurs before the
-caller consumes the return value. For consumer revalidation, every complete result includes
+After that syscall succeeds, the exporter neither rereads package content nor performs a nominal
+path check that could reclassify the successful commit. No finite sequence of reads can make files
+immutable after commit. A root, run-directory, or file mutation by another actor after the syscall
+is external to exporter success, even when it occurs before the syscall wrapper returns to the
+caller; it cannot alter the already fixed attestation. For consumer revalidation, every complete
+result includes
 `publication_snapshot`—a path-keyed inventory of directory kinds and file byte sizes/SHA-256—and
 `publication_digest`, the lowercase SHA-256 of its canonical UTF-8 JSON (`ensure_ascii=false`,
 keys sorted, separators `,` and `:`). A consumer that needs current integrity must rebuild the

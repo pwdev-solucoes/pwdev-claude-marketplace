@@ -216,3 +216,46 @@ OK
 
 The final ReportLab 4.4.9 integration published 7 pages, reopened them with pypdf strict mode,
 verified the attachment, and independently reproduced the committed snapshot and digest.
+
+## Correction round 4
+
+The two remaining round-3 findings were reproduced at their exact boundaries before correction.
+The publication probes now mutate `report.pdf` or exchange the nominal reports root immediately
+after the real no-overwrite rename syscall but before `_rename_no_replace_syscall` returns. The PDF
+fixtures include a false `/Type /Page` in a string, false types in comments/streams, an
+unterminated string, and an unbalanced nested dictionary.
+
+The commit helper now performs the last nominal-root probe, flushes all staged files/directories,
+and fixes the canonical snapshot/digest immediately before invoking the rename syscall. It returns
+that fixed value; no package reread or nominal-path decision occurs after a successful syscall.
+Consequently, pre-syscall staging mutation remains represented by the attestation, pre-syscall
+root exchange still fails without touching the sentinel, and post-syscall mutation is external and
+causes a consumer recomputation to diverge from the returned digest.
+
+PDF Page/Pages validation now uses a standard-library tokenizer/parser. Strings, comments, and
+stream bodies are opaque while keys are located; dictionaries, arrays, literal strings, and hex
+strings must be balanced; `/Type`, `/Pages`, `/Count`, and `/Kids` are unique direct dictionary
+entries with the required parsed value types. Recursive cycle, duplicate-node, live-reference,
+and descendant-count checks remain in force. No PDF verification dependency was added at runtime.
+
+Fresh TDD and verification evidence:
+
+```text
+# initial RED and explicit reversal
+python3 -m unittest <round-4 exact probes>
+FAILED (false Page types/unterminated strings published; post-syscall mutation changed success or attestation)
+
+# restored GREEN, including pre-syscall regressions
+python3 -m unittest <round-4 exact probes plus pre-syscall probes>
+Ran 5 tests — OK
+
+python3 -m unittest tests.test_qa_report_cli
+Ran 20 tests — OK
+
+<bundled-python-3.12> -m unittest discover -s tests -p 'test_qa*.py'
+Ran 136 tests — OK
+
+# ReportLab 4.4.9 integration
+complete/PASS, 7 pages in pypdf 6.10.0 strict mode, pdfplumber text extracted,
+and consumer snapshot/digest matched the returned attestation
+```

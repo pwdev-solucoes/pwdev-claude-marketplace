@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import contextvars
 import ctypes
 import errno
 import hashlib
@@ -53,6 +54,158 @@ _MEDIA_SUFFIX = {
     "image/png": ".png",
     "image/jpeg": ".jpg",
 }
+_COMMIT_CONTEXT = contextvars.ContextVar("qa_report_commit_context", default=None)
+
+
+def _pdf_tokens(raw: bytes, label: str) -> List[Tuple[str, Any]]:
+    """Tokenize one PDF value while keeping strings, comments, and streams opaque."""
+
+    tokens: List[Tuple[str, Any]] = []
+    position = 0
+    length = len(raw)
+    whitespace = b"\x00\t\n\x0c\r "
+    delimiters = b"()<>[]{}/%"
+    while position < length:
+        byte = raw[position]
+        if byte in whitespace:
+            position += 1
+            continue
+        if byte == ord("%"):
+            newline = raw.find(b"\n", position + 1)
+            carriage = raw.find(b"\r", position + 1)
+            endings = [item for item in (newline, carriage) if item >= 0]
+            position = min(endings) if endings else length
+            continue
+        if raw.startswith(b"<<", position):
+            tokens.append(("dict_start", b"<<"))
+            position += 2
+            continue
+        if raw.startswith(b">>", position):
+            tokens.append(("dict_end", b">>"))
+            position += 2
+            continue
+        if byte == ord("("):
+            start = position
+            position += 1
+            depth = 1
+            while position < length and depth:
+                current = raw[position]
+                if current == ord("\\"):
+                    position += 2
+                    continue
+                if current == ord("("):
+                    depth += 1
+                elif current == ord(")"):
+                    depth -= 1
+                position += 1
+            if depth:
+                raise RuntimeError(f"report.pdf {label} contains an unterminated string")
+            tokens.append(("string", raw[start:position]))
+            continue
+        if byte == ord("<"):
+            end = raw.find(b">", position + 1)
+            if end < 0:
+                raise RuntimeError(f"report.pdf {label} contains an unterminated hex string")
+            tokens.append(("string", raw[position : end + 1]))
+            position = end + 1
+            continue
+        if byte == ord("["):
+            tokens.append(("array_start", b"["))
+            position += 1
+            continue
+        if byte == ord("]"):
+            tokens.append(("array_end", b"]"))
+            position += 1
+            continue
+        if byte == ord("/"):
+            end = position + 1
+            while end < length and raw[end] not in whitespace + delimiters:
+                end += 1
+            if end == position + 1:
+                raise RuntimeError(f"report.pdf {label} contains an empty name")
+            tokens.append(("name", raw[position + 1 : end]))
+            position = end
+            continue
+        end = position
+        while end < length and raw[end] not in whitespace + delimiters:
+            end += 1
+        if end == position:
+            raise RuntimeError(f"report.pdf {label} contains an unexpected delimiter")
+        value = raw[position:end]
+        if re.fullmatch(rb"[+-]?[0-9]+", value):
+            tokens.append(("integer", int(value)))
+        else:
+            tokens.append(("keyword", value))
+        position = end
+        if value == b"stream":
+            if position >= length or raw[position : position + 1] not in (b"\r", b"\n"):
+                raise RuntimeError(f"report.pdf {label} stream has no line ending")
+            if raw.startswith(b"\r\n", position):
+                position += 2
+            else:
+                position += 1
+            stream_end = raw.find(b"endstream", position)
+            if stream_end < 0:
+                raise RuntimeError(f"report.pdf {label} contains an unterminated stream")
+            tokens.append(("stream_data", None))
+            position = stream_end + len(b"endstream")
+    return tokens
+
+
+def _parse_pdf_value(
+    tokens: List[Tuple[str, Any]], position: int, label: str
+) -> Tuple[Any, int]:
+    if position >= len(tokens):
+        raise RuntimeError(f"report.pdf {label} is missing a value")
+    kind, value = tokens[position]
+    if kind == "dict_start":
+        result: Dict[bytes, List[Any]] = {}
+        position += 1
+        while position < len(tokens) and tokens[position][0] != "dict_end":
+            if tokens[position][0] != "name":
+                raise RuntimeError(f"report.pdf {label} dictionary has a non-name key")
+            key = tokens[position][1]
+            item, position = _parse_pdf_value(tokens, position + 1, label)
+            result.setdefault(key, []).append(item)
+        if position >= len(tokens):
+            raise RuntimeError(f"report.pdf {label} contains an unterminated dictionary")
+        return ("dictionary", result), position + 1
+    if kind == "array_start":
+        result = []
+        position += 1
+        while position < len(tokens) and tokens[position][0] != "array_end":
+            item, position = _parse_pdf_value(tokens, position, label)
+            result.append(item)
+        if position >= len(tokens):
+            raise RuntimeError(f"report.pdf {label} contains an unterminated array")
+        return ("array", result), position + 1
+    if kind in ("dict_end", "array_end"):
+        raise RuntimeError(f"report.pdf {label} contains an unbalanced delimiter")
+    if (
+        kind == "integer"
+        and position + 2 < len(tokens)
+        and tokens[position + 1][0] == "integer"
+        and tokens[position + 2] == ("keyword", b"R")
+    ):
+        return ("reference", value, tokens[position + 1][1]), position + 3
+    if kind == "stream_data":
+        raise RuntimeError(f"report.pdf {label} contains unexpected stream data")
+    return (kind, value), position + 1
+
+
+def _pdf_dictionary(raw: bytes, label: str) -> Dict[bytes, List[Any]]:
+    tokens = _pdf_tokens(raw, label)
+    parsed, position = _parse_pdf_value(tokens, 0, label)
+    if parsed[0] != "dictionary" or position != len(tokens):
+        raise RuntimeError(f"report.pdf {label} is not one balanced dictionary")
+    return parsed[1]
+
+
+def _unique_pdf_entry(dictionary: Dict[bytes, List[Any]], key: bytes, label: str) -> Any:
+    values = dictionary.get(key, [])
+    if len(values) != 1:
+        raise RuntimeError(f"report.pdf {label} has no unique /{key.decode('ascii')}")
+    return values[0]
 
 
 def _open_directory(path: Path, label: str) -> Tuple[int, Tuple[int, int]]:
@@ -236,19 +389,21 @@ def _validate_pdf_structure(raw: bytes) -> None:
             )
             position += entry.end()
 
-    trailer_match = re.match(
-        rb"trailer\s*<<(.*?)>>\s*\Z", raw[position : ending.start()], re.DOTALL
-    )
-    if trailer_match is None:
+    trailer_region = raw[position : ending.start()]
+    trailer_prefix = re.match(rb"trailer\b", trailer_region)
+    if trailer_prefix is None:
         raise RuntimeError("report.pdf trailer is malformed")
-    trailer = trailer_match.group(1)
-    size_match = re.search(rb"/Size\s+([0-9]+)\b", trailer)
-    root_match = re.search(rb"/Root\s+([0-9]+)\s+([0-9]+)\s+R\b", trailer)
-    if size_match is None or root_match is None:
+    trailer = _pdf_dictionary(trailer_region[trailer_prefix.end() :].strip(), "trailer")
+    try:
+        size_value = _unique_pdf_entry(trailer, b"Size", "trailer")
+        root_value = _unique_pdf_entry(trailer, b"Root", "trailer")
+    except RuntimeError as error:
+        raise RuntimeError("report.pdf trailer has no Size or Root") from error
+    if size_value[0] != "integer" or root_value[0] != "reference":
         raise RuntimeError("report.pdf trailer has no Size or Root")
-    declared_size = int(size_match.group(1))
-    root_id = int(root_match.group(1))
-    root_generation = int(root_match.group(2))
+    declared_size = size_value[1]
+    root_id = root_value[1]
+    root_generation = root_value[2]
     if declared_size <= root_id or root_id not in entries:
         raise RuntimeError("report.pdf trailer Root is outside the xref")
 
@@ -273,19 +428,17 @@ def _validate_pdf_structure(raw: bytes) -> None:
             raise RuntimeError(f"report.pdf {label} object is incomplete")
         return raw[start:end].strip()
 
-    def dictionary(body: bytes, label: str) -> bytes:
-        if not body.startswith(b"<<") or not body.endswith(b">>"):
-            raise RuntimeError(f"report.pdf {label} is not a dictionary")
-        return body[2:-2]
-
-    catalog = dictionary(object_body(root_id, root_generation, "Catalog"), "Catalog")
-    if re.search(rb"/Type\s*/Catalog\b", catalog) is None:
+    catalog = _pdf_dictionary(
+        object_body(root_id, root_generation, "Catalog"), "Catalog"
+    )
+    catalog_type = _unique_pdf_entry(catalog, b"Type", "Root dictionary")
+    if catalog_type != ("name", b"Catalog"):
         raise RuntimeError("report.pdf Root dictionary is not /Type /Catalog")
-    pages_match = re.search(rb"/Pages\s+([0-9]+)\s+([0-9]+)\s+R\b", catalog)
-    if pages_match is None:
+    pages_value = _unique_pdf_entry(catalog, b"Pages", "Catalog")
+    if pages_value[0] != "reference":
         raise RuntimeError("report.pdf Catalog has no valid /Pages reference")
-    pages_id = int(pages_match.group(1))
-    pages_generation = int(pages_match.group(2))
+    pages_id = pages_value[1]
+    pages_generation = pages_value[2]
     visited_pages = set()
     visited_leaves = set()
 
@@ -293,14 +446,14 @@ def _validate_pdf_structure(raw: bytes) -> None:
         object_id: int, object_generation: int, ancestors: set
     ) -> int:
         reference = (object_id, object_generation)
-        node = dictionary(
+        node = _pdf_dictionary(
             object_body(object_id, object_generation, "page tree child"),
             "page tree child",
         )
-        types = re.findall(rb"/Type\s*/(Page|Pages)\b", node)
-        if len(types) != 1:
+        node_type = _unique_pdf_entry(node, b"Type", "page tree child")
+        if node_type not in (("name", b"Page"), ("name", b"Pages")):
             raise RuntimeError("report.pdf page tree child has no unique Page/Pages type")
-        if types[0] == b"Page":
+        if node_type == ("name", b"Page"):
             if reference in visited_leaves:
                 raise RuntimeError("report.pdf page tree contains a duplicate Page")
             visited_leaves.add(reference)
@@ -311,25 +464,20 @@ def _validate_pdf_structure(raw: bytes) -> None:
         if reference in visited_pages:
             raise RuntimeError("report.pdf page tree contains a duplicate Pages node")
         visited_pages.add(reference)
-        count_matches = re.findall(rb"/Count\s+(-?[0-9]+)(?![0-9.])", node)
-        kids_matches = re.findall(rb"/Kids\s*\[(.*?)\]", node, re.DOTALL)
-        if len(count_matches) != 1 or int(count_matches[0]) < 0:
+        count_value = _unique_pdf_entry(node, b"Count", "Pages")
+        kids_value = _unique_pdf_entry(node, b"Kids", "Pages")
+        if count_value[0] != "integer" or count_value[1] < 0:
             raise RuntimeError("report.pdf Pages /Count is not a non-negative integer")
-        if len(kids_matches) != 1:
+        if kids_value[0] != "array":
             raise RuntimeError("report.pdf Pages /Kids is not an array")
-        kids = kids_matches[0]
-        references = list(re.finditer(rb"([0-9]+)\s+([0-9]+)\s+R\b", kids))
-        remainder = re.sub(rb"[0-9]+\s+[0-9]+\s+R\b", b"", kids)
-        if remainder.strip():
+        references = kids_value[1]
+        if any(item[0] != "reference" for item in references):
             raise RuntimeError("report.pdf Pages /Kids contains a malformed reference")
         descendants = ancestors | {reference}
         leaf_count = sum(
-            walk_page_tree(
-                int(child.group(1)), int(child.group(2)), descendants
-            )
-            for child in references
+            walk_page_tree(child[1], child[2], descendants) for child in references
         )
-        if int(count_matches[0]) != leaf_count:
+        if count_value[1] != leaf_count:
             raise RuntimeError("report.pdf Pages /Count does not match leaf count")
         return leaf_count
 
@@ -588,7 +736,53 @@ def _copy_revalidated(
             os.close(attachments_fd)
 
 
-def _rename_no_replace_syscall(parent_fd: int, source: str, destination: str) -> None:
+def _fsync_tree_fd(directory_fd: int) -> None:
+    """Durably flush every regular file and directory in a staged package."""
+
+    for name in sorted(os.listdir(directory_fd)):
+        metadata = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+        if stat.S_ISDIR(metadata.st_mode) and not stat.S_ISLNK(metadata.st_mode):
+            child_fd = os.open(name, _DIRECTORY_FLAGS, dir_fd=directory_fd)
+            try:
+                _fsync_tree_fd(child_fd)
+            finally:
+                os.close(child_fd)
+        elif stat.S_ISREG(metadata.st_mode):
+            descriptor = os.open(name, _READ_FLAGS, dir_fd=directory_fd)
+            try:
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
+        else:
+            raise PublicationError(f"staging artifact {name!r} is unsafe")
+    os.fsync(directory_fd)
+
+
+def _rename_no_replace_syscall(
+    parent_fd: int, source: str, destination: str
+) -> Tuple[Dict[str, Any], str]:
+    """Fix the attestation immediately before, then perform, the commit syscall."""
+
+    commit_context = _COMMIT_CONTEXT.get()
+    if commit_context is None:
+        raise PublicationError("atomic report publication has no commit context")
+    project_root, reports_identity = commit_context
+    try:
+        _assert_nominal_reports_root(project_root, reports_identity)
+    except PublicationError as error:
+        if "reports root identity changed" in str(error):
+            raise PublicationError("reports root identity changed at commit") from error
+        raise
+    staging_fd, _ = _open_existing_directory(parent_fd, source, "staging directory")
+    try:
+        _fsync_tree_fd(staging_fd)
+        publication_snapshot = _publication_snapshot_fd(staging_fd)
+        publication_digest = _publication_digest(publication_snapshot)
+    except (OSError, RuntimeError, EvidenceError) as error:
+        raise PublicationError("staging package changed before commit") from error
+    finally:
+        os.close(staging_fd)
+
     libc = ctypes.CDLL(None, use_errno=True)
     encoded_source = os.fsencode(source)
     encoded_destination = os.fsencode(destination)
@@ -627,6 +821,7 @@ def _rename_no_replace_syscall(parent_fd: int, source: str, destination: str) ->
         raise PublicationError(
             f"atomic report publication failed: {os.strerror(error_number)}"
         )
+    return publication_snapshot, publication_digest
 
 
 def _atomic_rename_exclusive(
@@ -636,7 +831,7 @@ def _atomic_rename_exclusive(
     project_root: Path,
     reports_identity: Tuple[int, int],
     expected_snapshot: Dict[str, Any],
-) -> None:
+) -> Tuple[Dict[str, Any], str]:
     _assert_nominal_reports_root(project_root, reports_identity)
     staging_fd, _ = _open_existing_directory(
         parent_fd, source, "staging directory"
@@ -652,7 +847,11 @@ def _atomic_rename_exclusive(
             raise PublicationError("staging package changed before commit")
     finally:
         os.close(staging_fd)
-    _rename_no_replace_syscall(parent_fd, source, destination)
+    token = _COMMIT_CONTEXT.set((project_root, reports_identity))
+    try:
+        return _rename_no_replace_syscall(parent_fd, source, destination)
+    finally:
+        _COMMIT_CONTEXT.reset(token)
 
 
 def _assert_nominal_reports_root(
@@ -678,60 +877,6 @@ def _assert_nominal_reports_root(
         for descriptor in reversed(opened_children):
             os.close(descriptor)
         os.close(root_fd)
-
-
-def _verify_nominal_commit(
-    project_root: Path,
-    reports_identity: Tuple[int, int],
-    run_id: str,
-    run_identity: Tuple[int, int],
-) -> None:
-    """Bind the just-committed directory to the nominal output path once."""
-
-    root_fd, _ = _open_directory(project_root, "project root")
-    opened_children: List[int] = []
-    try:
-        current_fd = root_fd
-        for name, label in (
-            (".planning", "output component .planning"),
-            ("pwdev-qa", "output component pwdev-qa"),
-            ("reports", "reports root"),
-        ):
-            next_fd, identity = _open_existing_directory(current_fd, name, label)
-            opened_children.append(next_fd)
-            current_fd = next_fd
-        if identity != reports_identity:
-            raise PublicationError("reports root identity changed at commit")
-        run_fd, identity = _open_existing_directory(
-            current_fd, run_id, "published report directory"
-        )
-        try:
-            if identity != run_identity:
-                raise PublicationError("published report directory changed at commit")
-        finally:
-            os.close(run_fd)
-    finally:
-        for descriptor in reversed(opened_children):
-            os.close(descriptor)
-        os.close(root_fd)
-
-
-def _remove_committed_package_if_owned(
-    reports_fd: int, run_id: str, run_identity: Tuple[int, int]
-) -> None:
-    try:
-        descriptor, identity = _open_existing_directory(
-            reports_fd, run_id, "published report directory"
-        )
-    except PublicationError:
-        return
-    os.close(descriptor)
-    if identity != run_identity:
-        return
-    try:
-        _remove_tree(reports_fd, run_id)
-    except OSError:
-        pass
 
 
 def _preserve_partial(
@@ -798,7 +943,7 @@ def generate_report(manifest_path: Path, project_root: Path) -> dict:
             _validate_stage(reports_fd, staging_name, staging_fd, report, html)
             os.fsync(staging_fd)
             validated_snapshot = _publication_snapshot_fd(staging_fd)
-            _atomic_rename_exclusive(
+            publication_snapshot, publication_digest = _atomic_rename_exclusive(
                 reports_fd,
                 staging_name,
                 run_id,
@@ -807,30 +952,6 @@ def generate_report(manifest_path: Path, project_root: Path) -> dict:
                 validated_snapshot,
             )
             staging_name = ""
-            committed_metadata = os.fstat(staging_fd)
-            committed_identity = (committed_metadata.st_dev, committed_metadata.st_ino)
-            try:
-                publication_snapshot = _publication_snapshot_fd(staging_fd)
-            except (OSError, RuntimeError, EvidenceError) as error:
-                _remove_committed_package_if_owned(
-                    reports_fd, run_id, committed_identity
-                )
-                raise PublicationError(
-                    "committed package could not be safely attested"
-                ) from error
-            publication_digest = _publication_digest(publication_snapshot)
-            try:
-                _verify_nominal_commit(
-                    root,
-                    reports_identity,
-                    run_id,
-                    committed_identity,
-                )
-            except PublicationError:
-                _remove_committed_package_if_owned(
-                    reports_fd, run_id, committed_identity
-                )
-                raise
             return {
                 "run_id": run_id,
                 "verdict": report["verdict"],
