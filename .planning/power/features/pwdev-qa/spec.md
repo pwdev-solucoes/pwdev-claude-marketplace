@@ -1,6 +1,6 @@
 # PWDEV QA — especificação para planejamento
 Status: APPROVED
-Source: conversa; tasks/prd-pwdev-qa/prd.md; tasks/prd-pwdev-qa/design.md
+Source: conversa; tasks/prd-pwdev-qa/prd.md; .planning/power/features/pwdev-qa/design.md
 Updated: 2026-09-12
 
 ## Objetivo e autoridade

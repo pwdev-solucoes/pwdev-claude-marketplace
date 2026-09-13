@@ -3,7 +3,7 @@ type: PRD
 okf_version: "0.2"
 sources:
   - resource: "conversation:pwdev-qa"
-  - resource: "tasks/prd-pwdev-qa/design.md"
+  - resource: ".planning/power/features/pwdev-qa/design.md"
   - resource: ".planning/sdd-composy/context/project.md"
 generated:
   by: agent:codex
