@@ -106,6 +106,9 @@ def _pdf_tokens(raw: bytes, label: str) -> List[Tuple[str, Any]]:
             end = raw.find(b">", position + 1)
             if end < 0:
                 raise RuntimeError(f"report.pdf {label} contains an unterminated hex string")
+            hexadecimal = raw[position + 1 : end]
+            if re.fullmatch(rb"[0-9A-Fa-f\x00\t\n\x0c\r ]*", hexadecimal) is None:
+                raise RuntimeError(f"report.pdf {label} contains an invalid hex string")
             tokens.append(("string", raw[position : end + 1]))
             position = end + 1
             continue
@@ -134,8 +137,18 @@ def _pdf_tokens(raw: bytes, label: str) -> List[Tuple[str, Any]]:
         value = raw[position:end]
         if re.fullmatch(rb"[+-]?[0-9]+", value):
             tokens.append(("integer", int(value)))
+        elif re.fullmatch(rb"[+-]?(?:[0-9]+\.[0-9]*|\.[0-9]+)", value):
+            tokens.append(("real", value))
+        elif value in (b"true", b"false"):
+            tokens.append(("boolean", value == b"true"))
+        elif value == b"null":
+            tokens.append(("null", None))
+        elif value == b"R":
+            tokens.append(("reference_marker", value))
+        elif value == b"stream":
+            tokens.append(("stream_marker", value))
         else:
-            tokens.append(("keyword", value))
+            raise RuntimeError(f"report.pdf {label} contains an invalid keyword")
         position = end
         if value == b"stream":
             if position >= length or raw[position : position + 1] not in (b"\r", b"\n"):
@@ -185,11 +198,11 @@ def _parse_pdf_value(
         kind == "integer"
         and position + 2 < len(tokens)
         and tokens[position + 1][0] == "integer"
-        and tokens[position + 2] == ("keyword", b"R")
+        and tokens[position + 2] == ("reference_marker", b"R")
     ):
         return ("reference", value, tokens[position + 1][1]), position + 3
-    if kind == "stream_data":
-        raise RuntimeError(f"report.pdf {label} contains unexpected stream data")
+    if kind in ("reference_marker", "stream_marker", "stream_data"):
+        raise RuntimeError(f"report.pdf {label} contains an invalid standalone keyword")
     return (kind, value), position + 1
 
 

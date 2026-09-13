@@ -36,7 +36,12 @@ dictionary, dereferences its `/Pages` dictionary, and checks non-negative `/Coun
 live child references. The Pages tree is traversed recursively: every child must be a dictionary
 with exactly one `/Type /Page` or `/Type /Pages`, cycles and duplicate Page/Pages references are
 rejected, and every Pages `/Count` must equal its descendant leaf count. Marker-only, xref-only,
-garbage-root, garbage-child, cyclic, or malformed files are incomplete.
+garbage-root, garbage-child, cyclic, or malformed files are incomplete. The parser validates every
+value in Catalog/Page/Pages dictionaries, including nested dictionaries and arrays. Bare keywords
+other than PDF `true`, `false`, and `null` values are refused (`R` is accepted only as part of an
+indirect reference), and hexadecimal strings contain only hexadecimal digits and PDF whitespace;
+an odd final digit uses the padding defined by PDF. Strings, comments, and stream bodies remain
+opaque and cannot introduce false keys.
 
 Immediately before the commit syscall, the exporter reopens the nominal reports root without
 following symlinks and confirms its identity, flushes every staged regular file and directory,

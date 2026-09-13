@@ -259,3 +259,43 @@ Ran 136 tests — OK
 complete/PASS, 7 pages in pypdf 6.10.0 strict mode, pdfplumber text extracted,
 and consumer snapshot/digest matched the returned attestation
 ```
+
+## Correction round 5
+
+The remaining round-4 parser finding was reproduced through `generate_report`: both
+`<< /Type /Page /Bad garbage >>` and `<< /Type /Page /Bad <GG> >>` were incorrectly published as
+`complete/PASS`, while pypdf 6.10.0 strict rejected both fixtures.
+
+The tokenizer now accepts elementary bare keywords only for the PDF values `true`, `false`, and
+`null`; `R` is valid only as the third token of an indirect reference. Integers and PDF real-number
+syntax remain supported for ReportLab compatibility. Hexadecimal strings now allow only hex digits
+and PDF whitespace, with odd digit counts accepted under PDF's final-nibble padding rule. Because
+the recursive value parser already visits every dictionary value, these lexical checks also cover
+unused and nested Page entries while strings, comments, and stream data stay opaque. The
+commit/attestation path was not changed.
+
+Fresh TDD and verification evidence:
+
+```text
+# RED before implementation
+python3 -m unittest <bare-garbage> <bad-hex> <elementary-token-matrix>
+Ran 3 tests — FAILED (5 failures)
+
+# implementation temporarily reversed
+python3 -m unittest <bare-garbage> <bad-hex> <elementary-token-matrix>
+Ran 3 tests — FAILED (5 failures)
+
+# implementation restored
+python3 -m unittest <bare-garbage> <bad-hex> <elementary-token-matrix>
+Ran 3 tests — OK
+
+python3 -m unittest tests.test_qa_report_cli
+Ran 23 tests — OK
+
+<bundled-python-3.12> -m unittest discover -s tests -p 'test_qa*.py'
+Ran 139 tests — OK
+
+# external verification only
+ReportLab 4.4.9: complete/PASS, 7 pages, pypdf strict and pdfplumber successful,
+snapshot/digest reproduced; pypdf strict rejected both malformed fixtures with PdfReadError.
+```

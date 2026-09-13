@@ -353,6 +353,78 @@ class QaReportCliTest(unittest.TestCase):
                 self.assertEqual(result["export_status"], "incomplete")
                 self.assertFalse(self.output(run_id).exists())
 
+    def test_page_dictionary_rejects_bare_garbage_keyword(self):
+        publisher = load_module("qa_report_bare_garbage")
+
+        def bare_garbage(_report, destination):
+            write_classic_pdf(
+                destination,
+                {
+                    1: b"<< /Type /Catalog /Pages 2 0 R >>",
+                    2: b"<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+                    3: b"<< /Type /Page /Bad garbage >>",
+                },
+            )
+
+        with mock.patch.object(publisher, "render_pdf", side_effect=bare_garbage):
+            result = publisher.generate_report(self.manifest_path, self.root)
+
+        self.assertEqual(result["export_status"], "incomplete")
+        self.assertFalse(self.output().exists())
+
+    def test_page_dictionary_rejects_non_hex_string(self):
+        publisher = load_module("qa_report_bad_hex")
+
+        def bad_hex(_report, destination):
+            write_classic_pdf(
+                destination,
+                {
+                    1: b"<< /Type /Catalog /Pages 2 0 R >>",
+                    2: b"<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+                    3: b"<< /Type /Page /Bad <GG> >>",
+                },
+            )
+
+        with mock.patch.object(publisher, "render_pdf", side_effect=bad_hex):
+            result = publisher.generate_report(self.manifest_path, self.root)
+
+        self.assertEqual(result["export_status"], "incomplete")
+        self.assertFalse(self.output().exists())
+
+    def test_page_dictionary_elementary_token_matrix(self):
+        scenarios = {
+            "valid-keywords-and-hex": (
+                b"<< /Type /Page /Yes true /No false /Nothing null "
+                b"/Empty <> /Odd <ABC> /Spaced <0A FF> >>",
+                "complete",
+            ),
+            "invalid-keyword": (b"<< /Type /Page /Bad maybe >>", "incomplete"),
+            "invalid-reference-marker": (b"<< /Type /Page /Bad R >>", "incomplete"),
+            "invalid-hex-digit": (b"<< /Type /Page /Bad <0G> >>", "incomplete"),
+        }
+        for label, (page_body, expected_status) in scenarios.items():
+            with self.subTest(label=label):
+                run_id = f"cli-token-{label}"
+                data = copy.deepcopy(self.manifest)
+                data["run_id"] = run_id
+                self.manifest_path.write_text(json.dumps(data), encoding="utf-8")
+                publisher = load_module(f"qa_report_token_{label}")
+
+                def token_pdf(_report, destination, page_body=page_body):
+                    write_classic_pdf(
+                        destination,
+                        {
+                            1: b"<< /Type /Catalog /Pages 2 0 R >>",
+                            2: b"<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+                            3: page_body,
+                        },
+                    )
+
+                with mock.patch.object(publisher, "render_pdf", side_effect=token_pdf):
+                    result = publisher.generate_report(self.manifest_path, self.root)
+                self.assertEqual(result["export_status"], expected_status)
+                self.assertEqual(self.output(run_id).exists(), expected_status == "complete")
+
     def test_recursive_page_tree_accepts_nested_pages_with_matching_leaf_counts(self):
         publisher = load_module("qa_report_tree_nested_valid")
 
