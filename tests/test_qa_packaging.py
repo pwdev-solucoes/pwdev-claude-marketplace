@@ -186,7 +186,8 @@ class TestHermesRegistration(unittest.TestCase):
     def test_symlinked_root_directory_or_file_is_rejected_before_registration(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             temporary_root = Path(temporary_directory)
-            for variant in ("root", "directory", "file"):
+            variants = ("root", "directory", "file", "internal-directory", "internal-file")
+            for variant in variants:
                 with self.subTest(variant=variant):
                     external = temporary_root / f"external-{variant}"
                     shutil.copytree(PLUGIN / "skills", external)
@@ -202,10 +203,22 @@ class TestHermesRegistration(unittest.TestCase):
                             external / target_name,
                             target_is_directory=True,
                         )
-                    else:
+                    elif variant == "file":
                         skill_file = skills_root / target_name / "SKILL.md"
                         skill_file.unlink()
                         skill_file.symlink_to(external / target_name / "SKILL.md")
+                    elif variant == "internal-directory":
+                        shutil.rmtree(skills_root / target_name)
+                        (skills_root / target_name).symlink_to(
+                            skills_root / EXPECTED_SKILLS[1],
+                            target_is_directory=True,
+                        )
+                    else:
+                        skill_file = skills_root / target_name / "SKILL.md"
+                        skill_file.unlink()
+                        skill_file.symlink_to(
+                            skills_root / EXPECTED_SKILLS[1] / "SKILL.md",
+                        )
                     module = load_adapter(adapter, f"qa_hermes_symlink_{variant}")
                     context = RecordingContext()
 

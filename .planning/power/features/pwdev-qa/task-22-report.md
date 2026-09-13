@@ -76,3 +76,26 @@ observable order and duplicate registrations.
 - Mutation probe removing deterministic sorting failed the focused suite; mutation probe
   duplicating each callback failed exact sequence/cardinality assertions. Both mutations were
   reverted and the focused suite returned to green.
+
+## Fix round 2
+
+### Root cause
+
+The first symlink fixtures pointed only outside the skills root. Confinement validation therefore
+rejected them even when either explicit no-symlink guard was removed, so those fixtures coupled two
+rules and could not prove that internal aliases were independently forbidden.
+
+### Correction and evidence
+
+- Added an internal directory alias from one expected skill name to another expected skill
+  directory and an internal `SKILL.md` alias to another expected skill file. Both destinations
+  remain below the canonical skills root, isolating the explicit no-symlink policy.
+- Directory-guard mutation RED: removing `skill.is_symlink()` made the internal-directory subtest
+  fail because registration returned without raising.
+- File-guard mutation RED: removing `skill_file.is_symlink()` made the internal-file subtest fail
+  for the same reason.
+- Both product mutations were reverted. No product relaxation or implementation change was kept.
+- GREEN: `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v tests.test_qa_packaging` — 7 tests ran,
+  all passed, including five root/directory/file symlink variants.
+- Packaged suite: Python 3.12 `unittest discover -s tests -p 'test_qa_*.py'` — 180 tests ran, all
+  passed.
