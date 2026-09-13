@@ -36,7 +36,7 @@ Thumbs.db
 .ai
 .superpowers
 .claude
-.agents
+# .agents is versioned: AGENTS.md references .agents/rules/* and the marketplace catalogue lives there
 .docs
 .worktrees/
 
@@ -60,3 +60,6 @@ __pycache__/
 # Review diff packages are disposable evidence, regenerated on demand
 review-*.diff
 .planning/power/features/*/review-packages/
+
+# Session pointer (active feature / next action) — per-checkout, never merged
+.planning/power/state.md
