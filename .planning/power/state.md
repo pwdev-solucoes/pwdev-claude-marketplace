@@ -3,9 +3,9 @@
 - Schema: 1
 - Repository: brownfield
 - Status: EXECUTING
-- Active feature: pwdev-qa
-- Active artifact: .planning/power/features/pwdev-qa/plan.md
-- Last gate: APPROVED — pwdev-qa implementation plan (2026-09-12)
-- Correction cycles: 0
-- Updated: 2026-09-12
-- Next: execute PWDEV QA F01 with power-execute
+- Active feature: specflow-m01
+- Active artifact: .planning/power/features/specflow-m01/task-06-operational-gate.md
+- Last gate: APPROVED — M01 beta.25 operational probe gate
+- Correction cycles: 3
+- Updated: 2026-09-13
+- Next: generate Task 07 brief and dispatch a fresh implementer to execute only the seven approved probes and reconcile runtime evidence
