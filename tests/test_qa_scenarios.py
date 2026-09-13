@@ -12,6 +12,7 @@ ROOT = Path(__file__).parents[1]
 PLUGIN = ROOT / "plugins" / "pwdev-qa"
 ACCEPTANCE = PLUGIN / "references" / "acceptance-scenarios.md"
 RUNTIME_SMOKE = PLUGIN / "references" / "runtime-smoke.md"
+TASK_REPORT = ROOT / ".planning" / "power" / "features" / "pwdev-qa" / "task-24-report.md"
 
 WORKFLOWS = {
     "qa-init",
@@ -44,6 +45,71 @@ SPECIALISTS = {
     "qa-specialist-strategy",
     "qa-specialist-web",
 }
+
+RUNTIME_VERSIONS = {
+    "Claude Code": "`2.1.269 (Claude Code)`",
+    "Codex": "`codex-cli 0.153.4`",
+    "Hermes Agent": "`Hermes Agent v0.21.1 (2026.9.7) · upstream 564aef29`",
+}
+FORBIDDEN_PLACEHOLDERS = {"nonsense", "fabricated", "no evidence", "none", "n/a"}
+SEMANTIC_TOKENS = {
+    "qa-init": {"preconditions": ("objective", "target", "contract", "project root"), "actions": ("inspect", "probe", "inventory"), "oracle": ("TARGET", "CONTRACT", "CAPABILITIES", "LIMITATIONS"), "safety/limitation": ("no mutation", "BLOCKED")},
+    "qa-strategy": {"preconditions": ("target", "contract", "risks", "authorization"), "actions": ("criteria/cases", "qa-tooling"), "oracle": ("priority", "oracle", "environment"), "safety/limitation": ("no execution", "BLOCKED")},
+    "qa-test": {"preconditions": ("cases", "target", "authority"), "actions": ("attempts", "expected/observed", "evidence"), "oracle": ("terminal", "precedence"), "safety/limitation": ("NOT_RUN", "PASS")},
+    "qa-explore": {"preconditions": ("charter", "target", "timebox"), "actions": ("notes", "findings", "follow-up"), "oracle": ("reproducible", "evidence"), "safety/limitation": ("no scope expansion", "PASS")},
+    "qa-bug": {"preconditions": ("target/build", "scope", "evidence"), "actions": ("severity", "priority", "retest"), "oracle": ("reproduction", "lineage"), "safety/limitation": ("no product correction", "limitation")},
+    "qa-regression": {"preconditions": ("change set", "risks", "exclusions"), "actions": ("risk/criterion/defect", "cases"), "oracle": ("rationale", "retest"), "safety/limitation": ("missing links", "PASS")},
+    "qa-review": {"preconditions": ("immutable", "contract", "evidence"), "actions": ("coverage", "defects", "sufficiency"), "oracle": ("contradictions", "stale/missing"), "safety/limitation": ("read-only", "BLOCKED")},
+    "qa-release": {"preconditions": ("QA verdict", "criteria", "decision authority"), "actions": ("readiness", "risk decision"), "oracle": ("FAIL", "BLOCKED", "PASS"), "safety/limitation": ("never publishes", "cannot rewrite")},
+    "qa-report": {"preconditions": ("manifest", "project root", "run ID"), "actions": ("exporter exactly once", "attestation"), "oracle": ("HTML/PDF", "exit code", "verdict"), "safety/limitation": ("inert", "no retry")},
+    "qa-status": {"preconditions": ("immutable", "target"), "actions": ("criteria", "evidence", "limitations"), "oracle": ("current state", "history"), "safety/limitation": ("read-only", "never repairs")},
+    "qa-specialist-accessibility": {"preconditions": ("standard", "browser", "assistive"), "actions": ("keyboard", "focus", "contrast"), "oracle": ("rule", "element", "evidence"), "safety/limitation": ("unverified", "never PASS")},
+    "qa-specialist-api": {"preconditions": ("schema", "endpoint", "credentials"), "actions": ("authentication/authorization", "idempotency"), "oracle": ("status/body", "side effects"), "safety/limitation": ("NOT_RUN", "unsafe target")},
+    "qa-specialist-automation": {"preconditions": ("suite", "runner", "CI"), "actions": ("repeatable", "flaky"), "oracle": ("repeatability", "artifact"), "safety/limitation": ("missing runner", "never replaces")},
+    "qa-specialist-cicd": {"preconditions": ("CI provider", "build", "gate policy"), "actions": ("pipeline", "artifacts"), "oracle": ("QA verdict", "exit code"), "safety/limitation": ("NOT_RUN", "not mutated")},
+    "qa-specialist-data": {"preconditions": ("schema", "dataset", "write limit"), "actions": ("integrity", "transactions", "reconciliation"), "oracle": ("before/after", "invariant"), "safety/limitation": ("blocks mutation",)},
+    "qa-specialist-defects": {"preconditions": ("scope", "reproduction", "lineage"), "actions": ("severity", "priority", "retest"), "oracle": ("current in-scope", "valid linked retest"), "safety/limitation": ("blocks disposition", "cannot hide")},
+    "qa-specialist-functional": {"preconditions": ("contract", "boundaries", "expected"), "actions": ("positive", "negative", "boundary"), "oracle": ("expected", "observed", "evidence"), "safety/limitation": ("BLOCKED",)},
+    "qa-specialist-metrics": {"preconditions": ("numerator", "denominator", "included/excluded"), "actions": ("calculate", "auditable"), "oracle": ("percentage", "population"), "safety/limitation": ("zero", "no invented")},
+    "qa-specialist-mobile": {"preconditions": ("platform", "SDK/toolchain", "build/signing", "device"), "actions": ("Android", "iOS"), "oracle": ("prerequisite probe", "readiness"), "safety/limitation": ("BLOCKED/unverified",)},
+    "qa-specialist-performance": {"preconditions": ("workload", "window", "percentiles", "authorization"), "actions": ("bounded workload", "measurements"), "oracle": ("percentiles", "limits", "evidence"), "safety/limitation": ("NOT_RUN", "prevents load")},
+    "qa-specialist-production": {"preconditions": ("owner", "read-only", "window", "redaction"), "actions": ("logs/metrics/incidents", "preventive"), "oracle": ("timestamps", "queries", "sanitized"), "safety/limitation": ("stops production access",)},
+    "qa-specialist-readiness": {"preconditions": ("criteria", "evidence", "defects"), "actions": ("failure-before-pending", "risk decision"), "oracle": ("every applicable", "no current"), "safety/limitation": ("zero applicable", "prevents PASS")},
+    "qa-specialist-regression": {"preconditions": ("change", "risks", "exclusions"), "actions": ("impact cases", "retest lineage"), "oracle": ("change-to-case", "exclusion"), "safety/limitation": ("BLOCKED", "missing risk")},
+    "qa-specialist-requirements": {"preconditions": ("contract/hash", "criterion catalog", "actor/time"), "actions": ("ID/text", "expected/observed"), "oracle": ("semantic assessment", "file integrity"), "safety/limitation": ("blocks PASS", "waiver")},
+    "qa-specialist-security": {"preconditions": ("owner", "target", "methods", "window", "rate", "stop", "cleanup"), "actions": ("authorized", "exact scope"), "oracle": ("reproducible evidence", "impact"), "safety/limitation": ("NOT_RUN", "BLOCKED")},
+    "qa-specialist-strategy": {"preconditions": ("scope", "risks", "constraints", "contract"), "actions": ("prioritize", "criteria", "evidence"), "oracle": ("risk", "criterion/case", "oracle"), "safety/limitation": ("blocking limitation",)},
+    "qa-specialist-web": {"preconditions": ("target URL", "browser", "session ownership"), "actions": ("refs/snapshot/actions", "fallback"), "oracle": ("observable UI state", "expected"), "safety/limitation": ("personal profile", "cookies")},
+}
+
+
+def markdown_table(text, heading):
+    start = text.index(heading)
+    lines = text[start:].splitlines()
+    table_start = next(index for index, line in enumerate(lines) if line.startswith("|"))
+    rows = []
+    for line in lines[table_start:]:
+        if not line.startswith("|"):
+            break
+        rows.append([cell.strip() for cell in line.strip().strip("|").split("|")])
+    if len(rows) < 3:
+        raise AssertionError(f"{heading}: missing table rows")
+    return rows[0], rows[2:]
+
+
+def named_rows(text, heading, expected_header):
+    header, rows = markdown_table(text, heading)
+    if header != expected_header:
+        raise AssertionError(f"{heading}: header {header!r} != {expected_header!r}")
+    result = {}
+    for row in rows:
+        if len(row) != len(expected_header):
+            raise AssertionError(f"{heading}: malformed row {row!r}")
+        name = row[0].strip("`")
+        if name in result:
+            raise AssertionError(f"{heading}: duplicate row {name}")
+        result[name] = dict(zip(expected_header[1:], row[1:]))
+    return result
 
 
 def backtick_names(text, prefix):
@@ -79,19 +145,76 @@ class TestAcceptanceScenarios(unittest.TestCase):
         self.assertTrue(ACCEPTANCE.is_file(), f"missing {ACCEPTANCE}")
 
     def test_every_workflow_and_specialist_has_complete_scenario_evaluation(self):
-        self.assertEqual(backtick_names(self.text, "qa-") & WORKFLOWS, WORKFLOWS)
-        self.assertEqual(backtick_names(self.text, "qa-specialist-"), SPECIALISTS)
-        for required in (
-            "SCN-WORKFLOWS",
-            "SCN-SPECIALISTS",
-            "positive scenario",
-            "failure/limitation scenario",
-            "expected",
-            "observed",
-            "evidence",
-            "PASS",
+        workflow_rows = named_rows(
+            self.text,
+            "## SCN-WORKFLOWS",
+            ["workflow", "preconditions", "actions", "oracle", "safety/limitation", "evidence", "result"],
+        )
+        specialist_rows = named_rows(
+            self.text,
+            "## SCN-SPECIALISTS",
+            ["specialist", "preconditions", "actions", "oracle", "safety/limitation", "evidence", "result"],
+        )
+        self.assertEqual(set(workflow_rows), WORKFLOWS)
+        self.assertEqual(set(specialist_rows), SPECIALISTS)
+        for group in (workflow_rows, specialist_rows):
+            for name, row in group.items():
+                self.assertEqual(row["result"], "PASS", name)
+                for field in ("preconditions", "actions", "oracle", "safety/limitation", "evidence"):
+                    value = row[field]
+                    self.assertGreaterEqual(len(value), 18, f"{name}: weak {field}")
+                    self.assertNotIn(value.lower(), FORBIDDEN_PLACEHOLDERS, f"{name}: {field}")
+                evidence_paths = re.findall(r"`(tests/[^`]+\.py)`", row["evidence"])
+                self.assertTrue(evidence_paths, f"{name}: no executable evidence path")
+                for evidence_path in evidence_paths:
+                    self.assertTrue((ROOT / evidence_path).is_file(), f"{name}: {evidence_path}")
+
+                for field, tokens in SEMANTIC_TOKENS[name].items():
+                    for token in tokens:
+                        self.assertIn(token, row[field], f"{name}: {field} missing {token}")
+
+        qa_init = workflow_rows["qa-init"]
+        for token in ("objective", "target", "contract", "project root"):
+            self.assertIn(token, qa_init["preconditions"])
+        for token in ("inspect", "probe", "inventory"):
+            self.assertIn(token, qa_init["actions"])
+        for token in ("TARGET", "CONTRACT", "CAPABILITIES", "LIMITATIONS"):
+            self.assertIn(token, qa_init["oracle"])
+        self.assertIn("no mutation", qa_init["safety/limitation"])
+
+        security = specialist_rows["qa-specialist-security"]
+        for token in ("owner", "target", "methods", "window", "rate", "stop", "cleanup"):
+            self.assertIn(token, security["preconditions"])
+        self.assertIn("authorized", security["actions"])
+        self.assertIn("reproducible evidence", security["oracle"])
+        for token in ("NOT_RUN", "BLOCKED"):
+            self.assertIn(token, security["safety/limitation"])
+
+    def test_semantic_destruction_mutations_are_rejected_per_row(self):
+        for pattern, replacement in (
+            (
+                r"^\| `qa-init` \|.*$",
+                "| `qa-init` | nonsense | fabricated | no evidence | none | none | PASS |",
+            ),
+            (
+                r"^\| `qa-specialist-security` \|.*$",
+                "| `qa-specialist-security` | nonsense | fabricated | no evidence | none | none | PASS |",
+            ),
         ):
-            self.assertIn(required, self.text)
+            mutated = re.sub(pattern, replacement, self.text, count=1, flags=re.MULTILINE)
+            with self.assertRaises(AssertionError):
+                rows = named_rows(
+                    mutated,
+                    "## SCN-WORKFLOWS" if "qa-init" in replacement else "## SCN-SPECIALISTS",
+                    (["workflow", "preconditions", "actions", "oracle", "safety/limitation", "evidence", "result"]
+                     if "qa-init" in replacement else
+                     ["specialist", "preconditions", "actions", "oracle", "safety/limitation", "evidence", "result"]),
+                )
+                target = rows["qa-init" if "qa-init" in replacement else "qa-specialist-security"]
+                for field in ("preconditions", "actions", "oracle", "safety/limitation", "evidence"):
+                    self.assertGreaterEqual(len(target[field]), 18)
+                    self.assertNotIn(target[field].lower(), FORBIDDEN_PLACEHOLDERS)
+                self.assertTrue(re.findall(r"`(tests/[^`]+\.py)`", target["evidence"]))
 
     def test_missing_tool_scenario_is_explicit_and_never_fabricates_execution(self):
         for required in (
@@ -124,6 +247,25 @@ class TestAcceptanceScenarios(unittest.TestCase):
             "pdfplumber==0.11.9",
         ):
             self.assertIn(required, self.text)
+
+    def test_acceptance_results_use_only_normative_values_and_separate_limitations(self):
+        rows = named_rows(
+            self.text,
+            "## Acceptance mapping",
+            ["criterion", "scenario/evidence", "result", "limitations"],
+        )
+        self.assertEqual(set(rows), {"CA-001", "CA-002", "CA-003", "CA-004", "CA-018", "CA-022", "CA-023"})
+        for criterion, row in rows.items():
+            self.assertIn(row["result"], {"PASS", "FAIL", "BLOCKED"}, criterion)
+            self.assertTrue(row["limitations"], criterion)
+        self.assertEqual(rows["CA-003"]["result"], "BLOCKED")
+        self.assertIn("0 of 3", rows["CA-003"]["limitations"])
+        self.assertEqual(rows["CA-023"]["result"], "PASS")
+        report_text = TASK_REPORT.read_text(encoding="utf-8")
+        for document in (self.text, report_text):
+            self.assertNotRegex(
+                document, r"PASS_WITH_LIMITATION|PASS with (?:the )?limitations"
+            )
 
     @unittest.skipUnless(
         importlib.util.find_spec("reportlab")
@@ -176,6 +318,41 @@ class TestAcceptanceScenarios(unittest.TestCase):
 
 
 class TestRuntimeSmokeLedger(unittest.TestCase):
+    def assert_runtime_contract(self, text):
+        rows = named_rows(
+            text,
+            "## Result summary",
+            ["runtime", "exact version", "status", "discovery", "invocation/missing-tool", "fixture report", "limitations"],
+        )
+        self.assertEqual(set(rows), set(RUNTIME_VERSIONS))
+        for runtime, expected_version in RUNTIME_VERSIONS.items():
+            row = rows[runtime]
+            self.assertEqual(row["exact version"], expected_version)
+            self.assertEqual(row["status"], "UNVERIFIED")
+            for field in ("discovery", "invocation/missing-tool", "fixture report", "limitations"):
+                self.assertGreaterEqual(len(row[field]), 12, f"{runtime}: weak {field}")
+            self.assertNotRegex(row["discovery"], r"^successful$")
+        self.assertIn("Aggregate status: BLOCKED — 0 of 3 runtimes VERIFIED", text)
+
+        sections = {}
+        for runtime in RUNTIME_VERSIONS:
+            match = re.search(
+                rf"^## {re.escape(runtime)}\n(?P<body>.*?)(?=^## |\Z)",
+                text,
+                flags=re.MULTILINE | re.DOTALL,
+            )
+            self.assertIsNotNone(match, f"missing detailed section for {runtime}")
+            sections[runtime] = match.group("body")
+        required = {
+            "Claude Code": ("claude --version", "Discovery command/probe", "qa-tooling", "Invocation command/probe", "OAuth", "fixture report", "UNVERIFIED"),
+            "Codex": ("codex --version", "Discovery command/probe", "qa-tooling", "Missing tool command/probe", "Fixture report command/probe", "export_status=complete", "UNVERIFIED"),
+            "Hermes Agent": ("hermes --version", "Discovery command/probe", "qa-tooling", "Invocation/missing-tool", "Fixture report", "NOT_RUN", "UNVERIFIED"),
+        }
+        for runtime, tokens in required.items():
+            for token in tokens:
+                self.assertIn(token, sections[runtime], f"{runtime}: missing {token}")
+        return rows
+
     def test_real_runtime_results_are_versioned_reproducible_and_honest(self):
         self.assertTrue(RUNTIME_SMOKE.is_file(), f"missing {RUNTIME_SMOKE}")
         text = RUNTIME_SMOKE.read_text(encoding="utf-8") if RUNTIME_SMOKE.is_file() else ""
@@ -197,17 +374,27 @@ class TestRuntimeSmokeLedger(unittest.TestCase):
             "playwright-cli --version",
         ):
             self.assertIn(required, text)
-        rows = re.findall(
-            r"^\| (Claude Code|Codex|Hermes Agent) \| ([^|]+) \| "
-            r"(VERIFIED|UNVERIFIED) \|",
-            text,
-            flags=re.MULTILINE,
+        self.assert_runtime_contract(text)
+
+    def test_false_verification_and_removed_runtime_evidence_are_rejected(self):
+        text = RUNTIME_SMOKE.read_text(encoding="utf-8")
+        promoted = text.replace(
+            "| Codex | `codex-cli 0.153.4` | UNVERIFIED |",
+            "| Codex | `codex-cli 0.153.4` | VERIFIED |",
+            1,
         )
-        self.assertEqual(len(rows), 3)
-        for _, version, status in rows:
-            self.assertNotIn("pending", version.lower())
-            if status == "VERIFIED":
-                self.assertIn("successful", text)
+        with self.assertRaises(AssertionError):
+            self.assert_runtime_contract(promoted)
+
+        removed = re.sub(
+            r"^## Claude Code\n.*?(?=^## Codex)",
+            "## Claude Code\n\nDetailed evidence removed.\n\n",
+            text,
+            count=1,
+            flags=re.MULTILINE | re.DOTALL,
+        )
+        with self.assertRaises(AssertionError):
+            self.assert_runtime_contract(removed)
 
 
 if __name__ == "__main__":

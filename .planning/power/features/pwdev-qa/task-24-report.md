@@ -70,8 +70,8 @@ Full commands, output summaries and limitations are in
 - CA-018: PASS — English and Portuguese root/plugin documentation is integrated.
 - CA-022: PASS — the recommendation carries tool, purpose, availability, evidence,
   prerequisites, alternative and reason.
-- CA-023: PASS_WITH_LIMITATION — global and checkout-local Playwright paths and isolated session
-  behavior were exercised; runtime skill invocation remains blocked as described above.
+- CA-023: PASS — global and checkout-local Playwright paths and isolated session behavior were
+  exercised. Limitation: runtime skill invocation remains blocked as described above.
 
 ## Limitations and incident disclosure
 
@@ -88,3 +88,48 @@ Full commands, output summaries and limitations are in
 - A `file:` URL was refused by playwright-cli. The report was instead served on loopback, opened,
   snapshotted and screenshotted in the task-owned session, then that session was closed. Generated
   repository-local Playwright artifacts and Python cache were moved to Trash after inspection.
+
+## Fix round 1
+
+### Root cause
+
+The first scenario oracle searched for names and evidence vocabulary across the whole Markdown
+document. It did not bind a runtime status to that runtime's three smoke steps and detailed
+section, nor bind a workflow/specialist result to semantic fields in that item's table row.
+Consequently, unrelated occurrences satisfied the assertions after evidence was removed or a row
+was reduced to labels. The acceptance table also combined a normative result with limitation prose,
+creating values outside the approved enum.
+
+### RED and mutation reproduction
+
+- Before correction, in-memory mutations promoting only Codex to `VERIFIED`, removing the complete
+  Claude detail section, and replacing either the `qa-init` or `qa-specialist-security` semantic
+  row with placeholders were all accepted by the old predicates.
+- New structural tests were written first. The focused Python 3.12 run executed 10 tests and failed
+  3 times because the old runtime, scenario and acceptance table schemas lacked the required
+  per-identity fields. The existing report fixture continued to pass.
+- The new mutation tests explicitly require rejection of the false Codex promotion, missing Claude
+  detail, destroyed `qa-init` row and destroyed security row. The pre-fix documents were also
+  replayed from Git in memory and rejected by the new parser.
+
+### Correction
+
+- Runtime rows now contain exact version, status, discovery evidence, invocation/missing-tool
+  evidence, fixture-report evidence and limitations for each unique runtime. Detailed sections are
+  mandatory per runtime, and the aggregate remains `BLOCKED — 0 of 3 runtimes VERIFIED`.
+- Workflow and specialist tables now have exactly one row per expected item and explicit
+  preconditions, actions, oracle, safety/limitation, executable evidence paths and normative result.
+  Tests reject duplicates, extras, missing rows, placeholders, weak fields and nonexistent evidence
+  paths; `qa-init` and security carry additional behavior-specific assertions.
+- Acceptance results are now parsed separately from limitations. CA-023 is `PASS` with its
+  limitation in a distinct field; CA-003 remains `BLOCKED` with `0 of 3` in its limitation field.
+  No composite result value remains.
+
+### GREEN evidence
+
+- Focused Python 3.12 suite plus README test: 11 tests ran, all passed in 3.697s; the validator
+  reported 17 plugins in both READMEs.
+- Complete Python 3.12 `test_qa_*` suite: 201 tests ran, all passed in 14.597s.
+- The focused mutation tests pass only by observing rejection of all four adversarial variants.
+- JSON validation and final diff checks remained green; the known four legacy root README baseline
+  failures are unchanged and outside this correction.

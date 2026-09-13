@@ -8,14 +8,14 @@ VERIFIED only after successful `qa-tooling discovery`, real invocation producing
 
 ## Result summary
 
-| runtime | exact version | status | discovery | missing-tool response | fixture report | limitations |
+| runtime | exact version | status | discovery | invocation/missing-tool | fixture report | limitations |
 |---|---|---|---|---|---|---|
-| Claude Code | `2.1.269 (Claude Code)` | UNVERIFIED | session-only plugin inventory found `qa-tooling` | NOT_RUN | NOT_RUN | non-interactive invocation stopped before a model turn because OAuth refresh failed |
+| Claude Code | `2.1.269 (Claude Code)` | UNVERIFIED | successful session-only inventory found `qa-tooling`; see discovery probe below | NOT_RUN — OAuth failed before the model could invoke the skill | NOT_RUN — no report artifact was created | non-interactive invocation stopped before a model turn because OAuth refresh failed |
 | Codex | `codex-cli 0.153.4` | UNVERIFIED | effective ephemeral skill catalog did not expose `qa-tooling` | probe ran, but the skill response was BLOCKED | successful export, parse and inspection | report succeeded, but required skill discovery/invocation did not |
-| Hermes Agent | `Hermes Agent v0.21.1 (2026.9.7) · upstream 564aef29` | UNVERIFIED | doctor passed manifest/import/registration only | NOT_RUN | NOT_RUN | installed help exposes no session-local plugin-path load; safe isolation disables plugins and the remaining mode may load an existing `.env`, which this task must not read |
+| Hermes Agent | `Hermes Agent v0.21.1 (2026.9.7) · upstream 564aef29` | UNVERIFIED | successful doctor passed manifest/import/registration only, not skill loading | NOT_RUN — no compliant session-local `qa-tooling` invocation path | NOT_RUN — no report artifact was created | installed help exposes no session-local plugin-path load; safe isolation disables plugins and the remaining mode may load an existing `.env`, which this task must not read |
 
-No row is VERIFIED. `successful` below describes an individual probe only and never upgrades a
-runtime whose complete three-step smoke did not pass.
+Aggregate status: BLOCKED — 0 of 3 runtimes VERIFIED. `successful` below describes an individual
+probe only and never upgrades a runtime whose complete three-step smoke did not pass.
 
 ## Claude Code
 
@@ -32,6 +32,8 @@ runtime whose complete three-step smoke did not pass.
   paths. Result: `Failed to authenticate: OAuth session expired and could not be refreshed`.
 - Evidence/result: discovery succeeded; no model turn invoked `qa-tooling`, no missing-tool table
   was produced, and no fixture report was created. Status is UNVERIFIED.
+- Fixture report result/evidence: NOT_RUN because authentication failed before any model turn; no
+  output directory or report artifact was created by Claude Code.
 
 ## Codex
 
@@ -40,6 +42,8 @@ runtime whose complete three-step smoke did not pass.
   `codex plugin marketplace add --help`, and `codex plugin add --help`. The installed executable
   documents marketplace installation but no session-only local plugin path for `codex exec`; this
   smoke did not mutate configuration to manufacture discovery.
+- Discovery command/probe: inspection of the effective ephemeral skill catalog returned no
+  invocable `qa-tooling`; explicitly reading its file was not accepted as discovery evidence.
 - Invocation command/probe: `codex exec --ephemeral --ignore-user-config --ignore-rules
   --skip-git-repo-check --sandbox workspace-write --add-dir <absolute-plugin-path> <bounded-smoke>`
   ran from `/tmp/pwdev-qa-codex.xV0pUf`. The effective catalog explicitly lacked an invocable
@@ -67,6 +71,10 @@ runtime whose complete three-step smoke did not pass.
   still permits credentials from `.env`; plugin/skill help offers installation or project trust,
   not a session-local path. Repository governance forbids reading existing `.env` content and this
   task forbids changing installation/trust/configuration. No unsafe or stateful workaround ran.
+- Invocation/missing-tool result/evidence: `qa-tooling` could not be loaded through a documented
+  session-local mechanism, so no model response was invoked and the scenario is NOT_RUN.
+- Fixture report result/evidence: NOT_RUN because entering chat would either disable the plugin or
+  cross the prohibited existing-`.env` boundary; no Hermes report artifact exists.
 - Evidence/result: missing-tool response and fixture report are NOT_RUN; status is UNVERIFIED.
 
 ## playwright-cli probes
