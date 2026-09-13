@@ -37,7 +37,8 @@ Claude interactive adapter command boundaries before any provider execution.
   sandboxed run was blocked only because tmux could not create its temporary socket; the
   identical suite passed outside that sandbox restriction.
 - Canonical full suite:
-  `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 443 passed in 219.014s.
+  `python3 -m unittest discover -s tests -p 'test_sdd_composy*.py'` — 442 passed in 200.236s
+  on the clean committed head during independent review.
 
 No provider, cmux workspace, tmux session, real fleet run, retry, fallback, protected file,
 `--human-approved`, teardown, merge, or preserved recovery resource was accessed or changed.
