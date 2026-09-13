@@ -564,6 +564,12 @@ class QaWorkflowContractTest(unittest.TestCase):
             procedure,
             r"(?is)read.only.*(?:never|does not).*(?:correct|modify|mutate).*product",
         )
+        normalized_procedure = " ".join(procedure.split())
+        self.assertIn(
+            "It never corrects, modifies, or mutates the product, tests, contracts, "
+            "approvals, evidence, findings, or state.",
+            normalized_procedure,
+        )
         for surface in (
             "product",
             "tests",
@@ -580,7 +586,7 @@ class QaWorkflowContractTest(unittest.TestCase):
                 )
         self.assertNotRegex(
             procedure,
-            r"(?is)(?:this workflow|the review|review|it)\s+(?:may|can|is allowed|is permitted)\s+(?:correct|modify|mutate|write|change)",
+            r"(?is)\b(?:may|can|allowed|permitted)\b[^.\n]{0,120}\b(?:correct|modify|mutate|write|change)\b",
         )
         self.assertRegex(
             procedure,
@@ -619,6 +625,26 @@ class QaWorkflowContractTest(unittest.TestCase):
         self.assertRegex(
             procedure,
             r"(?is)human.*decision.*separate.*(?:QA|verdict)",
+        )
+        normalized_inputs = " ".join(inputs.split())
+        normalized_procedure = " ".join(procedure.split())
+        normalized_output = " ".join(output.split())
+        self.assertIn(
+            "Existing human release and risk decisions, each with actor, authority, scope, "
+            "rationale, and timestamp",
+            normalized_inputs,
+        )
+        self.assertIn(
+            "Record actor, authority, scope, rationale, and timestamp",
+            normalized_procedure,
+        )
+        self.assertRegex(
+            normalized_output,
+            r"HUMAN_DECISION: <separate release/risk decision with actor, authority, scope, rationale, timestamp, or missing>",
+        )
+        self.assertNotRegex(
+            procedure,
+            r"(?is)\bnever\s+(?:record|preserve|receive|emit)\b[^.\n]{0,160}\b(?:actor|authority|scope|rationale|timestamp)\b",
         )
         for decision_field in ("actor", "authority", "scope", "rationale", "timestamp"):
             with self.subTest(human_decision_field=decision_field):

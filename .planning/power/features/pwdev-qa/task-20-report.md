@@ -129,3 +129,48 @@ OK
 ```
 
 The final compilation and diff checks exited zero.
+
+## Correction round 2
+
+Review source: `.planning/power/features/pwdev-qa/task-20-review.md` (quality review round 2).
+
+### Root cause
+
+The round-1 read-only checks allowed the initial negative verb to span a later adversative clause,
+so `never ... product, but may mutate ...` still looked negative for every following surface. Its
+contradiction check also depended on a small subject list immediately before `may`/`can`. The human
+decision check established separation and mentioned each field, but did not prove the positive
+contract at its input, procedure, and output boundaries; therefore `Never record ...` retained all
+searched nouns.
+
+### Mutation RED evidence
+
+After strengthening the test and before retaining any contract change, both exact reviewed
+mutations were applied independently:
+
+- `It never ... mutates the product, but may mutate tests, contracts, approvals, evidence,
+  findings, or state` failed the normalized, complete read-only clause assertion;
+- `Never record actor, authority, scope, rationale, and timestamp` failed the positive procedure
+  assertion requiring `Record actor, authority, scope, rationale, and timestamp`.
+
+The review test additionally rejects permissive mutation language regardless of an immediately
+preceding subject. The release test now requires the five decision fields at all three structural
+boundaries: supplied input, positive record action, and `HUMAN_DECISION` output. Both mutations
+were reverted after their RED runs. The existing contracts were already unequivocal, so no
+production contract adjustment was retained in this round.
+
+### Correction GREEN
+
+Packaged Python 3.12 verification with the valid contracts restored:
+
+```text
+python3 -m unittest tests.test_qa_workflows
+Ran 26 tests in 0.009s
+OK
+
+python3 -m unittest discover -s tests -p 'test_qa_*.py'
+Ran 168 tests in 10.304s
+OK
+```
+
+The final compilation and diff checks exited zero.
