@@ -54,6 +54,9 @@ Task F04-21: complete (commits 75f7335..98046b8, review clean after fix rounds 1
 Task F05-22: fix round 1 — três findings Major confirmados: inventário Hermes aberto/registro parcial, symlinks externos e testes que mascaravam ordem/duplicatas.
 Task F05-22: fix round 2 — código recusava symlink interno, mas as fixtures externas não tornavam as guardas explícitas necessárias.
 Task F05-22: complete (commits a01ad69..cb1a13d, review clean after fix rounds 1-2)
+Task F05-23: fix round 1 — dois findings Major confirmados: contradições bilíngues passavam pelos testes e o snapshot do catálogo Claude não preservava todos os campos.
+Task F05-23: fix round 2 — os detectores bloqueavam as mutações nocivas, mas também rejeitavam 12 proibições válidas.
+Task F05-23: complete (commits 2d2ccc4..bfd2f2d, review clean after fix rounds 1-2)
 
 Baseline 2026-09-12: `python3 -m unittest discover -s tests` executou 670 testes em 404.209s; 7 falhas preexistentes antes de qualquer código PWDEV QA.
 - 2 falhas `test_flow_claude_compat`: READMEs raiz não contêm `claude -p`.
