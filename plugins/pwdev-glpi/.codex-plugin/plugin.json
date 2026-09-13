@@ -1,0 +1,18 @@
+{
+  "name": "pwdev-glpi",
+  "displayName": "PWDEV GLPI — Tickets, Triagem e Fila ITSM",
+  "version": "1.2.0",
+  "description": "Integração com GLPI 10.x e 11.x pela API REST Legacy V1 via servidor MCP próprio (@soarescbm/mcp-glpi, npx).",
+  "author": { "name": "Paulo Soares", "url": "https://github.com/soarescbm" },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": ["codex", "glpi", "itsm", "helpdesk", "tickets", "triage", "mcp"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "PWDEV GLPI",
+    "shortDescription": "Tickets, triagem e fila ITSM no GLPI",
+    "defaultPrompt": "Use $glpi para gerenciar tickets e consultar o GLPI via MCP."
+  }
+}

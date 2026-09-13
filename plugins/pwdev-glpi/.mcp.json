@@ -1,11 +1,13 @@
 {
   "glpi": {
     "command": "npx",
-    "args": ["-y", "@soarescbm/mcp-glpi@0.3.2"],
+    "args": ["-y", "@soarescbm/mcp-glpi@0.4.0"],
     "env": {
       "GLPI_BASE_URL": "${GLPI_BASE_URL:-}",
       "GLPI_PAT": "${GLPI_PAT:-}",
-      "GLPI_APP_TOKEN": "${GLPI_APP_TOKEN:-}"
+      "GLPI_APP_TOKEN": "${GLPI_APP_TOKEN:-}",
+      "GLPI_USE_SESSION": "${GLPI_USE_SESSION:-true}",
+      "GLPI_TIMEOUT_MS": "${GLPI_TIMEOUT_MS:-30000}"
     }
   }
 }

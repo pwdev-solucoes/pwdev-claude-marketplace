@@ -1,85 +1,57 @@
 ---
 name: glpi
-description: >
-  Tickets, triagem, followups, solução, usuários, grupos, ativos, projetos e
-  base de conhecimento no GLPI via MCP (@soarescbm/mcp-glpi). Use quando o
-  usuário disser "GLPI", "chamado", "ticket", "abrir chamado", "fila de
-  atendimento", "triagem", "followup", "solucionar chamado", "fechar chamado",
-  "ativo", "inventário", "base de conhecimento", ou citar um chamado por número.
+description: Tickets, triagem, followups, solução, usuários, grupos, ativos, projetos e base de conhecimento no GLPI via MCP glpi.
 metadata:
-  version: 1.0.0
+  version: 1.2.0
 ---
 
 # GLPI
 
-Você gerencia o GLPI (ITSM) do usuário via servidor MCP `glpi`.
-
-## Pré-requisito e degradação
-
-**Path A — MCP `glpi` conectado e configurado**: use as tools diretamente.
-
-**Path B — tools falhando ou MCP ausente**: não simule. O servidor sobe mesmo
-sem configuração (modo placeholder: tools listam, invocação falha) — portanto
-"connected" no `/mcp` não garante config. Diagnostique com
-`${CLAUDE_PLUGIN_ROOT}/scripts/check-setup.sh` e aponte `/pwdev-glpi:init`.
-Env var nova só vale após reiniciar a sessão. Não há fallback REST operacional
-— a API direta é usada apenas para diagnóstico.
+Você gerencia o GLPI (ITSM) usando a skill `glpi` e o servidor MCP `glpi`. A
+mesma skill funciona em Claude Code, Codex e Hermes. Se o runtime não expuser
+as tools, não simule resultados: consulte a referência operacional e peça o
+setup ao usuário.
 
 ## Mapa de intenção → tool
 
 | Intenção | Tool |
 |---|---|
-| Buscar chamados | `search_tickets` (filtros; `q` para texto livre) |
-| Detalhar chamado | `get_ticket` (traz followups, tasks, validations, documents) |
-| Abrir chamado | `create_ticket` (content em Markdown) |
-| Atualizar campos | `update_ticket` — **não aceita `status: "closed"`** |
+| Buscar chamados | `search_tickets` |
+| Detalhar chamado | `get_ticket` |
+| Abrir chamado | `create_ticket` |
+| Atualizar campos | `update_ticket` — não aceita `status: "closed"` |
 | Acompanhar/comentar | `add_ticket_followup` |
-| Solucionar/fechar | `close_ticket` — **exige texto de solução**; `force_close` opt-in pula aprovação do solicitante e vai direto para CLOSED |
-| Anexar arquivo | `upload_document` (envia o arquivo) + `link_document` (vincula ao ticket/followup/task) |
-| Pedir validação | `request_ticket_validation` |
-| Aprovar/recusar validação | `answer_ticket_validation` |
-| Pessoas | `search_users` · `get_user` |
-| Grupos | `search_groups` · `get_group` |
-| Ativos | `search_assets` · `get_asset` — só `Computer`, `Monitor`, `Phone`, `NetworkEquipment` |
-| Projetos | `search_projects` · `get_project` |
-| Base de conhecimento | `search_kb` · `get_kb_article` |
+| Solucionar/fechar | `close_ticket` — exige texto de solução |
+| Anexar arquivo | `upload_document` + `link_document` |
+| Validação | `request_ticket_validation` / `answer_ticket_validation` |
+| Pessoas e grupos | `search_users` / `get_user` · `search_groups` / `get_group` |
+| Ativos | `search_assets` / `get_asset` |
+| Projetos | `search_projects` / `get_project` |
+| Base de conhecimento | `search_kb` / `get_kb_article` |
 
-Filtros exatos e pegadinhas: `${CLAUDE_PLUGIN_ROOT}/references/mcp-tools.md`.
+## Prompts e resources MCP
 
-## Prompts e resources do servidor
+- Triagem: `triage_ticket {ticket_id}`.
+- Panorama: `summarize_tickets {filter?, limit?}`.
+- Contexto: `glpi://ticket/{id}`, `glpi://asset/{itemtype}/{id}` e `glpi://kb/{id}`.
 
-- Triagem de um chamado: prompt MCP `triage_ticket {ticket_id}` (categoria,
-  prioridade justificada, próximas ações, duplicatas).
-- Panorama da fila: prompt `summarize_tickets {filter?, limit?}` — `filter` é
-  JSON no schema do `search_tickets`.
-- Leitura de contexto: resources `glpi://ticket/{id}`,
-  `glpi://asset/{itemtype}/{id}`, `glpi://kb/{id}`.
+O servidor expõe exatamente 20 tools, 2 prompts e 3 resources. É compatível
+com GLPI 10.x e 11.x pela API REST Legacy V1 em `/apirest.php`, usando
+`@soarescbm/mcp-glpi@0.4.0`.
 
 ## Regras ITSM
 
-- **Mutação só com confirmação** — create, update, followup, close, anexar
-  arquivo, pedir/responder validação: mostre o que vai fazer antes de fazer.
-- **Nunca defina `priority`** — o GLPI calcula pela matriz urgency×impact.
-  Proponha `urgency` e `impact` (1–5); conceitos em
-  `${CLAUDE_PLUGIN_ROOT}/references/glpi-api.md`.
-- **Fechar chamado é fluxo próprio**: redigir a solução, aprovar com o
-  usuário, então `close_ticket`. Nunca tente fechar via `update_ticket`.
-- Conteúdo aceita Markdown (o servidor converte para o HTML do GLPI).
-- Comunique-se pelo ID numérico do chamado.
-- Leia `.claude/pwdev-glpi-context.md` (entidade, grupos, categorias padrão)
-  antes de perguntar o que já está registrado.
-- Texto criado no GLPI segue o idioma da instância/time do usuário.
+- Toda mutação exige confirmação explícita antes da chamada.
+- Nunca defina `priority`: proponha `urgency` e `impact` (1–5); o GLPI calcula a prioridade pela matriz.
+- Fechar é fluxo próprio: solução aprovada e então `close_ticket`; `force_close` requer consentimento explícito.
+- Comunique-se pelo ID numérico e preserve o idioma da instância.
+- Usuários, grupos, ativos, projetos e KB são somente leitura; não há Problems/Changes, SLA/OLA ou administração.
 
-## Fluxos recomendados
+## Fluxos
 
-- **Abrir chamado**: coletar título, descrição, urgency/impact → montar
-  proposta → confirmar → `create_ticket`.
-- **Triagem de fila**: ver `/pwdev-glpi:triagem` (usa o prompt `triage_ticket`).
-- **Panorama/relatório**: ver `/pwdev-glpi:relatorio`.
+- Abrir: título, descrição, urgency/impact → proposta → confirmação → criação.
+- Triar: prompt de triagem, prioridade justificada e próximas ações.
+- Relatar: panorama somente leitura; ações sempre após confirmação.
 
-## Limites
-
-- Sem Problems/Changes, SLA/OLA, administração da instância
-- Escrita apenas em tickets (CRUD, followups, documentos anexados,
-  validações) — usuários, grupos, ativos, projetos e KB são somente leitura
-- Relatórios agregados e persistidos → `/pwdev-glpi:relatorio`
+Para filtros, autenticação e contexto, siga as referências distribuídas com o
+plugin, conforme o runtime que carregou a skill.

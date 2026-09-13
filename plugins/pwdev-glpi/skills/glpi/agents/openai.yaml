@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV GLPI"
+  short_description: "Tickets, triagem e fila ITSM no GLPI"
+  default_prompt: "Use $glpi para gerenciar tickets e consultar o GLPI via MCP."

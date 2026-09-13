@@ -1,17 +1,20 @@
-# PWDEV GLPI — Tickets, Triagem e Fila ITSM
+# PWDEV GLPI — Tickets, Triagem e Fila ITSM (Claude Code, Codex, Hermes)
+
+A skill compartilhada `glpi` funciona em Claude Code, Codex e Hermes. O setup
+por runtime está em [`references/runtime.md`](./references/runtime.md).
 
 > [English version](./README.md)
 
-Plugin do Claude Code que gerencia o [GLPI](https://glpi-project.org/) 10.x
+Plugin do Claude Code que gerencia o [GLPI](https://glpi-project.org/) 10.x e 11.x
 pelo [`@soarescbm/mcp-glpi`](https://github.com/soarescbm/mcp-glpi) — servidor
 MCP próprio (stdio, iniciado via `npx`) que expõe 20 tools, 2 prompts e
-3 resources sobre a API REST do GLPI.
+3 resources pela API REST Legacy V1 do GLPI em `/apirest.php`.
 
 ## O que vem dentro
 
 | Peça | Função |
 |---|---|
-| MCP `glpi` | `npx -y @soarescbm/mcp-glpi@0.3.2` — CRUD de tickets + followups + solução/fechamento, upload e vínculo de documentos, validação de chamados, leitura de usuários, grupos, ativos (Computer/Monitor/Phone/NetworkEquipment), projetos e base de conhecimento |
+| MCP `glpi` | `npx -y @soarescbm/mcp-glpi@0.4.0` — CRUD de tickets + followups + solução/fechamento, upload e vínculo de documentos, validação de chamados, leitura de usuários, grupos, ativos (Computer/Monitor/Phone/NetworkEquipment), projetos e base de conhecimento |
 | Skill `glpi` | ITSM do dia a dia em conversa natural — mapa intenção→tool, regras ITIL (nunca setar priority, fechar só com solução aprovada, confirmar antes de mutação) |
 | `/pwdev-glpi:init` | Setup guiado: URL da API, PAT no Keychain do macOS, teste de conexão, contexto do projeto |
 | `/pwdev-glpi:status` | Diagnóstico: env vars, handshake REST, pacote npm, prova viva do MCP |
@@ -20,15 +23,24 @@ MCP próprio (stdio, iniciado via `npx`) que expõe 20 tools, 2 prompts e
 
 ## Requisitos
 
-- GLPI **10.x** com API REST habilitada (Setup → General → API).
+- GLPI **10.x ou 11.x** com a API REST Legacy V1 habilitada (Setup → General → API) em uma URL terminada por `/apirest.php`.
 - Um **API token** de usuário (PAT, ≥16 chars): Preferências → Chaves de
   acesso remoto.
 - Node.js **20+** (o `npx` baixa o servidor publicado na primeira execução).
 - `GLPI_APP_TOKEN` opcional, se a instância registrar API clients.
+- Overrides existentes de `GLPI_USE_SESSION` e `GLPI_TIMEOUT_MS` continuam compatíveis.
 
 ## Setup
 
-Rode `/pwdev-glpi:init` e siga os passos. Em resumo:
+No Claude Code, rode `/pwdev-glpi:init`. Codex usa o manifesto portátil e `$glpi`;
+Hermes usa a skill compartilhada e registra o MCP manualmente:
+
+```sh
+hermes mcp add glpi -- npx -y @soarescbm/mcp-glpi@0.4.0
+```
+
+Em qualquer runtime, forneça as variáveis documentadas e reinicie a sessão após
+alterações. Não edite configurações pessoais do runtime.
 
 ```sh
 # ~/.zshrc
@@ -43,8 +55,10 @@ sem configuração (modo placeholder — tools listam mas falham ao invocar),
 então `/mcp` mostrando *connected* não prova o setup; `/pwdev-glpi:status`
 prova.
 
-A versão do npm é **pinada** (`@0.3.2`) por reprodutibilidade e cache do npx;
-releases do servidor chegam como patch do plugin.
+A versão do npm é **pinada** (`@0.4.0`) por reprodutibilidade. Este branch do
+plugin depende da publicação futura de `@soarescbm/mcp-glpi@0.4.0`; a release
+está preparada apenas no branch irmão do MCP, portanto a inicialização via
+`npx` no registry não funcionará até uma publicação autorizada separadamente.
 
 ## Segurança do token
 
@@ -67,4 +81,5 @@ usuários, grupos, ativos, projetos e KB são somente leitura).
 | `ERROR_GLPI_LOGIN` / 401 | PAT inválido → regenerar o API token no GLPI |
 | Erro `*APP_TOKEN*` | Instância exige App-Token → `export GLPI_APP_TOKEN` |
 | HTML em vez de JSON | URL sem `/apirest.php` ou API REST desabilitada |
+| Geração GLPI desconhecida | A Legacy V1 responde, mas `getGlpiConfig` não expôs versão reconhecível; as tools continuam disponíveis |
 | Primeira sessão lenta para conectar | npx baixando o pacote (só na primeira vez) |
