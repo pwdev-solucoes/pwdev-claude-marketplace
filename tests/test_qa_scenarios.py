@@ -163,17 +163,24 @@ def backtick_names(text, prefix):
 
 class TestRootReadmes(unittest.TestCase):
     def test_bilingual_catalogs_add_qa_once_and_group_it_by_goal(self):
+        # The root READMEs follow the marketplace contract enforced by
+        # tests/test_marketplace_readmes.py: one plain link in the goal table and one
+        # bold row (description, version, license) in the plugin table.
         for relative in ("README.md", "README.pt-BR.md"):
             text = (ROOT / relative).read_text(encoding="utf-8")
-            link = "[pwdev-qa](./plugins/pwdev-qa/)"
-            self.assertEqual(text.count(link), 2, relative)
+            goal_link = "[pwdev-qa](./plugins/pwdev-qa/)"
+            table_link = "[**pwdev-qa**](./plugins/pwdev-qa/)"
+            self.assertEqual(text.count(goal_link), 1, relative)
+            self.assertEqual(text.count(table_link), 1, relative)
             self.assertRegex(
                 text,
-                r"\| (?:Quality assurance|Quality assurance \(QA\)|Garantia de qualidade \(QA\)) "
+                r"\| (?:Quality assurance|Quality assurance \(QA\)|Garantia de qualidade(?: \(QA\))?) "
                 r"\| \[pwdev-qa\]\(\./plugins/pwdev-qa/\) \|",
             )
-            self.assertIn(
-                "| [pwdev-qa](./plugins/pwdev-qa/) | 0.1.0 |", text
+            self.assertRegex(
+                text,
+                r"(?m)^\| \[\*\*pwdev-qa\*\*\]\(\./plugins/pwdev-qa/\) \|[^|\n]+\| 0\.1\.0 \| Apache-2\.0 \|$",
+                relative,
             )
 
 
