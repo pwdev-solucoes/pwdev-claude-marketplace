@@ -23,6 +23,22 @@ Task F03-10: complete (commits a67f9a2..8a5185e, review clean)
 Task F03-11: fix round 1 — 1 Critical e 2 Important confirmados: TOCTOU em diretório pai, imagem truncada aceita e credencial JSON escapada não detectada.
 Task F03-11: fix round 2 — Critical e revalidação ADDRESSED; permanecem variantes Important de paleta PNG incompatível com bit depth e chave JSON duplicada pós-decode.
 Task F03-11: complete (commits 8a5185e..b0412ba, review clean after fix rounds 1-2)
+Task F03-12: fix round 1 — três findings Important confirmados: N/A válido tratado como pendência, PASS de reteste supersedido encerra defeito e marcadores de escopo contraditórios excluem falha.
+Task F03-12: complete (commits 80286c2..f6fb6a4, review clean after fix round 1)
+Task F03-13: complete (commits f6fb6a4..4f6c179, review clean)
+Task F03-14: fix round 1 — finding Important confirmado para incorporar imagem verificada com legenda e revalidação segura; 1 Minor de integralidade da fixture deferred.
+Task F03-14: minor (deferred): teste 100×2000 não compara o fragmento final que completa os 2.000 caracteres.
+Task F03-14: fix round 2 — incorporação ADDRESSED, mas raiz de confinamento segue symlink e publicação re-resolve pathname.
+Task F03-14: fix round 3 — raiz symlink/redirecionamento ADDRESSED, mas troca de nome publica no inode preservado e retorna sucesso sem arquivo no destino nominal.
+Task F03-14: complete (commits 4f6c179..3185b7b, review clean after fix rounds 1-3; 1 Minor deferred)
+Task F03-15: fix round 1 — dois findings Important confirmados: troca pós-rename permite falso `complete` e PDF não parseável passa por checagem superficial de marcadores.
+Task F03-15: fix round 2 — PDF semântico permanece aberto; finding de troca pós-último snapshot exige definir ponto de linearização porque nenhum número finito de releituras torna pathname imutável.
+Task F03-15: fix round 3 — semântica pós-commit ADDRESSED; atestação ainda é pré-rename e parser não valida recursivamente filhos/ciclos de `/Pages`.
+Task F03-15: fix round 4 — atestação pré-commit e árvore recursiva avançaram; restaram semântica pós-syscall e dicionários `/Page` lexicalmente malformados.
+Task F03-15: fix round 5 — semântica de commit ADDRESSED; corrigindo os valores elementares inválidos restantes do parser PDF.
+Task F03-15: complete (commits 3185b7b..dcd096e, review clean after fix rounds 1-5)
+Task F03-16: fix round 1 — finding Important confirmado no oráculo E2E: cardinalidade/truncamento/expected-observed não eram comprovados integralmente.
+Task F03-16: complete (commits dcd096e..b8b5ab6, review clean after fix round 1; Python 3.9 sem dependências dev classificado como limitação de ambiente)
 
 Baseline 2026-09-12: `python3 -m unittest discover -s tests` executou 670 testes em 404.209s; 7 falhas preexistentes antes de qualquer código PWDEV QA.
 - 2 falhas `test_flow_claude_compat`: READMEs raiz não contêm `claude -p`.
@@ -58,6 +74,12 @@ Ruling: cenários de referência que exibem mutação ou carga observada só pod
 Ruling: pentest `READY` exige que a própria linha de cenário carregue owner, rate limit, stop conditions e cleanup, além de alvo, métodos, ambiente e janela; cada omissão mantém execução `NOT_RUN` e outcome `BLOCKED`. Se estiver errado, o cenário ficará mais estrito que uma proposta apenas consultiva, mas não confundirá autorização parcial com prontidão operacional.
 Ruling: percentual só é publicável quando target/contrato/coleta, IDs incluídos/excluídos e evidências sustentam numerador e denominador; decisão humana só habilita o cenário de readiness quando actor, authority, scope, rationale e timestamp estão explícitos e separados do parecer. Se estiver errado, a coleta exigirá mais metadados, mas evitará métricas e aprovações não auditáveis.
 Ruling: inspeção de evidência deve atravessar componentes por descritores confinados com `O_NOFOLLOW`; `copy_allowed` representa apenas elegibilidade daquele snapshot e exige reabertura/revalidação segura no momento da cópia. Imagens precisam de estrutura completa e JSON deve ser sanitizado semanticamente após decode. Se estiver errado, alguns anexos válidos incomuns poderão ser recusados, mas nenhum arquivo inseguro será promovido por pathname, truncamento ou escape textual.
+Ruling: `NOT_APPLICABLE` válido e justificado fora dos critérios aplicáveis não é pendência; reteste só encerra defeito se for o terminal válido do mesmo caso; marcadores de escopo contraditórios bloqueiam em vez de excluir o defeito. Se estiver errado, dispensas legítimas poderão exigir validação adicional, mas o parecer não retrocederá a tentativa antiga nem esconderá falha por ambiguidade.
+Ruling: publicação `complete` exige identidade nominal estável da raiz e snapshot pós-rename de inventário/conteúdo igual ao staging; o PDF deve ter estrutura xref/trailer/startxref coerente, não apenas marcadores. Se estiver errado, um PDF válido com estrutura não produzida pelo ReportLab poderá ser recusado, mas corrupção e troca de pacote não serão declaradas completas.
+Ruling: a paridade E2E precisa validar cardinalidade exata e uma representação integral de cada texto longo, incluindo o token parcial final, contra HTML, pypdf e pdfplumber; expected/observed devem ser confirmados separadamente em cada formato. Se estiver errado, a normalização de extração poderá ser mais rígida que alguns PDFs equivalentes, mas truncamento real não passará despercebido.
+Ruling: o rename no-replace é o ponto de commit da publicação; o retorno deve incluir digest do inventário publicado para revalidação por consumidores. Troca anterior ao commit é erro/colisão; mutação posterior é adulteração externa e não pode ser tornada impossível por releituras finitas do pathname. Se estiver errado, a API precisará mudar para devolver um handle durável ou operar em armazenamento imutável, além do contrato aprovado.
+Ruling: imagem só é incorporada a partir do staging do pacote, reaberta e revalidada sob a raiz do destino; a própria raiz deve ser diretório real sem symlink, e criação/substituição do PDF deve permanecer relativa ao mesmo descritor. Se estiver errado, destinos acessados por symlink legítimo serão recusados, mas não haverá escape entre validação e publicação.
+Ruling: o PDF incorpora somente imagens `VERIFIED` já revalidadas e copiadas para o diretório temporário do pacote; o renderer reabre o caminho relativo sob `destination.parent`, recusa symlink/mismatch de hash/tamanho/MIME e adiciona legenda com ID. Se estiver errado, a API standalone exigirá staging adicional, mas não reabrirá diretamente um anexo original por pathname não confiável.
 Ruling: cenários positivos de regressão, defeitos e produção devem materializar as relações verificáveis que sustentam o estado: IDs change→risk/criterion/defect→case e exclusões; `PASS` após reteste somente com todos os critérios aplicáveis PASS e nenhum outro defeito vigente; fronteira de produção completa por dimensão; causa nomeada e check preventivo com IDs/oráculo/ambiente/pré-requisitos. Se estiver errado, os exemplos ficarão extensos, mas não produzirão `READY`/`PASS` a partir de rótulos genéricos.
 
 ## Rulings
