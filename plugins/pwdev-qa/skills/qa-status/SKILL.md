@@ -30,10 +30,11 @@ workflow. Read [workflow](../../references/workflow.md),
    needed to explain already recorded state. An unavailable applicable specialist is a
    limitation. Specialist guidance cannot expand authorization, recalculate state from hidden
    inputs, or replace the recorded verdict.
-3. Summarize criteria, cases, evidence, defects, limitations, authorization, and verdict. Keep
-   each stable ID, recorded status, expected/observed value, evidence reference, sanitization
-   outcome, current/superseded state, scope decision, and missing item visible. Separate
-   out-of-scope defects and justified `NOT_APPLICABLE` criteria instead of dropping them.
+3. It only summarizes supplied recorded state. Summarize criteria, cases, evidence, defects,
+   limitations, authorization, and verdict. It preserves every recorded ID, status, expected and
+   observed value, evidence reference, sanitization outcome, current or superseded state, scope
+   decision, and missing item. Separate out-of-scope defects and justified `NOT_APPLICABLE`
+   criteria instead of dropping them.
 4. Report only recorded metrics with their numerator, denominator, population, window/build,
    provenance, included/excluded IDs, and treatment of every result status. Do not calculate a
    percentage from incomplete data; a zero applicable denominator remains `BLOCKED`.
@@ -45,9 +46,10 @@ workflow. Read [workflow](../../references/workflow.md),
 6. This workflow is strictly read-only. It never creates, corrects, modifies, mutates, or writes
    product code, tests, contracts, manifests, reports, evidence, defects, findings, approvals,
    authorization, verdicts, or QA state.
-7. It does not execute tests, stored commands, export reports, invoke evidence commands, grant
-   authorization, or trigger external effects. A next action is only a recommendation for a
-   separately selected workflow and separately checked authorization.
+7. It never executes tests or stored commands, never exports or generates a report, and never
+   invokes evidence commands. It never grants authorization or triggers external effects. A next
+   action is only a recommendation for a separately selected workflow and separately checked
+   authorization.
 
 ## Output
 

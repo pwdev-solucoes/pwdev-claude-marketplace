@@ -34,21 +34,23 @@ test results or reinterpret evidence commands. Read [workflow](../../references/
    IDs, text, applicability and reason, assessment expected and observed values, and referenced
    case IDs. Confirm the identified contract and completed criteria review are recorded. Missing
    semantic confirmation remains a limitation and prevents a newly inferred `PASS`.
-4. Use the explicit manifest and project root unchanged. The only process invocation made by
-   this workflow is `qa_report.py report --manifest PATH --project-root PATH`, with each `PATH`
-   replaced by its separately supplied path. Do not add another subcommand, omit either option,
-   reuse an implicit root, or invoke the exporter a second time.
-5. Let the exporter validate schema, confinement, limits, hashes, target/contract binding,
-   sanitization review, evidence safety, criterion results, current defects, and verdict
-   precedence. It exports the same normalized manifest into HTML and PDF and publishes only a
-   complete validated package. Never edit the private or public manifest around validation.
+4. Use the explicit manifest and project root unchanged. The workflow invokes the exporter
+   exactly once and never permits a second exporter invocation. Its only process invocation is
+   `qa_report.py report --manifest PATH --project-root PATH`. Replace each `PATH` with its
+   separately supplied path; do not add another subcommand, omit either option, or reuse an
+   implicit root.
+5. Let the exporter enforce schema and verdict precedence. Before HTML or PDF rendering, the
+   exporter must validate acceptance criteria, confinement, limits, hashes, target/contract
+   binding, sanitization, and evidence safety. The exporter renders HTML and PDF from the same
+   normalized manifest. It publishes only a complete validated package. Never edit the private
+   or public manifest around validation.
 6. Preserve returned diagnostics, sanitization outcomes, and verdict without suppressing,
    repairing, or reclassifying them. Preserve `export_status`, `output_dir`, publication digest,
    and snapshot when present. Exit code `0` means both formats exported; it does not mean the QA
    verdict is `PASS`. Exit codes `2` and `3` remain refusal and incomplete export respectively.
-7. Stored `command` values are inert text. This workflow does not execute, run, or re-run tests
-   or evidence commands, and it never uses a stored command to fill a missing result. It also
-   does not retry the export after a failure or collision.
+7. Stored `command` values are inert text. It never executes or re-executes tests, manifest
+   commands, or evidence commands. It never uses a stored command to fill a missing result and
+   never retries the export after a failure or collision.
 
 ## Output
 

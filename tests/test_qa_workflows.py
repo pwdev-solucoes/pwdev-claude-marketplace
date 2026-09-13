@@ -796,27 +796,81 @@ class QaWorkflowContractTest(unittest.TestCase):
         command = "qa_report.py report --manifest PATH --project-root PATH"
         self.assertRegex(inputs, r"(?is)explicit.*manifest.*project root")
         self.assertEqual(text.count(command), 1)
-        self.assertRegex(
-            procedure,
-            r"(?is)only process invocation.*`qa_report\.py report --manifest PATH --project-root PATH`",
+        normalized_procedure = " ".join(procedure.split())
+        procedure_sentences = re.split(r"(?<=[.!?])\s+", normalized_procedure)
+        single_invocation_clause = (
+            "The workflow invokes the exporter exactly once and never permits a second "
+            "exporter invocation."
         )
-        self.assertRegex(
-            procedure,
-            r"(?is)same normalized manifest.*(?:HTML.*PDF|PDF.*HTML)",
+        self.assertIn(single_invocation_clause, normalized_procedure)
+        self.assertEqual(
+            [
+                sentence
+                for sentence in procedure_sentences
+                if "exporter" in sentence.lower()
+                and "second" in sentence.lower()
+                and "invocation" in sentence.lower()
+            ],
+            [single_invocation_clause],
         )
-        self.assertRegex(
-            procedure,
-            r"(?is)acceptance criteri.*IDs.*text.*applicab.*expected.*observed.*case",
+        self.assertIn(
+            "Its only process invocation is `qa_report.py report --manifest PATH "
+            "--project-root PATH`.",
+            normalized_procedure,
         )
-        self.assertRegex(
-            procedure,
-            r"(?is)preserve.*diagnostics.*sanitization.*verdict",
+        inert_execution_clause = (
+            "It never executes or re-executes tests, manifest commands, or evidence commands."
         )
-        self.assertRegex(
-            procedure,
-            r"(?is)(?:does not|never).*(?:execute|run|re-run).*tests.*evidence commands",
+        self.assertIn(inert_execution_clause, normalized_procedure)
+        self.assertEqual(
+            [
+                sentence
+                for sentence in procedure_sentences
+                if re.search(r"\b(?:execute|executes|re-execute|re-executes|run|runs)\b", sentence, re.I)
+                and re.search(r"\b(?:tests?|manifest commands?|stored commands?|evidence commands?)\b", sentence, re.I)
+            ],
+            [inert_execution_clause],
         )
-        self.assertRegex(procedure, r"(?is)stored `command` values.*inert text")
+        validation_clause = (
+            "Before HTML or PDF rendering, the exporter must validate acceptance criteria, "
+            "confinement, limits, hashes, target/contract binding, sanitization, and evidence "
+            "safety."
+        )
+        self.assertIn(validation_clause, normalized_procedure)
+        for required_validation in (
+            "acceptance criteria",
+            "confinement",
+            "limits",
+            "hashes",
+            "target/contract binding",
+            "sanitization",
+            "evidence safety",
+        ):
+            with self.subTest(required_validation=required_validation):
+                self.assertIn(required_validation, validation_clause)
+        self.assertIn(
+            "The exporter renders HTML and PDF from the same normalized manifest.",
+            normalized_procedure,
+        )
+        self.assertIn(
+            "Preserve returned diagnostics, sanitization outcomes, and verdict",
+            normalized_procedure,
+        )
+        self.assertNotRegex(
+            normalized_procedure,
+            r"(?i)\b(?:may|can|is allowed to|is permitted to)\s+(?:also\s+)?"
+            r"(?:execute|run|re-run)\b[^.]*\b(?:test|manifest command|stored command|evidence command)",
+        )
+        self.assertNotRegex(
+            normalized_procedure,
+            r"(?i)\b(?:may|can|is allowed to|is permitted to)\s+(?:also\s+)?"
+            r"(?:invoke|run|execute)\b[^.]*\bexporter\b[^.]*(?:again|second time)",
+        )
+        self.assertNotRegex(
+            normalized_procedure,
+            r"(?i)\b(?:may|can|is allowed to|is permitted to)\s+"
+            r"(?:skip|ignore|bypass|omit)\b[^.]*\bevidence\b",
+        )
         expected_labels = [
             "TARGET",
             "OBJECTIVE",
@@ -847,23 +901,91 @@ class QaWorkflowContractTest(unittest.TestCase):
             r"(?is)preserve.*(?:objective|intent).*limitations.*authorization.*verdict",
         )
         normalized_procedure = " ".join(procedure.split())
+        procedure_sentences = re.split(r"(?<=[.!?])\s+", normalized_procedure)
+        self.assertIn(
+            "It only summarizes supplied recorded state.",
+            normalized_procedure,
+        )
         self.assertIn(
             "It never creates, corrects, modifies, mutates, or writes product code, tests, "
             "contracts, manifests, reports, evidence, defects, findings, approvals, "
             "authorization, verdicts, or QA state.",
             normalized_procedure,
         )
-        self.assertRegex(
-            procedure,
-            r"(?is)summarize.*criteria.*cases.*evidence.*defects.*limitations.*authorization.*verdict",
+        preservation_clause = (
+            "It preserves every recorded ID, status, expected and observed value, evidence "
+            "reference, sanitization outcome, current or superseded state, scope decision, "
+            "and missing item."
         )
-        self.assertRegex(
-            procedure,
-            r"(?is)(?:does not|never).*execute.*tests.*stored commands.*export",
+        self.assertIn(preservation_clause, normalized_procedure)
+        for preserved_field in (
+            "ID",
+            "status",
+            "expected and observed value",
+            "evidence reference",
+            "sanitization outcome",
+            "current or superseded state",
+            "scope decision",
+            "missing item",
+        ):
+            with self.subTest(preserved_field=preserved_field):
+                self.assertIn(preserved_field, preservation_clause)
+        no_effect_clause = (
+            "It never executes tests or stored commands, never exports or generates a report, "
+            "and never invokes evidence commands."
+        )
+        self.assertIn(no_effect_clause, normalized_procedure)
+        self.assertEqual(
+            [
+                sentence
+                for sentence in procedure_sentences
+                if (
+                    re.search(r"\b(?:export|exports|generate|generates)\b", sentence, re.I)
+                    and re.search(r"\breports?\b", sentence, re.I)
+                )
+                or (
+                    re.search(r"\b(?:invoke|invokes|execute|executes)\b", sentence, re.I)
+                    and re.search(r"\bevidence commands?\b", sentence, re.I)
+                )
+            ],
+            [no_effect_clause],
         )
         self.assertNotRegex(
-            procedure,
-            r"(?is)\b(?:may|can|allowed|permitted)\b[^.\n]{0,120}\b(?:create|correct|modify|mutate|write|change)\b",
+            normalized_procedure,
+            r"(?i)\b(?:may|can|is allowed to|is permitted to)\s+(?:also\s+)?"
+            r"(?:execute|invoke)\b[^.]*\b(?:test|stored command|evidence command)",
+        )
+        self.assertNotRegex(
+            normalized_procedure,
+            r"(?i)\b(?:may|can|is allowed to|is permitted to)\s+(?:also\s+)?"
+            r"(?:export|generate)\b[^.]*\breport",
+        )
+        destructive_sentences = [
+            sentence
+            for sentence in re.split(r"[.!?](?:\s+|$)", normalized_procedure.lower())
+            if re.search(r"\b(?:discard|drop|omit|ignore|remove)\b", sentence)
+        ]
+        for protected_term in (
+            "id",
+            "status",
+            "expected",
+            "observed",
+            "evidence reference",
+            "sanitization",
+            "current",
+            "superseded",
+            "scope decision",
+            "missing item",
+        ):
+            with self.subTest(discarded_field=protected_term):
+                self.assertFalse(
+                    any(protected_term in sentence for sentence in destructive_sentences),
+                    f"status procedure permits discarding {protected_term}",
+                )
+        self.assertNotRegex(
+            normalized_procedure,
+            r"(?i)\b(?:may|can|is allowed to|is permitted to)\s+(?:also\s+)?"
+            r"(?:create|correct|modify|mutate|write|change)\b",
         )
         expected_labels = [
             "TARGET",
