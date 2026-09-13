@@ -12,7 +12,6 @@ ROOT = Path(__file__).parents[1]
 PLUGIN = ROOT / "plugins" / "pwdev-qa"
 ACCEPTANCE = PLUGIN / "references" / "acceptance-scenarios.md"
 RUNTIME_SMOKE = PLUGIN / "references" / "runtime-smoke.md"
-TASK_REPORT = ROOT / ".planning" / "power" / "features" / "pwdev-qa" / "task-24-report.md"
 
 WORKFLOWS = {
     "qa-init",
@@ -310,11 +309,9 @@ class TestAcceptanceScenarios(unittest.TestCase):
         self.assertIn("3 of 3", rows["CA-003"]["scenario/evidence"])
         self.assertIn("preliminary", rows["CA-003"]["limitations"])
         self.assertEqual(rows["CA-023"]["result"], "PASS")
-        report_text = TASK_REPORT.read_text(encoding="utf-8")
-        for document in (self.text, report_text):
-            self.assertNotRegex(
-                document, r"PASS_WITH_LIMITATION|PASS with (?:the )?limitations"
-            )
+        self.assertNotRegex(
+            self.text, r"PASS_WITH_LIMITATION|PASS with (?:the )?limitations"
+        )
 
     @unittest.skipUnless(
         importlib.util.find_spec("reportlab")

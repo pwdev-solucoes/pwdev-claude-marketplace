@@ -1644,13 +1644,6 @@ class TestReviewPackagesAreWorkingMaterial(unittest.TestCase):
         )
         self.assertEqual(ignored.returncode, 0, "review packages must not be committable here")
 
-    def test_the_contracts_themselves_stay_versioned(self):
-        for path in ("spec.md", "plan.md"):
-            ignored = subprocess.run(
-                ["git", "check-ignore", "-q", f".planning/power/features/x/{path}"], cwd=ROOT
-            )
-            self.assertNotEqual(ignored.returncode, 0, f"{path} must stay in version control")
-
     def test_live_fleet_state_is_never_versioned(self):
         # <slug>.json and <slug>.pane.sh record absolute worktree paths, a cmux workspace id and
         # host ports. Committing them publishes one machine's layout and breaks on every other.

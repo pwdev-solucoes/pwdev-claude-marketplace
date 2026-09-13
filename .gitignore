@@ -36,13 +36,13 @@ Thumbs.db
 .ai
 .superpowers
 .claude
-# .agents is versioned: AGENTS.md references .agents/rules/* and the marketplace catalogue lives there
+# .agents is versioned: it holds the Codex marketplace catalogue and the skill links
 .docs
 .worktrees/
 
-# .planning is agent state and stays out, with one carve-out: pwdev-power keeps its approved
-# contracts under .planning/power/, and its fleet runner decides whether a stage did any work by
-# asking git whether the feature directory is dirty — which git never says of an ignored path.
+# .planning is agent state and stays out entirely. Note the consequence for pwdev-power: its
+# fleet runner detects stage work through git dirtiness of the feature directory, and fleet-up
+# refuses to launch when the contracts are ignored — so fleets are not run on this repository.
 # See plugins/pwdev-power/references/artifacts.md.
 .planning/
 
