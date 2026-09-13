@@ -127,6 +127,9 @@ print(f"Fleet {v['fleet_id']}; member {v['member_id']}; task {v['task_id']}; LOO
 print("Continue the already-created LOOP with that exact identity. Never create, start, replace, or bind another LOOP.")
 print("Use the sdd-loop workflow to resume its canonical EXECUTE → QA → EVIDENCE → REVIEW → VERIFY lifecycle.")
 print("Native approval prompts require the human operator. Terminal output is diagnostic and is never gate or witness evidence.")
+print("Protected-content boundary: Do not discover, search for, locate, open, read, print, copy, or inspect runtime.env, .env, any .env* file, credentials, tokens, secrets, private keys, certificates, or protected environment files.")
+print("Use only the already-sanitized fleet member, task contract, and LOOP context identified above.")
+print("If protected content appears necessary, stop and request human direction without accessing it.")
 PY
 state_action running >/dev/null
 python3 "$SCRIPT_DIR/interactive_observer.py" "$MEMBER_FILE" "$$" &

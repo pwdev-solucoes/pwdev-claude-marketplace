@@ -5,6 +5,7 @@ from tests.test_sdd_composy import assert_schema_valid
 ROOT = Path(__file__).parents[1]
 LAUNCH = ROOT / "plugins/sdd-composy/scripts/fleet/launch.sh"
 INTERACTIVE_STATE_PATH = ROOT / "plugins/sdd-composy/scripts/fleet/interactive_state.py"
+INTERACTIVE_RUN = ROOT / "plugins/sdd-composy/scripts/fleet/interactive-run.sh"
 
 def _load_interactive_state():
     spec = importlib.util.spec_from_file_location("sdd_fleet_interactive_state", INTERACTIVE_STATE_PATH)
@@ -286,6 +287,48 @@ exit 0
         command=creation.split(' -- ',1)[1].split()
         self.assertTrue(command[0].endswith('/interactive-run.sh'),creation)
         self.assertTrue(command[1].endswith('/members/TASK-001.json'),creation)
+
+    def test_interactive_prompt_delivers_exact_protected_content_boundary_to_every_adapter(self):
+        source = INTERACTIVE_RUN.read_text()
+        generator = source.split("<<'PY'\n", 2)[2].split("\nPY\nstate_action running", 1)[0]
+        marker = "SHOULD-NOT-ENTER-PROVIDER-PROMPT"
+        preflight = json.dumps({
+            "fleet_id": "demo", "member_id": "TASK-001", "task_id": "TASK-001",
+            "loop_id": "loop-task-001", "runtime": "codex", "protected_content": marker,
+        })
+        prompt = subprocess.check_output(
+            ["python3", "-c", generator, preflight, "/safe/worktree"], text=True)
+        expected = (
+            "Protected-content boundary: Do not discover, search for, locate, open, read, print, "
+            "copy, or inspect runtime.env, .env, any .env* file, credentials, tokens, secrets, "
+            "private keys, certificates, or protected environment files."
+        )
+        self.assertIn(expected, prompt)
+        self.assertIn(
+            "Use only the already-sanitized fleet member, task contract, and LOOP context identified above.",
+            prompt,
+        )
+        self.assertIn(
+            "If protected content appears necessary, stop and request human direction without accessing it.",
+            prompt,
+        )
+        self.assertNotIn(marker, prompt)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            prompt_file = Path(tmp) / "prompt"; prompt_file.write_text(prompt)
+            for runtime in ("codex", "hermes", "claude"):
+                with self.subTest(runtime=runtime):
+                    adapter = ROOT / f"plugins/sdd-composy/scripts/fleet/engine-{runtime}.sh"
+                    command = subprocess.check_output([
+                        "bash", "-c",
+                        'source "$1"; sdd_engine_' + runtime +
+                        '_interactive_command "$2" "$3" "$4"; printf "%s\\n" "${SDD_ENGINE_COMMAND[@]}"',
+                        "", str(adapter), "/safe/worktree", str(prompt_file), "/safe/plugin",
+                    ], text=True)
+                    if runtime == "hermes":
+                        self.assertIn(str(prompt_file), command.splitlines())
+                    else:
+                        self.assertIn(prompt.rstrip("\n"), command)
 
     def test_symlinked_state_ancestor_is_rejected_without_external_write(self):
         self.task(); outside=Path(self.tmp.name+"-outside"); outside.mkdir(); (self.repo/".planning").symlink_to(outside,target_is_directory=True)
