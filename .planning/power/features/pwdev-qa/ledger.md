@@ -41,6 +41,8 @@ Task F03-16: fix round 1 — finding Important confirmado no oráculo E2E: cardi
 Task F03-16: complete (commits dcd096e..b8b5ab6, review clean after fix round 1; Python 3.9 sem dependências dev classificado como limitação de ambiente)
 Task F04-17: fix round 1 — finding Major confirmado: os templates podiam descartar objetivo/intenção e autorização; teste de portabilidade Hermes também não protegia quatro tokens exclusivos do wrapper Claude.
 Task F04-17: complete (commits eee8386..7017f18, review clean after fix round 1)
+Task F04-18: fix round 1 — dois findings Major confirmados: Procedures não consumiam especialistas F02 e o oráculo aceitava perda dessa integração, reordenação do output e contradição da regra anti-PASS em exploração.
+Task F04-18: complete (commits ac9f1e0..bc9b23d, review clean after fix round 1)
 
 Baseline 2026-09-12: `python3 -m unittest discover -s tests` executou 670 testes em 404.209s; 7 falhas preexistentes antes de qualquer código PWDEV QA.
 - 2 falhas `test_flow_claude_compat`: READMEs raiz não contêm `claude -p`.
