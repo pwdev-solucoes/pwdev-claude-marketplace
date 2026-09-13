@@ -49,10 +49,11 @@ the release. Read [workflow](../../references/workflow.md),
    authority, scope, rationale, and timestamp without changing either the decision or underlying
    results. Risk acceptance cannot turn `FAIL` or `BLOCKED` into `PASS`; a required missing or
    incomplete human decision remains pending.
-7. Apply verdict precedence exactly: `PASS` requires all applicable criteria `PASS`, no current in-scope defects,
-   no failure or pending work, risk, limitation, evidence, gate, or required
-   decision, and a complete catalog. A proven current failure is `FAIL`; otherwise any pendency
-   or zero applicable criteria is `BLOCKED`.
+7. Apply verdict precedence exactly: `PASS` requires all applicable criteria `PASS`, no current
+   in-scope defects, no pending work, no pending risk, no pending limitation, no pending evidence,
+   no pending gate, no pending required decision, no proven failure, and a complete catalog. A
+   proven current in-scope failure is `FAIL`; otherwise any pending item or zero applicable
+   criteria is `BLOCKED`.
 8. Recommend release only for `PASS`, recommend against release for `FAIL`, and identify the
    exact owner/blocker for `BLOCKED`. The release owner makes the human decision separately.
 9. Return the opinion without release effects. Production access and external effects may occur

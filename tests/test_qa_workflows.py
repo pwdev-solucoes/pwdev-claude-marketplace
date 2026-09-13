@@ -564,6 +564,24 @@ class QaWorkflowContractTest(unittest.TestCase):
             procedure,
             r"(?is)read.only.*(?:never|does not).*(?:correct|modify|mutate).*product",
         )
+        for surface in (
+            "product",
+            "tests",
+            "contracts",
+            "approvals",
+            "evidence",
+            "findings",
+            "state",
+        ):
+            with self.subTest(read_only_surface=surface):
+                self.assertRegex(
+                    procedure,
+                    rf"(?is)(?:never|does not).{{0,120}}(?:correct|modify|mutate|write|change).{{0,120}}\b{surface}\b",
+                )
+        self.assertNotRegex(
+            procedure,
+            r"(?is)(?:this workflow|the review|review|it)\s+(?:may|can|is allowed|is permitted)\s+(?:correct|modify|mutate|write|change)",
+        )
         self.assertRegex(
             procedure,
             r"(?is)requirements.*coverage.*findings",
@@ -602,9 +620,32 @@ class QaWorkflowContractTest(unittest.TestCase):
             procedure,
             r"(?is)human.*decision.*separate.*(?:QA|verdict)",
         )
+        for decision_field in ("actor", "authority", "scope", "rationale", "timestamp"):
+            with self.subTest(human_decision_field=decision_field):
+                self.assertRegex(
+                    procedure,
+                    rf"(?is)human.*decision.*\b{decision_field}\b",
+                )
         self.assertRegex(
             procedure,
-            r"(?is)`PASS` requires all applicable criteria `PASS`.*no current in-scope defects.*no (?:failure|pending work|pending item|pending risk|pending limitation|pending evidence|pending decision)",
+            r"(?is)`PASS` requires all applicable criteria `PASS`.*no current\s+in-scope defects",
+        )
+        for pending_kind in (
+            "work",
+            "risk",
+            "limitation",
+            "evidence",
+            "gate",
+            "required decision",
+        ):
+            with self.subTest(pass_requires_no_pending=pending_kind):
+                self.assertRegex(
+                    procedure,
+                    rf"(?is)`PASS` requires.*no pending {pending_kind}",
+                )
+        self.assertRegex(
+            procedure,
+            r"(?is)proven current (?:in-scope )?failure.*`FAIL`.*otherwise.*(?:pending|pendency).*`BLOCKED`",
         )
         self.assertRegex(
             procedure,
