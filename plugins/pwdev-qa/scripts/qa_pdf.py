@@ -6,8 +6,8 @@ import errno
 import hashlib
 import io
 import os
+import secrets
 import stat
-import tempfile
 from pathlib import Path
 from typing import Any, Iterable
 from xml.sax.saxutils import escape
@@ -72,7 +72,64 @@ def _joined(values: Iterable[Any]) -> str:
     return ", ".join(rendered) if rendered else "—"
 
 
-def _staged_image_bytes(root: Path, evidence: dict, image_reader):
+def _open_destination_root(root: Path):
+    no_follow = getattr(os, "O_NOFOLLOW", 0)
+    directory = getattr(os, "O_DIRECTORY", 0)
+    if not no_follow or not directory or os.open not in os.supports_dir_fd:
+        raise RuntimeError("destination root: secure directory operations are unavailable")
+    try:
+        observed = os.lstat(root)
+    except OSError as error:
+        raise RuntimeError("destination root is missing or inaccessible") from error
+    if stat.S_ISLNK(observed.st_mode):
+        raise RuntimeError("destination root symlink is refused")
+    try:
+        descriptor = os.open(
+            root,
+            os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | directory | no_follow,
+        )
+    except OSError as error:
+        if error.errno in (errno.ELOOP, errno.ENOTDIR):
+            raise RuntimeError("destination root symlink is refused") from error
+        raise RuntimeError("destination root could not be opened securely") from error
+    metadata = os.fstat(descriptor)
+    if not stat.S_ISDIR(metadata.st_mode):
+        os.close(descriptor)
+        raise RuntimeError("destination root is not a directory")
+    return descriptor, (metadata.st_dev, metadata.st_ino)
+
+
+def _assert_root_identity(descriptor: int, identity) -> None:
+    metadata = os.fstat(descriptor)
+    if (metadata.st_dev, metadata.st_ino) != identity or not stat.S_ISDIR(
+        metadata.st_mode
+    ):
+        raise RuntimeError("destination root identity changed during PDF export")
+
+
+def _exclusive_temporary(root_fd: int, destination_name: str):
+    flags = (
+        os.O_RDWR
+        | os.O_CREAT
+        | os.O_EXCL
+        | getattr(os, "O_CLOEXEC", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+    )
+    for _ in range(100):
+        name = f".{destination_name}.{secrets.token_hex(12)}.tmp"
+        try:
+            descriptor = os.open(name, flags, 0o600, dir_fd=root_fd)
+        except FileExistsError:
+            continue
+        try:
+            return name, os.fdopen(descriptor, "w+b")
+        except Exception:
+            os.close(descriptor)
+            raise
+    raise RuntimeError("could not create an exclusive PDF temporary file")
+
+
+def _staged_image_bytes(root_fd: int, root_identity, evidence: dict, image_reader):
     identifier = _value(evidence.get("id"))
     relative = Path(_value(evidence.get("path")))
     if relative.is_absolute() or not relative.parts or any(
@@ -95,12 +152,12 @@ def _staged_image_bytes(root: Path, evidence: dict, image_reader):
             f"evidence image {identifier}: no-follow traversal is unavailable"
         )
 
+    _assert_root_identity(root_fd, root_identity)
     read_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
     directory_flags = read_flags | getattr(os, "O_DIRECTORY", 0) | no_follow
     descriptors = []
     try:
-        descriptors.append(os.open(root, read_flags | getattr(os, "O_DIRECTORY", 0)))
-        directory_fd = descriptors[-1]
+        directory_fd = root_fd
         for part in relative.parts[:-1]:
             try:
                 opened = os.open(part, directory_flags, dir_fd=directory_fd)
@@ -236,7 +293,8 @@ def render_pdf(report: dict, destination: Path) -> None:
     page_width, page_height = A4
     run_id = _value(report["run_id"])
     destination = Path(destination)
-    destination.parent.mkdir(parents=True, exist_ok=True)
+    if destination.name in ("", ".", ".."):
+        raise RuntimeError("PDF destination filename is invalid")
 
     class NumberedCanvas(canvas.Canvas):
         def __init__(self, *args, **kwargs):
@@ -518,71 +576,86 @@ def render_pdf(report: dict, destination: Path) -> None:
         ):
             field(name, value)
 
-    section("Approved evidence")
-    if not report["verified_evidence"]:
-        field("State", "No approved evidence.")
-    for index, item in enumerate(report["verified_evidence"], 1):
-        evidence_contract = item["contract"]
-        subsection(f"Evidence {index}: {item['id']}")
-        for name, value in (
-            ("ID", item["id"]),
-            ("Path", item["path"]),
-            ("Media type", item["media_type"]),
-            ("Size bytes", item["size_bytes"]),
-            ("SHA-256", item["sha256"]),
-            ("Target ID", item["target_id"]),
-            ("Contract path", evidence_contract["path"]),
-            ("Contract SHA-256", evidence_contract["sha256"]),
-            ("Status", item["status"]),
-            ("Copy allowed", item["copy_allowed"]),
-            ("Revalidation required", item["requires_copy_revalidation"]),
-            ("Diagnostic", item["diagnostic"]),
-        ):
-            field(name, value)
-        if item["media_type"] in ("image/png", "image/jpeg"):
-            data, image_width, image_height = _staged_image_bytes(
-                destination.parent, item, ImageReader
-            )
-            scale = min(
-                1.0,
-                (page_width - 2 * margin) / image_width,
-                (110 * mm) / image_height,
-            )
-            image_flowable = Image(
-                io.BytesIO(data),
-                width=image_width * scale,
-                height=image_height * scale,
-            )
-            image_flowable.hAlign = "LEFT"
-            caption = Paragraph(
-                "Evidence image: {} — {}".format(
-                    _markup(item["id"]), _markup(item["path"])
-                ),
-                label,
-            )
-            story.append(KeepTogether([image_flowable, caption]))
-
-    section("Diagnostics")
-    if not report["diagnostics"]:
-        field("State", "No diagnostics.")
-    for index, item in enumerate(report["diagnostics"], 1):
-        field(f"Diagnostic {index}", item)
-
-    section("Verdict")
-    field("Global verdict", report["verdict"], style=status)
-
-    temporary_path = None
+    root_fd, root_identity = _open_destination_root(destination.parent)
+    temporary_name = None
     try:
-        with tempfile.NamedTemporaryFile(
-            dir=destination.parent,
-            prefix=f".{destination.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as temporary:
-            temporary_path = Path(temporary.name)
-        document = ReportDocument(str(temporary_path))
-        document.multiBuild(story, canvasmaker=NumberedCanvas)
-        os.replace(temporary_path, destination)
+        section("Approved evidence")
+        if not report["verified_evidence"]:
+            field("State", "No approved evidence.")
+        for index, item in enumerate(report["verified_evidence"], 1):
+            evidence_contract = item["contract"]
+            subsection(f"Evidence {index}: {item['id']}")
+            for name, value in (
+                ("ID", item["id"]),
+                ("Path", item["path"]),
+                ("Media type", item["media_type"]),
+                ("Size bytes", item["size_bytes"]),
+                ("SHA-256", item["sha256"]),
+                ("Target ID", item["target_id"]),
+                ("Contract path", evidence_contract["path"]),
+                ("Contract SHA-256", evidence_contract["sha256"]),
+                ("Status", item["status"]),
+                ("Copy allowed", item["copy_allowed"]),
+                ("Revalidation required", item["requires_copy_revalidation"]),
+                ("Diagnostic", item["diagnostic"]),
+            ):
+                field(name, value)
+            if item["media_type"] in ("image/png", "image/jpeg"):
+                data, image_width, image_height = _staged_image_bytes(
+                    root_fd, root_identity, item, ImageReader
+                )
+                scale = min(
+                    1.0,
+                    (page_width - 2 * margin) / image_width,
+                    (110 * mm) / image_height,
+                )
+                image_flowable = Image(
+                    io.BytesIO(data),
+                    width=image_width * scale,
+                    height=image_height * scale,
+                )
+                image_flowable.hAlign = "LEFT"
+                caption = Paragraph(
+                    "Evidence image: {} — {}".format(
+                        _markup(item["id"]), _markup(item["path"])
+                    ),
+                    label,
+                )
+                story.append(KeepTogether([image_flowable, caption]))
+
+        section("Diagnostics")
+        if not report["diagnostics"]:
+            field("State", "No diagnostics.")
+        for index, item in enumerate(report["diagnostics"], 1):
+            field(f"Diagnostic {index}", item)
+
+        section("Verdict")
+        field("Global verdict", report["verdict"], style=status)
+
+        _assert_root_identity(root_fd, root_identity)
+        temporary_name, temporary = _exclusive_temporary(root_fd, destination.name)
+        with temporary:
+            document = ReportDocument(temporary)
+            document.multiBuild(story, canvasmaker=NumberedCanvas)
+            temporary.flush()
+            os.fsync(temporary.fileno())
+        _assert_root_identity(root_fd, root_identity)
+        try:
+            os.replace(
+                temporary_name,
+                destination.name,
+                src_dir_fd=root_fd,
+                dst_dir_fd=root_fd,
+            )
+        except TypeError as error:
+            raise RuntimeError(
+                "destination root: descriptor-relative replace is unavailable"
+            ) from error
+        temporary_name = None
     finally:
-        if temporary_path is not None and temporary_path.exists():
-            temporary_path.unlink()
+        if temporary_name is not None:
+            try:
+                os.unlink(temporary_name, dir_fd=root_fd)
+            except FileNotFoundError:
+                pass
+        os.close(root_fd)

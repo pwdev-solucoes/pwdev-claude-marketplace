@@ -231,6 +231,63 @@ class QaPdfTest(unittest.TestCase):
                     self.renderer.render_pdf(report, self.destination)
                 self.assertFalse(self.destination.exists())
 
+    def test_refuses_symlink_as_destination_root(self) -> None:
+        actual = Path(self.temporary.name) / "actual-root"
+        actual.mkdir()
+        staged = actual / "capture.png"
+        staged.write_bytes(PNG_BYTES)
+        linked = Path(self.temporary.name) / "linked-root"
+        linked.symlink_to(actual.name, target_is_directory=True)
+        self.destination = linked / "report.pdf"
+        report = self.image_report(
+            "capture.png",
+            digest=hashlib.sha256(PNG_BYTES).hexdigest(),
+            size=len(PNG_BYTES),
+            media_type="image/png",
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "destination root.*symlink"):
+            self.renderer.render_pdf(report, self.destination)
+        self.assertFalse((actual / "report.pdf").exists())
+
+    def test_root_exchange_cannot_redirect_final_publication(self) -> None:
+        root = Path(self.temporary.name) / "publication-root"
+        root.mkdir()
+        staged = root / "capture.png"
+        staged.write_bytes(PNG_BYTES)
+        preserved = Path(self.temporary.name) / "preserved-root"
+        self.destination = root / "report.pdf"
+        report = self.image_report(
+            "capture.png",
+            digest=hashlib.sha256(PNG_BYTES).hexdigest(),
+            size=len(PNG_BYTES),
+            media_type="image/png",
+        )
+        original_revalidation = self.renderer._staged_image_bytes
+        exchanged = False
+
+        def exchange_after_revalidation(*args, **kwargs):
+            nonlocal exchanged
+            result = original_revalidation(*args, **kwargs)
+            if not exchanged:
+                root.rename(preserved)
+                root.mkdir()
+                (root / "report.pdf").write_bytes(b"attacker-controlled-root")
+                exchanged = True
+            return result
+
+        with mock.patch.object(
+            self.renderer,
+            "_staged_image_bytes",
+            side_effect=exchange_after_revalidation,
+        ):
+            self.renderer.render_pdf(report, self.destination)
+
+        self.assertEqual(
+            (root / "report.pdf").read_bytes(), b"attacker-controlled-root"
+        )
+        self.assertTrue((preserved / "report.pdf").read_bytes().startswith(b"%PDF-"))
+
     def test_lists_only_verified_evidence_as_approved_references(self) -> None:
         data = valid_manifest()
         pending = copy.deepcopy(data["evidence"][0])

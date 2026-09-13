@@ -2,6 +2,33 @@
 
 Status: DONE
 
+## Review fix — round 2
+
+- Addressed the remaining Important root-identity finding. `destination.parent` is now opened
+  as a directory with `O_NOFOLLOW`; a root symlink is refused explicitly.
+- The opened root's device/inode identity is retained and checked through image revalidation,
+  exclusive temporary creation, PDF rendering, cleanup, and final publication.
+- The temporary PDF is created with `O_CREAT|O_EXCL|O_NOFOLLOW` relative to the retained root
+  descriptor. Final `os.replace` and failure cleanup are also descriptor-relative, so a renamed
+  or replaced pathname cannot redirect publication to a different directory.
+- Existing leaf-symlink, size, SHA-256, MIME, full-decode, image/legend, A4, margin, and
+  pagination behavior remains covered. The deferred 100 × 2000 Minor was not changed.
+
+### Round 2 TDD and fresh verification
+
+- RED: root-symlink export returned success and the root-exchange probe overwrote an
+  attacker-controlled sentinel (2 expected failures).
+- GREEN: 9 PDF tests passed; full QA regression passed 115 tests.
+- Regression proof: stashed only the production fix, observed both root tests fail again,
+  restored it, then observed both pass and reran the complete QA regression.
+- Root-exchange test renames the validated root after image revalidation and installs a new
+  directory plus sentinel at the nominal path. The sentinel remains byte-for-byte unchanged,
+  while the PDF is published under the retained original directory inode.
+- Fresh artifact `/tmp/pwdev-qa-f03-14-fix2.blxGBd/report.pdf` rendered to 7 PNG pages with
+  bundled `pdftoppm`. Pages 1, 6, and 7 were inspected with no clipping, overlap, or layout
+  regression; pypdf counted 1 image and both pypdf/pdfplumber extracted its caption intact.
+- The PDF, PNG pages, staged fixture, temporary directory, and generated caches were removed.
+
 ## Review fix — round 1
 
 - Addressed the Important finding by embedding verified PNG/JPEG evidence with a safe text
