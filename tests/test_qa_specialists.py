@@ -1,0 +1,1304 @@
+"""Deterministic behavioural scenarios for the PWDEV QA specialists."""
+
+import re
+import unittest
+from pathlib import Path
+from typing import Dict, List
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SKILLS = ROOT / "plugins" / "pwdev-qa" / "skills"
+SPECIALISTS = {
+    name: SKILLS / name / "SKILL.md"
+    for name in (
+        "qa-specialist-strategy",
+        "qa-specialist-requirements",
+        "qa-specialist-functional",
+        "qa-specialist-web",
+        "qa-specialist-api",
+        "qa-specialist-mobile",
+        "qa-specialist-data",
+        "qa-specialist-accessibility",
+        "qa-specialist-performance",
+        "qa-specialist-security",
+        "qa-specialist-automation",
+        "qa-specialist-cicd",
+        "qa-specialist-regression",
+        "qa-specialist-defects",
+        "qa-specialist-production",
+        "qa-specialist-metrics",
+        "qa-specialist-readiness",
+    )
+}
+COMMON_SECTIONS = (
+    "Inputs",
+    "Procedure",
+    "Output",
+    "Failure modes",
+    "Safety",
+    "Related skills",
+)
+METRIC_COLUMNS = (
+    "scenario",
+    "metric",
+    "target",
+    "contract",
+    "source_collection",
+    "freshness_build",
+    "numerator",
+    "denominator",
+    "population",
+    "window",
+    "criterion_ids",
+    "numerator_ids",
+    "remainder_status_reason",
+    "na_items_reason",
+    "evidence_refs",
+    "state_treatment",
+    "result",
+)
+READINESS_COLUMNS = (
+    "scenario",
+    "applicable_criteria",
+    "current_defects",
+    "risks",
+    "limitations",
+    "decision_record",
+    "decision_actor",
+    "decision_authority",
+    "decision_scope",
+    "decision_rationale",
+    "decision_timestamp",
+    "verdict",
+    "recommendation",
+)
+
+
+def read_required(path: Path) -> str:
+    if not path.is_file():
+        raise AssertionError(f"required QA specialist is missing: {path.relative_to(ROOT)}")
+    return path.read_text(encoding="utf-8")
+
+
+def parse_scenarios(text: str, columns: tuple[str, ...]) -> List[Dict[str, str]]:
+    heading = " | ".join(columns)
+    match = re.search(
+        rf"(?ms)^## Reference scenarios\n\n\| {re.escape(heading)} \|\n"
+        rf"\|[- |]+\|\n(?P<rows>(?:\|[^\n]*\|\n)+)",
+        text,
+    )
+    if not match:
+        raise AssertionError("specialist has no parseable reference scenario table")
+    rows = []
+    for line in match.group("rows").splitlines():
+        values = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(values) != len(columns):
+            raise AssertionError(
+                f"scenario row has {len(values)} fields, expected {len(columns)}"
+            )
+        rows.append(dict(zip(columns, values)))
+    return rows
+
+
+class QaSpecialistContractTest(unittest.TestCase):
+    def test_all_specialists_have_the_common_contract_and_remain_advisory(self) -> None:
+        for name, path in SPECIALISTS.items():
+            with self.subTest(specialist=name):
+                text = read_required(path)
+                self.assertRegex(
+                    text,
+                    rf"(?s)^---\nname: {re.escape(name)}\ndescription: .+?\n---\n",
+                )
+                for section in COMMON_SECTIONS:
+                    self.assertIn(f"## {section}", text)
+                self.assertRegex(text, r"(?is)does not execute (?:a )?workflow")
+                self.assertRegex(text, r"(?is)(?:cannot|does not) grant authorization")
+                self.assertIn("[workflow](../../references/workflow.md)", text)
+                self.assertIn("[safety](../../references/safety.md)", text)
+
+    def test_strategy_success_prioritizes_risk_and_produces_coverage(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-strategy"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "risk",
+                "likelihood",
+                "impact",
+                "oracle",
+                "coverage",
+                "outcome",
+            ),
+        )
+        success = [row for row in rows if row["scenario"] == "complete-risk"]
+        self.assertEqual(len(success), 2)
+        self.assertEqual(
+            [(row["risk"], row["likelihood"], row["impact"]) for row in success],
+            [
+                ("unauthorized access", "high", "high"),
+                ("export format drift", "medium", "high"),
+            ],
+        )
+        for row in success:
+            self.assertEqual(row["oracle"], "observable")
+            self.assertTrue(set(row["coverage"].split(",")) >= {"positive", "negative", "boundary"})
+            self.assertEqual(row["outcome"], "READY")
+
+        self.assertRegex(text, r"(?is)risk.*likelihood.*impact.*priority")
+        self.assertRegex(text, r"(?is)coverage gap.*residual risk")
+
+    def test_strategy_missing_oracle_is_a_blocking_coverage_gap(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-strategy"]),
+            (
+                "scenario",
+                "risk",
+                "likelihood",
+                "impact",
+                "oracle",
+                "coverage",
+                "outcome",
+            ),
+        )
+        limited = [row for row in rows if row["scenario"] == "missing-oracle"]
+        self.assertEqual(len(limited), 1)
+        self.assertEqual(limited[0]["oracle"], "missing")
+        self.assertEqual(limited[0]["coverage"], "none")
+        self.assertEqual(limited[0]["outcome"], "BLOCKED")
+
+    def test_requirements_accepts_observable_criteria_and_preserves_traceability(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-requirements"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "criterion_id",
+                "criterion_text",
+                "oracle",
+                "traceability",
+                "outcome",
+            ),
+        )
+        clear = next(row for row in rows if row["scenario"] == "clear-criterion")
+        self.assertEqual(clear["criterion_id"], "AC-LOGIN-01")
+        self.assertIn("three failed attempts", clear["criterion_text"])
+        self.assertEqual(clear["oracle"], "observable")
+        self.assertEqual(clear["traceability"], "preserved")
+        self.assertEqual(clear["outcome"], "READY")
+        self.assertRegex(text, r"(?is)preserve.*criterion ID.*text")
+
+    def test_requirements_blocks_ambiguity_without_inventing_a_threshold(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-requirements"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "criterion_id",
+                "criterion_text",
+                "oracle",
+                "traceability",
+                "outcome",
+            ),
+        )
+        ambiguous = next(row for row in rows if row["scenario"] == "ambiguous-criterion")
+        self.assertEqual(ambiguous["criterion_text"], "The response should be fast")
+        self.assertEqual(ambiguous["oracle"], "missing threshold and environment")
+        self.assertEqual(ambiguous["traceability"], "preserved")
+        self.assertEqual(ambiguous["outcome"], "BLOCKED")
+        self.assertNotRegex(ambiguous["criterion_text"], r"\d+\s*(?:ms|seconds?)")
+        self.assertRegex(text, r"(?is)do not invent.*threshold")
+
+    def test_functional_success_covers_positive_negative_and_boundary_observably(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-functional"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "partition",
+                "input",
+                "expected",
+                "observable",
+                "outcome",
+            ),
+        )
+        triplet = [row for row in rows if row["scenario"] == "complete-triplet"]
+        self.assertEqual(
+            [row["partition"] for row in triplet],
+            ["positive", "negative", "boundary"],
+        )
+        self.assertTrue(all(row["expected"] for row in triplet))
+        self.assertTrue(all(row["observable"] == "yes" for row in triplet))
+        self.assertTrue(all(row["outcome"] == "READY" for row in triplet))
+        self.assertRegex(text, r"(?is)expected.*observable")
+
+    def test_functional_missing_expected_observation_is_blocked(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-functional"]),
+            (
+                "scenario",
+                "partition",
+                "input",
+                "expected",
+                "observable",
+                "outcome",
+            ),
+        )
+        limited = [row for row in rows if row["scenario"] == "missing-observation"]
+        self.assertEqual(len(limited), 1)
+        self.assertEqual(limited[0]["partition"], "error")
+        self.assertEqual(limited[0]["expected"], "unspecified")
+        self.assertEqual(limited[0]["observable"], "no")
+        self.assertEqual(limited[0]["outcome"], "BLOCKED")
+
+    def test_web_available_cli_uses_isolated_observed_interaction(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-web"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "availability",
+                "browser",
+                "session",
+                "snapshot",
+                "action",
+                "capture",
+                "suite",
+                "outcome",
+            ),
+        )
+        success = next(row for row in rows if row["scenario"] == "available-cli")
+        self.assertEqual(success["availability"], "available")
+        self.assertEqual(success["browser"], "chromium")
+        self.assertEqual(success["session"], "qa-report")
+        self.assertEqual(success["snapshot"], "fresh")
+        self.assertEqual(success["action"], "observed refs")
+        self.assertEqual(success["capture"], "reviewed")
+        self.assertEqual(success["suite"], "Playwright Test")
+        self.assertEqual(success["outcome"], "READY")
+        self.assertIn("playwright-cli --version", text)
+        self.assertIn("npx --no-install playwright --version", text)
+        self.assertIn("npx playwright cli", text)
+        self.assertRegex(text, r"playwright-cli -s=qa-report (?:open|snapshot)")
+        self.assertRegex(text, r"(?is)screenshot.*review.*before.*attach")
+        self.assertRegex(text, r"(?is)does not replace.*(?:repeatable|deterministic).*suite")
+
+    def test_web_missing_cli_records_limitation_without_execution(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-web"]),
+            (
+                "scenario",
+                "availability",
+                "browser",
+                "session",
+                "snapshot",
+                "action",
+                "capture",
+                "suite",
+                "outcome",
+            ),
+        )
+        limited = next(row for row in rows if row["scenario"] == "missing-cli")
+        self.assertEqual(limited["availability"], "missing")
+        self.assertEqual(limited["session"], "none")
+        self.assertEqual(limited["snapshot"], "not run")
+        self.assertEqual(limited["action"], "not run")
+        self.assertEqual(limited["outcome"], "BLOCKED")
+
+    def test_api_success_covers_contract_access_errors_and_idempotency(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-api"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "contract",
+                "authentication",
+                "authorization",
+                "errors",
+                "idempotency",
+                "outcome",
+            ),
+        )
+        success = next(row for row in rows if row["scenario"] == "complete-api")
+        self.assertEqual(
+            success,
+            {
+                "scenario": "complete-api",
+                "contract": "schema and status verified",
+                "authentication": "valid and invalid credentials",
+                "authorization": "allowed and denied roles",
+                "errors": "mapped responses verified",
+                "idempotency": "same key no duplicate effect",
+                "outcome": "READY",
+            },
+        )
+        self.assertRegex(text, r"(?is)expected.*observed")
+        self.assertRegex(text, r"(?is)side effect.*idempot")
+
+    def test_api_missing_authorization_oracle_is_blocked(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-api"]),
+            (
+                "scenario",
+                "contract",
+                "authentication",
+                "authorization",
+                "errors",
+                "idempotency",
+                "outcome",
+            ),
+        )
+        limited = next(row for row in rows if row["scenario"] == "missing-authz-oracle")
+        self.assertEqual(limited["authorization"], "missing role policy")
+        self.assertEqual(limited["outcome"], "BLOCKED")
+
+    def test_mobile_ready_scenarios_distinguish_android_and_ios_prerequisites(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-mobile"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "platform",
+                "tool_probe",
+                "host_probe",
+                "sdk_probe",
+                "adb_probe",
+                "driver_probe",
+                "build_probe",
+                "signing_probe",
+                "device_probe",
+                "service_probe",
+                "outcome",
+            ),
+        )
+        ready = [row for row in rows if row["scenario"] == "platform-ready"]
+        self.assertEqual(
+            ready,
+            [
+                {
+                    "scenario": "platform-ready",
+                    "platform": "Android",
+                    "tool_probe": "positive: Appium",
+                    "host_probe": "positive: compatible host",
+                    "sdk_probe": "positive: Android SDK",
+                    "adb_probe": "positive: connected",
+                    "driver_probe": "positive: UiAutomator2",
+                    "build_probe": "positive: test build",
+                    "signing_probe": "positive: installable",
+                    "device_probe": "positive: emulator",
+                    "service_probe": "positive: test backend",
+                    "outcome": "READY",
+                },
+                {
+                    "scenario": "platform-ready",
+                    "platform": "iOS",
+                    "tool_probe": "positive: Appium",
+                    "host_probe": "positive: macOS",
+                    "sdk_probe": "positive: Xcode iOS SDK",
+                    "adb_probe": "not applicable: iOS",
+                    "driver_probe": "positive: XCUITest",
+                    "build_probe": "positive: test build",
+                    "signing_probe": "positive: simulator-valid",
+                    "device_probe": "positive: simulator",
+                    "service_probe": "positive: test backend",
+                    "outcome": "READY",
+                },
+            ],
+        )
+        self.assertRegex(text, r"(?is)Android.*SDK.*driver.*device")
+        self.assertRegex(text, r"(?is)iOS.*Xcode.*driver.*device")
+
+    def test_mobile_missing_device_is_blocked_and_never_fabricated(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-mobile"]),
+            (
+                "scenario",
+                "platform",
+                "tool_probe",
+                "host_probe",
+                "sdk_probe",
+                "adb_probe",
+                "driver_probe",
+                "build_probe",
+                "signing_probe",
+                "device_probe",
+                "service_probe",
+                "outcome",
+            ),
+        )
+        limited = next(row for row in rows if row["scenario"] == "missing-device")
+        self.assertEqual(limited["platform"], "Android")
+        self.assertEqual(limited["device_probe"], "negative: missing")
+        self.assertEqual(limited["outcome"], "BLOCKED")
+
+    def test_mobile_omitted_host_build_signing_or_adb_never_becomes_ready(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-mobile"]),
+            (
+                "scenario",
+                "platform",
+                "tool_probe",
+                "host_probe",
+                "sdk_probe",
+                "adb_probe",
+                "driver_probe",
+                "build_probe",
+                "signing_probe",
+                "device_probe",
+                "service_probe",
+                "outcome",
+            ),
+        )
+        expected = {
+            "missing-host": ("host_probe", "not_run: host", "unverified"),
+            "missing-build": ("build_probe", "negative: missing", "BLOCKED"),
+            "missing-signing": ("signing_probe", "not_run: signing", "unverified"),
+            "missing-adb": ("adb_probe", "not_run: ADB", "unverified"),
+        }
+        for scenario, (field, value, outcome) in expected.items():
+            with self.subTest(scenario=scenario):
+                row = next(item for item in rows if item["scenario"] == scenario)
+                self.assertEqual(row[field], value)
+                self.assertEqual(row["outcome"], outcome)
+                self.assertNotEqual(row["outcome"], "READY")
+
+    def test_data_ready_scenario_separates_reconciliation_integrity_and_transactions(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-data"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "authorization",
+                "target",
+                "dataset",
+                "write_limit",
+                "evidence",
+                "reconciliation",
+                "integrity",
+                "transaction",
+                "atomicity",
+                "outcome",
+            ),
+        )
+        ready = next(row for row in rows if row["scenario"] == "complete-data-check")
+        self.assertEqual(
+            ready,
+            {
+                "scenario": "complete-data-check",
+                "authorization": "explicit mutation grant",
+                "target": "qa-db.orders",
+                "dataset": "synthetic orders v1",
+                "write_limit": "20 rows in one transaction",
+                "evidence": "EV-DATA-001",
+                "reconciliation": "source and target totals match",
+                "integrity": "constraints and relationships verified",
+                "transaction": "commit and rollback observed",
+                "atomicity": "failure leaves no partial write",
+                "outcome": "READY",
+            },
+        )
+        self.assertRegex(text, r"(?is)reconciliation.*does not prove.*atomicity")
+        self.assertRegex(text, r"(?is)integrity.*does not prove.*transaction")
+
+    def test_data_missing_authorization_scope_or_evidence_never_runs_transaction(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-data"]),
+            (
+                "scenario",
+                "authorization",
+                "target",
+                "dataset",
+                "write_limit",
+                "evidence",
+                "reconciliation",
+                "integrity",
+                "transaction",
+                "atomicity",
+                "outcome",
+            ),
+        )
+        expected = {
+            "missing-data-authorization": ("authorization", "missing"),
+            "missing-data-target": ("target", "missing"),
+            "missing-data-dataset": ("dataset", "missing"),
+            "missing-write-limit": ("write_limit", "missing"),
+            "missing-data-evidence": ("evidence", "missing"),
+        }
+        for scenario, (field, value) in expected.items():
+            with self.subTest(scenario=scenario):
+                limited = next(row for row in rows if row["scenario"] == scenario)
+                self.assertEqual(limited[field], value)
+                self.assertEqual(limited["transaction"], "NOT_RUN")
+                self.assertEqual(limited["atomicity"], "unverified")
+                self.assertEqual(limited["outcome"], "BLOCKED")
+                self.assertNotEqual(limited["outcome"], "READY")
+
+    def test_accessibility_ready_requires_observed_keyboard_and_focus_beyond_scanner(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-accessibility"])
+        rows = parse_scenarios(
+            text,
+            ("scenario", "scanner", "keyboard", "focus", "semantics", "outcome"),
+        )
+        ready = next(row for row in rows if row["scenario"] == "complete-accessibility-check")
+        self.assertEqual(
+            ready,
+            {
+                "scenario": "complete-accessibility-check",
+                "scanner": "no reported violations",
+                "keyboard": "journey observed without pointer",
+                "focus": "order and visible indicator observed",
+                "semantics": "name role and state observed",
+                "outcome": "READY",
+            },
+        )
+        self.assertRegex(text, r"(?is)scanner.*does not prove.*accessib")
+        self.assertRegex(text, r"(?is)keyboard.*focus.*observ")
+
+    def test_accessibility_scanner_only_is_blocked(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-accessibility"]),
+            ("scenario", "scanner", "keyboard", "focus", "semantics", "outcome"),
+        )
+        limited = next(row for row in rows if row["scenario"] == "scanner-only")
+        self.assertEqual(limited["scanner"], "no reported violations")
+        self.assertEqual(limited["keyboard"], "not run")
+        self.assertEqual(limited["focus"], "not observed")
+        self.assertEqual(limited["outcome"], "BLOCKED")
+
+    def test_performance_ready_has_authorized_profile_sample_context_and_percentiles(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-performance"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "authorization",
+                "target",
+                "limits",
+                "environment",
+                "window",
+                "workload",
+                "sample",
+                "context",
+                "percentiles",
+                "threshold",
+                "outcome",
+            ),
+        )
+        ready = next(row for row in rows if row["scenario"] == "authorized-profile")
+        self.assertEqual(ready["authorization"], "explicit load grant")
+        self.assertEqual(ready["target"], "https://staging.example.test/search")
+        self.assertEqual(ready["limits"], "50 VUs and 500 requests/s maximum")
+        self.assertEqual(ready["environment"], "staging")
+        self.assertEqual(ready["window"], "2026-09-12T14:00Z to 2026-09-12T14:10Z")
+        self.assertEqual(ready["workload"], "50 VUs for 10 minutes")
+        self.assertEqual(ready["sample"], "12000 requests")
+        self.assertEqual(ready["context"], "staging build abc123 warm cache")
+        self.assertEqual(ready["percentiles"], "p50 80 ms, p95 210 ms, p99 290 ms")
+        self.assertEqual(ready["threshold"], "p95 at most 250 ms")
+        self.assertEqual(ready["outcome"], "READY")
+        self.assertRegex(text, r"(?is)explicit authorization.*target.*limits.*environment.*time window")
+
+    def test_performance_missing_authorization_component_never_runs_load(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-performance"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "authorization",
+                "target",
+                "limits",
+                "environment",
+                "window",
+                "workload",
+                "sample",
+                "context",
+                "percentiles",
+                "threshold",
+                "outcome",
+            ),
+        )
+        expected = {
+            "missing-load-authorization": ("authorization", "missing"),
+            "missing-load-target": ("target", "missing"),
+            "missing-load-limits": ("limits", "missing"),
+            "missing-load-environment": ("environment", "missing"),
+            "missing-load-window": ("window", "missing"),
+        }
+        for scenario, (field, value) in expected.items():
+            with self.subTest(scenario=scenario):
+                limited = next(row for row in rows if row["scenario"] == scenario)
+                self.assertEqual(limited[field], value)
+                self.assertEqual(limited["workload"], "NOT_RUN")
+                self.assertEqual(limited["outcome"], "BLOCKED")
+                self.assertNotEqual(limited["outcome"], "READY")
+        self.assertRegex(text, r"(?is)average.*(?:alone|isolated).*does not.*(?:PASS|READY|approval)")
+
+    def test_security_authorized_pentest_stays_inside_the_bounded_scope(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-security"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "scanner",
+                "pentest_authorization",
+                "target",
+                "methods",
+                "environment",
+                "window",
+                "owner",
+                "rate_limit",
+                "stop_conditions",
+                "cleanup",
+                "execution",
+                "outcome",
+            ),
+        )
+        ready = next(row for row in rows if row["scenario"] == "bounded-pentest")
+        self.assertEqual(
+            ready,
+            {
+                "scenario": "bounded-pentest",
+                "scanner": "reviewed findings",
+                "pentest_authorization": "explicit bounded grant",
+                "target": "staging.example.test/api",
+                "methods": "OWASP API checks excluding denial of service",
+                "environment": "staging",
+                "window": "2026-09-12T15:00Z to 2026-09-12T16:00Z",
+                "owner": "qa-security-owner",
+                "rate_limit": "20 requests/s maximum",
+                "stop_conditions": "service degradation or unexpected data access",
+                "cleanup": "revoke test tokens and remove synthetic data",
+                "execution": "authorized reproducible checks",
+                "outcome": "READY",
+            },
+        )
+        self.assertRegex(
+            text,
+            r"(?is)explicit authorization.*target.*methods.*environment.*time window",
+        )
+
+    def test_security_missing_operational_boundary_never_runs_or_becomes_ready(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-security"]),
+            (
+                "scenario",
+                "scanner",
+                "pentest_authorization",
+                "target",
+                "methods",
+                "environment",
+                "window",
+                "owner",
+                "rate_limit",
+                "stop_conditions",
+                "cleanup",
+                "execution",
+                "outcome",
+            ),
+        )
+        expected = {
+            "missing-owner": ("owner", "missing"),
+            "missing-rate-limit": ("rate_limit", "missing"),
+            "missing-stop-conditions": ("stop_conditions", "missing"),
+            "missing-cleanup": ("cleanup", "missing"),
+        }
+        for scenario, (field, value) in expected.items():
+            with self.subTest(scenario=scenario):
+                limited = next(row for row in rows if row["scenario"] == scenario)
+                self.assertEqual(limited[field], value)
+                self.assertEqual(limited["target"], "staging.example.test/api")
+                self.assertEqual(
+                    limited["methods"],
+                    "OWASP API checks excluding denial of service",
+                )
+                self.assertEqual(limited["environment"], "staging")
+                self.assertEqual(
+                    limited["window"],
+                    "2026-09-12T15:00Z to 2026-09-12T16:00Z",
+                )
+                self.assertEqual(limited["execution"], "NOT_RUN")
+                self.assertEqual(limited["outcome"], "BLOCKED")
+                self.assertNotEqual(limited["outcome"], "READY")
+
+    def test_security_scanner_never_becomes_pentest_authorization(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-security"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "scanner",
+                "pentest_authorization",
+                "target",
+                "methods",
+                "environment",
+                "window",
+                "owner",
+                "rate_limit",
+                "stop_conditions",
+                "cleanup",
+                "execution",
+                "outcome",
+            ),
+        )
+        limited = next(row for row in rows if row["scenario"] == "scanner-only")
+        self.assertEqual(limited["scanner"], "available with findings")
+        self.assertEqual(limited["pentest_authorization"], "missing")
+        self.assertEqual(limited["execution"], "NOT_RUN")
+        self.assertEqual(limited["outcome"], "BLOCKED")
+        self.assertRegex(text, r"(?is)scanner.*does not.*(?:grant|become).*pentest")
+        self.assertRegex(text, r"(?is)(?:never|do not).*expand.*scope")
+
+    def test_automation_separates_interactive_cli_from_repeatable_suite(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-automation"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "cli_availability",
+                "session",
+                "snapshot",
+                "interaction",
+                "capture",
+                "repeatable_suite",
+                "outcome",
+            ),
+        )
+        ready = next(row for row in rows if row["scenario"] == "interactive-exploration")
+        self.assertEqual(
+            ready,
+            {
+                "scenario": "interactive-exploration",
+                "cli_availability": "available",
+                "session": "qa-report",
+                "snapshot": "fresh",
+                "interaction": "observed refs",
+                "capture": "reviewed screenshot",
+                "repeatable_suite": "Playwright Test",
+                "outcome": "READY",
+            },
+        )
+        self.assertRegex(text, r"(?is)playwright-cli.*interactive.*explor")
+        self.assertRegex(text, r"(?is)Playwright Test.*repeatable.*CI")
+
+    def test_automation_missing_cli_uses_probe_based_alternative(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-automation"]),
+            (
+                "scenario",
+                "cli_availability",
+                "session",
+                "snapshot",
+                "interaction",
+                "capture",
+                "repeatable_suite",
+                "outcome",
+            ),
+        )
+        missing = next(row for row in rows if row["scenario"] == "missing-cli")
+        self.assertEqual(missing["cli_availability"], "missing")
+        self.assertEqual(missing["session"], "none")
+        self.assertEqual(missing["snapshot"], "not run")
+        self.assertEqual(missing["interaction"], "not run")
+        self.assertEqual(missing["repeatable_suite"], "existing Web/UI test runner")
+        self.assertEqual(missing["outcome"], "BLOCKED")
+
+    def test_automation_flaky_result_requires_reproduction_not_rerun_until_pass(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-automation"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "attempts",
+                "evidence",
+                "reproduction",
+                "classification",
+                "action",
+                "outcome",
+            ),
+        )
+        flaky = next(row for row in rows if row["scenario"] == "reproduced-flaky")
+        self.assertEqual(
+            flaky,
+            {
+                "scenario": "reproduced-flaky",
+                "attempts": "three recorded under same conditions",
+                "evidence": "failure and pass artifacts retained",
+                "reproduction": "intermittent failure reproduced",
+                "classification": "flaky",
+                "action": "quarantine with owner and root-cause investigation",
+                "outcome": "BLOCKED",
+            },
+        )
+        self.assertRegex(text, r"(?is)do not.*rerun.*until.*pass")
+        self.assertRegex(text, r"(?is)flaky.*evidence.*reproduc")
+
+    def test_cicd_gate_uses_manifest_verdict_not_export_exit_code(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-cicd"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "manifest_verdict",
+                "export_exit_code",
+                "export_status",
+                "qa_gate",
+                "pipeline_action",
+            ),
+        )
+        self.assertEqual(
+            rows,
+            [
+                {
+                    "scenario": "qa-fail-exported",
+                    "manifest_verdict": "FAIL",
+                    "export_exit_code": "0",
+                    "export_status": "complete",
+                    "qa_gate": "FAIL",
+                    "pipeline_action": "stop for QA failure",
+                },
+                {
+                    "scenario": "qa-pass-export-failed",
+                    "manifest_verdict": "PASS",
+                    "export_exit_code": "3",
+                    "export_status": "incomplete",
+                    "qa_gate": "PASS",
+                    "pipeline_action": "report export failure separately",
+                },
+            ],
+        )
+        self.assertRegex(text, r"(?is)manifest.*verdict.*(?:source|authoritative)")
+        self.assertRegex(text, r"(?is)exit code.*does not.*QA.*verdict")
+
+    def test_regression_selects_coverage_by_impact_and_traceability(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-regression"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "change_id",
+                "impact_id",
+                "risk_id",
+                "criterion_id",
+                "defect_id",
+                "selected_case_ids",
+                "excluded_case_ids",
+                "relations",
+                "outcome",
+            ),
+        )
+        selected = next(row for row in rows if row["scenario"] == "impact-selected")
+        self.assertEqual(
+            selected,
+            {
+                "scenario": "impact-selected",
+                "change_id": "CHG-AUTH-017",
+                "impact_id": "IMP-SESSION-01",
+                "risk_id": "RISK-AUTH-04",
+                "criterion_id": "AC-LOGIN-01",
+                "defect_id": "DEF-SESSION-09",
+                "selected_case_ids": "TC-LOGIN TC-LOGOUT TC-EXPIRY TC-DENIED-ROLE",
+                "excluded_case_ids": "TC-PROFILE",
+                "relations": "change to impact risk criterion defect selected and excluded cases",
+                "outcome": "READY",
+            },
+        )
+        self.assertRegex(text, r"(?is)stable case ID")
+        self.assertRegex(text, r"(?is)(?:not|never).*convenience")
+
+    def test_regression_missing_any_traceability_relation_is_blocked(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-regression"]),
+            (
+                "scenario",
+                "change_id",
+                "impact_id",
+                "risk_id",
+                "criterion_id",
+                "defect_id",
+                "selected_case_ids",
+                "excluded_case_ids",
+                "relations",
+                "outcome",
+            ),
+        )
+        omissions = {
+            "missing-change": "change_id",
+            "missing-impact": "impact_id",
+            "missing-risk": "risk_id",
+            "missing-criterion": "criterion_id",
+            "missing-defect": "defect_id",
+            "missing-selected-case": "selected_case_ids",
+            "missing-excluded-case": "excluded_case_ids",
+            "missing-relation": "relations",
+        }
+        for scenario, field in omissions.items():
+            with self.subTest(scenario=scenario):
+                limited = next(row for row in rows if row["scenario"] == scenario)
+                self.assertEqual(limited[field], "missing")
+                self.assertEqual(limited["outcome"], "BLOCKED")
+        convenient = next(row for row in rows if row["scenario"] == "convenience-only")
+        self.assertEqual(convenient["relations"], "convenience only")
+        self.assertEqual(convenient["outcome"], "BLOCKED")
+
+    def test_defects_separate_severity_priority_and_preserve_retest_history(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-defects"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "severity",
+                "priority",
+                "status",
+                "history",
+                "retest",
+                "evidence",
+                "defect_current",
+                "applicable_criteria",
+                "other_current_defects",
+                "verdict",
+            ),
+        )
+        resolved = next(row for row in rows if row["scenario"] == "verified-resolution")
+        self.assertEqual(resolved["severity"], "critical product impact")
+        self.assertEqual(resolved["priority"], "P1 delivery order")
+        self.assertEqual(resolved["status"], "resolved")
+        self.assertEqual(resolved["history"], "original failure and all attempts preserved")
+        self.assertEqual(resolved["retest"], "terminal PASS attempt")
+        self.assertEqual(resolved["evidence"], "valid original and retest evidence")
+        self.assertEqual(resolved["defect_current"], "false")
+        self.assertEqual(resolved["applicable_criteria"], "not evaluated by defect resolution")
+        self.assertEqual(resolved["other_current_defects"], "not evaluated")
+        self.assertEqual(resolved["verdict"], "BLOCKED")
+        self.assertRegex(text, r"(?is)severity.*product impact.*priority.*delivery")
+        self.assertRegex(text, r"(?is)retest.*history")
+
+    def test_defects_pass_requires_explicit_all_pass_catalog_and_no_current_defects(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-defects"]),
+            (
+                "scenario",
+                "severity",
+                "priority",
+                "status",
+                "history",
+                "retest",
+                "evidence",
+                "defect_current",
+                "applicable_criteria",
+                "other_current_defects",
+                "verdict",
+            ),
+        )
+        passed = next(row for row in rows if row["scenario"] == "all-applicable-pass")
+        self.assertEqual(passed["defect_current"], "false")
+        self.assertEqual(
+            passed["applicable_criteria"],
+            "explicit complete catalog AC-LOGIN-01=PASS AC-SESSION-02=PASS",
+        )
+        self.assertEqual(passed["other_current_defects"], "none")
+        self.assertEqual(passed["verdict"], "PASS")
+
+        missing = next(row for row in rows if row["scenario"] == "missing-criteria-catalog")
+        self.assertEqual(missing["applicable_criteria"], "missing")
+        self.assertEqual(missing["verdict"], "BLOCKED")
+        inventory = next(row for row in rows if row["scenario"] == "missing-defect-inventory")
+        self.assertEqual(inventory["other_current_defects"], "not evaluated")
+        self.assertEqual(inventory["verdict"], "BLOCKED")
+        current = next(row for row in rows if row["scenario"] == "other-current-defect")
+        self.assertEqual(current["other_current_defects"], "DEF-OTHER-02 proven current")
+        self.assertEqual(current["verdict"], "FAIL")
+
+    def test_proven_current_unlinked_defect_forces_fail(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-defects"]),
+            (
+                "scenario",
+                "severity",
+                "priority",
+                "status",
+                "history",
+                "retest",
+                "evidence",
+                "defect_current",
+                "applicable_criteria",
+                "other_current_defects",
+                "verdict",
+            ),
+        )
+        current = next(row for row in rows if row["scenario"] == "proven-unlinked-current")
+        self.assertEqual(current["status"], "open")
+        self.assertEqual(current["history"], "original failure preserved")
+        self.assertEqual(current["retest"], "NOT_RUN")
+        self.assertEqual(current["evidence"], "valid in-scope failure evidence")
+        self.assertEqual(current["defect_current"], "true")
+        self.assertEqual(current["verdict"], "FAIL")
+
+    def test_production_observation_is_authorized_read_only_and_preventive(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-production"])
+        rows = parse_scenarios(
+            text,
+            (
+                "scenario",
+                "authorization",
+                "target",
+                "telemetry_sources",
+                "identity_role",
+                "read_only_boundary",
+                "fields",
+                "window",
+                "owner",
+                "data_rules",
+                "stop_conditions",
+                "retention",
+                "observation",
+                "external_effects",
+                "cause",
+                "evidence",
+                "criterion_risk_or_unlinked",
+                "stable_case_id",
+                "oracle",
+                "environment",
+                "prerequisites",
+                "outcome",
+            ),
+        )
+        ready = next(row for row in rows if row["scenario"] == "authorized-observation")
+        self.assertEqual(ready["authorization"], "explicit read-only production grant")
+        self.assertEqual(ready["target"], "prod-api/session-service")
+        self.assertEqual(ready["telemetry_sources"], "existing metrics auth_failures and latency")
+        self.assertEqual(ready["identity_role"], "qa-observer read-only")
+        self.assertEqual(ready["read_only_boundary"], "metrics query only")
+        self.assertEqual(ready["fields"], "timestamp route status latency_ms")
+        self.assertEqual(ready["window"], "2026-09-12T10:00Z to 2026-09-12T11:00Z")
+        self.assertEqual(ready["owner"], "production-owner")
+        self.assertEqual(ready["data_rules"], "aggregate only no personal data")
+        self.assertEqual(ready["stop_conditions"], "unexpected sensitive field or access error")
+        self.assertEqual(ready["retention"], "reviewed aggregate evidence for 30 days")
+        self.assertEqual(ready["observation"], "approved existing telemetry only")
+        self.assertEqual(ready["external_effects"], "none")
+        self.assertEqual(ready["cause"], "session cache expiry race with contrary evidence addressed")
+        self.assertEqual(ready["evidence"], "EV-PROD-001 reviewed and target-bound")
+        self.assertEqual(ready["criterion_risk_or_unlinked"], "AC-SESSION-02 and RISK-AUTH-04")
+        self.assertEqual(ready["stable_case_id"], "TC-SESSION-EXPIRY-RACE")
+        self.assertEqual(ready["oracle"], "one refresh and no authentication failure at expiry")
+        self.assertEqual(ready["environment"], "staging with production-equivalent cache timing")
+        self.assertEqual(ready["prerequisites"], "synthetic account and controllable clock")
+        self.assertEqual(ready["outcome"], "READY")
+        self.assertRegex(text, r"(?is)explicit authorization.*read-only")
+        self.assertRegex(text, r"(?is)prevent.*recurrence.*cause.*evidence")
+
+    def test_production_missing_any_authorization_boundary_observes_nothing(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-production"]),
+            (
+                "scenario",
+                "authorization",
+                "target",
+                "telemetry_sources",
+                "identity_role",
+                "read_only_boundary",
+                "fields",
+                "window",
+                "owner",
+                "data_rules",
+                "stop_conditions",
+                "retention",
+                "observation",
+                "external_effects",
+                "cause",
+                "evidence",
+                "criterion_risk_or_unlinked",
+                "stable_case_id",
+                "oracle",
+                "environment",
+                "prerequisites",
+                "outcome",
+            ),
+        )
+        omissions = {
+            "missing-authorization": "authorization",
+            "missing-target": "target",
+            "missing-telemetry-sources": "telemetry_sources",
+            "missing-identity-role": "identity_role",
+            "missing-read-only-boundary": "read_only_boundary",
+            "missing-fields": "fields",
+            "missing-window": "window",
+            "missing-owner": "owner",
+            "missing-data-rules": "data_rules",
+            "missing-stop-conditions": "stop_conditions",
+            "missing-retention": "retention",
+        }
+        for scenario, field in omissions.items():
+            with self.subTest(scenario=scenario):
+                blocked = next(row for row in rows if row["scenario"] == scenario)
+                self.assertEqual(blocked[field], "missing")
+                self.assertEqual(blocked["observation"], "NOT_RUN")
+                self.assertEqual(blocked["external_effects"], "none")
+                self.assertEqual(blocked["outcome"], "BLOCKED")
+
+    def test_production_hypothetical_cause_or_generic_prevention_is_blocked(self) -> None:
+        rows = parse_scenarios(
+            read_required(SPECIALISTS["qa-specialist-production"]),
+            (
+                "scenario",
+                "authorization",
+                "target",
+                "telemetry_sources",
+                "identity_role",
+                "read_only_boundary",
+                "fields",
+                "window",
+                "owner",
+                "data_rules",
+                "stop_conditions",
+                "retention",
+                "observation",
+                "external_effects",
+                "cause",
+                "evidence",
+                "criterion_risk_or_unlinked",
+                "stable_case_id",
+                "oracle",
+                "environment",
+                "prerequisites",
+                "outcome",
+            ),
+        )
+        hypothetical = next(row for row in rows if row["scenario"] == "hypothetical-cause")
+        self.assertEqual(hypothetical["cause"], "hypothesis only")
+        self.assertEqual(hypothetical["outcome"], "BLOCKED")
+        generic = next(row for row in rows if row["scenario"] == "generic-prevention")
+        self.assertEqual(generic["stable_case_id"], "missing")
+        self.assertEqual(generic["oracle"], "missing")
+        self.assertEqual(generic["outcome"], "BLOCKED")
+
+    def test_metrics_carry_explicit_population_window_denominator_and_state_treatment(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-metrics"])
+        rows = parse_scenarios(text, METRIC_COLUMNS)
+        measured = next(row for row in rows if row["scenario"] == "explicit-rate")
+        self.assertEqual(
+            measured,
+            {
+                "scenario": "explicit-rate",
+                "metric": "applicable criterion pass rate",
+                "target": "checkout-api build rc-17",
+                "contract": "QA-CONTRACT-17 sha256:abc123",
+                "source_collection": "normalized manifest run-17 collected by qa-report",
+                "freshness_build": "fresh for build rc-17",
+                "numerator": "8 PASS",
+                "denominator": "10 applicable criteria",
+                "population": "complete release-candidate criterion catalog",
+                "window": "build rc-17 at 2026-09-12T18:00Z",
+                "criterion_ids": "AC-01 AC-02 AC-03 AC-04 AC-05 AC-06 AC-07 AC-08 AC-09 AC-10",
+                "numerator_ids": "AC-01 AC-02 AC-03 AC-04 AC-05 AC-06 AC-07 AC-08",
+                "remainder_status_reason": "AC-09=FAIL expected total mismatch; AC-10=BLOCKED evidence pending",
+                "na_items_reason": "none",
+                "evidence_refs": "EV-01 EV-02 EV-03 EV-04 EV-05 EV-06 EV-07 EV-08 EV-09 EV-10",
+                "state_treatment": "PASS numerator; FAIL BLOCKED NOT_RUN denominator only; NOT_APPLICABLE excluded",
+                "result": "80%",
+            },
+        )
+        self.assertRegex(text, r"(?is)requirements coverage.*not.*(?:source|line) coverage")
+        self.assertRegex(text, r"(?is)numerator.*denominator.*population.*window")
+
+    def test_metrics_zero_applicable_is_blocked_without_a_percentage(self) -> None:
+        rows = parse_scenarios(read_required(SPECIALISTS["qa-specialist-metrics"]), METRIC_COLUMNS)
+        empty = next(row for row in rows if row["scenario"] == "zero-applicable")
+        self.assertEqual(empty["numerator"], "0 PASS")
+        self.assertEqual(empty["denominator"], "0 applicable criteria")
+        self.assertEqual(empty["population"], "complete catalog with all criteria NOT_APPLICABLE")
+        self.assertEqual(
+            empty["state_treatment"],
+            "PASS numerator; FAIL BLOCKED NOT_RUN denominator only; NOT_APPLICABLE excluded with reasons; empty denominator has no rate",
+        )
+        self.assertEqual(empty["result"], "BLOCKED")
+        self.assertNotRegex(empty["result"], r"100%|PASS")
+
+    def test_metrics_missing_any_audit_precondition_is_blocked_without_a_percentage(self) -> None:
+        rows = parse_scenarios(read_required(SPECIALISTS["qa-specialist-metrics"]), METRIC_COLUMNS)
+        omissions = {
+            "missing-metric-target": "target",
+            "missing-metric-contract": "contract",
+            "missing-source-collection": "source_collection",
+            "missing-freshness-build": "freshness_build",
+            "missing-criterion-ids": "criterion_ids",
+            "missing-numerator-ids": "numerator_ids",
+            "missing-remainder-status-reason": "remainder_status_reason",
+            "missing-na-accounting": "na_items_reason",
+            "missing-metric-evidence": "evidence_refs",
+        }
+        for scenario, field in omissions.items():
+            with self.subTest(scenario=scenario):
+                row = next(item for item in rows if item["scenario"] == scenario)
+                self.assertEqual(row[field], "missing")
+                self.assertEqual(row["result"], "BLOCKED")
+                self.assertNotRegex(row["result"], r"%|PASS")
+
+    def test_readiness_pass_is_a_recommendation_after_human_decision_not_an_approval(self) -> None:
+        text = read_required(SPECIALISTS["qa-specialist-readiness"])
+        rows = parse_scenarios(text, READINESS_COLUMNS)
+        ready = next(row for row in rows if row["scenario"] == "release-ready")
+        self.assertEqual(
+            ready,
+            {
+                "scenario": "release-ready",
+                "applicable_criteria": "AC-LOGIN-01=PASS AC-SESSION-02=PASS",
+                "current_defects": "none including unlinked inventory",
+                "risks": "none unresolved",
+                "limitations": "none pending",
+                "decision_record": "recorded approve",
+                "decision_actor": "release-owner-17",
+                "decision_authority": "production release owner",
+                "decision_scope": "checkout-api build rc-17",
+                "decision_rationale": "all applicable criteria passed and no current defects or pending risks",
+                "decision_timestamp": "2026-09-12T18:30:00Z",
+                "verdict": "PASS",
+                "recommendation": "recommend release without approving it",
+            },
+        )
+        self.assertRegex(text, r"(?is)recommend.*does not.*approve.*release")
+        self.assertRegex(text, r"(?is)human.*decision")
+
+    def test_readiness_proven_unlinked_failure_overrides_risk_acceptance(self) -> None:
+        rows = parse_scenarios(read_required(SPECIALISTS["qa-specialist-readiness"]), READINESS_COLUMNS)
+        failed = next(row for row in rows if row["scenario"] == "proven-unlinked-failure")
+        self.assertEqual(failed["current_defects"], "DEF-UNLINKED-01 proven current in scope")
+        self.assertEqual(failed["decision_record"], "recorded risk acceptance")
+        self.assertEqual(failed["verdict"], "FAIL")
+        self.assertEqual(failed["recommendation"], "do not release")
+
+    def test_readiness_pending_or_zero_applicable_is_blocked(self) -> None:
+        rows = parse_scenarios(read_required(SPECIALISTS["qa-specialist-readiness"]), READINESS_COLUMNS)
+        expected = {
+            "pending-limitation": ("browser evidence pending", "BLOCKED"),
+            "zero-applicable": ("zero applicable criteria", "BLOCKED"),
+        }
+        for scenario, (limitation_or_criteria, verdict) in expected.items():
+            with self.subTest(scenario=scenario):
+                row = next(item for item in rows if item["scenario"] == scenario)
+                self.assertIn(
+                    limitation_or_criteria,
+                    (row["limitations"], row["applicable_criteria"]),
+                )
+                self.assertEqual(row["verdict"], verdict)
+                self.assertNotEqual(row["recommendation"], "recommend release without approving it")
+
+    def test_readiness_missing_any_human_decision_component_is_blocked(self) -> None:
+        rows = parse_scenarios(read_required(SPECIALISTS["qa-specialist-readiness"]), READINESS_COLUMNS)
+        omissions = {
+            "missing-decision-record": "decision_record",
+            "missing-decision-actor": "decision_actor",
+            "missing-decision-authority": "decision_authority",
+            "missing-decision-scope": "decision_scope",
+            "missing-decision-rationale": "decision_rationale",
+            "missing-decision-timestamp": "decision_timestamp",
+        }
+        for scenario, field in omissions.items():
+            with self.subTest(scenario=scenario):
+                row = next(item for item in rows if item["scenario"] == scenario)
+                self.assertEqual(row[field], "missing")
+                self.assertEqual(row["verdict"], "BLOCKED")
+                self.assertEqual(row["recommendation"], "obtain complete human decision")
+
+
+if __name__ == "__main__":
+    unittest.main()

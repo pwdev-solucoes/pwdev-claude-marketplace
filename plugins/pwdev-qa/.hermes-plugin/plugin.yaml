@@ -1,0 +1,7 @@
+name: pwdev-qa
+version: 0.1.0
+description: Portable quality assurance workflows, specialist guidance, evidence handling, and verifiable HTML and PDF reporting for Claude Code, Codex, and Hermes Agent.
+author: Paulo Soares
+homepage: https://github.com/pwdev-solucoes/pwdev-claude-marketplace
+repository: https://github.com/pwdev-solucoes/pwdev-claude-marketplace
+license: Apache-2.0

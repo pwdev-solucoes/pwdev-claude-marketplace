@@ -51,7 +51,7 @@ Python PDF disponível nesta sessão: /Users/paulosoares/.cache/codex-runtimes/c
 - tests/test_qa_scenarios.py
 - plugins/pwdev-qa/references/acceptance-scenarios.md
 
-## Task 01 — Manifests e registro Hermes
+## Task 22 — Manifests e registro Hermes
 Complexity: high
 Files:
 - plugins/pwdev-qa/.claude-plugin/plugin.json
@@ -72,7 +72,7 @@ Steps:
 - [ ] Executar `python3 -m unittest tests.test_qa_packaging` novamente; registrar resultado e limitações sem tratar falha de ambiente como aprovação.
 - [ ] Revisar diff e contrato; registrar evidência na execução Power e encaminhar findings para correção antes da tarefa seguinte.
 
-## Task 02 — Documentação e catálogos
+## Task 23 — Documentação e catálogos
 Complexity: medium
 Files:
 - plugins/pwdev-qa/README.md
@@ -81,7 +81,7 @@ Files:
 - .agents/plugins/marketplace.json
 - tests/test_qa_catalog.py
 Interfaces:
-  Consumes: Manifests e comandos F05-01/F04
+  Consumes: Manifests F05-22 e comandos F04-17..21
   Produces: Instalação manual documentada por runtime; entradas de catálogo locais
 Acceptance: CA-003, CA-018, CA-022, CA-023
 Behavior: Adicionar plugin sem reordenar entradas existentes nem mudar nome do marketplace. Documentar 29 skills/10 comandos, dependência PDF, qa-tooling, playwright-cli, execução/exportação distintas, limitações da sanitização. Catálogo Codex preserva políticas/unknown fields. Nenhuma instalação nesta tarefa.
@@ -93,7 +93,7 @@ Steps:
 - [ ] Executar `python3 -m unittest tests.test_qa_catalog` novamente; registrar resultado e limitações sem tratar falha de ambiente como aprovação.
 - [ ] Revisar diff e contrato; registrar evidência na execução Power e encaminhar findings para correção antes da tarefa seguinte.
 
-## Task 03 — Integração documental e smoke real
+## Task 24 — Integração documental e smoke real
 Complexity: high
 Files:
 - README.md

@@ -57,7 +57,7 @@ Python PDF disponível nesta sessão: /Users/paulosoares/.cache/codex-runtimes/c
 - plugins/pwdev-qa/skills/qa-status/SKILL.md
 - plugins/pwdev-qa/commands/status.md
 
-## Task 01 — Workflows init / strategy
+## Task 17 — Workflows init / strategy
 Complexity: medium
 Files:
 - plugins/pwdev-qa/skills/qa-init/SKILL.md
@@ -78,7 +78,7 @@ Steps:
 - [ ] Executar `python3 -m unittest tests.test_qa_workflows` novamente; registrar resultado e limitações sem tratar falha de ambiente como aprovação.
 - [ ] Revisar diff e contrato; registrar evidência na execução Power e encaminhar findings para correção antes da tarefa seguinte.
 
-## Task 02 — Workflows test / explore
+## Task 18 — Workflows test / explore
 Complexity: medium
 Files:
 - plugins/pwdev-qa/skills/qa-test/SKILL.md
@@ -99,7 +99,7 @@ Steps:
 - [ ] Executar `python3 -m unittest tests.test_qa_workflows` novamente; registrar resultado e limitações sem tratar falha de ambiente como aprovação.
 - [ ] Revisar diff e contrato; registrar evidência na execução Power e encaminhar findings para correção antes da tarefa seguinte.
 
-## Task 03 — Workflows regression / bug
+## Task 19 — Workflows regression / bug
 Complexity: medium
 Files:
 - plugins/pwdev-qa/skills/qa-regression/SKILL.md
@@ -120,7 +120,7 @@ Steps:
 - [ ] Executar `python3 -m unittest tests.test_qa_workflows` novamente; registrar resultado e limitações sem tratar falha de ambiente como aprovação.
 - [ ] Revisar diff e contrato; registrar evidência na execução Power e encaminhar findings para correção antes da tarefa seguinte.
 
-## Task 04 — Workflows review / release
+## Task 20 — Workflows review / release
 Complexity: medium
 Files:
 - plugins/pwdev-qa/skills/qa-review/SKILL.md
@@ -141,7 +141,7 @@ Steps:
 - [ ] Executar `python3 -m unittest tests.test_qa_workflows` novamente; registrar resultado e limitações sem tratar falha de ambiente como aprovação.
 - [ ] Revisar diff e contrato; registrar evidência na execução Power e encaminhar findings para correção antes da tarefa seguinte.
 
-## Task 05 — Workflows report / status
+## Task 21 — Workflows report / status
 Complexity: medium
 Files:
 - plugins/pwdev-qa/skills/qa-report/SKILL.md

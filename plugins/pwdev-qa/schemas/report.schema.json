@@ -1,0 +1,236 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pwdev.dev/schemas/qa-report-v1.schema.json",
+  "title": "PWDEV QA report manifest v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "project",
+    "target",
+    "executed_at",
+    "contract",
+    "criteria",
+    "cases",
+    "evidence",
+    "defects"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "run_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"},
+    "project": {"$ref": "#/$defs/nonEmptyString"},
+    "target": {
+      "type": "object",
+      "required": ["id", "kind"],
+      "properties": {
+        "id": {"$ref": "#/$defs/nonEmptyString"},
+        "kind": {"$ref": "#/$defs/nonEmptyString"}
+      },
+      "additionalProperties": true
+    },
+    "executed_at": {"$ref": "#/$defs/timestamp"},
+    "contract": {
+      "type": "object",
+      "required": ["path", "sha256", "criteria_review"],
+      "properties": {
+        "path": {"$ref": "#/$defs/relativePath"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "criteria_review": {
+          "allOf": [
+            {"$ref": "#/$defs/review"},
+            {
+              "type": "object",
+              "required": ["complete"],
+              "properties": {"complete": {"type": "boolean"}}
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "criteria": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {"$ref": "#/$defs/criterion"}
+    },
+    "cases": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/case"}
+    },
+    "evidence": {
+      "type": "array",
+      "maxItems": 1000,
+      "$comment": "The validator also enforces a 100 MiB aggregate declared-size limit.",
+      "items": {"$ref": "#/$defs/evidence"}
+    },
+    "defects": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/defect"}
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1},
+    "nullableId": {
+      "oneOf": [
+        {"$ref": "#/$defs/nonEmptyString"},
+        {"type": "null"}
+      ]
+    },
+    "stringList": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)(?!.*\\\\).+$"
+    },
+    "review": {
+      "type": "object",
+      "required": ["actor", "at"],
+      "properties": {
+        "actor": {"$ref": "#/$defs/nonEmptyString"},
+        "at": {"$ref": "#/$defs/timestamp"}
+      },
+      "additionalProperties": true
+    },
+    "assessment": {
+      "type": "object",
+      "required": ["actor", "at", "expected", "observed"],
+      "properties": {
+        "actor": {"$ref": "#/$defs/nonEmptyString"},
+        "at": {"$ref": "#/$defs/timestamp"},
+        "expected": {"type": "string"},
+        "observed": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "criterion": {
+      "type": "object",
+      "required": [
+        "id",
+        "text",
+        "applicable",
+        "applicability_reason",
+        "assessment",
+        "case_ids"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/nonEmptyString"},
+        "text": {"$ref": "#/$defs/nonEmptyString"},
+        "applicable": {"type": "boolean"},
+        "applicability_reason": {"type": "string"},
+        "assessment": {"$ref": "#/$defs/assessment"},
+        "case_ids": {"$ref": "#/$defs/stringList"}
+      },
+      "additionalProperties": true
+    },
+    "case": {
+      "type": "object",
+      "required": [
+        "id",
+        "case_id",
+        "criterion_ids",
+        "status",
+        "required",
+        "expected",
+        "observed",
+        "command",
+        "exit_code",
+        "evidence_ids",
+        "attempt",
+        "supersedes"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/nonEmptyString"},
+        "case_id": {"$ref": "#/$defs/nonEmptyString"},
+        "criterion_ids": {"$ref": "#/$defs/stringList"},
+        "status": {
+          "enum": ["PASS", "FAIL", "BLOCKED", "NOT_RUN", "NOT_APPLICABLE"]
+        },
+        "required": {"type": "boolean"},
+        "expected": {"type": "string"},
+        "observed": {"type": "string"},
+        "command": {"type": "string"},
+        "exit_code": {"type": ["integer", "null"]},
+        "evidence_ids": {"$ref": "#/$defs/stringList"},
+        "attempt": {"type": "integer", "minimum": 1},
+        "supersedes": {"$ref": "#/$defs/nullableId"}
+      },
+      "additionalProperties": true
+    },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "id",
+        "path",
+        "sha256",
+        "media_type",
+        "size_bytes",
+        "target_id",
+        "sanitization"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/nonEmptyString"},
+        "path": {"$ref": "#/$defs/relativePath"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "media_type": {
+          "enum": ["text/plain", "application/json", "image/png", "image/jpeg"]
+        },
+        "size_bytes": {"type": "integer", "minimum": 0, "maximum": 10485760},
+        "target_id": {"$ref": "#/$defs/nonEmptyString"},
+        "sanitization": {
+          "type": "object",
+          "required": ["status", "actor", "at"],
+          "properties": {
+            "status": {"enum": ["synthetic", "reviewed", "pending"]},
+            "actor": {"$ref": "#/$defs/nonEmptyString"},
+            "at": {"$ref": "#/$defs/timestamp"}
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "defect": {
+      "type": "object",
+      "required": [
+        "id",
+        "summary",
+        "in_scope",
+        "status",
+        "severity",
+        "criterion_ids",
+        "evidence_ids",
+        "supersedes",
+        "retest_attempt_id"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/nonEmptyString"},
+        "summary": {"$ref": "#/$defs/nonEmptyString"},
+        "in_scope": {"type": "boolean"},
+        "status": {"enum": ["open", "resolved", "out_of_scope"]},
+        "severity": {"$ref": "#/$defs/nonEmptyString"},
+        "criterion_ids": {"$ref": "#/$defs/stringList"},
+        "evidence_ids": {"$ref": "#/$defs/stringList"},
+        "supersedes": {"$ref": "#/$defs/nullableId"},
+        "retest_attempt_id": {"$ref": "#/$defs/nullableId"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "resolved"}}},
+          "then": {"properties": {"retest_attempt_id": {"$ref": "#/$defs/nonEmptyString"}}}
+        }
+      ],
+      "additionalProperties": true
+    }
+  }
+}

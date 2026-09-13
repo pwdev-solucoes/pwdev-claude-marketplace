@@ -20,6 +20,7 @@ Reinicie o runtime após a instalação. Consulte o README de cada plugin para s
 | Desenvolvimento orientado a especificações | [pwdev-power](./plugins/pwdev-power/), [pwdev-flow](./plugins/pwdev-flow/), [sdd-composy](./plugins/sdd-composy/) |
 | Código e delegação | [pwdev-code](./plugins/pwdev-code/), [pwdev-feat](./plugins/pwdev-feat/) |
 | Requisitos e UI/UX | [pwdev-prd](./plugins/pwdev-prd/), [pwdev-uiux](./plugins/pwdev-uiux/) |
+| Garantia de qualidade | [pwdev-qa](./plugins/pwdev-qa/) |
 | Copy e conteúdo social | [pwdev-copy](./plugins/pwdev-copy/), [pwdev-social-media](./plugins/pwdev-social-media/) |
 | DevOps e operações | [pwdev-devops](./plugins/pwdev-devops/) |
 | Conhecimento e integrações | [pwdev-brain](./plugins/pwdev-brain/), [pwdev-glpi](./plugins/pwdev-glpi/), [pwdev-obsidian](./plugins/pwdev-obsidian/), [pwdev-postgres](./plugins/pwdev-postgres/), [pwdev-youtrack](./plugins/pwdev-youtrack/) |
@@ -55,6 +56,7 @@ Comandos: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 | [**pwdev-uiux**](./plugins/pwdev-uiux/) | Engenharia UI/UX — 6 subagentes reais, fluxo de 5 fases com gates, Figma, WCAG 2.1 AA | 2.0.1 | Apache-2.0 |
 | [**pwdev-feat**](./plugins/pwdev-feat/) | Desenvolvimento simplificado de features — planos PWDEVIA inline + subagentes executor e advisor | 2.1.1 | Apache-2.0 |
 | [**pwdev-prd**](./plugins/pwdev-prd/) | Criação de PRD guiada por entrevista — 12 etapas inline, Markdown + JSON canônico | 2.0.1 | Apache-2.0 |
+| [**pwdev-qa**](./plugins/pwdev-qa/) | Garantia de qualidade portátil para Claude Code, Codex e Hermes Agent — 10 fluxos, 17 guias especialistas, recomendação de ferramentas, evidência auditável, relatórios offline em HTML e PDF | 0.1.0 | Apache-2.0 |
 | [**pwdev-copy**](./plugins/pwdev-copy/) | Framework de copywriting treinável — 20 skills no ciclo completo (VOC → copy → revisão → análise), 5 subagentes reais | 1.1.0 | Apache-2.0 |
 | [**pwdev-social-media**](./plugins/pwdev-social-media/) | Geração de criativos por IA — orquestração de APIs (Ideogram, Leonardo, Flux, Runway, Freepik) com trava de gasto, 19 skills, 4 subagentes | 2.0.1 | Apache-2.0 |
 | [**pwdev-devops**](./plugins/pwdev-devops/) | Plataforma, operação e incidente — postura de execução segura com guard script, 24 skills, 4 subagentes | 1.0.0 | Apache-2.0 |
@@ -221,6 +223,25 @@ Interview (12 steps) ─▶ PRD.md ─▶ Export (JSON / GitHub Issue)
 **Inclui:** 6 comandos · sem subagentes, por design · hooks
 
 Veja a [documentação completa do plugin](./plugins/pwdev-prd/README.md).
+
+### pwdev-qa
+
+**Garantia de qualidade portátil** para Claude Code, Codex e Hermes Agent:
+roteamento de intenção entre dez fluxos de QA, orientação especialista para web,
+API, mobile, dados, acessibilidade, performance, segurança, automação e
+produção, recomendação de ferramentas a partir do contexto observado,
+evidência auditável e relatórios offline equivalentes em HTML e PDF.
+
+```
+init ─▶ strategy ─▶ test / explore ─▶ bug ─▶ regression ─▶ review ─▶ release ─▶ report
+```
+
+**Habilidades:** qa (roteador intenção→fluxo), 17 guias qa-specialist-*, qa-tooling
+**Destaques:** evidência com digest SHA-256, aceite nunca inferido de confiança, paridade entre HTML e PDF offline, nenhum servidor MCP obrigatório
+
+**Inclui:** 10 comandos · 29 skills · sem MCP
+
+Veja a [documentação completa do plugin](./plugins/pwdev-qa/README.md).
 
 ### pwdev-copy
 
@@ -424,6 +445,9 @@ claude plugin install pwdev-feat@pwdev-claude-marketplace
 # Criação de PRD guiada por entrevista (processo em 12 etapas)
 claude plugin install pwdev-prd@pwdev-claude-marketplace
 
+# Garantia de qualidade portátil (10 fluxos, evidência, relatórios HTML/PDF)
+claude plugin install pwdev-qa@pwdev-claude-marketplace
+
 # Framework de copywriting treinável (20 skills, ciclo de análise)
 claude plugin install pwdev-copy@pwdev-claude-marketplace
 
@@ -568,6 +592,7 @@ claude plugin install pwdev-code@pwdev-claude-marketplace
 claude plugin install pwdev-uiux@pwdev-claude-marketplace
 claude plugin install pwdev-feat@pwdev-claude-marketplace
 claude plugin install pwdev-prd@pwdev-claude-marketplace
+claude plugin install pwdev-qa@pwdev-claude-marketplace
 claude plugin install pwdev-copy@pwdev-claude-marketplace
 claude plugin install pwdev-social-media@pwdev-claude-marketplace
 claude plugin install pwdev-devops@pwdev-claude-marketplace
