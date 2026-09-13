@@ -55,6 +55,71 @@ _MEDIA_SUFFIX = {
     "image/jpeg": ".jpg",
 }
 _COMMIT_CONTEXT = contextvars.ContextVar("qa_report_commit_context", default=None)
+MAX_CONTRACT_BYTES = 5 * 1024 * 1024
+
+
+def _criterion_pair_present(source: str, identifier: str, criterion_text: str) -> bool:
+    """Locate an exact declared ID/text pair without interpreting Markdown."""
+
+    identifier_pattern = re.compile(
+        r"(?<![A-Za-z0-9_-])" + re.escape(identifier) + r"(?![A-Za-z0-9_-])"
+    )
+    separators = " \t\r\n|:#*-\u2013\u2014"
+    for match in identifier_pattern.finditer(source):
+        end = match.end()
+        for length in range(1, min(256, len(source) - end) + 1):
+            if source[end + length - 1] not in separators:
+                break
+            if source.startswith(criterion_text, end + length):
+                return True
+    return False
+
+
+def _inspect_acceptance_contract(project_fd: int, manifest: Dict[str, Any]) -> List[str]:
+    """Safely verify bounded contract bytes, digest, and declared criterion pairs."""
+
+    try:
+        parts = _safe_parts("acceptance-contract", manifest["contract"]["path"])
+        _reject_sensitive_path("acceptance-contract", parts)
+        descriptor, metadata = _open_evidence(project_fd, parts, "acceptance-contract")
+    except EvidenceError as error:
+        raise EvidenceError("acceptance contract path is unsafe") from error
+    if descriptor is None or metadata is None:
+        return ["acceptance contract is missing"]
+    try:
+        chunks: List[bytes] = []
+        size = 0
+        while True:
+            chunk = os.read(descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            size += len(chunk)
+            if size > MAX_CONTRACT_BYTES:
+                raise EvidenceError("acceptance contract exceeds the bounded read limit")
+            chunks.append(chunk)
+        final = os.fstat(descriptor)
+        raw = b"".join(chunks)
+        if (
+            not stat.S_ISREG(final.st_mode)
+            or (final.st_dev, final.st_ino) != (metadata.st_dev, metadata.st_ino)
+            or final.st_size != metadata.st_size
+            or len(raw) != final.st_size
+        ):
+            return ["acceptance contract changed during verification"]
+    finally:
+        os.close(descriptor)
+    if hashlib.sha256(raw).hexdigest() != manifest["contract"]["sha256"]:
+        return ["acceptance contract digest does not match the manifest"]
+    try:
+        source = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return ["acceptance contract is not valid UTF-8"]
+    if not all(
+        _criterion_pair_present(source, item["id"], item["text"])
+        for item in manifest["criteria"]
+    ):
+        return ["acceptance contract does not contain every declared criterion pair"]
+    return []
 
 
 def _pdf_tokens(raw: bytes, label: str) -> List[Tuple[str, Any]]:
@@ -919,6 +984,11 @@ def generate_report(manifest_path: Path, project_root: Path) -> dict:
 
     manifest = load_manifest(Path(manifest_path))
     root = Path(project_root)
+    project_fd, _ = _open_directory(root, "project root")
+    try:
+        contract_diagnostics = _inspect_acceptance_contract(project_fd, manifest)
+    finally:
+        os.close(project_fd)
     inspections = inspect_evidence(root, manifest)
     reports_fd, reports_identity = _reports_root(root)
     reports_path = root / ".planning" / "pwdev-qa" / "reports"
@@ -942,7 +1012,7 @@ def generate_report(manifest_path: Path, project_root: Path) -> dict:
                 )
             finally:
                 os.close(project_fd)
-            report = build_report(manifest, adjusted)
+            report = build_report(manifest, adjusted, contract_diagnostics)
             for item in report["verified_evidence"]:
                 item["path"] = staged_paths[item["id"]]
 

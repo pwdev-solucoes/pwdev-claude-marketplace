@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
+from qa_evidence import EvidenceError, _json_contains_credential
 
 _CASE_RESULTS = {"PASS", "FAIL", "BLOCKED", "NOT_RUN", "NOT_APPLICABLE"}
 
@@ -157,7 +158,11 @@ def _public_verified(record: Dict[str, Any]) -> Dict[str, Any]:
     return public
 
 
-def build_report(manifest: dict, evidence: list[dict]) -> dict:
+def build_report(
+    manifest: dict,
+    evidence: list[dict],
+    contract_diagnostics: Optional[List[str]] = None,
+) -> dict:
     """Consolidate a normalized manifest and evidence inspections deterministically.
 
     Stored commands remain inert strings. The returned dictionary is an allowlisted public
@@ -169,6 +174,9 @@ def build_report(manifest: dict, evidence: list[dict]) -> dict:
     def diagnostic(message: str) -> None:
         if message not in diagnostics:
             diagnostics.append(message)
+
+    for message in contract_diagnostics or []:
+        diagnostic(message)
 
     public = _public_manifest(manifest)
     expected_evidence = {item["id"]: item for item in manifest["evidence"]}
@@ -257,6 +265,18 @@ def build_report(manifest: dict, evidence: list[dict]) -> dict:
     pending = bool(diagnostics) or invalid_case_history or blocked_evidence > 0
     for case in terminal_cases:
         status = case.get("status")
+        substantive_case = bool(case.get("expected", "").strip()) and bool(
+            case.get("observed", "").strip()
+        )
+        if (
+            case.get("required")
+            and status not in ("NOT_RUN", "NOT_APPLICABLE")
+            and not substantive_case
+        ):
+            diagnostic(
+                f"case {case['id']}: executed required case lacks expected or observed content"
+            )
+            pending = True
         if status not in _CASE_RESULTS:
             diagnostic(f"case {case['id']}: unknown terminal status {status!r}")
             pending = True
@@ -297,6 +317,10 @@ def build_report(manifest: dict, evidence: list[dict]) -> dict:
         if not criterion["applicable"]:
             result = "NOT_APPLICABLE"
         else:
+            assessment = criterion["assessment"]
+            substantive_assessment = bool(assessment["expected"].strip()) and bool(
+                assessment["observed"].strip()
+            )
             required_cases = []
             missing_cases = []
             non_reciprocal = []
@@ -319,7 +343,11 @@ def build_report(manifest: dict, evidence: list[dict]) -> dict:
                 for case in required_cases
                 if case.get("status") == "FAIL" and any_evidence_verified(case)
             ]
-            if proven_failures:
+            if not substantive_assessment:
+                result = "BLOCKED"
+                diagnostic(f"criterion {identifier}: substantive assessment is incomplete")
+                pending = True
+            elif proven_failures:
                 result = "FAIL"
             elif non_reciprocal:
                 result = "BLOCKED"
@@ -434,4 +462,8 @@ def build_report(manifest: dict, evidence: list[dict]) -> dict:
             if item["id"] in verified_by_id
         ],
     )
+    if _json_contains_credential(public):
+        raise EvidenceError(
+            "public report contains credential-like data; publication refused"
+        )
     return public

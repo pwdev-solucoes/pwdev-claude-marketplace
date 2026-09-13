@@ -211,10 +211,16 @@ class QaReportCliTest(unittest.TestCase):
                     data["criteria"][0]["case_ids"] = []
                 mutate(data)
                 self.manifest_path.write_text(json.dumps(data), encoding="utf-8")
+                private_before = copy.deepcopy(data)
                 publisher = load_module(f"qa_report_public_{label}")
                 with self.assertRaisesRegex(publisher.EvidenceError, "public report") as raised:
                     publisher.generate_report(self.manifest_path, self.root)
                 self.assertNotIn("SYNTHETIC_REVIEW_TOKEN", str(raised.exception))
+                self.assertEqual(data, private_before)
+                self.assertEqual(
+                    json.loads(self.manifest_path.read_text(encoding="utf-8")),
+                    private_before,
+                )
                 output = self.output(data["run_id"])
                 self.assertFalse(output.exists())
                 for name in ("manifest.json", "report.html", "report.pdf"):

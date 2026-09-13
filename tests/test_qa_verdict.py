@@ -407,6 +407,23 @@ class QaVerdictTest(unittest.TestCase):
         self.assertNotIn("PRIVATE-PATH", json.dumps(report))
         self.assertTrue(any("unexpected inspection" in item for item in report["diagnostics"]))
 
+    def test_known_credential_in_public_diagnostic_is_neutrally_refused(self) -> None:
+        data = normalized(valid_manifest())
+        data["defects"] = []
+        records = inspections(data)
+        records[0].update(
+            status="BLOCKED",
+            copy_allowed=False,
+            diagnostic="Authorization: Bearer SYNTHETIC_DIAGNOSTIC_TOKEN_123456",
+        )
+        private_before = copy.deepcopy(data)
+
+        with self.assertRaisesRegex(self.verdict.EvidenceError, "public report") as raised:
+            self.verdict.build_report(data, records)
+
+        self.assertNotIn("SYNTHETIC_DIAGNOSTIC_TOKEN", str(raised.exception))
+        self.assertEqual(data, private_before)
+
 
 if __name__ == "__main__":
     unittest.main()
