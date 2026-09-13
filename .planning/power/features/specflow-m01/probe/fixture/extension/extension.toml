@@ -1,7 +1,0 @@
-[extension]
-name = "specflow-m01-probe"
-version = "0.1.0"
-min_compozy_version = "0.3.0-beta.25"
-
-[resources]
-agents = ["agents"]

@@ -44,14 +44,7 @@ Thumbs.db
 # contracts under .planning/power/, and its fleet runner decides whether a stage did any work by
 # asking git whether the feature directory is dirty — which git never says of an ignored path.
 # See plugins/pwdev-power/references/artifacts.md.
-.planning/*
-!.planning/power/
-.planning/power/audit/
-.planning/power/fleet/
-.planning/power/fleet-status.json
-.planning/power/fleet-logs/
-.planning/power/fleet-results/
-.planning/power/features/*/review-*.diff
+.planning/
 
 # Python bytecode
 __pycache__/
