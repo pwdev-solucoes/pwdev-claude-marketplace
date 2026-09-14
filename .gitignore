@@ -59,3 +59,8 @@ review-*.diff
 
 # Local virtualenv (PDF verification environment for pwdev-qa tests)
 .venv/
+
+# skill benchmark rounds: keep summary/benchmark/tokens, drop workspaces, transcripts and the viewer
+plugins/*/skills/*/evals/benchmarks/*/eval-*/
+plugins/*/skills/*/evals/benchmarks/*/versions/
+plugins/*/skills/*/evals/benchmarks/*/review.html
