@@ -2,7 +2,8 @@
 
 Guia prático do plugin `pwdev-skills` e da skill `skill-refactor`: instalar, pedir uma revisão
 ou refatoração, descobrir o que roda na sua máquina, medir tamanho em tokens, rodar benchmark
-entre modelos e ler os resultados.
+entre modelos e ler os resultados. O método por trás de cada passo está detalhado em
+[Metodologia de refatoração](./metodologia-de-refatoracao.md).
 
 > Versão do plugin: 0.1.0 · Runtimes: Claude Code, Codex, Hermes Agent (o benchmark também roda OpenCode)
 
@@ -208,22 +209,35 @@ exemplo `meeting-summary` (propositalmente com problemas):
 | 2 | `unknown_model_explicit_override` | Perfil padrão `guided` sem modelo conhecido; separação de perfis |
 | 3 | `review_only` | Revisão sem nenhuma escrita, com achados por categoria, A/B proposto e métricas do protocolo |
 
-Ou seja, ele avalia **uma versão da skill-refactor** (candidata × baseline) nesses casos. Para
-avaliar outra skill, é preciso escrever casos e verificações próprios; a lógica de runtime em
-`runtimes.py` pode ser reaproveitada.
+Ou seja, por padrão ele avalia **uma versão da skill-refactor** nesses casos. Para avaliar outra
+skill com casos do domínio dela, gere-os com `cases.py` (abaixo) e passe a pasta em `--cases`.
+
+**Braços.** Cada caso roda em até três braços, sempre no mesmo runtime e modelo:
+
+| Braço | O que o runtime recebe | Pasta no `--out` |
+| --- | --- | --- |
+| `candidate` | a skill em `--skill` | `with_skill/` |
+| `baseline` | a versão anterior em `--baseline` | `without_skill/` |
+| `no_skill` | só o fixture e o pedido (`--no-skill-arm`) | `no_skill/` |
+
+`baseline` × `candidate` responde "a refatoração melhorou?"; `no_skill` × `candidate` responde
+"a skill acrescenta alguma coisa neste caso?". Se `no_skill` empata ou vence a candidata num
+caso, a skill não está agregando ali — isso é um achado, não um ruído.
 
 ### Opções
 
 | Opção | Padrão | Efeito |
 | --- | --- | --- |
 | `--skill <dir>` | obrigatório | Versão candidata |
-| `--baseline <dir \| git:<sha> \| git:<sha>:<caminho>>` | nenhum | Versão anterior; habilita o A/B (`with_skill` × `without_skill`). `git:<sha>` acha a skill pelo nome se ela mudou de pasta; se houver mais de uma cópia naquele commit, informe o caminho |
+| `--baseline <dir \| git:<sha> \| git:<sha>:<caminho>>` | nenhum | Versão anterior; habilita o braço `baseline`. `git:<sha>` acha a skill pelo nome se ela mudou de pasta; se houver mais de uma cópia naquele commit, informe o caminho |
+| `--no-skill-arm` | desligado | Acrescenta o braço `no_skill`: o runtime recebe só o fixture e o pedido |
+| `--cases <arquivo \| dir>` | `evals/evals.json` | Outro `evals.json`, ou uma pasta gerada por `cases.py` (lê `cases.json` e recusa conjunto não aprovado) |
 | `--out <dir>` | obrigatório | Diretório de trabalho da rodada. **Use um temporário** |
 | `--publish <dir>` | nenhum | Copia só `summary.json`, `benchmark.md` e `tokens.json` |
 | `--runtimes` | `claude,codex,hermes` | Lista, ou `auto` (tudo que o `discover.py` marca como utilizável) |
 | `--claude-models` / `--codex-models` / `--opencode-models` | `default` | Lista separada por vírgula; `default` = sem `--model` |
-| `--hermes-model` | — | Obrigatório com Hermes: slug do provedor ou `default` |
-| `--hermes-provider` | configurado | Ex.: `openrouter` |
+| `--hermes-model` | — | Obrigatório com Hermes: um ou mais slugs do provedor separados por vírgula, ou `default` |
+| `--hermes-provider` | configurado | Ex.: `openrouter`. O catálogo (`evals/evals.json`, `matrix`) traz três modelos OpenRouter para Hermes e OpenCode: `z-ai/glm-5.3-flash`, `tencent/hy4-preview` e `deepseek/deepseek-v4.1-flash` (no OpenCode, com prefixo `openrouter/` e depois de `opencode providers login`) |
 | `--<runtime>-effort` | padrão configurado | Esforço explícito (`--effort`, `-c model_reasoning_effort=`, `--reasoning`, `--variant`) |
 | `--only-case N` | todos | Repetível. Ex.: `--only-case 3` para só revisão |
 | `--reps N` | 1 | Repetições por combinação |
@@ -274,6 +288,17 @@ python3 scripts/bench.py --skill . --baseline git:dc80270:plugins/pwdev-code/ski
   --out "$(mktemp -d)" --publish evals/benchmarks/$(date +%F)
 ```
 
+**Três braços (antes, sem skill e depois) com esforço igual:**
+```bash
+python3 scripts/bench.py --skill . --baseline git:<sha-antes> --no-skill-arm \
+  --runtimes claude,codex,hermes,opencode \
+  --claude-models claude-sonnet-5 --codex-models gpt-5.6-terra \
+  --hermes-model default --opencode-models opencode/ling-3.0-flash-fin-free \
+  --claude-effort medium --codex-effort medium --reps 2 --timeout 1800 \
+  --acknowledge-hermes-automation --budget-usd 10 \
+  --out "$(mktemp -d)" --publish evals/benchmarks/$(date +%F)/round-2-after
+```
+
 **Validar o pipeline sem gastar nada (na raiz do marketplace):**
 ```bash
 python3 -m unittest tests.test_skill_refactor_bench tests.test_skills_packaging
@@ -291,6 +316,54 @@ O runtime recebe uma cópia, então editar a original não afeta os runs. Mesmo 
 passa a descrever um alvo em movimento: o `summary.json` lista os arquivos alterados em
 `source_skill_changed_during_round`, e uma rodada que passaria fica com o veredito
 `PASS_WITH_SOURCE_DRIFT`.
+
+### Casos por contexto — `cases.py`
+
+O benchmark padrão conhece só o fixture `meeting-summary`. Para medir uma refatoração com casos
+da própria skill que está sendo refatorada, `cases.py` produz o conjunto em três etapas, cada uma
+deixando um arquivo que a seguinte lê:
+
+```bash
+python3 scripts/cases.py --extract <pasta-da-skill>                 # sem custo -> evals/cases/<nome>/cases.draft.json
+python3 scripts/cases.py --propose <pasta-dos-casos> --runtime claude --model claude-sonnet-5 --effort medium
+python3 scripts/cases.py --approve <pasta-dos-casos> --skill <pasta-da-skill>   # pergunta; grava cases.json
+python3 scripts/bench.py --skill <pasta-da-skill> --cases <pasta-dos-casos> ...
+```
+
+1. **`--extract`** lê a skill e deriva os **invariantes** (nome, `paths`, `metadata` estável,
+   literais `CHAVE=valor`, rótulos de saída recorrentes, proibições `never/do not`, blocos
+   opcionais com seus termos e regra de guarda, marcadores do idioma), os defeitos que consegue
+   detectar por categoria, três pedidos-modelo (refatoração com consumidores mistos, refatoração
+   sem modelo conhecido, revisão) e oito consultas de acionamento. O fixture leva a pasta inteira
+   da skill, menos `evals/`, arquivos ocultos e nomes que sugerem segredo.
+2. **`--propose`** faz **uma** chamada headless, sem skill carregada, com a skill em `./target` e
+   o rascunho em `./draft.json`, e pede JSON com dois ou três pedidos realistas no domínio da
+   skill e oito a dez consultas de acionamento próximas (positivas e negativas). A resposta passa
+   por validação de esquema. **Nada que o modelo escreve vira verificação objetiva**: os pedidos
+   propostos usam os invariantes extraídos, e sugestões de invariantes ficam em
+   `llm_suggested_invariants` até alguém movê-las à mão.
+3. **`--approve`** imprime o conjunto, pede confirmação (ou `--yes`) e grava `cases.json` com
+   `approved: true` e o SHA-256 do `SKILL.md` de origem. `--check` avisa se a skill mudou desde a
+   aprovação; o `bench.py` recusa um `cases.json` não aprovado.
+
+O `grade.py` lê o bloco `invariants` de cada caso e constrói as verificações a partir dele
+("Preserves name: …", "Preserves the literal …", "<tópico> detail is conditional"), em vez de
+conhecer um fixture fixo. Os casos de `evals.json` sem `invariants` continuam usando os do
+`meeting-summary`.
+
+### Regradar uma rodada sem pagar de novo — `--regrade`
+
+Toda correção do avaliador ou do classificador vale para rodadas já pagas:
+
+```bash
+python3 scripts/bench.py --regrade <out-da-rodada> --cases evals/evals.json --publish evals/benchmarks/<data>
+```
+
+Reconstrói a lista de runs **a partir do disco** (serve para rodada interrompida e para rodada
+completada em várias invocações no mesmo `--out`, um runtime por vez), reclassifica cada
+`record.json` (guardando o status anterior em `reclassified_from`), reavalia, reescreve
+`summary.json`/`benchmark.md` e, com `--publish`, republica. A rodada grava `meta.json` com os
+caminhos não sanitizados; para rodadas anteriores a ele, passe `--cases`.
 
 ### `grade.py`
 
@@ -335,6 +408,14 @@ eval-<id>-<caso>/<config>/run-<n>-<runtime>-<modelo>/
 | `pass_rate` | `grading.json` | Fração de expectativas atendidas |
 | `acceptance_rate` | `summary.json` | Fração de runs com **todas** as expectativas atendidas |
 | `cost_per_success_usd` | `summary.json` | Custo total, inclusive falhas, dividido pelos runs aceitos. **É a métrica de decisão** |
+
+### Comparação pareada (`paired_by_case`)
+
+Além das médias por modelo, o `summary.json` traz `paired_by_case`: para cada (caso, runtime,
+modelo), os braços lado a lado — runs, aceitos, taxa de aceite, média de expectativas, custo por
+tarefa aceita e p50 de contexto. O `benchmark.md` mostra a mesma coisa na tabela "Paired by
+case". É nessa tabela, e não na média geral, que a decisão do §10.5 da metodologia se apoia:
+candidata contra baseline **dentro de cada modelo**, e `no_skill` como controle.
 
 ### Antes de acreditar numa falha
 

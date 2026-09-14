@@ -7,10 +7,10 @@ generated:
   at: "2026-09-12T23:39:51Z"
 lifecycle:
   status: draft
-  updated_at: "2026-09-13T20:30:12Z"
+  updated_at: "2026-09-14T20:10:00Z"
 sources:
   - resource: "docs/skill-refactoring-guide.md"
-    sha256: "b044b3d3246dca295fb93c8e7da094a541b200c262fdc57ad4077fde0c7c60c5"
+    sha256: "d6744f5425825434fa208b5a1a8419797379344c6cc6ee0af5cdd7f8eb1bd0e1"
     context: "Path in the source repository; this reference is a portable adaptation, not a full copy."
   - resource: "https://claude.com/plugins/skill-creator"
   - resource: "https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra"
@@ -110,6 +110,27 @@ Executor profile `guided` follows this sequence:
 
 Executor profile `lean` uses the same contract and checks with freedom to order the
 steps. No profile grants extra authority.
+
+## The review contract
+
+A review — a read-only request — has three parts, in this order:
+
+1. **Findings**, each named by its inspection category (duplication, contradiction,
+   unconditional reading, over-broad or under-specific description, procedure without
+   purpose), with the lines it comes from.
+2. **Proposed changes**, each tied to the finding it answers and to the requirement it
+   preserves — the manter/mover/remover decision of the core rule it touches.
+3. **How to verify the effect**: the static size with `scripts/tokens.py <skill> --baseline <old>`,
+   then an A/B of the previous version against the candidate on the same cases per consumer
+   model (`scripts/bench.py`), decided by cost per accepted task inside a quality limit fixed
+   beforehand.
+
+Part 3 reports the protocol's measures — acceptance rate, cost per accepted task, accumulated
+input tokens, latency, triggering precision and coverage — because those are what the harness
+records and what another run can reproduce. A metric invented for the occasion (a readability
+score, lines per execution, time to comprehension) cannot be compared with anything, and this
+protocol rejects file size as a measure of cost. Say plainly which part of the review is
+static diagnosis and which needs a measured run: a review is never evidence of efficiency.
 
 ## Verification and delivery
 

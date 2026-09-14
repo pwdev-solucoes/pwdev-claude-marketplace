@@ -1,0 +1,2344 @@
+{
+  "schema_version": 1,
+  "skill_name": "skill-refactor",
+  "skill_path": "/[USER]/Projetos/skills-ia/pwdev-claude-marketplace/plugins/pwdev-skills/skills/skill-refactor",
+  "baseline": null,
+  "arms": [
+    "candidate",
+    "no_skill"
+  ],
+  "cases_source": "/[USER]/Projetos/skills-ia/pwdev-claude-marketplace/plugins/pwdev-skills/skills/skill-refactor/evals/evals.json",
+  "started_at": "2026-09-14T17:10:27.253903Z",
+  "budget_usd": 10.0,
+  "dry_run": false,
+  "reps": 2,
+  "runtime_versions": {
+    "claude": "2.1.270 (Claude Code)",
+    "codex": "codex-cli 0.153.4",
+    "hermes": "Hermes Agent v0.21.1 (2026.9.7) · upstream 564aef29",
+    "opencode": "1.17.11"
+  },
+  "targets": [
+    {
+      "runtime": "claude",
+      "model": "claude-sonnet-5"
+    },
+    {
+      "runtime": "codex",
+      "model": "gpt-5.6-terra"
+    },
+    {
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free"
+    },
+    {
+      "runtime": "hermes",
+      "model": null
+    }
+  ],
+  "pricing": {
+    "gpt-6-astra": {
+      "input": 10.0,
+      "cached_input": 1.0,
+      "output": 50.0
+    },
+    "gpt-5.6-sol": {
+      "input": 4.0,
+      "cached_input": 0.4,
+      "output": 20.0
+    },
+    "gpt-5.6-terra": {
+      "input": 2.0,
+      "cached_input": 0.2,
+      "output": 12.0
+    },
+    "gpt-5.6-luna": {
+      "input": 0.2,
+      "cached_input": 0.02,
+      "output": 1.2
+    },
+    "z-ai/glm-5.3-flash": {
+      "input": 0.15,
+      "cached_input": 0.03,
+      "output": 0.5,
+      "source": "openrouter",
+      "date": "2026-09-14"
+    },
+    "tencent/hy4-preview": {
+      "input": 0.834,
+      "cached_input": 0.042,
+      "output": 2.501,
+      "source": "openrouter",
+      "date": "2026-09-14"
+    },
+    "deepseek/deepseek-v4.1-flash": {
+      "input": 0.15,
+      "cached_input": 0.003,
+      "output": 0.6,
+      "source": "openrouter",
+      "date": "2026-09-14"
+    }
+  },
+  "per_claude_run_budget_usd": 0.8333,
+  "regraded_at": "2026-09-14T21:15:20.531525Z",
+  "ended_at": "2026-09-14T21:15:20.531919Z",
+  "verdict": "PASS",
+  "runs_planned": 48,
+  "runs_executed": 47,
+  "cost_total_usd": 7.579676,
+  "efficiency_by_model": [
+    {
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "effort": "medium",
+      "config": "candidate",
+      "effort_source": "request",
+      "model_source": "request",
+      "planned": 6,
+      "executed": 6,
+      "not_run": 0,
+      "accepted": 3,
+      "pass_rate_mean": 0.9468,
+      "acceptance_rate": 0.5,
+      "cost_total_usd": 2.830515,
+      "cost_per_success_usd": 0.943505,
+      "tokens_in_mean": 896901.0,
+      "tokens_out_mean": 10620.0,
+      "duration_p50_s": 120.138,
+      "skill_static_tokens": 3004,
+      "reasons": []
+    },
+    {
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "effort": "medium",
+      "config": "no_skill",
+      "effort_source": "request",
+      "model_source": "request",
+      "planned": 6,
+      "executed": 6,
+      "not_run": 0,
+      "accepted": 0,
+      "pass_rate_mean": 0.8449,
+      "acceptance_rate": 0.0,
+      "cost_total_usd": 2.463926,
+      "cost_per_success_usd": null,
+      "tokens_in_mean": 706189.5,
+      "tokens_out_mean": 6957.0,
+      "duration_p50_s": 80.966,
+      "skill_static_tokens": 0,
+      "reasons": []
+    },
+    {
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "effort": "medium",
+      "config": "candidate",
+      "effort_source": "request",
+      "model_source": "request",
+      "planned": 6,
+      "executed": 6,
+      "not_run": 0,
+      "accepted": 2,
+      "pass_rate_mean": 0.8869,
+      "acceptance_rate": 0.3333,
+      "cost_total_usd": 1.169324,
+      "cost_per_success_usd": 0.584662,
+      "tokens_in_mean": 305842.5,
+      "tokens_out_mean": 4880.5,
+      "duration_p50_s": 87.931,
+      "skill_static_tokens": 3004,
+      "reasons": []
+    },
+    {
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "effort": "medium",
+      "config": "no_skill",
+      "effort_source": "request",
+      "model_source": "request",
+      "planned": 6,
+      "executed": 6,
+      "not_run": 0,
+      "accepted": 0,
+      "pass_rate_mean": 0.8015,
+      "acceptance_rate": 0.0,
+      "cost_total_usd": 0.864221,
+      "cost_per_success_usd": null,
+      "tokens_in_mean": 267827.5,
+      "tokens_out_mean": 4985.0,
+      "duration_p50_s": 84.704,
+      "skill_static_tokens": 0,
+      "reasons": []
+    },
+    {
+      "runtime": "hermes",
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "effort": "medium",
+      "config": "candidate",
+      "effort_source": "~/.hermes/config.yaml agent.reasoning_effort",
+      "model_source": "~/.hermes/config.yaml model.default",
+      "planned": 6,
+      "executed": 5,
+      "not_run": 1,
+      "accepted": 2,
+      "pass_rate_mean": 0.938,
+      "acceptance_rate": 0.4,
+      "cost_total_usd": 0.059168,
+      "cost_per_success_usd": 0.029584,
+      "tokens_in_mean": 352861,
+      "tokens_out_mean": 10990,
+      "duration_p50_s": 295.459,
+      "skill_static_tokens": 3004,
+      "reasons": [
+        "timeout after 1800s"
+      ]
+    },
+    {
+      "runtime": "hermes",
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "effort": "medium",
+      "config": "no_skill",
+      "effort_source": "~/.hermes/config.yaml agent.reasoning_effort",
+      "model_source": "~/.hermes/config.yaml model.default",
+      "planned": 6,
+      "executed": 6,
+      "not_run": 0,
+      "accepted": 1,
+      "pass_rate_mean": 0.8531,
+      "acceptance_rate": 0.1667,
+      "cost_total_usd": 0.192522,
+      "cost_per_success_usd": 0.192522,
+      "tokens_in_mean": 1415749.5,
+      "tokens_out_mean": 24673.5,
+      "duration_p50_s": 863.948,
+      "skill_static_tokens": 0,
+      "reasons": []
+    },
+    {
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "effort": "default",
+      "config": "candidate",
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "model_source": "request",
+      "planned": 6,
+      "executed": 6,
+      "not_run": 0,
+      "accepted": 5,
+      "pass_rate_mean": 0.9902,
+      "acceptance_rate": 0.8333,
+      "cost_total_usd": 0.0,
+      "cost_per_success_usd": 0.0,
+      "tokens_in_mean": 471811.0,
+      "tokens_out_mean": 5790.0,
+      "duration_p50_s": 80.145,
+      "skill_static_tokens": 3004,
+      "reasons": []
+    },
+    {
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "effort": "default",
+      "config": "no_skill",
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "model_source": "request",
+      "planned": 6,
+      "executed": 6,
+      "not_run": 0,
+      "accepted": 0,
+      "pass_rate_mean": 0.7986,
+      "acceptance_rate": 0.0,
+      "cost_total_usd": 0.0,
+      "cost_per_success_usd": null,
+      "tokens_in_mean": 199154.0,
+      "tokens_out_mean": 2995.0,
+      "duration_p50_s": 54.587,
+      "skill_static_tokens": 0,
+      "reasons": []
+    }
+  ],
+  "paired_by_case": [
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "arms": {
+        "candidate": {
+          "runs": 2,
+          "accepted": 2,
+          "acceptance_rate": 1.0,
+          "pass_rate_mean": 1.0,
+          "cost_per_success_usd": 0.575411,
+          "context_p50": 1135669.0
+        },
+        "no_skill": {
+          "runs": 2,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.8667,
+          "cost_per_success_usd": null,
+          "context_p50": 786621.5
+        }
+      }
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "arms": {
+        "candidate": {
+          "runs": 2,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.8667,
+          "cost_per_success_usd": null,
+          "context_p50": 621196.0
+        },
+        "no_skill": {
+          "runs": 2,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.8667,
+          "cost_per_success_usd": null,
+          "context_p50": 331231.0
+        }
+      }
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "runtime": "hermes",
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "arms": {
+        "candidate": {
+          "runs": 2,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.9333,
+          "cost_per_success_usd": null,
+          "context_p50": 1039379.0
+        },
+        "no_skill": {
+          "runs": 2,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.9333,
+          "cost_per_success_usd": null,
+          "context_p50": 794856.5
+        }
+      }
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "arms": {
+        "candidate": {
+          "runs": 2,
+          "accepted": 2,
+          "acceptance_rate": 1.0,
+          "pass_rate_mean": 1.0,
+          "cost_per_success_usd": 0.0,
+          "context_p50": 965105.0
+        },
+        "no_skill": {
+          "runs": 2,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.9,
+          "cost_per_success_usd": null,
+          "context_p50": 221124.0
+        }
+      }
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "arms": {
+        "candidate": {
+          "runs": 2,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.9118,
+          "cost_per_success_usd": null,
+          "context_p50": 979292.0
+        },
+        "no_skill": {
+          "runs": 2,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.8824,
+          "cost_per_success_usd": null,
+          "context_p50": 774201.5
+        }
+      }
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "arms": {
+        "candidate": {
+          "runs": 2,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.7941,
+          "cost_per_success_usd": null,
+          "context_p50": 302007.0
+        },
+        "no_skill": {
+          "runs": 2,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.8236,
+          "cost_per_success_usd": null,
+          "context_p50": 318634.5
+        }
+      }
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "runtime": "hermes",
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "arms": {
+        "candidate": {
+          "runs": 1,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.8235,
+          "cost_per_success_usd": null,
+          "context_p50": 352861
+        },
+        "no_skill": {
+          "runs": 2,
+          "accepted": 1,
+          "acceptance_rate": 0.5,
+          "pass_rate_mean": 0.9118,
+          "cost_per_success_usd": 0.115635,
+          "context_p50": 2706059.5
+        }
+      }
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "arms": {
+        "candidate": {
+          "runs": 2,
+          "accepted": 1,
+          "acceptance_rate": 0.5,
+          "pass_rate_mean": 0.9706,
+          "cost_per_success_usd": 0.0,
+          "context_p50": 737079.0
+        },
+        "no_skill": {
+          "runs": 2,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.8529,
+          "cost_per_success_usd": null,
+          "context_p50": 234853.5
+        }
+      }
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "arms": {
+        "candidate": {
+          "runs": 2,
+          "accepted": 1,
+          "acceptance_rate": 0.5,
+          "pass_rate_mean": 0.9285,
+          "cost_per_success_usd": 0.626075,
+          "context_p50": 319158.5
+        },
+        "no_skill": {
+          "runs": 2,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.7857,
+          "cost_per_success_usd": null,
+          "context_p50": 183520.0
+        }
+      }
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "arms": {
+        "candidate": {
+          "runs": 2,
+          "accepted": 2,
+          "acceptance_rate": 1.0,
+          "pass_rate_mean": 1.0,
+          "cost_per_success_usd": 0.067484,
+          "context_p50": 105436.0
+        },
+        "no_skill": {
+          "runs": 2,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.7143,
+          "cost_per_success_usd": null,
+          "context_p50": 92443.5
+        }
+      }
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "runtime": "hermes",
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "arms": {
+        "candidate": {
+          "runs": 2,
+          "accepted": 2,
+          "acceptance_rate": 1.0,
+          "pass_rate_mean": 1.0,
+          "cost_per_success_usd": 0.003438,
+          "context_p50": 106178.0
+        },
+        "no_skill": {
+          "runs": 2,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.7143,
+          "cost_per_success_usd": null,
+          "context_p50": 778128.5
+        }
+      }
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "arms": {
+        "candidate": {
+          "runs": 2,
+          "accepted": 2,
+          "acceptance_rate": 1.0,
+          "pass_rate_mean": 1.0,
+          "cost_per_success_usd": 0.0,
+          "context_p50": 69058.0
+        },
+        "no_skill": {
+          "runs": 2,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.6429,
+          "cost_per_success_usd": null,
+          "context_p50": 31383.0
+        }
+      }
+    }
+  ],
+  "static_tokens": {
+    "candidate": {
+      "skill_dir": "/private/tmp/claude-501/-Users-paulosoares-Projetos-skills-ia-pwdev-claude-marketplace/a4331304-eba8-4c0f-83c0-acfafca7e5d5/scratchpad/round-1/out/versions/with_skill/skill-refactor",
+      "tokens_source": "tiktoken:o200k_base",
+      "files": {
+        "README.md": {
+          "chars": 5436,
+          "bytes": 5446,
+          "words": 684,
+          "lines": 112,
+          "tokens": 1347
+        },
+        "SKILL.md": {
+          "chars": 6956,
+          "bytes": 6980,
+          "words": 1006,
+          "lines": 127,
+          "tokens": 1506
+        },
+        "agents/openai.yaml": {
+          "chars": 230,
+          "bytes": 230,
+          "words": 27,
+          "lines": 4,
+          "tokens": 54
+        },
+        "evals/cases/skill-refactor/cases.draft.json": {
+          "chars": 199842,
+          "bytes": 200043,
+          "words": 19061,
+          "lines": 210,
+          "tokens": 52095
+        },
+        "evals/evals.json": {
+          "chars": 11129,
+          "bytes": 11129,
+          "words": 1276,
+          "lines": 216,
+          "tokens": 2703
+        },
+        "references/evaluation.md": {
+          "chars": 9044,
+          "bytes": 9059,
+          "words": 1295,
+          "lines": 157,
+          "tokens": 2046
+        },
+        "references/refactoring.md": {
+          "chars": 8002,
+          "bytes": 8006,
+          "words": 1153,
+          "lines": 146,
+          "tokens": 1746
+        },
+        "references/runtimes.md": {
+          "chars": 9857,
+          "bytes": 9885,
+          "words": 1350,
+          "lines": 125,
+          "tokens": 2599
+        }
+      },
+      "layers": {
+        "SKILL.md#description": {
+          "chars": 558,
+          "bytes": 560,
+          "words": 83,
+          "lines": 1,
+          "tokens": 107
+        },
+        "SKILL.md#frontmatter": {
+          "chars": 874,
+          "bytes": 876,
+          "words": 102,
+          "lines": 18,
+          "tokens": 247
+        },
+        "SKILL.md#body": {
+          "chars": 6073,
+          "bytes": 6095,
+          "words": 902,
+          "lines": 107,
+          "tokens": 1258
+        },
+        "README.md": {
+          "chars": 5436,
+          "bytes": 5446,
+          "words": 684,
+          "lines": 112,
+          "tokens": 1347
+        },
+        "agents/openai.yaml": {
+          "chars": 230,
+          "bytes": 230,
+          "words": 27,
+          "lines": 4,
+          "tokens": 54
+        },
+        "evals/cases/skill-refactor/cases.draft.json": {
+          "chars": 199842,
+          "bytes": 200043,
+          "words": 19061,
+          "lines": 210,
+          "tokens": 52095
+        },
+        "evals/evals.json": {
+          "chars": 11129,
+          "bytes": 11129,
+          "words": 1276,
+          "lines": 216,
+          "tokens": 2703
+        },
+        "references/evaluation.md": {
+          "chars": 9044,
+          "bytes": 9059,
+          "words": 1295,
+          "lines": 157,
+          "tokens": 2046
+        },
+        "references/refactoring.md": {
+          "chars": 8002,
+          "bytes": 8006,
+          "words": 1153,
+          "lines": 146,
+          "tokens": 1746
+        },
+        "references/runtimes.md": {
+          "chars": 9857,
+          "bytes": 9885,
+          "words": 1350,
+          "lines": 125,
+          "tokens": 2599
+        }
+      },
+      "scenarios": {
+        "review-only (core)": {
+          "members": [
+            "SKILL.md#body"
+          ],
+          "chars": 6073,
+          "bytes": 6095,
+          "words": 902,
+          "lines": 107,
+          "tokens": 1258
+        },
+        "refactor (core + refactoring)": {
+          "members": [
+            "SKILL.md#body",
+            "references/refactoring.md"
+          ],
+          "chars": 14075,
+          "bytes": 14101,
+          "words": 2055,
+          "lines": 253,
+          "tokens": 3004
+        },
+        "refactor + evaluation (core + both references)": {
+          "members": [
+            "SKILL.md#body",
+            "references/refactoring.md",
+            "references/evaluation.md"
+          ],
+          "chars": 23119,
+          "bytes": 23160,
+          "words": 3350,
+          "lines": 410,
+          "tokens": 5050
+        },
+        "everything (worst case)": {
+          "members": [
+            "SKILL.md#body",
+            "references/evaluation.md",
+            "references/refactoring.md",
+            "references/runtimes.md",
+            "README.md",
+            "evals/evals.json"
+          ],
+          "chars": 49541,
+          "bytes": 49620,
+          "words": 6660,
+          "lines": 863,
+          "tokens": 11699
+        }
+      },
+      "total": {
+        "chars": 250496,
+        "bytes": 250778,
+        "words": 25852,
+        "lines": 1097,
+        "tokens": 64096
+      }
+    }
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "candidate",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 1,
+      "run_dir": "eval-1-mixed_consumers_edit/with_skill/run-1-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 160.058,
+      "usage": {
+        "input_tokens": 42,
+        "output_tokens": 13997,
+        "cache_read_tokens": 1368582,
+        "cache_write_tokens": 62514,
+        "reasoning_tokens": 4337,
+        "total_tokens": 1445135,
+        "context_tokens": 1431138
+      },
+      "cost_usd": 0.66489,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 1.0,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "candidate",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 2,
+      "run_dir": "eval-1-mixed_consumers_edit/with_skill/run-2-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 116.593,
+      "usage": {
+        "input_tokens": 26,
+        "output_tokens": 10426,
+        "cache_read_tokens": 784249,
+        "cache_write_tokens": 55925,
+        "reasoning_tokens": 1931,
+        "total_tokens": 850626,
+        "context_tokens": 840200
+      },
+      "cost_usd": 0.485931,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 1.0,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "candidate",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-1-mixed_consumers_edit/with_skill/run-1-codex-gpt-5.6-terra",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 186.49,
+      "usage": {
+        "input_tokens": 51736,
+        "output_tokens": 11843,
+        "cache_read_tokens": 629504,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 3333,
+        "total_tokens": 693083,
+        "context_tokens": 681240
+      },
+      "cost_usd": 0.371489,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 0.8667,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Keeps the csv requirements (action, assignee, due_date and its guard rule)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "candidate",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 2,
+      "run_dir": "eval-1-mixed_consumers_edit/with_skill/run-2-codex-gpt-5.6-terra",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 171.668,
+      "usage": {
+        "input_tokens": 50688,
+        "output_tokens": 10943,
+        "cache_read_tokens": 510464,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 2615,
+        "total_tokens": 572095,
+        "context_tokens": 561152
+      },
+      "cost_usd": 0.334785,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 0.8667,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Keeps the csv requirements (action, assignee, due_date and its guard rule)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "candidate",
+      "runtime": "hermes",
+      "model": null,
+      "rep": 1,
+      "run_dir": "eval-1-mixed_consumers_edit/with_skill/run-1-hermes-default",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 295.459,
+      "usage": {
+        "input_tokens": 97016,
+        "output_tokens": 14274,
+        "cache_read_tokens": 391424,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 8948,
+        "total_tokens": 502714,
+        "context_tokens": 488440
+      },
+      "cost_usd": 0.012231,
+      "cost_source": "estimated",
+      "model_observed": "deepseek/deepseek-v4-flash-0731",
+      "pass_rate": 0.9333,
+      "model_effective": "deepseek/deepseek-v4-flash-0731",
+      "model_source": "~/.hermes/config.yaml model.default",
+      "effort_effective": "medium",
+      "effort_source": "~/.hermes/config.yaml agent.reasoning_effort",
+      "expectations_failed": [
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "candidate",
+      "runtime": "hermes",
+      "model": null,
+      "rep": 2,
+      "run_dir": "eval-1-mixed_consumers_edit/with_skill/run-2-hermes-default",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 941.393,
+      "usage": {
+        "input_tokens": 136198,
+        "output_tokens": 32136,
+        "cache_read_tokens": 1454120,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 23094,
+        "total_tokens": 1622454,
+        "context_tokens": 1590318
+      },
+      "cost_usd": 0.029478,
+      "cost_source": "estimated",
+      "model_observed": "deepseek/deepseek-v4-flash-0731",
+      "pass_rate": 0.9333,
+      "model_effective": "deepseek/deepseek-v4-flash-0731",
+      "model_source": "~/.hermes/config.yaml model.default",
+      "effort_effective": "medium",
+      "effort_source": "~/.hermes/config.yaml agent.reasoning_effort",
+      "expectations_failed": [
+        "csv detail is conditional: inline behind an explicit condition, or in a reference the core loads only on request"
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "candidate",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-1-mixed_consumers_edit/with_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 70.249,
+      "usage": {
+        "input_tokens": 41533,
+        "output_tokens": 5550,
+        "cache_read_tokens": 215808,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 1603,
+        "total_tokens": 262891,
+        "context_tokens": 257341
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 1.0,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "candidate",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 2,
+      "run_dir": "eval-1-mixed_consumers_edit/with_skill/run-2-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 245.404,
+      "usage": {
+        "input_tokens": 69093,
+        "output_tokens": 14190,
+        "cache_read_tokens": 1603776,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 5108,
+        "total_tokens": 1687059,
+        "context_tokens": 1672869
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 1.0,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "no_skill",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 1,
+      "run_dir": "eval-1-mixed_consumers_edit/no_skill/run-1-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 99.595,
+      "usage": {
+        "input_tokens": 26,
+        "output_tokens": 7701,
+        "cache_read_tokens": 806675,
+        "cache_write_tokens": 56255,
+        "reasoning_tokens": 2968,
+        "total_tokens": 870657,
+        "context_tokens": 862956
+      },
+      "cost_usd": 0.464486,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 0.9333,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "no_skill",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 2,
+      "run_dir": "eval-1-mixed_consumers_edit/no_skill/run-2-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 71.866,
+      "usage": {
+        "input_tokens": 22,
+        "output_tokens": 6213,
+        "cache_read_tokens": 656694,
+        "cache_write_tokens": 53571,
+        "reasoning_tokens": 2504,
+        "total_tokens": 716500,
+        "context_tokens": 710287
+      },
+      "cost_usd": 0.408866,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 0.8,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Keeps the csv requirements (action, assignee, due_date and its guard rule)",
+        "csv detail is conditional: inline behind an explicit condition, or in a reference the core loads only on request",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "no_skill",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-1-mixed_consumers_edit/no_skill/run-1-codex-gpt-5.6-terra",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 134.791,
+      "usage": {
+        "input_tokens": 38188,
+        "output_tokens": 8448,
+        "cache_read_tokens": 383488,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 1902,
+        "total_tokens": 430124,
+        "context_tokens": 421676
+      },
+      "cost_usd": 0.25445,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 0.8667,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Keeps the csv requirements (action, assignee, due_date and its guard rule)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "no_skill",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 2,
+      "run_dir": "eval-1-mixed_consumers_edit/no_skill/run-2-codex-gpt-5.6-terra",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 86.793,
+      "usage": {
+        "input_tokens": 30098,
+        "output_tokens": 5223,
+        "cache_read_tokens": 210688,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 638,
+        "total_tokens": 246009,
+        "context_tokens": 240786
+      },
+      "cost_usd": 0.16501,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 0.8667,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Keeps the csv requirements (action, assignee, due_date and its guard rule)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "no_skill",
+      "runtime": "hermes",
+      "model": null,
+      "rep": 1,
+      "run_dir": "eval-1-mixed_consumers_edit/no_skill/run-1-hermes-default",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 848.099,
+      "usage": {
+        "input_tokens": 136573,
+        "output_tokens": 33905,
+        "cache_read_tokens": 1337344,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 25556,
+        "total_tokens": 1507822,
+        "context_tokens": 1473917
+      },
+      "cost_usd": 0.028311,
+      "cost_source": "estimated",
+      "model_observed": "deepseek/deepseek-v4-flash-0731",
+      "pass_rate": 0.9333,
+      "model_effective": "deepseek/deepseek-v4-flash-0731",
+      "model_source": "~/.hermes/config.yaml model.default",
+      "effort_effective": "medium",
+      "effort_source": "~/.hermes/config.yaml agent.reasoning_effort",
+      "expectations_failed": [
+        "csv detail is conditional: inline behind an explicit condition, or in a reference the core loads only on request"
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "no_skill",
+      "runtime": "hermes",
+      "model": null,
+      "rep": 2,
+      "run_dir": "eval-1-mixed_consumers_edit/no_skill/run-2-hermes-default",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 73.984,
+      "usage": {
+        "input_tokens": 39252,
+        "output_tokens": 6338,
+        "cache_read_tokens": 76544,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 3383,
+        "total_tokens": 122134,
+        "context_tokens": 115796
+      },
+      "cost_usd": 0.004034,
+      "cost_source": "estimated",
+      "model_observed": "deepseek/deepseek-v4-flash-0731",
+      "pass_rate": 0.9333,
+      "model_effective": "deepseek/deepseek-v4-flash-0731",
+      "model_source": "~/.hermes/config.yaml model.default",
+      "effort_effective": "medium",
+      "effort_source": "~/.hermes/config.yaml agent.reasoning_effort",
+      "expectations_failed": [
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "no_skill",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-1-mixed_consumers_edit/no_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 58.013,
+      "usage": {
+        "input_tokens": 57909,
+        "output_tokens": 4178,
+        "cache_read_tokens": 141824,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 2167,
+        "total_tokens": 203911,
+        "context_tokens": 199733
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.8667,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "csv detail is conditional: inline behind an explicit condition, or in a reference the core loads only on request",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "no_skill",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 2,
+      "run_dir": "eval-1-mixed_consumers_edit/no_skill/run-2-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 96.926,
+      "usage": {
+        "input_tokens": 45075,
+        "output_tokens": 4269,
+        "cache_read_tokens": 197440,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 3818,
+        "total_tokens": 246784,
+        "context_tokens": 242515
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.9333,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "candidate",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 1,
+      "run_dir": "eval-2-unknown_model_explicit_override/with_skill/run-1-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 131.721,
+      "usage": {
+        "input_tokens": 28,
+        "output_tokens": 10916,
+        "cache_read_tokens": 891485,
+        "cache_write_tokens": 62089,
+        "reasoning_tokens": 3465,
+        "total_tokens": 964518,
+        "context_tokens": 953602
+      },
+      "cost_usd": 0.53692,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 0.8824,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Keeps the csv requirements (action, assignee, due_date and its guard rule)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "candidate",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 2,
+      "run_dir": "eval-2-unknown_model_explicit_override/with_skill/run-2-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 123.683,
+      "usage": {
+        "input_tokens": 32,
+        "output_tokens": 10814,
+        "cache_read_tokens": 950620,
+        "cache_write_tokens": 54330,
+        "reasoning_tokens": 3526,
+        "total_tokens": 1015796,
+        "context_tokens": 1004982
+      },
+      "cost_usd": 0.516699,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 0.9412,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "candidate",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-2-unknown_model_explicit_override/with_skill/run-1-codex-gpt-5.6-terra",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 36.757,
+      "usage": {
+        "input_tokens": 22506,
+        "output_tokens": 1685,
+        "cache_read_tokens": 105216,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 501,
+        "total_tokens": 129407,
+        "context_tokens": 127722
+      },
+      "cost_usd": 0.086275,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 0.7647,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Target was edited (not only recommended)",
+        "Removes verbatim repetition from the core",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark",
+        "States the executor and consumer profiles separately, both guided by default"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "candidate",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 2,
+      "run_dir": "eval-2-unknown_model_explicit_override/with_skill/run-2-codex-gpt-5.6-terra",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 123.725,
+      "usage": {
+        "input_tokens": 30596,
+        "output_tokens": 7623,
+        "cache_read_tokens": 445696,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 1797,
+        "total_tokens": 483915,
+        "context_tokens": 476292
+      },
+      "cost_usd": 0.241807,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 0.8235,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Keeps the csv requirements (action, assignee, due_date and its guard rule)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark",
+        "States the executor and consumer profiles separately, both guided by default"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "candidate",
+      "runtime": "hermes",
+      "model": null,
+      "rep": 1,
+      "run_dir": "eval-2-unknown_model_explicit_override/with_skill/run-1-hermes-default",
+      "status": "BLOCKED",
+      "reason": "timeout after 1800s",
+      "exit_code": null,
+      "duration_seconds": 1800.036,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": null,
+      "pass_rate": 0.7059,
+      "model_effective": "deepseek/deepseek-v4-flash-0731",
+      "model_source": "~/.hermes/config.yaml model.default",
+      "effort_effective": "medium",
+      "effort_source": "~/.hermes/config.yaml agent.reasoning_effort",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Keeps the csv requirements (action, assignee, due_date and its guard rule)",
+        "csv detail is conditional: inline behind an explicit condition, or in a reference the core loads only on request",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark",
+        "States the executor and consumer profiles separately, both guided by default"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "candidate",
+      "runtime": "hermes",
+      "model": null,
+      "rep": 2,
+      "run_dir": "eval-2-unknown_model_explicit_override/with_skill/run-2-hermes-default",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 343.846,
+      "usage": {
+        "input_tokens": 104797,
+        "output_tokens": 10990,
+        "cache_read_tokens": 248064,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 4910,
+        "total_tokens": 363851,
+        "context_tokens": 352861
+      },
+      "cost_usd": 0.010583,
+      "cost_source": "estimated",
+      "model_observed": "deepseek/deepseek-v4-flash-0731",
+      "pass_rate": 0.8235,
+      "model_effective": "deepseek/deepseek-v4-flash-0731",
+      "model_source": "~/.hermes/config.yaml model.default",
+      "effort_effective": "medium",
+      "effort_source": "~/.hermes/config.yaml agent.reasoning_effort",
+      "expectations_failed": [
+        "Keeps the csv requirements (action, assignee, due_date and its guard rule)",
+        "csv detail is conditional: inline behind an explicit condition, or in a reference the core loads only on request",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "candidate",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-2-unknown_model_explicit_override/with_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 92.923,
+      "usage": {
+        "input_tokens": 61925,
+        "output_tokens": 7262,
+        "cache_read_tokens": 725952,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 4163,
+        "total_tokens": 795139,
+        "context_tokens": 787877
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.9412,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "candidate",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 2,
+      "run_dir": "eval-2-unknown_model_explicit_override/with_skill/run-2-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 90.042,
+      "usage": {
+        "input_tokens": 102857,
+        "output_tokens": 6030,
+        "cache_read_tokens": 583424,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 4025,
+        "total_tokens": 692311,
+        "context_tokens": 686281
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 1.0,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "no_skill",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 1,
+      "run_dir": "eval-2-unknown_model_explicit_override/no_skill/run-1-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 90.066,
+      "usage": {
+        "input_tokens": 18,
+        "output_tokens": 8010,
+        "cache_read_tokens": 754661,
+        "cache_write_tokens": 91632,
+        "reasoning_tokens": 3582,
+        "total_tokens": 854321,
+        "context_tokens": 846311
+      },
+      "cost_usd": 0.598632,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 0.8824,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark",
+        "States the executor and consumer profiles separately, both guided by default"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "no_skill",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 2,
+      "run_dir": "eval-2-unknown_model_explicit_override/no_skill/run-2-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 100.142,
+      "usage": {
+        "input_tokens": 16,
+        "output_tokens": 7876,
+        "cache_read_tokens": 612633,
+        "cache_write_tokens": 89443,
+        "reasoning_tokens": 4820,
+        "total_tokens": 709968,
+        "context_tokens": 702092
+      },
+      "cost_usd": 0.560137,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 0.8824,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark",
+        "States the executor and consumer profiles separately, both guided by default"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "no_skill",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-2-unknown_model_explicit_override/no_skill/run-1-codex-gpt-5.6-terra",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 107.988,
+      "usage": {
+        "input_tokens": 26752,
+        "output_tokens": 6173,
+        "cache_read_tokens": 315648,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 1454,
+        "total_tokens": 348573,
+        "context_tokens": 342400
+      },
+      "cost_usd": 0.19071,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 0.7647,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Keeps the csv requirements (action, assignee, due_date and its guard rule)",
+        "csv detail is conditional: inline behind an explicit condition, or in a reference the core loads only on request",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark",
+        "States the executor and consumer profiles separately, both guided by default"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "no_skill",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 2,
+      "run_dir": "eval-2-unknown_model_explicit_override/no_skill/run-2-codex-gpt-5.6-terra",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 82.614,
+      "usage": {
+        "input_tokens": 22997,
+        "output_tokens": 4747,
+        "cache_read_tokens": 271872,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 958,
+        "total_tokens": 299616,
+        "context_tokens": 294869
+      },
+      "cost_usd": 0.157332,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 0.8824,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark",
+        "States the executor and consumer profiles separately, both guided by default"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "no_skill",
+      "runtime": "hermes",
+      "model": null,
+      "rep": 1,
+      "run_dir": "eval-2-unknown_model_explicit_override/no_skill/run-1-hermes-default",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 879.798,
+      "usage": {
+        "input_tokens": 251918,
+        "output_tokens": 24581,
+        "cache_read_tokens": 1105664,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 15872,
+        "total_tokens": 1382163,
+        "context_tokens": 1357582
+      },
+      "cost_usd": 0.031333,
+      "cost_source": "estimated",
+      "model_observed": "deepseek/deepseek-v4-flash-0731",
+      "pass_rate": 1.0,
+      "model_effective": "deepseek/deepseek-v4-flash-0731",
+      "model_source": "~/.hermes/config.yaml model.default",
+      "effort_effective": "medium",
+      "effort_source": "~/.hermes/config.yaml agent.reasoning_effort",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "no_skill",
+      "runtime": "hermes",
+      "model": null,
+      "rep": 2,
+      "run_dir": "eval-2-unknown_model_explicit_override/no_skill/run-2-hermes-default",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 996.426,
+      "usage": {
+        "input_tokens": 675904,
+        "output_tokens": 26705,
+        "cache_read_tokens": 3378633,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 11363,
+        "total_tokens": 4081242,
+        "context_tokens": 4054537
+      },
+      "cost_usd": 0.084302,
+      "cost_source": "estimated",
+      "model_observed": "deepseek/deepseek-v4-flash-0731",
+      "pass_rate": 0.8235,
+      "model_effective": "deepseek/deepseek-v4-flash-0731",
+      "model_source": "~/.hermes/config.yaml model.default",
+      "effort_effective": "medium",
+      "effort_source": "~/.hermes/config.yaml agent.reasoning_effort",
+      "expectations_failed": [
+        "Keeps the csv requirements (action, assignee, due_date and its guard rule)",
+        "csv detail is conditional: inline behind an explicit condition, or in a reference the core loads only on request",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "no_skill",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-2-unknown_model_explicit_override/no_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 51.161,
+      "usage": {
+        "input_tokens": 41884,
+        "output_tokens": 2767,
+        "cache_read_tokens": 229248,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 6005,
+        "total_tokens": 273899,
+        "context_tokens": 271132
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.8824,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark",
+        "States the executor and consumer profiles separately, both guided by default"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "no_skill",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 2,
+      "run_dir": "eval-2-unknown_model_explicit_override/no_skill/run-2-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 61.927,
+      "usage": {
+        "input_tokens": 28399,
+        "output_tokens": 3223,
+        "cache_read_tokens": 170176,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 4020,
+        "total_tokens": 201798,
+        "context_tokens": 198575
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.8235,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "Removes verbatim repetition from the core",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark",
+        "States the executor and consumer profiles separately, both guided by default"
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "candidate",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/with_skill/run-1-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 80.177,
+      "usage": {
+        "input_tokens": 10,
+        "output_tokens": 5811,
+        "cache_read_tokens": 242451,
+        "cache_write_tokens": 48971,
+        "reasoning_tokens": 3078,
+        "total_tokens": 297243,
+        "context_tokens": 291432
+      },
+      "cost_usd": 0.303517,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 0.8571,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Review separates static validation from measured efficiency"
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "candidate",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 2,
+      "run_dir": "eval-3-review_only/with_skill/run-2-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 77.545,
+      "usage": {
+        "input_tokens": 12,
+        "output_tokens": 6501,
+        "cache_read_tokens": 297628,
+        "cache_write_tokens": 49245,
+        "reasoning_tokens": 3249,
+        "total_tokens": 353386,
+        "context_tokens": 346885
+      },
+      "cost_usd": 0.322558,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 1.0,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "candidate",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/with_skill/run-1-codex-gpt-5.6-terra",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 33.08,
+      "usage": {
+        "input_tokens": 11735,
+        "output_tokens": 1612,
+        "cache_read_tokens": 63744,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 652,
+        "total_tokens": 77091,
+        "context_tokens": 75479
+      },
+      "cost_usd": 0.055563,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 1.0,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "candidate",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 2,
+      "run_dir": "eval-3-review_only/with_skill/run-2-codex-gpt-5.6-terra",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 52.138,
+      "usage": {
+        "input_tokens": 14817,
+        "output_tokens": 2138,
+        "cache_read_tokens": 120576,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 603,
+        "total_tokens": 137531,
+        "context_tokens": 135393
+      },
+      "cost_usd": 0.079405,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 1.0,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "candidate",
+      "runtime": "hermes",
+      "model": null,
+      "rep": 1,
+      "run_dir": "eval-3-review_only/with_skill/run-1-hermes-default",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 120.803,
+      "usage": {
+        "input_tokens": 23954,
+        "output_tokens": 5044,
+        "cache_read_tokens": 72192,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 2681,
+        "total_tokens": 101190,
+        "context_tokens": 96146
+      },
+      "cost_usd": 0.002909,
+      "cost_source": "estimated",
+      "model_observed": "deepseek/deepseek-v4-flash-0731",
+      "pass_rate": 1.0,
+      "model_effective": "deepseek/deepseek-v4-flash-0731",
+      "model_source": "~/.hermes/config.yaml model.default",
+      "effort_effective": "medium",
+      "effort_source": "~/.hermes/config.yaml agent.reasoning_effort",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "candidate",
+      "runtime": "hermes",
+      "model": null,
+      "rep": 2,
+      "run_dir": "eval-3-review_only/with_skill/run-2-hermes-default",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 58.767,
+      "usage": {
+        "input_tokens": 42226,
+        "output_tokens": 4544,
+        "cache_read_tokens": 73984,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 2636,
+        "total_tokens": 120754,
+        "context_tokens": 116210
+      },
+      "cost_usd": 0.003967,
+      "cost_source": "estimated",
+      "model_observed": "deepseek/deepseek-v4-flash-0731",
+      "pass_rate": 1.0,
+      "model_effective": "deepseek/deepseek-v4-flash-0731",
+      "model_source": "~/.hermes/config.yaml model.default",
+      "effort_effective": "medium",
+      "effort_source": "~/.hermes/config.yaml agent.reasoning_effort",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "candidate",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/with_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 17.164,
+      "usage": {
+        "input_tokens": 19368,
+        "output_tokens": 2218,
+        "cache_read_tokens": 46656,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 1050,
+        "total_tokens": 68242,
+        "context_tokens": 66024
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 1.0,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "candidate",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 2,
+      "run_dir": "eval-3-review_only/with_skill/run-2-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 17.375,
+      "usage": {
+        "input_tokens": 16476,
+        "output_tokens": 1197,
+        "cache_read_tokens": 55616,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 1229,
+        "total_tokens": 73289,
+        "context_tokens": 72092
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 1.0,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "no_skill",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/no_skill/run-1-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 43.988,
+      "usage": {
+        "input_tokens": 6,
+        "output_tokens": 3145,
+        "cache_read_tokens": 118585,
+        "cache_write_tokens": 35550,
+        "reasoning_tokens": 1543,
+        "total_tokens": 157286,
+        "context_tokens": 154141
+      },
+      "cost_usd": 0.198392,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 0.7143,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Review proposes a comparison against the previous version on the same cases",
+        "Review separates static validation from measured efficiency"
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "no_skill",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 2,
+      "run_dir": "eval-3-review_only/no_skill/run-2-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 59.441,
+      "usage": {
+        "input_tokens": 8,
+        "output_tokens": 4429,
+        "cache_read_tokens": 174600,
+        "cache_write_tokens": 38291,
+        "reasoning_tokens": 2496,
+        "total_tokens": 217328,
+        "context_tokens": 212899
+      },
+      "cost_usd": 0.233413,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 0.8571,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Review proposes a comparison against the previous version on the same cases"
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "no_skill",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/no_skill/run-1-codex-gpt-5.6-terra",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 32.704,
+      "usage": {
+        "input_tokens": 7940,
+        "output_tokens": 1572,
+        "cache_read_tokens": 86016,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 298,
+        "total_tokens": 95528,
+        "context_tokens": 93956
+      },
+      "cost_usd": 0.051947,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 0.5714,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Review proposes a comparison against the previous version on the same cases",
+        "Review separates static validation from measured efficiency",
+        "Review measures with the protocol's own metrics instead of inventing one"
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "no_skill",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 2,
+      "run_dir": "eval-3-review_only/no_skill/run-2-codex-gpt-5.6-terra",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 30.149,
+      "usage": {
+        "input_tokens": 6963,
+        "output_tokens": 1171,
+        "cache_read_tokens": 83968,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 220,
+        "total_tokens": 92102,
+        "context_tokens": 90931
+      },
+      "cost_usd": 0.044772,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 0.8571,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Review proposes a comparison against the previous version on the same cases"
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "no_skill",
+      "runtime": "hermes",
+      "model": null,
+      "rep": 1,
+      "run_dir": "eval-3-review_only/no_skill/run-1-hermes-default",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 1047.697,
+      "usage": {
+        "input_tokens": 440053,
+        "output_tokens": 24766,
+        "cache_read_tokens": 1068118,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 14831,
+        "total_tokens": 1532937,
+        "context_tokens": 1508171
+      },
+      "cost_usd": 0.042193,
+      "cost_source": "estimated",
+      "model_observed": "deepseek/deepseek-v4-flash-0731",
+      "pass_rate": 0.8571,
+      "model_effective": "deepseek/deepseek-v4-flash-0731",
+      "model_source": "~/.hermes/config.yaml model.default",
+      "effort_effective": "medium",
+      "effort_source": "~/.hermes/config.yaml agent.reasoning_effort",
+      "expectations_failed": [
+        "Review separates static validation from measured efficiency"
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "no_skill",
+      "runtime": "hermes",
+      "model": null,
+      "rep": 2,
+      "run_dir": "eval-3-review_only/no_skill/run-2-hermes-default",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 51.841,
+      "usage": {
+        "input_tokens": 28728,
+        "output_tokens": 3275,
+        "cache_read_tokens": 19358,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 1960,
+        "total_tokens": 51361,
+        "context_tokens": 48086
+      },
+      "cost_usd": 0.002349,
+      "cost_source": "estimated",
+      "model_observed": "deepseek/deepseek-v4-flash-0731",
+      "pass_rate": 0.5714,
+      "model_effective": "deepseek/deepseek-v4-flash-0731",
+      "model_source": "~/.hermes/config.yaml model.default",
+      "effort_effective": "medium",
+      "effort_source": "~/.hermes/config.yaml agent.reasoning_effort",
+      "expectations_failed": [
+        "Review proposes a comparison against the previous version on the same cases",
+        "Review separates static validation from measured efficiency",
+        "Review measures with the protocol's own metrics instead of inventing one"
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "no_skill",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/no_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 11.382,
+      "usage": {
+        "input_tokens": 10637,
+        "output_tokens": 832,
+        "cache_read_tokens": 14016,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 466,
+        "total_tokens": 25485,
+        "context_tokens": 24653
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.7143,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "Review separates static validation from measured efficiency",
+        "Review measures with the protocol's own metrics instead of inventing one"
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "no_skill",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 2,
+      "run_dir": "eval-3-review_only/no_skill/run-2-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 14.431,
+      "usage": {
+        "input_tokens": 21089,
+        "output_tokens": 990,
+        "cache_read_tokens": 17024,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 696,
+        "total_tokens": 39103,
+        "context_tokens": 38113
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.5714,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "Review proposes a comparison against the previous version on the same cases",
+        "Review separates static validation from measured efficiency",
+        "Review measures with the protocol's own metrics instead of inventing one"
+      ]
+    }
+  ],
+  "skill_creator": {
+    "aggregate": {
+      "exit_code": 0,
+      "stderr": ""
+    },
+    "viewer": {
+      "exit_code": 0,
+      "stderr": ""
+    }
+  }
+}

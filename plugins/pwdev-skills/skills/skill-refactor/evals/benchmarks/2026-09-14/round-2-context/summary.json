@@ -1,0 +1,1081 @@
+{
+  "schema_version": 1,
+  "skill_name": "skill-refactor",
+  "skill_path": "/[USER]/Projetos/skills-ia/pwdev-claude-marketplace/plugins/pwdev-skills/skills/skill-refactor",
+  "baseline": "/private/tmp/claude-501/-Users-paulosoares-Projetos-skills-ia-pwdev-claude-marketplace/a4331304-eba8-4c0f-83c0-acfafca7e5d5/scratchpad/skill-refactor-0.2.1",
+  "arms": [
+    "candidate",
+    "baseline",
+    "no_skill"
+  ],
+  "cases_source": "evals/cases/skill-refactor/cases.json",
+  "started_at": "2026-09-14T21:00:01.015255Z",
+  "budget_usd": 1.0,
+  "dry_run": false,
+  "reps": 1,
+  "runtime_versions": {
+    "codex": "codex-cli 0.153.4",
+    "opencode": "1.18.31"
+  },
+  "targets": [
+    {
+      "runtime": "codex",
+      "model": "gpt-5.6-terra"
+    },
+    {
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free"
+    }
+  ],
+  "pricing": {},
+  "per_claude_run_budget_usd": null,
+  "regraded_at": "2026-09-14T21:15:21.172101Z",
+  "ended_at": "2026-09-14T21:15:21.172385Z",
+  "verdict": "PASS",
+  "runs_planned": 18,
+  "runs_executed": 1,
+  "cost_total_usd": 0.0,
+  "efficiency_by_model": [
+    {
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "effort": "medium",
+      "config": "baseline",
+      "effort_source": "request",
+      "model_source": "request",
+      "planned": 3,
+      "executed": 0,
+      "not_run": 3,
+      "accepted": 0,
+      "pass_rate_mean": null,
+      "acceptance_rate": null,
+      "cost_total_usd": null,
+      "cost_per_success_usd": null,
+      "tokens_in_mean": null,
+      "tokens_out_mean": null,
+      "duration_p50_s": null,
+      "skill_static_tokens": 3004,
+      "reasons": [
+        "runtime quota or usage limit: hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 5:34 AM.\"}"
+      ]
+    },
+    {
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "effort": "medium",
+      "config": "candidate",
+      "effort_source": "request",
+      "model_source": "request",
+      "planned": 3,
+      "executed": 0,
+      "not_run": 3,
+      "accepted": 0,
+      "pass_rate_mean": null,
+      "acceptance_rate": null,
+      "cost_total_usd": null,
+      "cost_per_success_usd": null,
+      "tokens_in_mean": null,
+      "tokens_out_mean": null,
+      "duration_p50_s": null,
+      "skill_static_tokens": 3025,
+      "reasons": [
+        "runtime quota or usage limit: hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 5:34 AM.\"}"
+      ]
+    },
+    {
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "effort": "medium",
+      "config": "no_skill",
+      "effort_source": "request",
+      "model_source": "request",
+      "planned": 3,
+      "executed": 0,
+      "not_run": 3,
+      "accepted": 0,
+      "pass_rate_mean": null,
+      "acceptance_rate": null,
+      "cost_total_usd": null,
+      "cost_per_success_usd": null,
+      "tokens_in_mean": null,
+      "tokens_out_mean": null,
+      "duration_p50_s": null,
+      "skill_static_tokens": 0,
+      "reasons": [
+        "runtime quota or usage limit: hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 5:34 AM.\"}"
+      ]
+    },
+    {
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "effort": "default",
+      "config": "baseline",
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "model_source": "request",
+      "planned": 3,
+      "executed": 1,
+      "not_run": 2,
+      "accepted": 0,
+      "pass_rate_mean": 0.9333,
+      "acceptance_rate": 0.0,
+      "cost_total_usd": 0.0,
+      "cost_per_success_usd": null,
+      "tokens_in_mean": 232822,
+      "tokens_out_mean": 5065,
+      "duration_p50_s": 81.789,
+      "skill_static_tokens": 3004,
+      "reasons": [
+        "provider unavailable: Cannot connect to API: The socket connection was closed unexpectedly. For more information, pass `verbose: true` in the second argument to fetch()\",\"isRetryable\":true,\"metadata\":{\"u",
+        "runtime quota or usage limit: Rate limit exceeded. Please try again later.\",\"statusCode\":429,\"isRetryable\":true,\"responseHeaders\":{\"cf-placement\":\"remote-ORD\",\"cf-ray\":\"a3b25f4eca0f278e-CLT\",\"connecti"
+      ]
+    },
+    {
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "effort": "default",
+      "config": "candidate",
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "model_source": "request",
+      "planned": 3,
+      "executed": 0,
+      "not_run": 3,
+      "accepted": 0,
+      "pass_rate_mean": null,
+      "acceptance_rate": null,
+      "cost_total_usd": null,
+      "cost_per_success_usd": null,
+      "tokens_in_mean": null,
+      "tokens_out_mean": null,
+      "duration_p50_s": null,
+      "skill_static_tokens": 3025,
+      "reasons": [
+        "runtime quota or usage limit: Rate limit exceeded. Please try again later.\",\"statusCode\":429,\"isRetryable\":true,\"responseHeaders\":{\"cf-placement\":\"remote-ORD\",\"cf-ray\":\"a3b2566b5f04129c-CLT\",\"connecti",
+        "runtime quota or usage limit: Rate limit exceeded. Please try again later.\",\"statusCode\":429,\"isRetryable\":true,\"responseHeaders\":{\"cf-placement\":\"remote-ORD\",\"cf-ray\":\"a3b25bcbbd3c1439-PIT\",\"connecti",
+        "runtime quota or usage limit: Rate limit exceeded. Please try again later.\",\"statusCode\":429,\"isRetryable\":true,\"responseHeaders\":{\"cf-placement\":\"remote-ORD\",\"cf-ray\":\"a3b26134dc655670-PIT\",\"connecti"
+      ]
+    },
+    {
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "effort": "default",
+      "config": "no_skill",
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "model_source": "request",
+      "planned": 3,
+      "executed": 0,
+      "not_run": 3,
+      "accepted": 0,
+      "pass_rate_mean": null,
+      "acceptance_rate": null,
+      "cost_total_usd": null,
+      "cost_per_success_usd": null,
+      "tokens_in_mean": null,
+      "tokens_out_mean": null,
+      "duration_p50_s": null,
+      "skill_static_tokens": 0,
+      "reasons": [
+        "runtime quota or usage limit: Rate limit exceeded. Please try again later.\",\"statusCode\":429,\"isRetryable\":true,\"responseHeaders\":{\"cf-placement\":\"remote-ORD\",\"cf-ray\":\"a3b258252a93710f-PIT\",\"connecti",
+        "runtime quota or usage limit: Rate limit exceeded. Please try again later.\",\"statusCode\":429,\"isRetryable\":true,\"responseHeaders\":{\"cf-placement\":\"remote-ORD\",\"cf-ray\":\"a3b25d8d7edf278e-CLT\",\"connecti",
+        "runtime quota or usage limit: Rate limit exceeded. Please try again later.\",\"statusCode\":429,\"isRetryable\":true,\"responseHeaders\":{\"cf-placement\":\"remote-ORD\",\"cf-ray\":\"a3b26306a845aaa9-PHL\",\"connecti"
+      ]
+    }
+  ],
+  "paired_by_case": [
+    {
+      "eval_id": 4,
+      "eval_name": "trim_duplicated_core_and_guide_profiles",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "arms": {
+        "baseline": {
+          "runs": 1,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.9333,
+          "cost_per_success_usd": null,
+          "context_p50": 232822
+        }
+      }
+    }
+  ],
+  "static_tokens": {
+    "candidate": {
+      "skill_dir": "/private/tmp/claude-501/-Users-paulosoares-Projetos-skills-ia-pwdev-claude-marketplace/a4331304-eba8-4c0f-83c0-acfafca7e5d5/scratchpad/round-2/out-b/versions/with_skill/skill-refactor",
+      "tokens_source": "tiktoken:o200k_base",
+      "files": {
+        "README.md": {
+          "chars": 6136,
+          "bytes": 6146,
+          "words": 754,
+          "lines": 121,
+          "tokens": 1549
+        },
+        "SKILL.md": {
+          "chars": 5751,
+          "bytes": 5773,
+          "words": 824,
+          "lines": 105,
+          "tokens": 1246
+        },
+        "agents/openai.yaml": {
+          "chars": 230,
+          "bytes": 230,
+          "words": 27,
+          "lines": 4,
+          "tokens": 54
+        },
+        "evals/evals.json": {
+          "chars": 13964,
+          "bytes": 13967,
+          "words": 1453,
+          "lines": 330,
+          "tokens": 3411
+        },
+        "references/evaluation.md": {
+          "chars": 9044,
+          "bytes": 9059,
+          "words": 1295,
+          "lines": 157,
+          "tokens": 2046
+        },
+        "references/refactoring.md": {
+          "chars": 9329,
+          "bytes": 9343,
+          "words": 1354,
+          "lines": 167,
+          "tokens": 2027
+        },
+        "references/runtimes.md": {
+          "chars": 10645,
+          "bytes": 10675,
+          "words": 1470,
+          "lines": 137,
+          "tokens": 2773
+        }
+      },
+      "layers": {
+        "SKILL.md#description": {
+          "chars": 558,
+          "bytes": 560,
+          "words": 83,
+          "lines": 1,
+          "tokens": 107
+        },
+        "SKILL.md#frontmatter": {
+          "chars": 874,
+          "bytes": 876,
+          "words": 102,
+          "lines": 18,
+          "tokens": 247
+        },
+        "SKILL.md#body": {
+          "chars": 4868,
+          "bytes": 4888,
+          "words": 720,
+          "lines": 85,
+          "tokens": 998
+        },
+        "README.md": {
+          "chars": 6136,
+          "bytes": 6146,
+          "words": 754,
+          "lines": 121,
+          "tokens": 1549
+        },
+        "agents/openai.yaml": {
+          "chars": 230,
+          "bytes": 230,
+          "words": 27,
+          "lines": 4,
+          "tokens": 54
+        },
+        "evals/evals.json": {
+          "chars": 13964,
+          "bytes": 13967,
+          "words": 1453,
+          "lines": 330,
+          "tokens": 3411
+        },
+        "references/evaluation.md": {
+          "chars": 9044,
+          "bytes": 9059,
+          "words": 1295,
+          "lines": 157,
+          "tokens": 2046
+        },
+        "references/refactoring.md": {
+          "chars": 9329,
+          "bytes": 9343,
+          "words": 1354,
+          "lines": 167,
+          "tokens": 2027
+        },
+        "references/runtimes.md": {
+          "chars": 10645,
+          "bytes": 10675,
+          "words": 1470,
+          "lines": 137,
+          "tokens": 2773
+        }
+      },
+      "scenarios": {
+        "review-only (core)": {
+          "members": [
+            "SKILL.md#body"
+          ],
+          "chars": 4868,
+          "bytes": 4888,
+          "words": 720,
+          "lines": 85,
+          "tokens": 998
+        },
+        "refactor (core + refactoring)": {
+          "members": [
+            "SKILL.md#body",
+            "references/refactoring.md"
+          ],
+          "chars": 14197,
+          "bytes": 14231,
+          "words": 2074,
+          "lines": 252,
+          "tokens": 3025
+        },
+        "refactor + evaluation (core + both references)": {
+          "members": [
+            "SKILL.md#body",
+            "references/refactoring.md",
+            "references/evaluation.md"
+          ],
+          "chars": 23241,
+          "bytes": 23290,
+          "words": 3369,
+          "lines": 409,
+          "tokens": 5071
+        },
+        "everything (worst case)": {
+          "members": [
+            "SKILL.md#body",
+            "references/evaluation.md",
+            "references/refactoring.md",
+            "references/runtimes.md",
+            "README.md",
+            "evals/evals.json"
+          ],
+          "chars": 53986,
+          "bytes": 54078,
+          "words": 7046,
+          "lines": 997,
+          "tokens": 12804
+        }
+      },
+      "total": {
+        "chars": 55099,
+        "bytes": 55193,
+        "words": 7177,
+        "lines": 1021,
+        "tokens": 13106
+      }
+    },
+    "baseline": {
+      "skill_dir": "/private/tmp/claude-501/-Users-paulosoares-Projetos-skills-ia-pwdev-claude-marketplace/a4331304-eba8-4c0f-83c0-acfafca7e5d5/scratchpad/round-2/out-b/versions/without_skill/skill-refactor-0.2.1",
+      "tokens_source": "tiktoken:o200k_base",
+      "files": {
+        "README.md": {
+          "chars": 5436,
+          "bytes": 5446,
+          "words": 684,
+          "lines": 112,
+          "tokens": 1347
+        },
+        "SKILL.md": {
+          "chars": 6956,
+          "bytes": 6980,
+          "words": 1006,
+          "lines": 127,
+          "tokens": 1506
+        },
+        "agents/openai.yaml": {
+          "chars": 230,
+          "bytes": 230,
+          "words": 27,
+          "lines": 4,
+          "tokens": 54
+        },
+        "evals/evals.json": {
+          "chars": 11129,
+          "bytes": 11129,
+          "words": 1276,
+          "lines": 216,
+          "tokens": 2703
+        },
+        "references/evaluation.md": {
+          "chars": 9044,
+          "bytes": 9059,
+          "words": 1295,
+          "lines": 157,
+          "tokens": 2046
+        },
+        "references/refactoring.md": {
+          "chars": 8002,
+          "bytes": 8006,
+          "words": 1153,
+          "lines": 146,
+          "tokens": 1746
+        },
+        "references/runtimes.md": {
+          "chars": 9857,
+          "bytes": 9885,
+          "words": 1350,
+          "lines": 125,
+          "tokens": 2599
+        }
+      },
+      "layers": {
+        "SKILL.md#description": {
+          "chars": 558,
+          "bytes": 560,
+          "words": 83,
+          "lines": 1,
+          "tokens": 107
+        },
+        "SKILL.md#frontmatter": {
+          "chars": 874,
+          "bytes": 876,
+          "words": 102,
+          "lines": 18,
+          "tokens": 247
+        },
+        "SKILL.md#body": {
+          "chars": 6073,
+          "bytes": 6095,
+          "words": 902,
+          "lines": 107,
+          "tokens": 1258
+        },
+        "README.md": {
+          "chars": 5436,
+          "bytes": 5446,
+          "words": 684,
+          "lines": 112,
+          "tokens": 1347
+        },
+        "agents/openai.yaml": {
+          "chars": 230,
+          "bytes": 230,
+          "words": 27,
+          "lines": 4,
+          "tokens": 54
+        },
+        "evals/evals.json": {
+          "chars": 11129,
+          "bytes": 11129,
+          "words": 1276,
+          "lines": 216,
+          "tokens": 2703
+        },
+        "references/evaluation.md": {
+          "chars": 9044,
+          "bytes": 9059,
+          "words": 1295,
+          "lines": 157,
+          "tokens": 2046
+        },
+        "references/refactoring.md": {
+          "chars": 8002,
+          "bytes": 8006,
+          "words": 1153,
+          "lines": 146,
+          "tokens": 1746
+        },
+        "references/runtimes.md": {
+          "chars": 9857,
+          "bytes": 9885,
+          "words": 1350,
+          "lines": 125,
+          "tokens": 2599
+        }
+      },
+      "scenarios": {
+        "review-only (core)": {
+          "members": [
+            "SKILL.md#body"
+          ],
+          "chars": 6073,
+          "bytes": 6095,
+          "words": 902,
+          "lines": 107,
+          "tokens": 1258
+        },
+        "refactor (core + refactoring)": {
+          "members": [
+            "SKILL.md#body",
+            "references/refactoring.md"
+          ],
+          "chars": 14075,
+          "bytes": 14101,
+          "words": 2055,
+          "lines": 253,
+          "tokens": 3004
+        },
+        "refactor + evaluation (core + both references)": {
+          "members": [
+            "SKILL.md#body",
+            "references/refactoring.md",
+            "references/evaluation.md"
+          ],
+          "chars": 23119,
+          "bytes": 23160,
+          "words": 3350,
+          "lines": 410,
+          "tokens": 5050
+        },
+        "everything (worst case)": {
+          "members": [
+            "SKILL.md#body",
+            "references/evaluation.md",
+            "references/refactoring.md",
+            "references/runtimes.md",
+            "README.md",
+            "evals/evals.json"
+          ],
+          "chars": 49541,
+          "bytes": 49620,
+          "words": 6660,
+          "lines": 863,
+          "tokens": 11699
+        }
+      },
+      "total": {
+        "chars": 50654,
+        "bytes": 50735,
+        "words": 6791,
+        "lines": 887,
+        "tokens": 12001
+      }
+    }
+  },
+  "runs": [
+    {
+      "eval_id": 4,
+      "eval_name": "trim_duplicated_core_and_guide_profiles",
+      "config": "baseline",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-4-trim_duplicated_core_and_guide_profiles/without_skill/run-1-codex-gpt-5.6-terra",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 5:34 AM.\"}",
+      "exit_code": 1,
+      "duration_seconds": 6.158,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": null,
+      "pass_rate": 0.8,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Target was edited (not only recommended)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 4,
+      "eval_name": "trim_duplicated_core_and_guide_profiles",
+      "config": "baseline",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-4-trim_duplicated_core_and_guide_profiles/without_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 81.789,
+      "usage": {
+        "input_tokens": 64438,
+        "output_tokens": 5065,
+        "cache_read_tokens": 168384,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 5215,
+        "total_tokens": 237887,
+        "context_tokens": 232822
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.9333,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "Target was edited (not only recommended)"
+      ]
+    },
+    {
+      "eval_id": 4,
+      "eval_name": "trim_duplicated_core_and_guide_profiles",
+      "config": "candidate",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-4-trim_duplicated_core_and_guide_profiles/with_skill/run-1-codex-gpt-5.6-terra",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 5:34 AM.\"}",
+      "exit_code": 1,
+      "duration_seconds": 5.633,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": null,
+      "pass_rate": 0.8,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Target was edited (not only recommended)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 4,
+      "eval_name": "trim_duplicated_core_and_guide_profiles",
+      "config": "candidate",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-4-trim_duplicated_core_and_guide_profiles/with_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: Rate limit exceeded. Please try again later.\",\"statusCode\":429,\"isRetryable\":true,\"responseHeaders\":{\"cf-placement\":\"remote-ORD\",\"cf-ray\":\"a3b2566b5f04129c-CLT\",\"connecti",
+      "exit_code": 1,
+      "duration_seconds": 114.28,
+      "usage": {
+        "input_tokens": 62738,
+        "output_tokens": 2968,
+        "cache_read_tokens": 106944,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 4464,
+        "total_tokens": 172650,
+        "context_tokens": 169682
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.8,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Target was edited (not only recommended)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 4,
+      "eval_name": "trim_duplicated_core_and_guide_profiles",
+      "config": "no_skill",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-4-trim_duplicated_core_and_guide_profiles/no_skill/run-1-codex-gpt-5.6-terra",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 5:34 AM.\"}",
+      "exit_code": 1,
+      "duration_seconds": 6.099,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": null,
+      "pass_rate": 0.8,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Target was edited (not only recommended)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 4,
+      "eval_name": "trim_duplicated_core_and_guide_profiles",
+      "config": "no_skill",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-4-trim_duplicated_core_and_guide_profiles/no_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: Rate limit exceeded. Please try again later.\",\"statusCode\":429,\"isRetryable\":true,\"responseHeaders\":{\"cf-placement\":\"remote-ORD\",\"cf-ray\":\"a3b258252a93710f-PIT\",\"connecti",
+      "exit_code": 1,
+      "duration_seconds": 70.07,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.8,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Target was edited (not only recommended)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 5,
+      "eval_name": "audit_trigger_breadth_before_touching_files",
+      "config": "baseline",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-5-audit_trigger_breadth_before_touching_files/without_skill/run-1-codex-gpt-5.6-terra",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 5:34 AM.\"}",
+      "exit_code": 1,
+      "duration_seconds": 5.988,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": null,
+      "pass_rate": 0.2857,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Review names the defects by inspection category (duplication, unconditional reading, over-broad description)",
+        "Review proposes a comparison against the previous version on the same cases",
+        "Review separates static validation from measured efficiency",
+        "Review measures with the protocol's own metrics instead of inventing one"
+      ]
+    },
+    {
+      "eval_id": 5,
+      "eval_name": "audit_trigger_breadth_before_touching_files",
+      "config": "baseline",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-5-audit_trigger_breadth_before_touching_files/without_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "NOT_RUN",
+      "reason": "provider unavailable: Cannot connect to API: The socket connection was closed unexpectedly. For more information, pass `verbose: true` in the second argument to fetch()\",\"isRetryable\":true,\"metadata\":{\"u",
+      "exit_code": 1,
+      "duration_seconds": 76.311,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.2857,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Review names the defects by inspection category (duplication, unconditional reading, over-broad description)",
+        "Review proposes a comparison against the previous version on the same cases",
+        "Review separates static validation from measured efficiency",
+        "Review measures with the protocol's own metrics instead of inventing one"
+      ]
+    },
+    {
+      "eval_id": 5,
+      "eval_name": "audit_trigger_breadth_before_touching_files",
+      "config": "candidate",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-5-audit_trigger_breadth_before_touching_files/with_skill/run-1-codex-gpt-5.6-terra",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 5:34 AM.\"}",
+      "exit_code": 1,
+      "duration_seconds": 5.672,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": null,
+      "pass_rate": 0.2857,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Review names the defects by inspection category (duplication, unconditional reading, over-broad description)",
+        "Review proposes a comparison against the previous version on the same cases",
+        "Review separates static validation from measured efficiency",
+        "Review measures with the protocol's own metrics instead of inventing one"
+      ]
+    },
+    {
+      "eval_id": 5,
+      "eval_name": "audit_trigger_breadth_before_touching_files",
+      "config": "candidate",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-5-audit_trigger_breadth_before_touching_files/with_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: Rate limit exceeded. Please try again later.\",\"statusCode\":429,\"isRetryable\":true,\"responseHeaders\":{\"cf-placement\":\"remote-ORD\",\"cf-ray\":\"a3b25bcbbd3c1439-PIT\",\"connecti",
+      "exit_code": 1,
+      "duration_seconds": 71.811,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.2857,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Review names the defects by inspection category (duplication, unconditional reading, over-broad description)",
+        "Review proposes a comparison against the previous version on the same cases",
+        "Review separates static validation from measured efficiency",
+        "Review measures with the protocol's own metrics instead of inventing one"
+      ]
+    },
+    {
+      "eval_id": 5,
+      "eval_name": "audit_trigger_breadth_before_touching_files",
+      "config": "no_skill",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-5-audit_trigger_breadth_before_touching_files/no_skill/run-1-codex-gpt-5.6-terra",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 5:34 AM.\"}",
+      "exit_code": 1,
+      "duration_seconds": 5.754,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": null,
+      "pass_rate": 0.2857,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Review names the defects by inspection category (duplication, unconditional reading, over-broad description)",
+        "Review proposes a comparison against the previous version on the same cases",
+        "Review separates static validation from measured efficiency",
+        "Review measures with the protocol's own metrics instead of inventing one"
+      ]
+    },
+    {
+      "eval_id": 5,
+      "eval_name": "audit_trigger_breadth_before_touching_files",
+      "config": "no_skill",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-5-audit_trigger_breadth_before_touching_files/no_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: Rate limit exceeded. Please try again later.\",\"statusCode\":429,\"isRetryable\":true,\"responseHeaders\":{\"cf-placement\":\"remote-ORD\",\"cf-ray\":\"a3b25d8d7edf278e-CLT\",\"connecti",
+      "exit_code": 1,
+      "duration_seconds": 71.359,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.2857,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Review names the defects by inspection category (duplication, unconditional reading, over-broad description)",
+        "Review proposes a comparison against the previous version on the same cases",
+        "Review separates static validation from measured efficiency",
+        "Review measures with the protocol's own metrics instead of inventing one"
+      ]
+    },
+    {
+      "eval_id": 6,
+      "eval_name": "resolve_unstated_consumer_profile",
+      "config": "baseline",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-6-resolve_unstated_consumer_profile/without_skill/run-1-codex-gpt-5.6-terra",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 5:34 AM.\"}",
+      "exit_code": 1,
+      "duration_seconds": 5.493,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": null,
+      "pass_rate": 0.8,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Target was edited (not only recommended)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 6,
+      "eval_name": "resolve_unstated_consumer_profile",
+      "config": "baseline",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-6-resolve_unstated_consumer_profile/without_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: Rate limit exceeded. Please try again later.\",\"statusCode\":429,\"isRetryable\":true,\"responseHeaders\":{\"cf-placement\":\"remote-ORD\",\"cf-ray\":\"a3b25f4eca0f278e-CLT\",\"connecti",
+      "exit_code": 1,
+      "duration_seconds": 71.202,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.8,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Target was edited (not only recommended)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 6,
+      "eval_name": "resolve_unstated_consumer_profile",
+      "config": "candidate",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-6-resolve_unstated_consumer_profile/with_skill/run-1-codex-gpt-5.6-terra",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 5:34 AM.\"}",
+      "exit_code": 1,
+      "duration_seconds": 6.428,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": null,
+      "pass_rate": 0.8,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Target was edited (not only recommended)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 6,
+      "eval_name": "resolve_unstated_consumer_profile",
+      "config": "candidate",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-6-resolve_unstated_consumer_profile/with_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: Rate limit exceeded. Please try again later.\",\"statusCode\":429,\"isRetryable\":true,\"responseHeaders\":{\"cf-placement\":\"remote-ORD\",\"cf-ray\":\"a3b26134dc655670-PIT\",\"connecti",
+      "exit_code": 1,
+      "duration_seconds": 77.116,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.8,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Target was edited (not only recommended)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 6,
+      "eval_name": "resolve_unstated_consumer_profile",
+      "config": "no_skill",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-6-resolve_unstated_consumer_profile/no_skill/run-1-codex-gpt-5.6-terra",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 5:34 AM.\"}",
+      "exit_code": 1,
+      "duration_seconds": 7.822,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": null,
+      "pass_rate": 0.8,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Target was edited (not only recommended)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 6,
+      "eval_name": "resolve_unstated_consumer_profile",
+      "config": "no_skill",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-6-resolve_unstated_consumer_profile/no_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: Rate limit exceeded. Please try again later.\",\"statusCode\":429,\"isRetryable\":true,\"responseHeaders\":{\"cf-placement\":\"remote-ORD\",\"cf-ray\":\"a3b26306a845aaa9-PHL\",\"connecti",
+      "exit_code": 1,
+      "duration_seconds": 73.872,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.8,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Target was edited (not only recommended)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    }
+  ],
+  "skill_creator": {
+    "aggregate": {
+      "exit_code": 0,
+      "stderr": ""
+    },
+    "viewer": {
+      "exit_code": 0,
+      "stderr": ""
+    }
+  }
+}

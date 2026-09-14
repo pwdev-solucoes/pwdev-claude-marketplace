@@ -23,6 +23,18 @@ returns the same record for every runtime. This skill ships in the `pwdev-skills
 runtimes below are the ones it measures, independently of where the plugin itself is installed. Read this when running or interpreting
 `scripts/bench.py`, or when a runtime changes its CLI.
 
+## Before measuring
+
+Size is a diagnostic; efficiency is cost per accepted task, per model. Start from what is
+actually available: `scripts/discover.py` reports the runtimes installed and signed in here
+(Claude Code, Codex, Hermes, OpenCode), each one's default model and effort with their
+source, and the models each can run. Propose and run only runtimes and models it lists, and
+state the effort every run used — a comparison across runtimes at unequal effort compares
+configurations, not models. `scripts/tokens.py <skill> --baseline <old>` measures files,
+context layers and load scenarios with a generic tokenizer. `scripts/bench.py` runs the
+evaluation cases under a budget and writes the per-model and per-case tables; never claim a
+gain from a static reduction or a single run.
+
 ## Discovery first
 
 `scripts/discover.py` (read-only) answers what can run here before anything is planned:
@@ -100,6 +112,34 @@ Hermes additionally requires `hermes_automation_acknowledged=True`
 
 - OpenCode can exit `0` after an `error` event (rate limit, provider failure). An error event is
   never a `PASS`; a rate-limit message is `NOT_RUN`. Free Zen models are rate-limited.
+
+## Models through OpenRouter (Hermes and OpenCode)
+
+The catalogue in `evals/evals.json` lists three OpenRouter models the user asked to keep under
+test: `z-ai/glm-5.3-flash`, `tencent/hy4-preview` and `deepseek/deepseek-v4.1-flash`. The same
+model has two spellings, one per runtime:
+
+| Runtime | How to run it | Prerequisite |
+| --- | --- | --- |
+| Hermes | `--hermes-model z-ai/glm-5.3-flash,tencent/hy4-preview --hermes-provider openrouter` | OpenRouter key already marked ✓ by `hermes status` |
+| OpenCode | `--opencode-models openrouter/z-ai/glm-5.3-flash,...` | `opencode providers login` → OpenRouter, then confirm with `opencode models openrouter` |
+
+Cost: Hermes writes its own estimate to `--usage-file`, OpenCode emits `step_finish.cost`; the
+`matrix.pricing` entries for these ids (source `openrouter`, dated) are a cross-check and the
+fallback when a runtime reports nothing. Unlike the free Zen models, these are billed per token
+on the user's OpenRouter balance, so they count against `--budget-usd`.
+
+## Observed on 2026-09-14
+
+- Codex on a ChatGPT plan hit its usage limit mid-round ("try again at Sep 19th"): exit 1, an
+  `error` event, `NOT_RUN`. Plan quota is a real ceiling on how many Codex runs a day can hold.
+- OpenCode Zen free models returned 429 (`FreeUsageLimitError`) and dropped connections
+  ("Cannot connect to API: The socket connection was closed unexpectedly", `isRetryable: true`);
+  both are `NOT_RUN`. Free tiers are not a stable benchmark substrate for more than a few runs.
+- Hermes with the default OpenRouter model took 3–30 min per run and one timeout at 1800 s; a
+  round that needs Hermes should plan for hours, or run it as its own slice into the same `--out`.
+- Agents quote this file in their answers. A quota or outage pattern found only in the answer
+  text is not a failure: `classify()` reads stderr and error events first.
 
 ## Observed on 2026-09-13
 

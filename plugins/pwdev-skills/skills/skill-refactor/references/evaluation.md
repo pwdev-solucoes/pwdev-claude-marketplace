@@ -10,7 +10,7 @@ lifecycle:
   updated_at: "2026-09-13T20:30:12Z"
 sources:
   - resource: "docs/skill-refactoring-guide.md"
-    sha256: "b044b3d3246dca295fb93c8e7da094a541b200c262fdc57ad4077fde0c7c60c5"
+    sha256: "d6744f5425825434fa208b5a1a8419797379344c6cc6ee0af5cdd7f8eb1bd0e1"
   - resource: "https://claude.com/plugins/skill-creator"
   - resource: "https://developers.openai.com/api/docs/guides/evaluation-best-practices"
   - resource: "https://www.anthropic.com/claude/fable"

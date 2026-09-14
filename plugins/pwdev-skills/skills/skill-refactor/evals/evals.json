@@ -22,9 +22,14 @@
         "cost_source": "pricing table below"
       },
       "hermes": {
-        "models": [],
+        "models": [
+          "z-ai/glm-5.3-flash",
+          "tencent/hy4-preview",
+          "deepseek/deepseek-v4.1-flash"
+        ],
         "provider": "openrouter",
-        "cost_source": "--usage-file estimated cost"
+        "cost_source": "--usage-file estimated cost",
+        "note": "OpenRouter candidates added 2026-09-14 at the user's request. bench.py never assumes a Hermes model: pass --hermes-model <id>[,<id>...] (or 'default') and --hermes-provider openrouter."
       },
       "opencode": {
         "models": [
@@ -33,10 +38,13 @@
           "opencode/nemotron-3-ultra-free",
           "opencode/ling-3.0-flash-fin-free",
           "opencode/mimo-v2.5-free",
-          "opencode/nemotron-3.5-lightning-free"
+          "opencode/nemotron-3.5-lightning-free",
+          "openrouter/z-ai/glm-5.3-flash",
+          "openrouter/tencent/hy4-preview",
+          "openrouter/deepseek/deepseek-v4.1-flash"
         ],
         "cost_source": "runtime step_finish.cost (0 for free Zen models)",
-        "note": "Only models listed by `opencode models` on the machine that runs the round; add providers with `opencode providers login` and confirm ids with `opencode models <provider>`."
+        "note": "Only models listed by `opencode models` on the machine that runs the round; add providers with `opencode providers login` and confirm ids with `opencode models <provider>`. The `openrouter/*` entries need the OpenRouter provider signed in to OpenCode (none on 2026-09-14): until then the runtime rejects the id and the run is recorded NOT_RUN, never substituted."
       }
     },
     "pricing": {
@@ -59,6 +67,27 @@
         "input": 0.2,
         "cached_input": 0.02,
         "output": 1.2
+      },
+      "z-ai/glm-5.3-flash": {
+        "input": 0.15,
+        "cached_input": 0.03,
+        "output": 0.5,
+        "source": "openrouter",
+        "date": "2026-09-14"
+      },
+      "tencent/hy4-preview": {
+        "input": 0.834,
+        "cached_input": 0.042,
+        "output": 2.501,
+        "source": "openrouter",
+        "date": "2026-09-14"
+      },
+      "deepseek/deepseek-v4.1-flash": {
+        "input": 0.15,
+        "cached_input": 0.003,
+        "output": 0.6,
+        "source": "openrouter",
+        "date": "2026-09-14"
       }
     },
     "pricing_unit": "USD per 1M tokens",
@@ -66,7 +95,7 @@
     "pricing_date": "2026-09-13",
     "budget_usd_per_round": 5.0,
     "reps": 1,
-    "pricing_note": "API list prices, standard tier. Codex runs signed in with a ChatGPT plan are not billed per token; cost_usd for them is an API-equivalent figure, comparable across models, not a charge."
+    "pricing_note": "API list prices, standard tier. Codex runs signed in with a ChatGPT plan are not billed per token; cost_usd for them is an API-equivalent figure, comparable across models, not a charge. OpenRouter entries (per-entry `source`/`date`) come from https://openrouter.ai/api/v1/models and price the same model whether Hermes or OpenCode drives it; Hermes and OpenCode report their own cost first, so these serve as a cross-check and as a fallback when the runtime reports none."
   },
   "fixture_protocol": "Before each execution, the evaluation harness writes fixture.skill_md to a fresh regular target/SKILL.md under an isolated authorized run directory and substitutes {target} and {run_dir} in the prompt. Preserve a separate baseline before launching the executor. fixture and fixture_protocol are harness extensions, not promises of support by stock skill-creator scripts. Never materialize fixtures over user files.",
   "fixture": {
@@ -87,7 +116,45 @@
         "Moves conditional detail or removes repetition without losing the CSV requirements.",
         "Modifies no file outside the target folder and the authorized artifact area.",
         "Delivers a report that labels the outcome refactored and statically validated, and does not label it behaviorally evaluated because no benchmark ran."
-      ]
+      ],
+      "invariants": {
+        "name": "meeting-summary",
+        "paths": [
+          "**/minutes.txt"
+        ],
+        "metadata": {
+          "user_extension": "keep-me"
+        },
+        "must_keep_literals": [
+          "REVIEW_WINDOW=14"
+        ],
+        "labels": [
+          "Key points",
+          "Decisions",
+          "Actions"
+        ],
+        "prohibitions": [
+          "(?i)(never|do not|don't)\\s+(invent|fabricate|make up)"
+        ],
+        "conditional_blocks": [
+          {
+            "topic": "csv",
+            "must_keep_terms": [
+              "action",
+              "assignee",
+              "due_date"
+            ],
+            "guard": "(?i)(do not|don't|never) export without",
+            "marker": "due_date"
+          }
+        ],
+        "language_markers": [
+          "(?i)\\b(summar|meeting)\\b"
+        ],
+        "foreign_markers": [
+          "(?i)\\bresum[oa]\\b|reuni[aã]o"
+        ]
+      }
     },
     {
       "id": 2,
@@ -100,7 +167,45 @@
         "Produces a material change and keeps the name, unknown fields, and requirements.",
         "Invokes no external provider and invents no model ID.",
         "Does not claim that guided is empirically necessary or better for every model."
-      ]
+      ],
+      "invariants": {
+        "name": "meeting-summary",
+        "paths": [
+          "**/minutes.txt"
+        ],
+        "metadata": {
+          "user_extension": "keep-me"
+        },
+        "must_keep_literals": [
+          "REVIEW_WINDOW=14"
+        ],
+        "labels": [
+          "Key points",
+          "Decisions",
+          "Actions"
+        ],
+        "prohibitions": [
+          "(?i)(never|do not|don't)\\s+(invent|fabricate|make up)"
+        ],
+        "conditional_blocks": [
+          {
+            "topic": "csv",
+            "must_keep_terms": [
+              "action",
+              "assignee",
+              "due_date"
+            ],
+            "guard": "(?i)(do not|don't|never) export without",
+            "marker": "due_date"
+          }
+        ],
+        "language_markers": [
+          "(?i)\\b(summar|meeting)\\b"
+        ],
+        "foreign_markers": [
+          "(?i)\\bresum[oa]\\b|reuni[aã]o"
+        ]
+      }
     },
     {
       "id": 3,
@@ -115,7 +220,45 @@
         "Proposes an A/B comparison of the previous version against the candidate on the same cases.",
         "Separates static diagnosis from measured efficiency and states that a review is not evidence of a gain.",
         "Uses the protocol's own measures (cost per accepted task, acceptance rate, accumulated input tokens, triggering precision/coverage) instead of inventing a metric such as lines per execution or a readability score."
-      ]
+      ],
+      "invariants": {
+        "name": "meeting-summary",
+        "paths": [
+          "**/minutes.txt"
+        ],
+        "metadata": {
+          "user_extension": "keep-me"
+        },
+        "must_keep_literals": [
+          "REVIEW_WINDOW=14"
+        ],
+        "labels": [
+          "Key points",
+          "Decisions",
+          "Actions"
+        ],
+        "prohibitions": [
+          "(?i)(never|do not|don't)\\s+(invent|fabricate|make up)"
+        ],
+        "conditional_blocks": [
+          {
+            "topic": "csv",
+            "must_keep_terms": [
+              "action",
+              "assignee",
+              "due_date"
+            ],
+            "guard": "(?i)(do not|don't|never) export without",
+            "marker": "due_date"
+          }
+        ],
+        "language_markers": [
+          "(?i)\\b(summar|meeting)\\b"
+        ],
+        "foreign_markers": [
+          "(?i)\\bresum[oa]\\b|reuni[aã]o"
+        ]
+      }
     }
   ],
   "trigger_evals": [

@@ -82,7 +82,8 @@ def measure_text(text: str, tokenizer: Tokenizer) -> Dict[str, int]:
 def skill_files(skill_dir: Path) -> List[Path]:
     """Files an agent may load into context. Scripts run; they are never read in."""
     files = [p for p in sorted(skill_dir.rglob("*")) if p.is_file() and not p.is_symlink()]
-    skipped_dirs = {"__pycache__", "scripts", "benchmarks"}
+    # benchmarks/ holds results and cases/ holds generated fixtures: neither is loaded by a runtime
+    skipped_dirs = {"__pycache__", "scripts", "benchmarks", "cases"}
     return [p for p in files
             if not skipped_dirs.intersection(p.relative_to(skill_dir).parts[:-1])
             and p.suffix in {".md", ".json", ".yaml", ".yml", ".txt"}]

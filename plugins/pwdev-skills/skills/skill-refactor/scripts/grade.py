@@ -23,9 +23,22 @@ from typing import Any, Dict, List, Optional, Tuple
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from tokens import Tokenizer, split_frontmatter  # noqa: E402
 
-LABELS = ("Key points", "Decisions", "Actions")
-CSV_COLUMNS = ("action", "assignee", "due_date")
 DELIVERY_LABELS = ("refactored", "statically validated")
+
+# Invariants of the built-in fixture, as data. A context-derived case brings its own block with
+# the same keys, so the objective checks are the same code for every target skill.
+FIXTURE_INVARIANTS = {
+    "name": "meeting-summary",
+    "paths": ["**/minutes.txt"],
+    "metadata": {"user_extension": "keep-me"},
+    "must_keep_literals": ["REVIEW_WINDOW=14"],
+    "labels": ["Key points", "Decisions", "Actions"],
+    "prohibitions": [r"(?i)(never|do not|don't)\s+(invent|fabricate|make up)"],
+    "conditional_blocks": [{"topic": "csv", "must_keep_terms": ["action", "assignee", "due_date"],
+                            "guard": r"(?i)(do not|don't|never) export without", "marker": "due_date"}],
+    "language_markers": [r"(?i)\b(summar|meeting)\b"],
+    "foreign_markers": [r"(?i)\bresum[oa]\b|reuni[aã]o"],
+}
 BEHAVIORAL_LABEL = "behaviorally evaluated"
 # A review may legitimately be written in the target's language or the user's. Matching is done on
 # accent-stripped text with stems that hold in English and Portuguese, so "estatico" and "static"
@@ -94,6 +107,7 @@ def grade_run(*, case: Dict[str, Any], fixture_skill_md: str, target_dir: Path, 
               record: Dict[str, Any], snapshot_before: Optional[Dict[str, Any]] = None,
               snapshot_after: Optional[Dict[str, Any]] = None, tokenizer: Optional[Tokenizer] = None) -> Dict[str, Any]:
     tokenizer = tokenizer or Tokenizer()
+    invariants = case.get("invariants") or FIXTURE_INVARIANTS
     name = case.get("name", f"eval-{case.get('id')}")
     review_only = name == "review_only" or case.get("mode") == "review"
     expectations: List[Dict[str, Any]] = []
@@ -140,40 +154,17 @@ def grade_run(*, case: Dict[str, Any], fixture_skill_md: str, target_dir: Path, 
                                     bool(target_md) and sha(target_md) != sha(fixture_skill_md),
                                     "sha differs from fixture" if sha(target_md) != sha(fixture_skill_md) else "unchanged"))
     if not review_only:
-        expectations.append(_expect("Preserves name: meeting-summary",
-                                    bool(re.search(r"^name:\s*meeting-summary\s*$", frontmatter, re.M)),
-                                    _line(frontmatter, "name:")))
-        expectations.append(_expect("Preserves paths: **/minutes.txt",
-                                    "**/minutes.txt" in frontmatter, _line(frontmatter, "minutes.txt")))
-        expectations.append(_expect("Preserves metadata.user_extension: keep-me",
-                                    bool(re.search(r"user_extension:\s*['\"]?keep-me", frontmatter)),
-                                    _line(frontmatter, "user_extension")))
-        expectations.append(_expect("Preserves the editorial note REVIEW_WINDOW=14",
-                                    "REVIEW_WINDOW=14" in everything, _where(corpus, "REVIEW_WINDOW=14")))
-        missing = [label for label in LABELS if label not in everything]
-        expectations.append(_expect("Preserves the output labels Key points / Decisions / Actions",
-                                    not missing, f"missing: {missing}" if missing else "all three present"))
-        expectations.append(_expect("Preserves the prohibition on inventing decisions, assignees or dates",
-                                    bool(re.search(r"(?i)(never|do not|don't)\s+(invent|fabricate|make up)", everything)),
-                                    _where(corpus, "invent")))
-        csv_missing = [c for c in CSV_COLUMNS if c not in everything]
-        csv_guard = bool(re.search(r"(?i)(do not|don't|never) export without", everything))
-        expectations.append(_expect("Keeps the CSV requirements (columns action/assignee/due_date and the no-export-without-request rule)",
-                                    not csv_missing and csv_guard,
-                                    f"missing columns: {csv_missing}; guard present: {csv_guard}"))
-        csv_in_core = "due_date" in body
-        csv_refs = [rel for rel, text in corpus.items() if rel != "SKILL.md" and "due_date" in text]
-        conditional = bool(re.search(r"(?i)(if|when|only).{0,60}csv", body))
-        expectations.append(_expect("CSV detail is conditional: inline behind an explicit condition, or in a reference the core loads only for CSV requests",
-                                    (csv_in_core and conditional) or (bool(csv_refs) and conditional),
-                                    f"in core: {csv_in_core}; references: {csv_refs}; condition in core: {conditional}"))
-        expectations.append(_expect("Target stays in English with the same output labels (no translation)",
-                                    bool(re.search(r"(?i)\b(summar|meeting)\b", target_md)) and not re.search(r"(?i)\bresum[oa]\b|reuni[aã]o", target_md),
-                                    "english markers present"))
+        expectations.extend(expectations_from_spec(invariants, frontmatter=frontmatter, body=body,
+                                                   everything=everything, corpus=corpus, target_md=target_md))
         repeated = _repeated_lines(body)
         expectations.append(_expect("Removes verbatim repetition from the core",
                                     not repeated, f"repeated lines: {repeated[:3]}" if repeated else "no repeated non-trivial lines"))
-        report = result_text + "\n" + "\n".join(text for rel, text in corpus.items() if "report" in rel.lower())
+        # The skill sends the report to the artifact area beside the target, not into the target:
+        # read what was written there too (observed 2026-09-14: labels present only in artifacts/).
+        artifacts = target_dir.parent / "artifacts"
+        artifact_texts = [p.read_text(encoding="utf-8", errors="replace") for p in sorted(artifacts.rglob("*"))
+                          if p.is_file() and p.suffix.lower() in (".md", ".txt") and "baseline" not in p.parts] if artifacts.is_dir() else []
+        report = result_text + "\n" + "\n".join(text for rel, text in corpus.items() if "report" in rel.lower()) + "\n" + "\n".join(artifact_texts)
         labels_ok = all(label in report for label in DELIVERY_LABELS)
         behavioral_claim = BEHAVIORAL_LABEL in report and not re.search(r"(?i)not\s+behaviorally evaluated|no benchmark", report)
         expectations.append(_expect("Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark",
@@ -206,6 +197,58 @@ def grade_run(*, case: Dict[str, Any], fixture_skill_md: str, target_dir: Path, 
                                "workarounds": []},
     }
     return grading
+
+
+def expectations_from_spec(spec: Dict[str, Any], *, frontmatter: str, body: str, everything: str,
+                           corpus: Dict[str, str], target_md: str) -> List[Dict[str, Any]]:
+    """Objective checks built from a target's invariants, not from code that knows one fixture.
+
+    Every key is optional; an absent key produces no expectation. The keys are the things any
+    correct refactoring must keep: identity (name, paths, metadata), literals, output labels,
+    prohibitions, blocks that must become conditional, and the target's language.
+    """
+    out: List[Dict[str, Any]] = []
+    name = spec.get("name")
+    if name:
+        out.append(_expect(f"Preserves name: {name}",
+                           bool(re.search(rf"^name:\s*{re.escape(name)}\s*$", frontmatter, re.M)), _line(frontmatter, "name:")))
+    for path in spec.get("paths") or []:
+        out.append(_expect(f"Preserves paths: {path}", path in frontmatter, _line(frontmatter, path.split("/")[-1])))
+    for key, value in (spec.get("metadata") or {}).items():
+        pattern = rf"{re.escape(key)}:\s*['\"]?{re.escape(str(value))}"
+        out.append(_expect(f"Preserves metadata.{key}: {value}", bool(re.search(pattern, frontmatter)), _line(frontmatter, key)))
+    for literal in spec.get("must_keep_literals") or []:
+        out.append(_expect(f"Preserves the literal {literal}", literal in everything, _where(corpus, literal)))
+    labels = spec.get("labels") or []
+    if labels:
+        missing = [label for label in labels if label not in everything]
+        out.append(_expect("Preserves the output labels " + " / ".join(labels),
+                           not missing, f"missing: {missing}" if missing else "all present"))
+    for pattern in spec.get("prohibitions") or []:
+        out.append(_expect(f"Preserves the prohibition /{pattern}/", bool(re.search(pattern, everything)),
+                           "prohibition present" if re.search(pattern, everything) else "prohibition not found"))
+    for block in spec.get("conditional_blocks") or []:
+        topic, terms = block.get("topic", "block"), block.get("must_keep_terms") or []
+        missing = [term for term in terms if term not in everything]
+        guard = block.get("guard")
+        guard_ok = bool(re.search(guard, everything)) if guard else True
+        out.append(_expect(f"Keeps the {topic} requirements ({', '.join(terms)}" + (" and its guard rule" if guard else "") + ")",
+                           not missing and guard_ok, f"missing terms: {missing}; guard present: {guard_ok}"))
+        marker = block.get("marker") or (terms[0] if terms else None)
+        if marker:
+            in_core = marker in body
+            refs = [rel for rel, text in corpus.items() if rel != "SKILL.md" and marker in text]
+            conditional = bool(re.search(rf"(?i)(if|when|only).{{0,60}}{re.escape(topic)}", body))
+            out.append(_expect(f"{topic} detail is conditional: inline behind an explicit condition, or in a reference the core loads only on request",
+                               (in_core and conditional) or (bool(refs) and conditional),
+                               f"in core: {in_core}; references: {refs}; condition in core: {conditional}"))
+    markers, foreign = spec.get("language_markers") or [], spec.get("foreign_markers") or []
+    if markers:
+        native = all(re.search(m, target_md) for m in markers)
+        translated = any(re.search(f, target_md) for f in foreign)
+        out.append(_expect("Target stays in its original language (no translation)", native and not translated,
+                           f"native markers: {native}; foreign markers: {translated}"))
+    return out
 
 
 def _line(text: str, needle: str) -> str:

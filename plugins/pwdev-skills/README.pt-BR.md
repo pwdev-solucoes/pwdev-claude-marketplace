@@ -4,7 +4,7 @@ Revisa, refatora e faz benchmark de Agent Skills no Claude Code, no Codex e no H
 benchmark também roda no OpenCode. O plugin traz uma skill, `skill-refactor`, e os scripts que ela
 usa para medir uma skill nos modelos realmente disponíveis nesta máquina.
 
-> [English version](./README.md) · [Manual de uso](./docs/manual-de-uso.md)
+> [English version](./README.md) · [Manual de uso](./docs/manual-de-uso.md) · [Metodologia de refatoração](./docs/metodologia-de-refatoracao.md)
 
 ## O que vem dentro
 
@@ -16,7 +16,8 @@ usa para medir uma skill nos modelos realmente disponíveis nesta máquina.
 | `references/runtimes.md` | Contrato headless por runtime: comandos, fontes de uso e custo, regras de segurança |
 | `scripts/discover.py` | Quais runtimes estão instalados e autenticados, modelo e esforço padrão de cada um, e os modelos disponíveis |
 | `scripts/tokens.py` | Tamanho por arquivo, camada de contexto e cenário de carga com tokenizador genérico (`tiktoken`) |
-| `scripts/bench.py` + `runtimes.py` + `grade.py` | Benchmark A/B headless entre runtimes e modelos, avaliado objetivamente, com orçamento |
+| `scripts/bench.py` + `runtimes.py` + `grade.py` | Benchmark A/B headless entre runtimes e modelos — braços `candidate`, `baseline` e `no_skill` — avaliado a partir dos invariantes de cada caso, com orçamento |
+| `scripts/cases.py` | Casos derivados da skill em refatoração: invariantes e defeitos por script, pedidos e consultas de acionamento propostos por uma chamada headless, aprovação humana amarrada ao hash de origem |
 | `evals/evals.json` | Fixture, casos, verificações de acionamento e roteamento, matriz padrão e preços datados |
 
 Inclui 1 skill. Sem comandos, subagentes, hooks ou servidor MCP.

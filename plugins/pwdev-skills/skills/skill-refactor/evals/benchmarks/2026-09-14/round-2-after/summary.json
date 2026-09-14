@@ -1,0 +1,1756 @@
+{
+  "schema_version": 1,
+  "skill_name": "skill-refactor",
+  "skill_path": "/[USER]/Projetos/skills-ia/pwdev-claude-marketplace/plugins/pwdev-skills/skills/skill-refactor",
+  "baseline": "/private/tmp/claude-501/-Users-paulosoares-Projetos-skills-ia-pwdev-claude-marketplace/a4331304-eba8-4c0f-83c0-acfafca7e5d5/scratchpad/skill-refactor-0.2.1",
+  "arms": [
+    "candidate",
+    "baseline",
+    "no_skill"
+  ],
+  "cases_source": "/[USER]/Projetos/skills-ia/pwdev-claude-marketplace/plugins/pwdev-skills/skills/skill-refactor/evals/evals.json",
+  "started_at": "2026-09-14T20:46:58.128661Z",
+  "budget_usd": 7.0,
+  "dry_run": false,
+  "reps": 1,
+  "runtime_versions": {
+    "claude": "2.1.270 (Claude Code)"
+  },
+  "targets": [
+    {
+      "runtime": "claude",
+      "model": "claude-sonnet-5"
+    }
+  ],
+  "pricing": {
+    "gpt-6-astra": {
+      "input": 10.0,
+      "cached_input": 1.0,
+      "output": 50.0
+    },
+    "gpt-5.6-sol": {
+      "input": 4.0,
+      "cached_input": 0.4,
+      "output": 20.0
+    },
+    "gpt-5.6-terra": {
+      "input": 2.0,
+      "cached_input": 0.2,
+      "output": 12.0
+    },
+    "gpt-5.6-luna": {
+      "input": 0.2,
+      "cached_input": 0.02,
+      "output": 1.2
+    },
+    "z-ai/glm-5.3-flash": {
+      "input": 0.15,
+      "cached_input": 0.03,
+      "output": 0.5,
+      "source": "openrouter",
+      "date": "2026-09-14"
+    },
+    "tencent/hy4-preview": {
+      "input": 0.834,
+      "cached_input": 0.042,
+      "output": 2.501,
+      "source": "openrouter",
+      "date": "2026-09-14"
+    },
+    "deepseek/deepseek-v4.1-flash": {
+      "input": 0.15,
+      "cached_input": 0.003,
+      "output": 0.6,
+      "source": "openrouter",
+      "date": "2026-09-14"
+    }
+  },
+  "per_claude_run_budget_usd": 0.7778,
+  "regraded_at": "2026-09-14T21:15:20.827869Z",
+  "ended_at": "2026-09-14T21:15:20.828370Z",
+  "verdict": "PASS",
+  "runs_planned": 27,
+  "runs_executed": 23,
+  "cost_total_usd": 5.093044,
+  "efficiency_by_model": [
+    {
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "effort": "medium",
+      "config": "baseline",
+      "effort_source": "request",
+      "model_source": "request",
+      "planned": 3,
+      "executed": 3,
+      "not_run": 0,
+      "accepted": 2,
+      "pass_rate_mean": 0.9608,
+      "acceptance_rate": 0.6667,
+      "cost_total_usd": 1.329196,
+      "cost_per_success_usd": 0.664598,
+      "tokens_in_mean": 725854,
+      "tokens_out_mean": 11099,
+      "duration_p50_s": 123.432,
+      "skill_static_tokens": 3004,
+      "reasons": []
+    },
+    {
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "effort": "medium",
+      "config": "candidate",
+      "effort_source": "request",
+      "model_source": "request",
+      "planned": 3,
+      "executed": 3,
+      "not_run": 0,
+      "accepted": 3,
+      "pass_rate_mean": 1.0,
+      "acceptance_rate": 1.0,
+      "cost_total_usd": 1.345103,
+      "cost_per_success_usd": 0.448368,
+      "tokens_in_mean": 998950,
+      "tokens_out_mean": 9974,
+      "duration_p50_s": 110.086,
+      "skill_static_tokens": 3025,
+      "reasons": []
+    },
+    {
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "effort": "medium",
+      "config": "no_skill",
+      "effort_source": "request",
+      "model_source": "request",
+      "planned": 3,
+      "executed": 3,
+      "not_run": 0,
+      "accepted": 0,
+      "pass_rate_mean": 0.8433,
+      "acceptance_rate": 0.0,
+      "cost_total_usd": 0.968684,
+      "cost_per_success_usd": null,
+      "tokens_in_mean": 487963,
+      "tokens_out_mean": 5660,
+      "duration_p50_s": 63.603,
+      "skill_static_tokens": 0,
+      "reasons": []
+    },
+    {
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "effort": "medium",
+      "config": "baseline",
+      "effort_source": "request",
+      "model_source": "request",
+      "planned": 3,
+      "executed": 2,
+      "not_run": 1,
+      "accepted": 0,
+      "pass_rate_mean": 0.8157,
+      "acceptance_rate": 0.0,
+      "cost_total_usd": 0.583126,
+      "cost_per_success_usd": null,
+      "tokens_in_mean": 519316.5,
+      "tokens_out_mean": 9149.0,
+      "duration_p50_s": 151.399,
+      "skill_static_tokens": 3004,
+      "reasons": [
+        "runtime quota or usage limit: hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 5:34 AM.\"}"
+      ]
+    },
+    {
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "effort": "medium",
+      "config": "candidate",
+      "effort_source": "request",
+      "model_source": "request",
+      "planned": 3,
+      "executed": 2,
+      "not_run": 1,
+      "accepted": 0,
+      "pass_rate_mean": 0.9373,
+      "acceptance_rate": 0.0,
+      "cost_total_usd": 0.678686,
+      "cost_per_success_usd": null,
+      "tokens_in_mean": 599402.5,
+      "tokens_out_mean": 10535.0,
+      "duration_p50_s": 179.627,
+      "skill_static_tokens": 3025,
+      "reasons": [
+        "runtime quota or usage limit: hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 5:34 AM.\"}"
+      ]
+    },
+    {
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "effort": "medium",
+      "config": "no_skill",
+      "effort_source": "request",
+      "model_source": "request",
+      "planned": 3,
+      "executed": 1,
+      "not_run": 2,
+      "accepted": 0,
+      "pass_rate_mean": 0.8667,
+      "acceptance_rate": 0.0,
+      "cost_total_usd": 0.188249,
+      "cost_per_success_usd": null,
+      "tokens_in_mean": 332021,
+      "tokens_out_mean": 6469,
+      "duration_p50_s": 103.704,
+      "skill_static_tokens": 0,
+      "reasons": [
+        "runtime quota or usage limit: hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 5:34 AM.\"}"
+      ]
+    },
+    {
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "effort": "default",
+      "config": "baseline",
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "model_source": "request",
+      "planned": 3,
+      "executed": 3,
+      "not_run": 0,
+      "accepted": 2,
+      "pass_rate_mean": 0.9804,
+      "acceptance_rate": 0.6667,
+      "cost_total_usd": 0.0,
+      "cost_per_success_usd": 0.0,
+      "tokens_in_mean": 400968,
+      "tokens_out_mean": 5116,
+      "duration_p50_s": 51.525,
+      "skill_static_tokens": 3004,
+      "reasons": []
+    },
+    {
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "effort": "default",
+      "config": "candidate",
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "model_source": "request",
+      "planned": 3,
+      "executed": 3,
+      "not_run": 0,
+      "accepted": 3,
+      "pass_rate_mean": 1.0,
+      "acceptance_rate": 1.0,
+      "cost_total_usd": 0.0,
+      "cost_per_success_usd": 0.0,
+      "tokens_in_mean": 230773,
+      "tokens_out_mean": 3590,
+      "duration_p50_s": 47.355,
+      "skill_static_tokens": 3025,
+      "reasons": []
+    },
+    {
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "effort": "default",
+      "config": "no_skill",
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "model_source": "request",
+      "planned": 3,
+      "executed": 3,
+      "not_run": 0,
+      "accepted": 0,
+      "pass_rate_mean": 0.7761,
+      "acceptance_rate": 0.0,
+      "cost_total_usd": 0.0,
+      "cost_per_success_usd": null,
+      "tokens_in_mean": 263349,
+      "tokens_out_mean": 3514,
+      "duration_p50_s": 47.732,
+      "skill_static_tokens": 0,
+      "reasons": []
+    }
+  ],
+  "paired_by_case": [
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "arms": {
+        "baseline": {
+          "runs": 1,
+          "accepted": 1,
+          "acceptance_rate": 1.0,
+          "pass_rate_mean": 1.0,
+          "cost_per_success_usd": 0.488282,
+          "context_p50": 725854
+        },
+        "candidate": {
+          "runs": 1,
+          "accepted": 1,
+          "acceptance_rate": 1.0,
+          "pass_rate_mean": 1.0,
+          "cost_per_success_usd": 0.517842,
+          "context_p50": 998950
+        },
+        "no_skill": {
+          "runs": 1,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.9333,
+          "cost_per_success_usd": null,
+          "context_p50": 566701
+        }
+      }
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "arms": {
+        "baseline": {
+          "runs": 1,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.8667,
+          "cost_per_success_usd": null,
+          "context_p50": 474500
+        },
+        "candidate": {
+          "runs": 1,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.9333,
+          "cost_per_success_usd": null,
+          "context_p50": 721617
+        },
+        "no_skill": {
+          "runs": 1,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.8667,
+          "cost_per_success_usd": null,
+          "context_p50": 332021
+        }
+      }
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "arms": {
+        "baseline": {
+          "runs": 1,
+          "accepted": 1,
+          "acceptance_rate": 1.0,
+          "pass_rate_mean": 1.0,
+          "cost_per_success_usd": 0.0,
+          "context_p50": 1769377
+        },
+        "candidate": {
+          "runs": 1,
+          "accepted": 1,
+          "acceptance_rate": 1.0,
+          "pass_rate_mean": 1.0,
+          "cost_per_success_usd": 0.0,
+          "context_p50": 418121
+        },
+        "no_skill": {
+          "runs": 1,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.9333,
+          "cost_per_success_usd": null,
+          "context_p50": 263349
+        }
+      }
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "arms": {
+        "baseline": {
+          "runs": 1,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.8824,
+          "cost_per_success_usd": null,
+          "context_p50": 1104094
+        },
+        "candidate": {
+          "runs": 1,
+          "accepted": 1,
+          "acceptance_rate": 1.0,
+          "pass_rate_mean": 1.0,
+          "cost_per_success_usd": 0.572465,
+          "context_p50": 1190513
+        },
+        "no_skill": {
+          "runs": 1,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.8824,
+          "cost_per_success_usd": null,
+          "context_p50": 487963
+        }
+      }
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "arms": {
+        "baseline": {
+          "runs": 1,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.7647,
+          "cost_per_success_usd": null,
+          "context_p50": 564133
+        },
+        "candidate": {
+          "runs": 1,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.9412,
+          "cost_per_success_usd": null,
+          "context_p50": 477188
+        }
+      }
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "arms": {
+        "baseline": {
+          "runs": 1,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.9412,
+          "cost_per_success_usd": null,
+          "context_p50": 400968
+        },
+        "candidate": {
+          "runs": 1,
+          "accepted": 1,
+          "acceptance_rate": 1.0,
+          "pass_rate_mean": 1.0,
+          "cost_per_success_usd": 0.0,
+          "context_p50": 230773
+        },
+        "no_skill": {
+          "runs": 1,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.8235,
+          "cost_per_success_usd": null,
+          "context_p50": 334918
+        }
+      }
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "arms": {
+        "baseline": {
+          "runs": 1,
+          "accepted": 1,
+          "acceptance_rate": 1.0,
+          "pass_rate_mean": 1.0,
+          "cost_per_success_usd": 0.290934,
+          "context_p50": 351887
+        },
+        "candidate": {
+          "runs": 1,
+          "accepted": 1,
+          "acceptance_rate": 1.0,
+          "pass_rate_mean": 1.0,
+          "cost_per_success_usd": 0.254796,
+          "context_p50": 280250
+        },
+        "no_skill": {
+          "runs": 1,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.7143,
+          "cost_per_success_usd": null,
+          "context_p50": 267555
+        }
+      }
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "arms": {
+        "baseline": {
+          "runs": 1,
+          "accepted": 1,
+          "acceptance_rate": 1.0,
+          "pass_rate_mean": 1.0,
+          "cost_per_success_usd": 0.0,
+          "context_p50": 40587
+        },
+        "candidate": {
+          "runs": 1,
+          "accepted": 1,
+          "acceptance_rate": 1.0,
+          "pass_rate_mean": 1.0,
+          "cost_per_success_usd": 0.0,
+          "context_p50": 27175
+        },
+        "no_skill": {
+          "runs": 1,
+          "accepted": 0,
+          "acceptance_rate": 0.0,
+          "pass_rate_mean": 0.5714,
+          "cost_per_success_usd": null,
+          "context_p50": 24468
+        }
+      }
+    }
+  ],
+  "static_tokens": {
+    "candidate": {
+      "skill_dir": "/private/tmp/claude-501/-Users-paulosoares-Projetos-skills-ia-pwdev-claude-marketplace/a4331304-eba8-4c0f-83c0-acfafca7e5d5/scratchpad/round-2/out-a/versions/with_skill/skill-refactor",
+      "tokens_source": "tiktoken:o200k_base",
+      "files": {
+        "README.md": {
+          "chars": 6136,
+          "bytes": 6146,
+          "words": 754,
+          "lines": 121,
+          "tokens": 1549
+        },
+        "SKILL.md": {
+          "chars": 5751,
+          "bytes": 5773,
+          "words": 824,
+          "lines": 105,
+          "tokens": 1246
+        },
+        "agents/openai.yaml": {
+          "chars": 230,
+          "bytes": 230,
+          "words": 27,
+          "lines": 4,
+          "tokens": 54
+        },
+        "evals/evals.json": {
+          "chars": 13964,
+          "bytes": 13967,
+          "words": 1453,
+          "lines": 330,
+          "tokens": 3411
+        },
+        "references/evaluation.md": {
+          "chars": 9044,
+          "bytes": 9059,
+          "words": 1295,
+          "lines": 157,
+          "tokens": 2046
+        },
+        "references/refactoring.md": {
+          "chars": 9329,
+          "bytes": 9343,
+          "words": 1354,
+          "lines": 167,
+          "tokens": 2027
+        },
+        "references/runtimes.md": {
+          "chars": 10645,
+          "bytes": 10675,
+          "words": 1470,
+          "lines": 137,
+          "tokens": 2773
+        }
+      },
+      "layers": {
+        "SKILL.md#description": {
+          "chars": 558,
+          "bytes": 560,
+          "words": 83,
+          "lines": 1,
+          "tokens": 107
+        },
+        "SKILL.md#frontmatter": {
+          "chars": 874,
+          "bytes": 876,
+          "words": 102,
+          "lines": 18,
+          "tokens": 247
+        },
+        "SKILL.md#body": {
+          "chars": 4868,
+          "bytes": 4888,
+          "words": 720,
+          "lines": 85,
+          "tokens": 998
+        },
+        "README.md": {
+          "chars": 6136,
+          "bytes": 6146,
+          "words": 754,
+          "lines": 121,
+          "tokens": 1549
+        },
+        "agents/openai.yaml": {
+          "chars": 230,
+          "bytes": 230,
+          "words": 27,
+          "lines": 4,
+          "tokens": 54
+        },
+        "evals/evals.json": {
+          "chars": 13964,
+          "bytes": 13967,
+          "words": 1453,
+          "lines": 330,
+          "tokens": 3411
+        },
+        "references/evaluation.md": {
+          "chars": 9044,
+          "bytes": 9059,
+          "words": 1295,
+          "lines": 157,
+          "tokens": 2046
+        },
+        "references/refactoring.md": {
+          "chars": 9329,
+          "bytes": 9343,
+          "words": 1354,
+          "lines": 167,
+          "tokens": 2027
+        },
+        "references/runtimes.md": {
+          "chars": 10645,
+          "bytes": 10675,
+          "words": 1470,
+          "lines": 137,
+          "tokens": 2773
+        }
+      },
+      "scenarios": {
+        "review-only (core)": {
+          "members": [
+            "SKILL.md#body"
+          ],
+          "chars": 4868,
+          "bytes": 4888,
+          "words": 720,
+          "lines": 85,
+          "tokens": 998
+        },
+        "refactor (core + refactoring)": {
+          "members": [
+            "SKILL.md#body",
+            "references/refactoring.md"
+          ],
+          "chars": 14197,
+          "bytes": 14231,
+          "words": 2074,
+          "lines": 252,
+          "tokens": 3025
+        },
+        "refactor + evaluation (core + both references)": {
+          "members": [
+            "SKILL.md#body",
+            "references/refactoring.md",
+            "references/evaluation.md"
+          ],
+          "chars": 23241,
+          "bytes": 23290,
+          "words": 3369,
+          "lines": 409,
+          "tokens": 5071
+        },
+        "everything (worst case)": {
+          "members": [
+            "SKILL.md#body",
+            "references/evaluation.md",
+            "references/refactoring.md",
+            "references/runtimes.md",
+            "README.md",
+            "evals/evals.json"
+          ],
+          "chars": 53986,
+          "bytes": 54078,
+          "words": 7046,
+          "lines": 997,
+          "tokens": 12804
+        }
+      },
+      "total": {
+        "chars": 55099,
+        "bytes": 55193,
+        "words": 7177,
+        "lines": 1021,
+        "tokens": 13106
+      }
+    },
+    "baseline": {
+      "skill_dir": "/private/tmp/claude-501/-Users-paulosoares-Projetos-skills-ia-pwdev-claude-marketplace/a4331304-eba8-4c0f-83c0-acfafca7e5d5/scratchpad/round-2/out-a/versions/without_skill/skill-refactor-0.2.1",
+      "tokens_source": "tiktoken:o200k_base",
+      "files": {
+        "README.md": {
+          "chars": 5436,
+          "bytes": 5446,
+          "words": 684,
+          "lines": 112,
+          "tokens": 1347
+        },
+        "SKILL.md": {
+          "chars": 6956,
+          "bytes": 6980,
+          "words": 1006,
+          "lines": 127,
+          "tokens": 1506
+        },
+        "agents/openai.yaml": {
+          "chars": 230,
+          "bytes": 230,
+          "words": 27,
+          "lines": 4,
+          "tokens": 54
+        },
+        "evals/evals.json": {
+          "chars": 11129,
+          "bytes": 11129,
+          "words": 1276,
+          "lines": 216,
+          "tokens": 2703
+        },
+        "references/evaluation.md": {
+          "chars": 9044,
+          "bytes": 9059,
+          "words": 1295,
+          "lines": 157,
+          "tokens": 2046
+        },
+        "references/refactoring.md": {
+          "chars": 8002,
+          "bytes": 8006,
+          "words": 1153,
+          "lines": 146,
+          "tokens": 1746
+        },
+        "references/runtimes.md": {
+          "chars": 9857,
+          "bytes": 9885,
+          "words": 1350,
+          "lines": 125,
+          "tokens": 2599
+        }
+      },
+      "layers": {
+        "SKILL.md#description": {
+          "chars": 558,
+          "bytes": 560,
+          "words": 83,
+          "lines": 1,
+          "tokens": 107
+        },
+        "SKILL.md#frontmatter": {
+          "chars": 874,
+          "bytes": 876,
+          "words": 102,
+          "lines": 18,
+          "tokens": 247
+        },
+        "SKILL.md#body": {
+          "chars": 6073,
+          "bytes": 6095,
+          "words": 902,
+          "lines": 107,
+          "tokens": 1258
+        },
+        "README.md": {
+          "chars": 5436,
+          "bytes": 5446,
+          "words": 684,
+          "lines": 112,
+          "tokens": 1347
+        },
+        "agents/openai.yaml": {
+          "chars": 230,
+          "bytes": 230,
+          "words": 27,
+          "lines": 4,
+          "tokens": 54
+        },
+        "evals/evals.json": {
+          "chars": 11129,
+          "bytes": 11129,
+          "words": 1276,
+          "lines": 216,
+          "tokens": 2703
+        },
+        "references/evaluation.md": {
+          "chars": 9044,
+          "bytes": 9059,
+          "words": 1295,
+          "lines": 157,
+          "tokens": 2046
+        },
+        "references/refactoring.md": {
+          "chars": 8002,
+          "bytes": 8006,
+          "words": 1153,
+          "lines": 146,
+          "tokens": 1746
+        },
+        "references/runtimes.md": {
+          "chars": 9857,
+          "bytes": 9885,
+          "words": 1350,
+          "lines": 125,
+          "tokens": 2599
+        }
+      },
+      "scenarios": {
+        "review-only (core)": {
+          "members": [
+            "SKILL.md#body"
+          ],
+          "chars": 6073,
+          "bytes": 6095,
+          "words": 902,
+          "lines": 107,
+          "tokens": 1258
+        },
+        "refactor (core + refactoring)": {
+          "members": [
+            "SKILL.md#body",
+            "references/refactoring.md"
+          ],
+          "chars": 14075,
+          "bytes": 14101,
+          "words": 2055,
+          "lines": 253,
+          "tokens": 3004
+        },
+        "refactor + evaluation (core + both references)": {
+          "members": [
+            "SKILL.md#body",
+            "references/refactoring.md",
+            "references/evaluation.md"
+          ],
+          "chars": 23119,
+          "bytes": 23160,
+          "words": 3350,
+          "lines": 410,
+          "tokens": 5050
+        },
+        "everything (worst case)": {
+          "members": [
+            "SKILL.md#body",
+            "references/evaluation.md",
+            "references/refactoring.md",
+            "references/runtimes.md",
+            "README.md",
+            "evals/evals.json"
+          ],
+          "chars": 49541,
+          "bytes": 49620,
+          "words": 6660,
+          "lines": 863,
+          "tokens": 11699
+        }
+      },
+      "total": {
+        "chars": 50654,
+        "bytes": 50735,
+        "words": 6791,
+        "lines": 887,
+        "tokens": 12001
+      }
+    }
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "baseline",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 1,
+      "run_dir": "eval-1-mixed_consumers_edit/without_skill/run-1-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 126.992,
+      "usage": {
+        "input_tokens": 22,
+        "output_tokens": 11694,
+        "cache_read_tokens": 666605,
+        "cache_write_tokens": 59227,
+        "reasoning_tokens": 3704,
+        "total_tokens": 737548,
+        "context_tokens": 725854
+      },
+      "cost_usd": 0.488282,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 1.0,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "baseline",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-1-mixed_consumers_edit/without_skill/run-1-codex-gpt-5.6-terra",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 152.18,
+      "usage": {
+        "input_tokens": 42628,
+        "output_tokens": 8811,
+        "cache_read_tokens": 431872,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 1658,
+        "total_tokens": 483311,
+        "context_tokens": 474500
+      },
+      "cost_usd": 0.277362,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 0.8667,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Keeps the csv requirements (action, assignee, due_date and its guard rule)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "baseline",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-1-mixed_consumers_edit/without_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 390.866,
+      "usage": {
+        "input_tokens": 606753,
+        "output_tokens": 13888,
+        "cache_read_tokens": 1162624,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 3938,
+        "total_tokens": 1783265,
+        "context_tokens": 1769377
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 1.0,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "candidate",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 1,
+      "run_dir": "eval-1-mixed_consumers_edit/with_skill/run-1-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 110.086,
+      "usage": {
+        "input_tokens": 30,
+        "output_tokens": 9974,
+        "cache_read_tokens": 941765,
+        "cache_write_tokens": 57155,
+        "reasoning_tokens": 2613,
+        "total_tokens": 1008924,
+        "context_tokens": 998950
+      },
+      "cost_usd": 0.517842,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 1.0,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "candidate",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-1-mixed_consumers_edit/with_skill/run-1-codex-gpt-5.6-terra",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 190.713,
+      "usage": {
+        "input_tokens": 41425,
+        "output_tokens": 11769,
+        "cache_read_tokens": 680192,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 2696,
+        "total_tokens": 733386,
+        "context_tokens": 721617
+      },
+      "cost_usd": 0.360116,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 0.9333,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Keeps the csv requirements (action, assignee, due_date and its guard rule)"
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "candidate",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-1-mixed_consumers_edit/with_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 136.84,
+      "usage": {
+        "input_tokens": 71561,
+        "output_tokens": 7989,
+        "cache_read_tokens": 346560,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 2250,
+        "total_tokens": 426110,
+        "context_tokens": 418121
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 1.0,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "no_skill",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 1,
+      "run_dir": "eval-1-mixed_consumers_edit/no_skill/run-1-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 63.603,
+      "usage": {
+        "input_tokens": 18,
+        "output_tokens": 5660,
+        "cache_read_tokens": 513492,
+        "cache_write_tokens": 53191,
+        "reasoning_tokens": 2040,
+        "total_tokens": 572361,
+        "context_tokens": 566701
+      },
+      "cost_usd": 0.373162,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 0.9333,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "no_skill",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-1-mixed_consumers_edit/no_skill/run-1-codex-gpt-5.6-terra",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 103.704,
+      "usage": {
+        "input_tokens": 24565,
+        "output_tokens": 6469,
+        "cache_read_tokens": 307456,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 1184,
+        "total_tokens": 338490,
+        "context_tokens": 332021
+      },
+      "cost_usd": 0.188249,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 0.8667,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Keeps the csv requirements (action, assignee, due_date and its guard rule)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "mixed_consumers_edit",
+      "config": "no_skill",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-1-mixed_consumers_edit/no_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 54.785,
+      "usage": {
+        "input_tokens": 43253,
+        "output_tokens": 4861,
+        "cache_read_tokens": 220096,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 3647,
+        "total_tokens": 268210,
+        "context_tokens": 263349
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.9333,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "baseline",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 1,
+      "run_dir": "eval-2-unknown_model_explicit_override/without_skill/run-1-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 123.432,
+      "usage": {
+        "input_tokens": 34,
+        "output_tokens": 11099,
+        "cache_read_tokens": 1046938,
+        "cache_write_tokens": 57122,
+        "reasoning_tokens": 3314,
+        "total_tokens": 1115193,
+        "context_tokens": 1104094
+      },
+      "cost_usd": 0.54998,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 0.8824,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Keeps the csv requirements (action, assignee, due_date and its guard rule)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "baseline",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-2-unknown_model_explicit_override/without_skill/run-1-codex-gpt-5.6-terra",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 150.618,
+      "usage": {
+        "input_tokens": 43941,
+        "output_tokens": 9487,
+        "cache_read_tokens": 520192,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 2575,
+        "total_tokens": 573620,
+        "context_tokens": 564133
+      },
+      "cost_usd": 0.305764,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 0.7647,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Keeps the csv requirements (action, assignee, due_date and its guard rule)",
+        "csv detail is conditional: inline behind an explicit condition, or in a reference the core loads only on request",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark",
+        "States the executor and consumer profiles separately, both guided by default"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "baseline",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-2-unknown_model_explicit_override/without_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 51.525,
+      "usage": {
+        "input_tokens": 26760,
+        "output_tokens": 5116,
+        "cache_read_tokens": 374208,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 2985,
+        "total_tokens": 406084,
+        "context_tokens": 400968
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.9412,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "candidate",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 1,
+      "run_dir": "eval-2-unknown_model_explicit_override/with_skill/run-1-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 134.934,
+      "usage": {
+        "input_tokens": 36,
+        "output_tokens": 10115,
+        "cache_read_tokens": 1129399,
+        "cache_write_tokens": 61078,
+        "reasoning_tokens": 2277,
+        "total_tokens": 1200628,
+        "context_tokens": 1190513
+      },
+      "cost_usd": 0.572465,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 1.0,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "candidate",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-2-unknown_model_explicit_override/with_skill/run-1-codex-gpt-5.6-terra",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 168.541,
+      "usage": {
+        "input_tokens": 61956,
+        "output_tokens": 9301,
+        "cache_read_tokens": 415232,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 2008,
+        "total_tokens": 486489,
+        "context_tokens": 477188
+      },
+      "cost_usd": 0.31857,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 0.9412,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Keeps the csv requirements (action, assignee, due_date and its guard rule)"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "candidate",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-2-unknown_model_explicit_override/with_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 47.355,
+      "usage": {
+        "input_tokens": 51829,
+        "output_tokens": 3590,
+        "cache_read_tokens": 178944,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 3223,
+        "total_tokens": 234363,
+        "context_tokens": 230773
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 1.0,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "no_skill",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 1,
+      "run_dir": "eval-2-unknown_model_explicit_override/no_skill/run-1-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 78.0,
+      "usage": {
+        "input_tokens": 16,
+        "output_tokens": 6666,
+        "cache_read_tokens": 434439,
+        "cache_write_tokens": 53508,
+        "reasoning_tokens": 3157,
+        "total_tokens": 494629,
+        "context_tokens": 487963
+      },
+      "cost_usd": 0.368668,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 0.8824,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark",
+        "States the executor and consumer profiles separately, both guided by default"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "no_skill",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-2-unknown_model_explicit_override/no_skill/run-1-codex-gpt-5.6-terra",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 5:34 AM.\"}",
+      "exit_code": 1,
+      "duration_seconds": 98.672,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": null,
+      "pass_rate": 0.7647,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Keeps the csv requirements (action, assignee, due_date and its guard rule)",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark",
+        "States the executor and consumer profiles separately, both guided by default"
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unknown_model_explicit_override",
+      "config": "no_skill",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-2-unknown_model_explicit_override/no_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 47.732,
+      "usage": {
+        "input_tokens": 34566,
+        "output_tokens": 3514,
+        "cache_read_tokens": 300352,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 2820,
+        "total_tokens": 338432,
+        "context_tokens": 334918
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.8235,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "Removes verbatim repetition from the core",
+        "Delivery labels the outcome refactored and statically validated, and does not claim behaviorally evaluated without a benchmark",
+        "States the executor and consumer profiles separately, both guided by default"
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "baseline",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/without_skill/run-1-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 61.266,
+      "usage": {
+        "input_tokens": 12,
+        "output_tokens": 4390,
+        "cache_read_tokens": 305660,
+        "cache_write_tokens": 46215,
+        "reasoning_tokens": 1399,
+        "total_tokens": 356277,
+        "context_tokens": 351887
+      },
+      "cost_usd": 0.290934,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 1.0,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "baseline",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/without_skill/run-1-codex-gpt-5.6-terra",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 5:34 AM.\"}",
+      "exit_code": 1,
+      "duration_seconds": 5.821,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": null,
+      "pass_rate": 0.2857,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Review names the defects by inspection category (duplication, unconditional reading, over-broad description)",
+        "Review proposes a comparison against the previous version on the same cases",
+        "Review separates static validation from measured efficiency",
+        "Review measures with the protocol's own metrics instead of inventing one"
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "baseline",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/without_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 19.317,
+      "usage": {
+        "input_tokens": 24715,
+        "output_tokens": 941,
+        "cache_read_tokens": 15872,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 1038,
+        "total_tokens": 41528,
+        "context_tokens": 40587
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 1.0,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "candidate",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/with_skill/run-1-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 43.647,
+      "usage": {
+        "input_tokens": 10,
+        "output_tokens": 3810,
+        "cache_read_tokens": 238240,
+        "cache_write_tokens": 42000,
+        "reasoning_tokens": 1330,
+        "total_tokens": 284060,
+        "context_tokens": 280250
+      },
+      "cost_usd": 0.254796,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 1.0,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "candidate",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/with_skill/run-1-codex-gpt-5.6-terra",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 5:34 AM.\"}",
+      "exit_code": 1,
+      "duration_seconds": 5.865,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": null,
+      "pass_rate": 0.2857,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Review names the defects by inspection category (duplication, unconditional reading, over-broad description)",
+        "Review proposes a comparison against the previous version on the same cases",
+        "Review separates static validation from measured efficiency",
+        "Review measures with the protocol's own metrics instead of inventing one"
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "candidate",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/with_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 10.207,
+      "usage": {
+        "input_tokens": 13159,
+        "output_tokens": 897,
+        "cache_read_tokens": 14016,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 589,
+        "total_tokens": 28072,
+        "context_tokens": 27175
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 1.0,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "no_skill",
+      "runtime": "claude",
+      "model": "claude-sonnet-5",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/no_skill/run-1-claude-claude-sonnet-5",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 40.284,
+      "usage": {
+        "input_tokens": 10,
+        "output_tokens": 3050,
+        "cache_read_tokens": 230226,
+        "cache_write_tokens": 37319,
+        "reasoning_tokens": 1078,
+        "total_tokens": 270605,
+        "context_tokens": 267555
+      },
+      "cost_usd": 0.226854,
+      "cost_source": "runtime",
+      "model_observed": "claude-sonnet-5",
+      "pass_rate": 0.7143,
+      "model_effective": "claude-sonnet-5",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "Review proposes a comparison against the previous version on the same cases",
+        "Review separates static validation from measured efficiency"
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "no_skill",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/no_skill/run-1-codex-gpt-5.6-terra",
+      "status": "NOT_RUN",
+      "reason": "runtime quota or usage limit: hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 5:34 AM.\"}",
+      "exit_code": 1,
+      "duration_seconds": 5.382,
+      "usage": null,
+      "cost_usd": null,
+      "cost_source": null,
+      "model_observed": null,
+      "pass_rate": 0.2857,
+      "model_effective": "gpt-5.6-terra",
+      "model_source": "request",
+      "effort_effective": "medium",
+      "effort_source": "request",
+      "expectations_failed": [
+        "The runtime completed the task without error",
+        "Review names the defects by inspection category (duplication, unconditional reading, over-broad description)",
+        "Review proposes a comparison against the previous version on the same cases",
+        "Review separates static validation from measured efficiency",
+        "Review measures with the protocol's own metrics instead of inventing one"
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "no_skill",
+      "runtime": "opencode",
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/no_skill/run-1-opencode-opencode_ling-3.0-flash-fin-free",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 9.749,
+      "usage": {
+        "input_tokens": 10708,
+        "output_tokens": 800,
+        "cache_read_tokens": 13760,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 515,
+        "total_tokens": 25268,
+        "context_tokens": 24468
+      },
+      "cost_usd": 0.0,
+      "cost_source": "runtime",
+      "model_observed": "opencode/ling-3.0-flash-fin-free",
+      "pass_rate": 0.5714,
+      "model_effective": "opencode/ling-3.0-flash-fin-free",
+      "model_source": "request",
+      "effort_effective": null,
+      "effort_source": "runtime built-in default (not reported by the runtime)",
+      "expectations_failed": [
+        "Review proposes a comparison against the previous version on the same cases",
+        "Review separates static validation from measured efficiency",
+        "Review measures with the protocol's own metrics instead of inventing one"
+      ]
+    }
+  ],
+  "skill_creator": {
+    "aggregate": {
+      "exit_code": 0,
+      "stderr": ""
+    },
+    "viewer": {
+      "exit_code": 0,
+      "stderr": ""
+    }
+  }
+}

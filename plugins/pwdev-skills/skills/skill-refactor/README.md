@@ -82,14 +82,23 @@ python3 scripts/discover.py                                               # add 
 # sizes per file, context layer and load scenario; generic tokenizer, deltas against a baseline
 python3 scripts/tokens.py . --baseline /path/to/previous-version        # add --json for data
 
-# the matrix: cases × {candidate, baseline} × (runtime, model), graded objectively, under a budget
-python3 scripts/bench.py --skill . --baseline git:<sha> --out "$(mktemp -d)" --publish evals/benchmarks/$(date +%F) \
+# the matrix: cases × {candidate, baseline, no_skill} × (runtime, model), graded objectively, under a budget
+python3 scripts/bench.py --skill . --baseline git:<sha> --no-skill-arm --out "$(mktemp -d)" --publish evals/benchmarks/$(date +%F) \
   --runtimes claude,codex,hermes,opencode \
   --claude-models claude-haiku-4-5-20251001,claude-sonnet-5 \
   --codex-models gpt-5.6-luna,gpt-5.6-terra \
   --hermes-model <model chosen by you> --hermes-provider openrouter \
   --opencode-models opencode/big-pickle \
   --acknowledge-hermes-automation --budget-usd 5
+
+# cases in the domain of the skill being refactored: extract (free) -> propose (one call) -> approve (you)
+python3 scripts/cases.py --extract /path/to/that-skill
+python3 scripts/cases.py --propose /path/to/that-skill/evals/cases/<name> --runtime claude --model claude-sonnet-5
+python3 scripts/cases.py --approve /path/to/that-skill/evals/cases/<name> --skill /path/to/that-skill
+python3 scripts/bench.py --skill /path/to/that-skill --cases /path/to/that-skill/evals/cases/<name> ...
+
+# a finished round after a grader or classifier fix: re-grade from disk, no new calls
+python3 scripts/bench.py --regrade <out-dir> --cases evals/evals.json --publish evals/benchmarks/<date>
 ```
 
 `tokens.py` uses `tiktoken` (`pip install tiktoken`) and labels every number `estimate`

@@ -6,7 +6,10 @@ the on-disk layout that skill-creator's aggregator consumes.
 """
 from __future__ import annotations
 
+import hashlib
 import importlib.util
+import io
+import re
 import sys
 import json
 import os
@@ -48,6 +51,17 @@ def make_skill(root: Path, body: str = "# Demo\n\nDo the thing.\n", description:
 class TokensTest(unittest.TestCase):
     def setUp(self):
         self.tokens = load("tokens")
+
+    def test_generated_cases_and_benchmark_results_are_not_context(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._check_not_context(make_skill(Path(tmp) / "sk"))
+
+    def _check_not_context(self, skill: Path):
+        write(skill / "evals" / "cases" / "sk" / "cases.json", json.dumps({"fixture": {"skill_md": "x" * 5000}}))
+        write(skill / "evals" / "benchmarks" / "2026-09-14" / "summary.json", "{}")
+        files = {p.relative_to(skill).as_posix() for p in self.tokens.skill_files(skill)}
+        self.assertIn("evals/evals.json", files)
+        self.assertFalse(any(f.startswith(("evals/cases/", "evals/benchmarks/")) for f in files), files)
 
     def test_counts_every_layer_and_scenario(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -156,7 +170,10 @@ if os.environ.get("FAKE_ESCAPE"):
 prompt = sys.argv[sys.argv.index("-p") + 1]
 result = "done: refactored"
 target = os.path.join(os.getcwd(), "target", "SKILL.md")
-if prompt.startswith("Review"):
+if os.environ.get("FAKE_PROPOSAL") and "proposal.json" in prompt:
+    open(os.path.join(os.getcwd(), "proposal.json"), "w").write(os.environ["FAKE_PROPOSAL"])
+    result = "wrote proposal.json"
+elif prompt.startswith("Review"):
     result = ("Review: the description is too broad, two paragraphs are duplicated verbatim and the CSV section is "
               "loaded unconditionally on every task. Compare the candidate with the previous version on the same "
               "cases; static validation is not measured efficiency.")
@@ -184,7 +201,11 @@ if "-m" in sys.argv and sys.argv[sys.argv.index("-m") + 1] == "gpt-quota":
     print(json.dumps({"type": "error", "message": "You've hit your usage limit. Visit https://chatgpt.com/codex/settings/usage"}))
     sys.exit(1)
 last = sys.argv[sys.argv.index("--output-last-message") + 1]
-open(last, "w").write("done: statically validated")
+text = "done: statically validated"
+if "-m" in sys.argv and sys.argv[sys.argv.index("-m") + 1] == "gpt-quota-quote":
+    # a clean run whose agent text quotes documentation about quotas
+    text = "The runtime contract says a run that reports 'hit your usage limit' or a rate limit is NOT_RUN. done: statically validated"
+open(last, "w").write(text)
 for event in ({"type": "thread.started", "thread_id": "t-1", "model": "gpt-5.6-luna"},
               {"type": "item.completed", "item": {"type": "agent_message"}},
               {"type": "turn.completed", "usage": {"input_tokens": 2000, "cached_input_tokens": 500, "output_tokens": 400}}):
@@ -223,6 +244,11 @@ skills = os.path.join(workspace, ".opencode", "skills")
 names = sorted(os.listdir(skills)) if os.path.isdir(skills) else []
 if "-m" in sys.argv and sys.argv[sys.argv.index("-m") + 1] == "opencode/overloaded-free":
     print(json.dumps({"type": "error", "sessionID": "ses_y", "error": {"name": "UnknownError", "data": {"message": "Streaming response failed: [502] Upstream error from Nvidia: Service temporarily overloaded"}}}))
+    sys.exit(1)
+if "-m" in sys.argv and sys.argv[sys.argv.index("-m") + 1] == "opencode/disconnected-free":
+    # the answer so far quoted the docs; the runtime's own failure is a dropped connection
+    print(json.dumps({"type": "text", "sessionID": "ses_z", "part": {"text": "The contract says a rate limit is NOT_RUN."}}))
+    print(json.dumps({"type": "error", "sessionID": "ses_z", "error": {"name": "APIError", "data": {"message": "Cannot connect to API: The socket connection was closed unexpectedly", "isRetryable": True}}}))
     sys.exit(1)
 if "-m" in sys.argv and sys.argv[sys.argv.index("-m") + 1] == "opencode/rate-limited-free":
     print(json.dumps({"type": "error", "sessionID": "ses_x", "error": {"message": "Rate limit exceeded for free model"}}))
@@ -427,6 +453,13 @@ class RuntimesTest(unittest.TestCase):
         self.assertEqual(record["extra"]["steps"], 2)
         self.assertEqual((self.root / "run" / "result.txt").read_text(), "done: statically validated")
 
+    def test_opencode_dropped_connection_is_not_run_with_the_runtime_s_reason(self):
+        record = self.runtimes.run("opencode", self.request(model="opencode/disconnected-free"))
+        self.assertEqual(record["status"], "NOT_RUN")
+        self.assertIn("provider unavailable", record["reason"])
+        self.assertIn("Cannot connect to API", record["reason"])
+        self.assertNotIn("contract says", record["reason"])
+
     def test_opencode_provider_overload_is_not_run(self):
         record = self.runtimes.run("opencode", self.request(model="opencode/overloaded-free"))
         self.assertEqual(record["status"], "NOT_RUN")
@@ -448,6 +481,13 @@ class RuntimesTest(unittest.TestCase):
         self.assertEqual(record["cost_source"], "runtime")
         self.assertEqual(record["usage"]["output_tokens"], 250)
         self.assertEqual(record["extra"]["stop_reason"], "tool_use")
+
+    def test_quota_words_inside_a_successful_run_are_not_a_quota(self):
+        # Observed 2026-09-14: two Codex runs that read references/runtimes.md and quoted "hit your
+        # usage limit" in their answer were recorded NOT_RUN although they exited 0 with a clean envelope.
+        record = self.runtimes.run("codex", self.request(model="gpt-quota-quote"))
+        self.assertEqual(record["status"], "PASS", record.get("reason"))
+        self.assertTrue(record["envelope_ok"])
 
     def test_quota_exhaustion_is_not_run_not_fail(self):
         record = self.runtimes.run("codex", self.request(model="gpt-quota"))
@@ -644,10 +684,50 @@ class GradeTest(unittest.TestCase):
         broken = GOOD_REFACTOR.replace("REVIEW_WINDOW=14", "").replace('user_extension: "keep-me"', "other: 1")
         grading = self.grade_edit(broken, "Outcome: refactored, statically validated and behaviorally evaluated on all models!")
         failed = {e["text"] for e in grading["expectations"] if not e["passed"]}
-        self.assertIn("Preserves the editorial note REVIEW_WINDOW=14", failed)
+        self.assertIn("Preserves the literal REVIEW_WINDOW=14", failed)
         self.assertIn("Preserves metadata.user_extension: keep-me", failed)
         self.assertTrue(any("behaviorally evaluated" in text for text in failed))
         self.assertLess(grading["summary"]["pass_rate"], 1.0)
+
+    def test_delivery_labels_are_read_from_the_artifact_area_too(self):
+        # The skill sends the report to {run_dir}/artifacts, beside target/: labels written only there
+        # must count (observed 2026-09-14: Claude labelled the report file, not the chat answer).
+        case = self.cases["mixed_consumers_edit"]
+        with tempfile.TemporaryDirectory() as tmp:
+            ws = Path(tmp)
+            write(ws / "target" / "SKILL.md", GOOD_REFACTOR)
+            write(ws / "target" / "references" / "csv-export.md", CSV_REFERENCE)
+            write(ws / "artifacts" / "artifacts" / "report-2026-09-14.md",
+                  "# Report\n\nOutcome: refactored, statically validated. Not behaviorally evaluated (no benchmark ran).\n"
+                  "Executor profile: guided; consumer profile: guided.\n")
+            write(ws / "artifacts" / "artifacts" / "baseline" / "SKILL.md", "old text labelled behaviorally evaluated\n")
+            grading = self.grade.grade_run(case=case, fixture_skill_md=self.fixture, target_dir=ws / "target",
+                                           result_text="Done; see artifacts/artifacts/report-2026-09-14.md.",
+                                           record={"status": "PASS", "protected_changed": False}, tokenizer=self.tokenizer)
+        labels = next(e for e in grading["expectations"] if e["text"].startswith("Delivery labels"))
+        self.assertTrue(labels["passed"], labels["evidence"])
+
+    def test_invariants_from_a_case_replace_the_fixture_rules(self):
+        # A context-derived case brings its own invariants; the fixture's rules must not leak in.
+        case = dict(self.cases["mixed_consumers_edit"])
+        case["invariants"] = {"name": "ticket-triage", "must_keep_literals": ["SLA=4h"], "labels": ["Severity", "Owner"],
+                              "prohibitions": [r"(?i)never\s+close"], "language_markers": [r"(?i)\bticket\b"]}
+        target_md = ("---\nname: ticket-triage\n---\n\n# Triage a ticket\n\nLabel Severity and Owner. Never close a "
+                     "ticket without a reply. Keep SLA=4h.\n")
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "target"
+            write(target / "SKILL.md", target_md)
+            grading = self.grade.grade_run(case=case, fixture_skill_md="---\nname: ticket-triage\n---\nold old old\n",
+                                           target_dir=target, result_text="Outcome: refactored, statically validated.",
+                                           record={"status": "PASS", "protected_changed": False}, tokenizer=self.tokenizer)
+        texts = [e["text"] for e in grading["expectations"]]
+        self.assertIn("Preserves name: ticket-triage", texts)
+        self.assertIn("Preserves the literal SLA=4h", texts)
+        self.assertIn("Preserves the output labels Severity / Owner", texts)
+        self.assertFalse(any("meeting-summary" in x or "REVIEW_WINDOW" in x or "csv" in x.lower() for x in texts))
+        failed = [e["text"] for e in grading["expectations"] if not e["passed"]]
+        self.assertNotIn("Preserves name: ticket-triage", failed)
+        self.assertNotIn("Preserves the literal SLA=4h", failed)
 
     def test_unchanged_target_fails_edit_but_review_only_requires_no_change(self):
         unchanged = self.grade_edit(self.fixture, "recommendations only", csv=None)
@@ -711,6 +791,196 @@ class GradeTest(unittest.TestCase):
                       {e["text"] for e in changed["expectations"] if not e["passed"]})
 
 
+VALID_PROPOSAL = {
+    "requests": [
+        {"name": "agenda_focus", "mode": "refactor",
+         "prompt": "Refactor {target} so the agenda section loads only when minutes carry an agenda; report in {run_dir}/artifacts. No benchmarks.",
+         "expected_output": "Conditional agenda support, requirements preserved."},
+        {"name": "csv_review", "mode": "review",
+         "prompt": "Review {target}: is the CSV block worth its cost on every summary? Do not edit files.",
+         "expected_output": "A review with a measurement plan."},
+    ],
+    "trigger_evals": [
+        {"query": "Slim down the meeting-summary skill for cheap models.", "should_trigger": True},
+        {"query": "Split meeting-summary's CSV export into a reference.", "should_trigger": True},
+        {"query": "Measure whether the new meeting-summary core costs less per accepted summary.", "should_trigger": True},
+        {"query": "Audit meeting-summary for duplicated instructions.", "should_trigger": True},
+        {"query": "Summarize yesterday's board meeting from these minutes.", "should_trigger": False},
+        {"query": "Export the action items of this meeting to CSV.", "should_trigger": False},
+        {"query": "Write minutes for the meeting we just had.", "should_trigger": False},
+        {"query": "Which decisions were taken in the Q3 planning meeting?", "should_trigger": False},
+    ],
+    "invariant_suggestions": {"labels": ["Agenda"]},
+}
+
+
+class CasesTest(unittest.TestCase):
+    def setUp(self):
+        self.cases = load("cases")
+        self.grade = load("grade")
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.bin = self.root / "bin"
+        install_fakes(self.bin)
+        spec = json.loads(REAL_EVALS.read_text(encoding="utf-8"))
+        self.fixture_md = spec["fixture"]["skill_md"]
+        self.skill = self.root / "meeting-summary"
+        write(self.skill / "SKILL.md", self.fixture_md)
+        write(self.skill / "references" / "style.md", "# Style\n\nShort sentences.\n")
+        write(self.skill / "evals" / "evals.json", "{}")
+        write(self.skill / "private.pem", "not a real key\n")
+        write(self.skill / "credentials.json", "{}\n")
+        self.out = self.root / "cases"
+        self._env = dict(os.environ)
+        os.environ["FAKE_LOG"] = str(self.root / "calls.jsonl")
+        os.environ["PATH"] = f"{self.bin}:/usr/bin:/bin"
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self._env)
+        self.tmp.cleanup()
+
+    def test_extract_reproduces_the_fixture_invariants_and_finds_its_defects(self):
+        draft = self.cases.extract(self.skill)
+        inv = draft["invariants"]
+        self.assertEqual(inv["name"], "meeting-summary")
+        self.assertEqual(inv["paths"], ["**/minutes.txt"])
+        self.assertEqual(inv["metadata"], {"user_extension": "keep-me"})
+        self.assertEqual(inv["must_keep_literals"], ["REVIEW_WINDOW=14"])
+        self.assertTrue({"Key points", "Decisions", "Actions"} <= set(inv["labels"]), inv["labels"])
+        self.assertTrue(any(re.search(p, "Never invent decisions") for p in inv["prohibitions"]), inv["prohibitions"])
+        block = next(b for b in inv["conditional_blocks"] if b["topic"] == "csv")
+        self.assertEqual(block["must_keep_terms"][:3], ["action", "assignee", "due_date"])
+        self.assertTrue(re.search(block["guard"], "Do not export without a request."))
+        self.assertEqual(block["marker"], "due_date")
+        self.assertEqual(draft["source"]["language"], "en")
+        categories = {f["category"] for f in draft["findings"]}
+        self.assertTrue({"duplication", "unconditional reading", "over-broad description", "procedure without purpose"} <= categories, categories)
+        self.assertFalse(draft["approved"])
+        self.assertEqual([c["name"] for c in draft["evals"]], ["mixed_consumers_edit", "unknown_model_explicit_override", "review_only"])
+        self.assertTrue(all("{target}" in c["prompt"] and c["invariants"] is inv for c in draft["evals"]))
+        self.assertEqual(len(draft["trigger_evals"]), 8)
+        self.assertEqual({t["should_trigger"] for t in draft["trigger_evals"]}, {True, False})
+        # the fixture carries the skill's own files, never its evals, dotfiles or secrets-by-name
+        self.assertEqual(set(draft["fixture"]["files"]), {"references/style.md"})
+        self.assertEqual(draft["fixture"]["skill_md"], self.fixture_md)
+        self.assertNotIn("/Users/", json.dumps(draft))
+
+    def test_extraction_ignores_volatile_metadata_and_judges_links_by_paragraph(self):
+        write(self.skill / "SKILL.md", (
+            "---\nname: wrapped\ndescription: Use when wrapping.\nmetadata:\n  version: 0.2.1\n  updated: 2026-09-14\n"
+            "  generated_at: 2026-09-12T00:00:00Z\n  author: Someone\n---\n\n# Wrapped\n\n"
+            "Inspect the target for these defects: 3. Unconditional reading — references loaded on every run.\n\n"
+            "- Any edit to the target, and any review that names findings:\n"
+            "  [the protocol](references/protocol.md).\n"
+            "- Packaging questions only: [usage](README.md).\n\n"
+            "Terms are defined once, in [the glossary](references/glossary.md).\n"))
+        draft = self.cases.extract(self.skill)
+        self.assertEqual(draft["invariants"]["metadata"], {"author": "Someone"})
+        unconditional = [f for f in draft["findings"] if f["category"] == "unconditional reading"]
+        evidence = unconditional[0]["evidence"] if unconditional else []
+        self.assertEqual(evidence, ["reference linked without a condition: references/glossary.md"])
+
+    def test_extracted_invariants_drive_the_grader_and_hold_on_the_untouched_fixture(self):
+        inv = self.cases.extract(self.skill)["invariants"]
+        frontmatter, body = self.cases.split_frontmatter(self.fixture_md)
+        corpus = {"SKILL.md": self.fixture_md}
+        expectations = self.grade.expectations_from_spec(inv, frontmatter=frontmatter, body=body, everything=self.fixture_md,
+                                                         corpus=corpus, target_md=self.fixture_md)
+        texts = {e["text"]: e["passed"] for e in expectations}
+        for needle in ("Preserves name: meeting-summary", "Preserves paths: **/minutes.txt",
+                       "Preserves metadata.user_extension: keep-me", "Preserves the literal REVIEW_WINDOW=14",
+                       "Target stays in its original language (no translation)"):
+            self.assertIn(needle, texts)
+            self.assertTrue(texts[needle], needle)
+        self.assertTrue(all(v for k, v in texts.items() if k.startswith("Preserves")), texts)
+
+    def test_proposal_schema_rejects_what_the_grader_could_not_trust(self):
+        good = json.loads(json.dumps(VALID_PROPOSAL))
+        self.assertEqual(len(self.cases.validate_proposal(good)["requests"]), 2)
+        bad_cases = {
+            "not an object": [],
+            "one request": {**good, "requests": good["requests"][:1]},
+            "bad mode": {**good, "requests": [{**good["requests"][0], "mode": "benchmark"}, good["requests"][1]]},
+            "no target placeholder": {**good, "requests": [{**good["requests"][0], "prompt": "Refactor the skill."}, good["requests"][1]]},
+            "name not snake": {**good, "requests": [{**good["requests"][0], "name": "Agenda Focus"}, good["requests"][1]]},
+            "too few triggers": {**good, "trigger_evals": good["trigger_evals"][:5]},
+            "only positives": {**good, "trigger_evals": [{**t, "should_trigger": True} for t in good["trigger_evals"]]},
+            "string polarity": {**good, "trigger_evals": [{**good["trigger_evals"][0], "should_trigger": "yes"}] + good["trigger_evals"][1:]},
+        }
+        for label, payload in bad_cases.items():
+            with self.assertRaises(ValueError, msg=label):
+                self.cases.validate_proposal(payload)
+
+    def test_propose_makes_one_headless_call_without_a_skill_and_keeps_suggestions_apart(self):
+        draft = self.cases.extract(self.skill)
+        write(self.out / "cases.draft.json", json.dumps(draft))
+        os.environ["FAKE_PROPOSAL"] = json.dumps(VALID_PROPOSAL)
+        work = self.root / "work"
+        proposed = self.cases.propose(self.out, runtime="claude", model="claude-haiku-4-5-20251001", effort="medium",
+                                      budget_usd=1.0, timeout=60, hermes_ack=False, work_dir=work,
+                                      env_passthrough=("FAKE_LOG", "FAKE_PROPOSAL"))
+        calls = [json.loads(line) for line in (self.root / "calls.jsonl").read_text().splitlines()]
+        runs = [c for c in calls if "-p" in c["argv"]]
+        self.assertEqual(len(runs), 1)
+        self.assertNotIn("--plugin-dir", runs[0]["argv"])
+        self.assertTrue((work / "workspace" / "target" / "references" / "style.md").is_file())
+        self.assertTrue((self.out / "cases.proposed.json").is_file())
+        self.assertEqual([c["name"] for c in proposed["evals"]][3:], ["agenda_focus", "csv_review"])
+        llm = proposed["evals"][3]
+        self.assertTrue(llm["origin"].startswith("llm:claude:"))
+        self.assertEqual(llm["invariants"], draft["invariants"])  # objective checks come from extraction only
+        self.assertEqual(len(proposed["trigger_evals"]), 16)
+        self.assertEqual(proposed["llm_suggested_invariants"], {"labels": ["Agenda"]})
+        self.assertNotIn("Agenda", proposed["invariants"].get("labels", []))
+        self.assertEqual(proposed["proposal_run"]["status"], "PASS")
+        self.assertFalse(proposed["proposal_run"]["protected_changed"])
+        self.assertFalse(proposed["approved"])
+        self.assertFalse((self.skill / "evals" / "cases").exists())  # nothing landed in the skill tree
+
+    def test_propose_refuses_an_invalid_reply(self):
+        write(self.out / "cases.draft.json", json.dumps(self.cases.extract(self.skill)))
+        os.environ["FAKE_PROPOSAL"] = json.dumps({"requests": [], "trigger_evals": []})
+        with self.assertRaises(ValueError):
+            self.cases.propose(self.out, runtime="claude", model=None, effort=None, budget_usd=1.0, timeout=60,
+                               hermes_ack=False, work_dir=self.root / "work", env_passthrough=("FAKE_LOG", "FAKE_PROPOSAL"))
+        self.assertFalse((self.out / "cases.proposed.json").exists())
+
+    def test_approve_needs_a_yes_and_pins_the_source_hash(self):
+        write(self.out / "cases.draft.json", json.dumps(self.cases.extract(self.skill)))
+        sink = io.StringIO()
+        self.assertIsNone(self.cases.approve(self.out, skill_dir=self.skill, yes=False, stdin=io.StringIO("n\n"), stdout=sink))
+        self.assertFalse((self.out / "cases.json").exists())
+        self.assertIn("mixed_consumers_edit", sink.getvalue())
+        path = self.cases.approve(self.out, skill_dir=self.skill, yes=False, stdin=io.StringIO("y\n"), stdout=io.StringIO())
+        approved = json.loads(path.read_text())
+        self.assertTrue(approved["approved"])
+        self.assertEqual(approved["source"]["skill_md_sha256"], hashlib.sha256(self.fixture_md.encode()).hexdigest())
+        self.assertTrue(self.cases.check(self.out, self.skill))
+        # editing the skill after approval is drift: bench must not pair the cases with a different source
+        write(self.skill / "SKILL.md", self.fixture_md + "\nOne more rule.\n")
+        self.assertFalse(self.cases.check(self.out, self.skill))
+        with self.assertRaisesRegex(SystemExit, "changed since extraction"):
+            self.cases.approve(self.out, skill_dir=self.skill, yes=True, stdout=io.StringIO())
+
+    def test_bench_materializes_the_whole_context_fixture(self):
+        bench = load("bench")
+        write(self.out / "cases.draft.json", json.dumps(self.cases.extract(self.skill)))
+        self.cases.approve(self.out, skill_dir=self.skill, yes=True, stdout=io.StringIO())
+        out = self.root / "bench-out"
+        os.environ["FAKE_EDIT"] = "1"
+        code = bench.main(["--skill", str(self.skill), "--out", str(out), "--cases", str(self.out), "--only-case", "3",
+                           "--runtimes", "claude", "--claude-models", "claude-haiku-4-5-20251001", "--reps", "1",
+                           "--dry-run", "--fake-bin", str(self.bin), "--no-skill-creator", "--no-skill-arm"])
+        self.assertEqual(code, 0)
+        summary = json.loads((out / "summary.json").read_text())
+        self.assertTrue(summary["cases_source"].endswith("cases.json"))
+        run = next(r for r in summary["runs"] if r["config"] == "no_skill")
+        target = out / run["run_dir"] / "workspace" / "target"
+        self.assertTrue((target / "references" / "style.md").is_file())
+        self.assertFalse((target / "evals").exists())
+
+
 class BenchTest(unittest.TestCase):
     def setUp(self):
         self.bench = load("bench")
@@ -731,6 +1001,10 @@ class BenchTest(unittest.TestCase):
         os.environ.clear()
         os.environ.update(self._env)
         self.tmp.cleanup()
+
+    def calls(self):
+        log = self.root / "calls.jsonl"
+        return [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
 
     def run_bench(self, *extra: str, budget: str = "5") -> tuple[int, Path]:
         out = self.root / "out"
@@ -754,18 +1028,24 @@ class BenchTest(unittest.TestCase):
             for name in ("record.json", "grading.json", "timing.json", "transcript.md", "outputs/report.md", "outputs/target/SKILL.md"):
                 self.assertTrue((run_dir / name).exists(), f"{run_dir.name} lacks {name}")
             self.assertTrue((run_dir.parent.parent / "eval_metadata.json").is_file())
+        # directories keep skill-creator's names; the summary names the arms by their role
         self.assertEqual({p.parent.name for p in run_dirs}, {"with_skill", "without_skill"})
+        self.assertEqual(summary["arms"], ["candidate", "baseline"])
         rows = {(r["runtime"], r["model"], r["config"]) for r in summary["efficiency_by_model"]}
-        self.assertIn(("claude", "claude-haiku-4-5-20251001", "with_skill"), rows)
-        self.assertIn(("codex", "gpt-5.6-luna", "without_skill"), rows)
-        codex_row = next(r for r in summary["efficiency_by_model"] if r["runtime"] == "codex" and r["config"] == "with_skill")
+        self.assertIn(("claude", "claude-haiku-4-5-20251001", "candidate"), rows)
+        self.assertIn(("codex", "gpt-5.6-luna", "baseline"), rows)
+        codex_row = next(r for r in summary["efficiency_by_model"] if r["runtime"] == "codex" and r["config"] == "candidate")
         self.assertEqual(codex_row["executed"], 3)
         self.assertIsNotNone(codex_row["cost_total_usd"])  # from the pricing table in evals.json
         self.assertGreater(summary["cost_total_usd"], 0)
         # the claude edit cases pass every objective expectation with the fake's good refactor
         claude_edit = [r for r in summary["runs"] if r["runtime"] == "claude" and r["eval_name"] == "mixed_consumers_edit"]
         self.assertTrue(all(r["pass_rate"] == 1.0 for r in claude_edit), claude_edit)
-        self.assertIn("with_skill", summary["static_tokens"])
+        self.assertIn("candidate", summary["static_tokens"])
+        paired = summary["paired_by_case"]
+        self.assertEqual(len(paired), 3 * 3)  # cases × (runtime, model)
+        self.assertEqual(set(paired[0]["arms"]), {"candidate", "baseline"})
+        self.assertIn("cost_per_success_usd", paired[0]["arms"]["candidate"])
         self.assertTrue((out / "benchmark.md").is_file())
         self.assertTrue((out / "tokens.json").is_file())
         # summary.json is the versioned artifact: no home-directory paths anywhere in it
@@ -825,6 +1105,88 @@ class BenchTest(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self.bench.resolve_version(f"git:{old_sha}:plugins/nowhere", new, self.root / "v3")
 
+    def test_no_skill_arm_exposes_nothing_and_is_paired_with_the_others(self):
+        code, out = self.run_bench("--no-skill-arm", "--only-case", "3", "--runtimes", "claude,codex,opencode",
+                                   "--opencode-models", "opencode/big-pickle")
+        summary = json.loads((out / "summary.json").read_text())
+        self.assertEqual(summary["arms"], ["candidate", "baseline", "no_skill"])
+        control = [r for r in summary["runs"] if r["config"] == "no_skill"]
+        self.assertEqual(len(control), 3)
+        for run in control:
+            run_dir = out / run["run_dir"]
+            self.assertEqual(run_dir.parent.name, "no_skill")
+            workspace = run_dir / "workspace"
+            # the runtime received the fixture and the prompt, and no skill through any channel
+            self.assertTrue((workspace / "target" / "SKILL.md").is_file())
+            self.assertFalse((workspace / "skills").exists())
+            self.assertFalse((workspace / "AGENTS.md").exists())
+            self.assertFalse((workspace / ".opencode").exists())
+            self.assertFalse((run_dir / "plugin" / "skills").exists())
+        argvs = [c["argv"] for c in self.calls() if c["exe"] == "claude" and "-p" in c["argv"]]
+        self.assertTrue(argvs)
+        self.assertTrue(any("--plugin-dir" not in a for a in argvs), "the no-skill Claude run must not load a plugin")
+        self.assertEqual(summary["static_tokens"].get("no_skill"), None)
+        slot = next(s for s in summary["paired_by_case"] if s["runtime"] == "claude")
+        self.assertEqual(set(slot["arms"]), {"candidate", "baseline", "no_skill"})
+        row = next(r for r in summary["efficiency_by_model"] if r["config"] == "no_skill")
+        self.assertEqual(row["skill_static_tokens"], 0)
+
+    def test_unapproved_context_cases_are_refused(self):
+        cases_dir = self.root / "cases"
+        spec = json.loads(REAL_EVALS.read_text(encoding="utf-8"))
+        spec["approved"] = False
+        write(cases_dir / "cases.json", json.dumps(spec))
+        with self.assertRaisesRegex(SystemExit, "unapproved"):
+            self.bench.main(["--skill", str(self.candidate), "--out", str(self.root / "o"), "--cases", str(cases_dir),
+                             "--runtimes", "claude", "--dry-run", "--fake-bin", str(self.bin), "--no-skill-creator"])
+
+    def test_regrade_reclassifies_and_resummarizes_without_new_calls(self):
+        code, out = self.run_bench("--only-case", "3", "--runtimes", "codex", "--codex-models", "gpt-5.6-luna", "--reps", "1")
+        self.assertEqual(code, 0)
+        summary = json.loads((out / "summary.json").read_text())
+        run = next(r for r in summary["runs"] if r["config"] == "candidate")
+        record_path = out / run["run_dir"] / "record.json"
+        record = json.loads(record_path.read_text())
+        # simulate the classifier bug: a clean run recorded as a quota outage
+        record.update(status="NOT_RUN", reason="runtime quota or usage limit: rate limit quoted from docs")
+        record.pop("envelope_ok", None)
+        record_path.write_text(json.dumps(record))
+        calls_before = len(self.calls())
+        code = self.bench.main(["--regrade", str(out), "--fake-bin", str(self.bin), "--no-skill-creator"])
+        self.assertEqual(code, 0)
+        self.assertEqual(len(self.calls()), calls_before)  # no runtime was invoked
+        regraded = json.loads(record_path.read_text())
+        self.assertEqual(regraded["status"], "PASS")
+        self.assertTrue(regraded["envelope_ok"])
+        grading = json.loads((out / run["run_dir"] / "grading.json").read_text())
+        self.assertTrue(next(e["passed"] for e in grading["expectations"] if e["text"].startswith("The runtime completed")))
+        summary2 = json.loads((out / "summary.json").read_text())
+        self.assertEqual(summary2["runs_executed"], summary["runs_executed"])
+        self.assertTrue(all(r["status"] == "PASS" for r in summary2["runs"]))
+        self.assertIn("regraded_at", summary2)
+        self.assertEqual(summary2["arms"], summary["arms"])
+        self.assertEqual(summary2["started_at"], summary["started_at"])
+        self.assertTrue((out / "benchmark.md").is_file())
+
+    def test_regrade_summarizes_runs_from_disk_across_invocations(self):
+        # Round interrupted (no summary.json), then completed by a second invocation of another
+        # runtime into the same --out: the regrade unites both from the run dirs.
+        code, out = self.run_bench("--only-case", "3", "--runtimes", "codex", "--codex-models", "gpt-5.6-luna", "--reps", "1")
+        self.assertEqual(code, 0)
+        (out / "summary.json").unlink()
+        code, _ = self.run_bench("--only-case", "3", "--runtimes", "claude", "--reps", "1")
+        self.assertEqual(code, 0)
+        only_claude = json.loads((out / "summary.json").read_text())
+        self.assertEqual({r["runtime"] for r in only_claude["runs"]}, {"claude"})
+        code = self.bench.main(["--regrade", str(out), "--fake-bin", str(self.bin), "--no-skill-creator"])
+        self.assertEqual(code, 0)
+        merged = json.loads((out / "summary.json").read_text())
+        self.assertEqual({r["runtime"] for r in merged["runs"]}, {"claude", "codex"})
+        self.assertEqual(merged["runs_planned"], 4)
+        self.assertEqual({(r["runtime"], r["config"]) for r in merged["runs"]},
+                         {("claude", "candidate"), ("claude", "baseline"), ("codex", "candidate"), ("codex", "baseline")})
+        self.assertTrue(all(r["status"] == "PASS" for r in merged["runs"]))
+
     def test_publish_copies_summaries_only_never_skill_copies(self):
         # A round directory holds version copies and fixture workspaces, each with a SKILL.md.
         # Published into a plugin those would count as extra skills, so only summaries are copied.
@@ -835,6 +1197,17 @@ class BenchTest(unittest.TestCase):
         self.assertEqual(sorted(p.name for p in published.iterdir()), ["benchmark.md", "summary.json", "tokens.json"])
         self.assertEqual(list(published.rglob("SKILL.md")), [])
         self.assertTrue(list(out.rglob("SKILL.md")), "the round itself does contain skill copies")
+
+    def test_hermes_model_accepts_a_list_of_provider_slugs(self):
+        code, out = self.run_bench("--only-case", "3", "--runtimes", "hermes", "--hermes-provider", "openrouter",
+                                   "--hermes-model", "z-ai/glm-5.3-flash,deepseek/deepseek-v4.1-flash")
+        self.assertEqual(code, 0)
+        summary = json.loads((out / "summary.json").read_text())
+        models = {r["model"] for r in summary["runs"] if r["runtime"] == "hermes"}
+        self.assertEqual(models, {"z-ai/glm-5.3-flash", "deepseek/deepseek-v4.1-flash"})
+        argvs = [c["argv"] for c in self.calls() if c["exe"] == "hermes" and "-z" in c["argv"]]
+        self.assertTrue(all(a[a.index("--provider") + 1] == "openrouter" for a in argvs))
+        self.assertEqual({a[a.index("-m") + 1] for a in argvs}, models)
 
     def test_hermes_model_must_be_chosen_by_the_user_outside_dry_run(self):
         with self.assertRaises(SystemExit):

@@ -4,7 +4,7 @@ Review, refactor and benchmark Agent Skills in Claude Code, Codex and Hermes Age
 benchmark also drives OpenCode. The plugin ships one skill, `skill-refactor`, and the scripts it
 uses to measure a skill on the models that are actually available on this machine.
 
-> [Versão em Português](./README.pt-BR.md) · [Manual de uso (PT-BR)](./docs/manual-de-uso.md)
+> [Versão em Português](./README.pt-BR.md) · [Manual de uso (PT-BR)](./docs/manual-de-uso.md) · [Metodologia de refatoração (PT-BR)](./docs/metodologia-de-refatoracao.md)
 
 ## What's inside
 
@@ -16,7 +16,8 @@ uses to measure a skill on the models that are actually available on this machin
 | `references/runtimes.md` | The headless contract per runtime: command vectors, usage and cost sources, safety rules |
 | `scripts/discover.py` | Which runtimes are installed and signed in, their default model and effort, and the models each one can run |
 | `scripts/tokens.py` | Size per file, context layer and load scenario with a generic tokenizer (`tiktoken`) |
-| `scripts/bench.py` + `runtimes.py` + `grade.py` | Headless A/B benchmark across runtimes and models, graded objectively, under a budget |
+| `scripts/bench.py` + `runtimes.py` + `grade.py` | Headless A/B benchmark across runtimes and models — arms `candidate`, `baseline` and `no_skill` — graded from each case's invariants, under a budget |
+| `scripts/cases.py` | Cases derived from the skill under refactoring: invariants and defects by script, requests and trigger queries proposed by one headless call, human approval pinned to the source hash |
 | `evals/evals.json` | Fixture, cases, trigger and routing checks, default matrix and dated pricing |
 
 Ships 1 skill. No commands, subagents, hooks or MCP server.
