@@ -1,0 +1,38 @@
+{
+  "name": "pwdev-skills",
+  "version": "0.1.0",
+  "description": "Review, refactor and benchmark Agent Skills across Claude Code, Codex, Hermes Agent and OpenCode, with runtime and model discovery and objective headless A/B benchmarks.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "codex",
+    "agent-skills",
+    "skill-refactoring",
+    "benchmark",
+    "evaluation",
+    "hermes",
+    "portable"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "PWDEV Skills",
+    "shortDescription": "Review, refactor and benchmark Agent Skills",
+    "longDescription": "Review or refactor an existing SKILL.md into a smaller core with conditional references, discover the runtimes and models available, size skills with a generic tokenizer, and compare a candidate with the previous version through headless A/B benchmarks graded objectively under a budget.",
+    "developerName": "PWDEV Solucoes",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Review this SKILL.md without editing it and explain how to measure the effect of simplifying it.",
+      "Discover which runtimes and models are available here for benchmarking a skill.",
+      "Refactor this skill into a smaller core with conditional references and prepare evaluation cases."
+    ]
+  }
+}

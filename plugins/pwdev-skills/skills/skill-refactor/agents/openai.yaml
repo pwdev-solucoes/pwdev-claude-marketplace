@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Skill Refactor"
+  short_description: "Review, refactor and benchmark Agent Skills"
+  default_prompt: "Use $skill-refactor to review or refactor a SKILL.md and measure the effect across runtimes."

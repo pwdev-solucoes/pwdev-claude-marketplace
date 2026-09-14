@@ -1,0 +1,187 @@
+{
+  "skill_name": "skill-refactor",
+  "matrix": {
+    "note": "Default benchmark matrix for scripts/bench.py. Model ids are the runtimes' official identifiers; a slug the runtime rejects is recorded NOT_RUN, never substituted. The Hermes model is chosen by the user at run time.",
+    "runtimes": {
+      "claude": {
+        "models": [
+          "claude-haiku-4-5-20251001",
+          "claude-sonnet-5",
+          "claude-opus-5",
+          "claude-fable-5-1"
+        ],
+        "cost_source": "runtime total_cost_usd"
+      },
+      "codex": {
+        "models": [
+          "gpt-5.6-luna",
+          "gpt-5.6-terra",
+          "gpt-5.6-sol",
+          "gpt-6-astra"
+        ],
+        "cost_source": "pricing table below"
+      },
+      "hermes": {
+        "models": [],
+        "provider": "openrouter",
+        "cost_source": "--usage-file estimated cost"
+      },
+      "opencode": {
+        "models": [
+          "opencode/big-pickle",
+          "opencode/muse-spark-1.3-contributor-free",
+          "opencode/nemotron-3-ultra-free",
+          "opencode/ling-3.0-flash-fin-free",
+          "opencode/mimo-v2.5-free",
+          "opencode/nemotron-3.5-lightning-free"
+        ],
+        "cost_source": "runtime step_finish.cost (0 for free Zen models)",
+        "note": "Only models listed by `opencode models` on the machine that runs the round; add providers with `opencode providers login` and confirm ids with `opencode models <provider>`."
+      }
+    },
+    "pricing": {
+      "gpt-6-astra": {
+        "input": 10.0,
+        "cached_input": 1.0,
+        "output": 50.0
+      },
+      "gpt-5.6-sol": {
+        "input": 4.0,
+        "cached_input": 0.4,
+        "output": 20.0
+      },
+      "gpt-5.6-terra": {
+        "input": 2.0,
+        "cached_input": 0.2,
+        "output": 12.0
+      },
+      "gpt-5.6-luna": {
+        "input": 0.2,
+        "cached_input": 0.02,
+        "output": 1.2
+      }
+    },
+    "pricing_unit": "USD per 1M tokens",
+    "pricing_source": "https://developers.openai.com/api/docs/pricing",
+    "pricing_date": "2026-09-13",
+    "budget_usd_per_round": 5.0,
+    "reps": 1,
+    "pricing_note": "API list prices, standard tier. Codex runs signed in with a ChatGPT plan are not billed per token; cost_usd for them is an API-equivalent figure, comparable across models, not a charge."
+  },
+  "fixture_protocol": "Before each execution, the evaluation harness writes fixture.skill_md to a fresh regular target/SKILL.md under an isolated authorized run directory and substitutes {target} and {run_dir} in the prompt. Preserve a separate baseline before launching the executor. fixture and fixture_protocol are harness extensions, not promises of support by stock skill-creator scripts. Never materialize fixtures over user files.",
+  "fixture": {
+    "skill_md": "---\nname: meeting-summary\ndescription: Use for any text, document, message, or information task.\npaths: [\"**/minutes.txt\"]\nmetadata:\n  user_extension: \"keep-me\"\n---\n\n# Summarize a meeting\n\nUse only supplied content. Never invent decisions, assignees, or dates.\nOutput Key points, Decisions, and Actions. Label missing assignees and dates.\nPreserve the editorial note: REVIEW_WINDOW=14.\n\nAlways read every document before doing any work. Always write a long plan.\nAlways reread this skill. Always explain every tiny step before editing.\nUse only supplied content. Never invent decisions, assignees, or dates.\nOutput Key points, Decisions, and Actions. Label missing assignees and dates.\n\n## Optional CSV export details currently loaded for every task\n\nIf the user requests CSV export, use columns action, assignee, due_date.\nQuote fields containing commas. Preserve dates exactly as supplied.\nMissing assignees and dates remain empty cells. Do not export without a request.\nUse UTF-8 and include the header row. Preserve accents and source ordering.\nCheck that parsing the CSV yields the expected columns and row count.\n"
+  },
+  "evals": [
+    {
+      "id": 1,
+      "name": "mixed_consumers_edit",
+      "prompt": "Refactor {target} and create only the resources needed inside that skill's folder. Report and baseline go in {run_dir}/artifacts. Consumers: Astra and Fable in lean, every other model in guided. Do not run model benchmarks. Preserve the requirements, the name, paths, the user extension, and REVIEW_WINDOW=14. Local editing is authorized; deliver the candidate and the checks performed.",
+      "expected_output": "A real diff in the target, a shared core, and guided support with an explicit loading condition. Requirements and extensions preserved, local links valid, and an OKF report labelled refactored and statically validated that claims no measured gain.",
+      "files": [],
+      "expectations": [
+        "Edits the target instead of only presenting recommendations.",
+        "Preserves name, paths, metadata.user_extension, and REVIEW_WINDOW=14.",
+        "Preserves the target's English, the labels Key points/Decisions/Actions, and the prohibition on inventing decisions, assignees, and dates.",
+        "Routes Astra and Fable to lean and every other model to guided because the request said so, and states that an explicit selection wins.",
+        "Moves conditional detail or removes repetition without losing the CSV requirements.",
+        "Modifies no file outside the target folder and the authorized artifact area.",
+        "Delivers a report that labels the outcome refactored and statically validated, and does not label it behaviorally evaluated because no benchmark ran."
+      ]
+    },
+    {
+      "id": 2,
+      "name": "unknown_model_explicit_override",
+      "prompt": "Refactor {target}; baseline and report in {run_dir}/artifacts. The executor model was not stated and the only consumer model is unknown. Apply the skill's default profile rule and state that choice. Do not switch models and do not run provider CLIs. Preserve the target's extensions and requirements. Edit the authorized files and deliver the result.",
+      "expected_output": "Executor and consumer profiles both resolved to guided by the default rule; a material change with explicit guided support, no invented model identity, and no efficiency claims.",
+      "files": [],
+      "expectations": [
+        "Records the executor and consumer profiles separately, both guided in the absence of an identity or an explicit selection.",
+        "Produces a material change and keeps the name, unknown fields, and requirements.",
+        "Invokes no external provider and invents no model ID.",
+        "Does not claim that guided is empirically necessary or better for every model."
+      ]
+    },
+    {
+      "id": 3,
+      "name": "review_only",
+      "prompt": "Review {target} for consumers in the lean profile; describe how to simplify it and how to measure the effect. Do not edit files and do not create a report on disk. Do not run benchmarks.",
+      "expected_output": "A review in chat with observations against the five inspection categories, the lean profile applied to the consumers, a measurement protocol, and no writes at all.",
+      "files": [],
+      "expectations": [
+        "The hash and inventory of the run's files are identical before and after the execution.",
+        "Applies no refactoring, creates no baseline or report, and runs no benchmark.",
+        "Names the defects by inspection category: duplication, unconditional reading, and over-broad description at minimum.",
+        "Proposes an A/B comparison of the previous version against the candidate on the same cases.",
+        "Separates static diagnosis from measured efficiency and states that a review is not evidence of a gain.",
+        "Uses the protocol's own measures (cost per accepted task, acceptance rate, accumulated input tokens, triggering precision/coverage) instead of inventing a metric such as lines per execution or a readability score."
+      ]
+    }
+  ],
+  "trigger_evals": [
+    {
+      "query": "Refactor this SKILL.md so that lean consumers stop loading redundant instructions.",
+      "should_trigger": true
+    },
+    {
+      "query": "Reorganize the description and references of the reports skill while keeping support for other models.",
+      "should_trigger": true
+    },
+    {
+      "query": "Compare the previous version of this skill with the candidate on cost per accepted task.",
+      "should_trigger": true
+    },
+    {
+      "query": "Review this skill without editing it and explain how to measure its efficiency.",
+      "should_trigger": true
+    },
+    {
+      "query": "Use the summary skill to summarize this meeting.",
+      "should_trigger": false
+    },
+    {
+      "query": "Refactor this Python function to remove duplication.",
+      "should_trigger": false
+    },
+    {
+      "query": "Translate the text of a skill literally, without changing its behavior.",
+      "should_trigger": false
+    },
+    {
+      "query": "Create a new skill for preparing presentations, not based on an existing one.",
+      "should_trigger": false
+    }
+  ],
+  "routing_checks": [
+    {
+      "consumer": "any model",
+      "explicit_profile": null,
+      "expected": "guided"
+    },
+    {
+      "consumer": null,
+      "explicit_profile": null,
+      "expected": "guided"
+    },
+    {
+      "consumer": "Astra",
+      "explicit_profile": null,
+      "expected": "guided"
+    },
+    {
+      "consumer": "Fable",
+      "explicit_profile": "lean",
+      "expected": "lean"
+    },
+    {
+      "consumer": "Fable",
+      "explicit_profile": "guided",
+      "expected": "guided"
+    },
+    {
+      "consumer": "other",
+      "explicit_profile": "lean",
+      "expected": "lean"
+    }
+  ]
+}

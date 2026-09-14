@@ -1,0 +1,310 @@
+{
+  "schema_version": 1,
+  "skill_name": "skill-refactor",
+  "skill_path": "/[USER]/Projetos/skills-ia/pwdev-claude-marketplace/plugins/pwdev-code/skills/skill-refactor",
+  "baseline": null,
+  "started_at": "2026-09-13T22:24:41.004707Z",
+  "budget_usd": 1.0,
+  "dry_run": false,
+  "reps": 1,
+  "runtime_versions": {
+    "hermes": "Hermes Agent v0.21.1 (2026.9.7) · upstream 564aef29",
+    "claude": "2.1.270 (Claude Code)"
+  },
+  "targets": [
+    {
+      "runtime": "claude",
+      "model": "claude-haiku-4-5-20251001"
+    },
+    {
+      "runtime": "hermes",
+      "model": null
+    }
+  ],
+  "pricing": {
+    "gpt-6-astra": {
+      "input": 10.0,
+      "output": 50.0
+    },
+    "gpt-5.6-sol": {
+      "input": 4.0,
+      "output": 20.0
+    },
+    "gpt-5.6-terra": {
+      "input": 2.0,
+      "output": 12.0
+    },
+    "gpt-5.6-luna": {
+      "input": 0.2,
+      "output": 1.2
+    }
+  },
+  "per_claude_run_budget_usd": 1.0,
+  "ended_at": "2026-09-13T22:26:30.881883Z",
+  "verdict": "PASS",
+  "runs_planned": 2,
+  "runs_executed": 2,
+  "cost_total_usd": 0.056316,
+  "efficiency_by_model": [
+    {
+      "runtime": "claude",
+      "model": "claude-haiku-4-5-20251001",
+      "config": "with_skill",
+      "planned": 1,
+      "executed": 1,
+      "not_run": 0,
+      "accepted": 0,
+      "pass_rate_mean": 0.8,
+      "acceptance_rate": 0.0,
+      "cost_total_usd": 0.052796,
+      "cost_per_success_usd": null,
+      "tokens_in_mean": 58559,
+      "tokens_out_mean": 1572,
+      "duration_p50_s": 24.653,
+      "skill_static_tokens": 2652,
+      "reasons": []
+    },
+    {
+      "runtime": "hermes",
+      "model": "(default)",
+      "config": "with_skill",
+      "planned": 1,
+      "executed": 1,
+      "not_run": 0,
+      "accepted": 0,
+      "pass_rate_mean": 0.8,
+      "acceptance_rate": 0.0,
+      "cost_total_usd": 0.00352,
+      "cost_per_success_usd": null,
+      "tokens_in_mean": 135252,
+      "tokens_out_mean": 4307,
+      "duration_p50_s": 84.856,
+      "skill_static_tokens": 2652,
+      "reasons": []
+    }
+  ],
+  "static_tokens": {
+    "with_skill": {
+      "skill_dir": "/private/tmp/claude-501/-Users-paulosoares-Projetos-skills-ia-pwdev-claude-marketplace/a4331304-eba8-4c0f-83c0-acfafca7e5d5/scratchpad/smoke-7/versions/with_skill/skill-refactor",
+      "tokens_source": "tiktoken:o200k_base",
+      "files": {
+        "README.md": {
+          "chars": 4825,
+          "bytes": 4835,
+          "words": 619,
+          "lines": 104,
+          "tokens": 1186
+        },
+        "SKILL.md": {
+          "chars": 5337,
+          "bytes": 5353,
+          "words": 744,
+          "lines": 106,
+          "tokens": 1154
+        },
+        "evals/evals.json": {
+          "chars": 8426,
+          "bytes": 8426,
+          "words": 1005,
+          "lines": 168,
+          "tokens": 1964
+        },
+        "references/evaluation.md": {
+          "chars": 8545,
+          "bytes": 8557,
+          "words": 1213,
+          "lines": 150,
+          "tokens": 1937
+        },
+        "references/refactoring.md": {
+          "chars": 8002,
+          "bytes": 8006,
+          "words": 1153,
+          "lines": 146,
+          "tokens": 1745
+        },
+        "references/runtimes.md": {
+          "chars": 5127,
+          "bytes": 5137,
+          "words": 678,
+          "lines": 76,
+          "tokens": 1347
+        }
+      },
+      "layers": {
+        "SKILL.md#description": {
+          "chars": 558,
+          "bytes": 560,
+          "words": 83,
+          "lines": 1,
+          "tokens": 107
+        },
+        "SKILL.md#frontmatter": {
+          "chars": 874,
+          "bytes": 876,
+          "words": 102,
+          "lines": 18,
+          "tokens": 246
+        },
+        "SKILL.md#body": {
+          "chars": 4454,
+          "bytes": 4468,
+          "words": 640,
+          "lines": 86,
+          "tokens": 907
+        },
+        "README.md": {
+          "chars": 4825,
+          "bytes": 4835,
+          "words": 619,
+          "lines": 104,
+          "tokens": 1186
+        },
+        "evals/evals.json": {
+          "chars": 8426,
+          "bytes": 8426,
+          "words": 1005,
+          "lines": 168,
+          "tokens": 1964
+        },
+        "references/evaluation.md": {
+          "chars": 8545,
+          "bytes": 8557,
+          "words": 1213,
+          "lines": 150,
+          "tokens": 1937
+        },
+        "references/refactoring.md": {
+          "chars": 8002,
+          "bytes": 8006,
+          "words": 1153,
+          "lines": 146,
+          "tokens": 1745
+        },
+        "references/runtimes.md": {
+          "chars": 5127,
+          "bytes": 5137,
+          "words": 678,
+          "lines": 76,
+          "tokens": 1347
+        }
+      },
+      "scenarios": {
+        "review-only (core)": {
+          "members": [
+            "SKILL.md#body"
+          ],
+          "chars": 4454,
+          "bytes": 4468,
+          "words": 640,
+          "lines": 86,
+          "tokens": 907
+        },
+        "refactor (core + refactoring)": {
+          "members": [
+            "SKILL.md#body",
+            "references/refactoring.md"
+          ],
+          "chars": 12456,
+          "bytes": 12474,
+          "words": 1793,
+          "lines": 232,
+          "tokens": 2652
+        },
+        "refactor + evaluation (core + both references)": {
+          "members": [
+            "SKILL.md#body",
+            "references/refactoring.md",
+            "references/evaluation.md"
+          ],
+          "chars": 21001,
+          "bytes": 21031,
+          "words": 3006,
+          "lines": 382,
+          "tokens": 4589
+        },
+        "everything (worst case)": {
+          "members": [
+            "SKILL.md#body",
+            "references/evaluation.md",
+            "references/refactoring.md",
+            "references/runtimes.md",
+            "README.md",
+            "evals/evals.json"
+          ],
+          "chars": 39379,
+          "bytes": 39429,
+          "words": 5308,
+          "lines": 730,
+          "tokens": 9086
+        }
+      },
+      "total": {
+        "chars": 40262,
+        "bytes": 40314,
+        "words": 5412,
+        "lines": 750,
+        "tokens": 9333
+      }
+    }
+  },
+  "runs": [
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "with_skill",
+      "runtime": "claude",
+      "model": "claude-haiku-4-5-20251001",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/with_skill/run-1-claude-claude-haiku-4-5-20251001",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 24.653,
+      "usage": {
+        "input_tokens": 18,
+        "output_tokens": 1572,
+        "cache_read_tokens": 38514,
+        "cache_write_tokens": 20027,
+        "total_tokens": 60131,
+        "context_tokens": 58559
+      },
+      "cost_usd": 0.052796,
+      "cost_source": "runtime",
+      "model_observed": "claude-haiku-4-5-20251001",
+      "pass_rate": 0.8,
+      "expectations_failed": [
+        "Review proposes a comparison with the previous version and separates static validation from measured efficiency"
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "with_skill",
+      "runtime": "hermes",
+      "model": null,
+      "rep": 1,
+      "run_dir": "eval-3-review_only/with_skill/run-1-hermes-default",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 84.856,
+      "usage": {
+        "input_tokens": 65434,
+        "output_tokens": 4307,
+        "cache_read_tokens": 69818,
+        "cache_write_tokens": 0,
+        "total_tokens": 139559,
+        "context_tokens": 135252
+      },
+      "cost_usd": 0.00352,
+      "cost_source": "estimated",
+      "model_observed": "deepseek/deepseek-v4-flash-0731",
+      "pass_rate": 0.8,
+      "expectations_failed": [
+        "Review proposes a comparison with the previous version and separates static validation from measured efficiency"
+      ]
+    }
+  ],
+  "scope": "Adapter validation only: one case (review_only), candidate version, no baseline A/B. Codex is NOT_RUN for this round (provider usage limit, resets 2026-09-19). Labels: refactored + statically validated for the skill; behaviorally evaluated only for claude/claude-haiku-4-5-20251001 and hermes/deepseek-v4-flash-0731 on this single case."
+}

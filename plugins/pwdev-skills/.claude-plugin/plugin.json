@@ -1,0 +1,24 @@
+{
+  "name": "pwdev-skills",
+  "displayName": "PWDEV Skills — Skill Engineering",
+  "version": "0.1.0",
+  "description": "Review, refactor and benchmark Agent Skills across Claude Code, Codex, Hermes Agent and OpenCode: a smaller always-loaded core, conditional references, lean/guided profiles chosen by measurement, runtime and model discovery, generic token sizing, and headless A/B benchmarks graded objectively under a budget.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "claude-code",
+    "claude-plugin",
+    "codex",
+    "hermes",
+    "agent-skills",
+    "skill-refactoring",
+    "benchmark",
+    "evaluation",
+    "portable"
+  ]
+}

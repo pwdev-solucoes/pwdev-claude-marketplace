@@ -21,6 +21,7 @@ Reinicie o runtime após a instalação. Consulte o README de cada plugin para s
 | Código e delegação | [pwdev-code](./plugins/pwdev-code/), [pwdev-feat](./plugins/pwdev-feat/) |
 | Requisitos e UI/UX | [pwdev-prd](./plugins/pwdev-prd/), [pwdev-uiux](./plugins/pwdev-uiux/) |
 | Garantia de qualidade | [pwdev-qa](./plugins/pwdev-qa/) |
+| Engenharia de skills | [pwdev-skills](./plugins/pwdev-skills/) |
 | Copy e conteúdo social | [pwdev-copy](./plugins/pwdev-copy/), [pwdev-social-media](./plugins/pwdev-social-media/) |
 | DevOps e operações | [pwdev-devops](./plugins/pwdev-devops/) |
 | Conhecimento e integrações | [pwdev-brain](./plugins/pwdev-brain/), [pwdev-glpi](./plugins/pwdev-glpi/), [pwdev-obsidian](./plugins/pwdev-obsidian/), [pwdev-postgres](./plugins/pwdev-postgres/), [pwdev-youtrack](./plugins/pwdev-youtrack/) |
@@ -57,6 +58,7 @@ Comandos: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 | [**pwdev-feat**](./plugins/pwdev-feat/) | Desenvolvimento simplificado de features — planos PWDEVIA inline + subagentes executor e advisor | 2.1.1 | Apache-2.0 |
 | [**pwdev-prd**](./plugins/pwdev-prd/) | Criação de PRD guiada por entrevista — 12 etapas inline, Markdown + JSON canônico | 2.0.1 | Apache-2.0 |
 | [**pwdev-qa**](./plugins/pwdev-qa/) | Garantia de qualidade portátil para Claude Code, Codex e Hermes Agent — 10 fluxos, 17 guias especialistas, recomendação de ferramentas, evidência auditável, relatórios offline em HTML e PDF | 0.1.0 | Apache-2.0 |
+| [**pwdev-skills**](./plugins/pwdev-skills/) | Engenharia de skills para Claude Code, Codex e Hermes Agent — revisão e refatoração de skills, perfis lean/guided por medição, descoberta de runtimes e modelos, benchmark A/B headless objetivo em Claude Code, Codex, Hermes e OpenCode | 0.1.0 | Apache-2.0 |
 | [**pwdev-copy**](./plugins/pwdev-copy/) | Framework de copywriting treinável — 20 skills no ciclo completo (VOC → copy → revisão → análise), 5 subagentes reais | 1.1.0 | Apache-2.0 |
 | [**pwdev-social-media**](./plugins/pwdev-social-media/) | Geração de criativos por IA — orquestração de APIs (Ideogram, Leonardo, Flux, Runway, Freepik) com trava de gasto, 19 skills, 4 subagentes | 2.0.1 | Apache-2.0 |
 | [**pwdev-devops**](./plugins/pwdev-devops/) | Plataforma, operação e incidente — postura de execução segura com guard script, 24 skills, 4 subagentes | 1.0.0 | Apache-2.0 |
@@ -170,7 +172,7 @@ PRD ─▶ ROADMAP ─▶ DISCOVER ─▶ DESIGN ─▶ PLAN ─▶ EXECUTE ─�
 **Subagentes:** executor, advisor, simplifier, code-reviewer, qa, verifier adversarial, researcher, roadmap
 **Personas inline:** interviewer, architect, planner, product manager, quick engineer
 
-**Inclui:** 23 comandos · 8 subagentes · 3 skills · hooks
+**Inclui:** 23 comandos · 8 subagentes · 2 skills · hooks
 
 Veja a [documentação completa do plugin](./plugins/pwdev-code/README.md).
 
@@ -242,6 +244,25 @@ init ─▶ strategy ─▶ test / explore ─▶ bug ─▶ regression ─▶ r
 **Inclui:** 10 comandos · 29 skills · sem MCP
 
 Veja a [documentação completa do plugin](./plugins/pwdev-qa/README.md).
+
+### pwdev-skills
+
+**Engenharia de skills** para Claude Code, Codex e Hermes Agent: revisa ou refatora uma `SKILL.md`
+existente em um núcleo menor com referências condicionais, escolhe perfis lean/guided por medição,
+descobre os runtimes e modelos disponíveis, mede skills com tokenizador genérico e compara a
+candidata com a versão anterior por benchmark A/B headless em Claude Code, Codex, Hermes e
+OpenCode, avaliado objetivamente e com orçamento.
+
+```
+descobrir runtimes e modelos ─▶ revisar / refatorar ─▶ tokens ─▶ benchmark A/B ─▶ tabela de eficiência por modelo
+```
+
+**Habilidades:** skill-refactor (contrato de revisão, dez regras de otimização, contrato de runtime)
+**Destaques:** descoberta de runtimes e modelos com a origem de cada dado, esforço explícito ou registrado em cada run, custo por tarefa aceita, teto de orçamento, registros sanitizados
+
+**Inclui:** 1 skill · sem subagentes · sem MCP
+
+Veja a [documentação completa do plugin](./plugins/pwdev-skills/README.pt-BR.md).
 
 ### pwdev-copy
 
@@ -448,6 +469,9 @@ claude plugin install pwdev-prd@pwdev-claude-marketplace
 # Garantia de qualidade portátil (10 fluxos, evidência, relatórios HTML/PDF)
 claude plugin install pwdev-qa@pwdev-claude-marketplace
 
+# Engenharia de skills: revisar, refatorar e fazer benchmark de skills entre runtimes
+claude plugin install pwdev-skills@pwdev-claude-marketplace
+
 # Framework de copywriting treinável (20 skills, ciclo de análise)
 claude plugin install pwdev-copy@pwdev-claude-marketplace
 
@@ -593,6 +617,7 @@ claude plugin install pwdev-uiux@pwdev-claude-marketplace
 claude plugin install pwdev-feat@pwdev-claude-marketplace
 claude plugin install pwdev-prd@pwdev-claude-marketplace
 claude plugin install pwdev-qa@pwdev-claude-marketplace
+claude plugin install pwdev-skills@pwdev-claude-marketplace
 claude plugin install pwdev-copy@pwdev-claude-marketplace
 claude plugin install pwdev-social-media@pwdev-claude-marketplace
 claude plugin install pwdev-devops@pwdev-claude-marketplace

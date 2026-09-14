@@ -1,0 +1,7 @@
+name: pwdev-skills
+version: 0.1.0
+description: Review, refactor and benchmark Agent Skills across Claude Code, Codex, Hermes Agent and OpenCode.
+author: Paulo Soares
+homepage: https://github.com/pwdev-solucoes/pwdev-claude-marketplace
+repository: https://github.com/pwdev-solucoes/pwdev-claude-marketplace
+license: Apache-2.0

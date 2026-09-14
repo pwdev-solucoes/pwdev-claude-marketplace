@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "scope": "Cross-runtime comparison at each runtime's configured default: no model or effort flag passed. Case review_only, candidate version, 1 repetition, no baseline arm. Model and effort are read from each runtime's own configuration and recorded with their source.",
+  "date": "2026-09-13",
+  "results": [
+    {
+      "runtime": "claude",
+      "version": "2.1.270 (Claude Code)",
+      "model": "claude-opus-5",
+      "model_source": "~/.claude/settings.json model (alias)",
+      "effort": "high",
+      "effort_source": "env CLAUDE_EFFORT",
+      "verdict": "PASS",
+      "expectations": "7/7",
+      "duration_s": 87,
+      "context_tokens": 225641,
+      "cached_tokens": 183787,
+      "output_tokens": 6430,
+      "reasoning_tokens": 2607,
+      "cost_usd": 0.672146,
+      "cost_source": "runtime",
+      "failed": []
+    },
+    {
+      "runtime": "codex",
+      "version": "codex-cli 0.153.4",
+      "model": "gpt-5.6-sol",
+      "model_source": "~/.codex/config.toml model",
+      "effort": "low",
+      "effort_source": "~/.codex/config.toml model_reasoning_effort",
+      "verdict": "PASS",
+      "expectations": "7/7",
+      "duration_s": 44,
+      "context_tokens": 103255,
+      "cached_tokens": 84480,
+      "output_tokens": 2112,
+      "reasoning_tokens": 597,
+      "cost_usd": 0.151132,
+      "cost_source": "pricing_table",
+      "failed": []
+    },
+    {
+      "runtime": "hermes",
+      "version": "Hermes Agent v0.21.1 (2026.9.7) · upstream 564aef29",
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "model_source": "~/.hermes/config.yaml model.default",
+      "effort": "medium",
+      "effort_source": "~/.hermes/config.yaml agent.reasoning_effort",
+      "verdict": "FAIL",
+      "expectations": "6/7",
+      "duration_s": 302,
+      "context_tokens": 652016,
+      "cached_tokens": 630262,
+      "output_tokens": 9254,
+      "reasoning_tokens": 4858,
+      "cost_usd": 0.013164,
+      "cost_source": "estimated",
+      "failed": [
+        "Review separates static validation from measured efficiency"
+      ]
+    }
+  ],
+  "cost_basis": {
+    "claude": "runtime total_cost_usd (real charge)",
+    "codex": "API list price equivalent; ChatGPT plan is not billed per token",
+    "hermes": "estimated by Hermes --usage-file (openrouter)"
+  },
+  "corrections_after_the_fact": [
+    "codex cost_usd was null in the live run: pricing looked up the requested model, empty at default. Recomputed from recorded usage with the effective model (gpt-5.6-sol from ~/.codex/config.toml); runtimes.py fixed.",
+    "claude reasoning_tokens was null: Claude reports thinking under usage.output_tokens_details.thinking_tokens. Re-read from the stored envelope; fixed.",
+    "grade.py lacked Portuguese metric terms (precisao, cobertura). Added and re-graded; hermes still fails the static-vs-measured check on its merits."
+  ],
+  "findings": [
+    "Defaults are not equivalent: Claude opus-5 @ high (env CLAUDE_EFFORT), Codex gpt-5.6-sol @ low (config.toml), Hermes deepseek-v4-flash @ medium (config.yaml). This compares the tools as configured on this machine, not the models at equal effort.",
+    "hermes failed for a real reason: it proposed an A/B but measured efficiency by skill size in tokens and concluded 'if token cost drops, the effect is positive' — the conflation the skill forbids. The same model and effort passed 7/7 earlier today (135k context), so one repetition does not characterise it.",
+    "hermes used 652k context in 302s, 6x Codex's context and 7x its time, for the lowest cost of the three (US$ 0.013 estimated)."
+  ]
+}

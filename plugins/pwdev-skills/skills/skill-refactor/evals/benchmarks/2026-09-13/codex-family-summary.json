@@ -1,0 +1,395 @@
+{
+  "schema_version": 1,
+  "skill_name": "skill-refactor",
+  "skill_path": "/[USER]/Projetos/skills-ia/pwdev-claude-marketplace/plugins/pwdev-code/skills/skill-refactor",
+  "baseline": null,
+  "started_at": "2026-09-14T00:20:04.364539Z",
+  "budget_usd": 10.0,
+  "dry_run": false,
+  "reps": 1,
+  "runtime_versions": {
+    "codex": "codex-cli 0.153.4"
+  },
+  "targets": [
+    {
+      "runtime": "codex",
+      "model": "gpt-5.6-luna"
+    },
+    {
+      "runtime": "codex",
+      "model": "gpt-5.6-terra"
+    },
+    {
+      "runtime": "codex",
+      "model": "gpt-5.6-sol"
+    },
+    {
+      "runtime": "codex",
+      "model": "gpt-6-astra"
+    }
+  ],
+  "pricing": {
+    "gpt-6-astra": {
+      "input": 10.0,
+      "cached_input": 1.0,
+      "output": 50.0
+    },
+    "gpt-5.6-sol": {
+      "input": 4.0,
+      "cached_input": 0.4,
+      "output": 20.0
+    },
+    "gpt-5.6-terra": {
+      "input": 2.0,
+      "cached_input": 0.2,
+      "output": 12.0
+    },
+    "gpt-5.6-luna": {
+      "input": 0.2,
+      "cached_input": 0.02,
+      "output": 1.2
+    }
+  },
+  "per_claude_run_budget_usd": null,
+  "ended_at": "2026-09-14T00:22:39.246028Z",
+  "verdict": "PASS",
+  "runs_planned": 4,
+  "runs_executed": 4,
+  "cost_total_usd": 0.548851,
+  "efficiency_by_model": [
+    {
+      "model": "gpt-5.6-terra",
+      "verdict": "PASS",
+      "expectations": "7/7",
+      "context_tokens": 74818,
+      "cached_tokens": 54528,
+      "output_tokens": 1749,
+      "duration_s": 33,
+      "cost_usd_api_equiv": 0.0725,
+      "note": "cheapest model that passed every expectation — the efficient choice on this case"
+    },
+    {
+      "model": "gpt-5.6-sol",
+      "verdict": "PASS",
+      "expectations": "7/7",
+      "context_tokens": 74540,
+      "cached_tokens": 56192,
+      "output_tokens": 2025,
+      "duration_s": 40,
+      "cost_usd_api_equiv": 0.1364,
+      "note": "same verdict as terra at 1.9x"
+    },
+    {
+      "model": "gpt-6-astra",
+      "verdict": "PASS",
+      "expectations": "7/7",
+      "context_tokens": 108711,
+      "cached_tokens": 89216,
+      "output_tokens": 966,
+      "duration_s": 33,
+      "cost_usd_api_equiv": 0.3325,
+      "note": "shortest answer and 28 reasoning tokens; 4.6x terra for the same verdict"
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "verdict": "PASS",
+      "expectations": "7/7",
+      "context_tokens": 97232,
+      "cached_tokens": 76800,
+      "output_tokens": 1600,
+      "duration_s": 48,
+      "cost_usd_api_equiv": 0.0075,
+      "note": "passed after a grader fix (see corrections); 10x cheaper than terra — cheapest pass overall, pending repetition"
+    }
+  ],
+  "static_tokens": {
+    "with_skill": {
+      "skill_dir": "/private/tmp/claude-501/-Users-paulosoares-Projetos-skills-ia-pwdev-claude-marketplace/a4331304-eba8-4c0f-83c0-acfafca7e5d5/scratchpad/codex-family/versions/with_skill/skill-refactor",
+      "tokens_source": "tiktoken:o200k_base",
+      "files": {
+        "README.md": {
+          "chars": 4825,
+          "bytes": 4835,
+          "words": 619,
+          "lines": 104,
+          "tokens": 1186
+        },
+        "SKILL.md": {
+          "chars": 6575,
+          "bytes": 6597,
+          "words": 947,
+          "lines": 123,
+          "tokens": 1421
+        },
+        "evals/evals.json": {
+          "chars": 9061,
+          "bytes": 9061,
+          "words": 1090,
+          "lines": 175,
+          "tokens": 2115
+        },
+        "references/evaluation.md": {
+          "chars": 9044,
+          "bytes": 9059,
+          "words": 1295,
+          "lines": 157,
+          "tokens": 2045
+        },
+        "references/refactoring.md": {
+          "chars": 8002,
+          "bytes": 8006,
+          "words": 1153,
+          "lines": 146,
+          "tokens": 1745
+        },
+        "references/runtimes.md": {
+          "chars": 5746,
+          "bytes": 5758,
+          "words": 775,
+          "lines": 83,
+          "tokens": 1522
+        }
+      },
+      "layers": {
+        "SKILL.md#description": {
+          "chars": 558,
+          "bytes": 560,
+          "words": 83,
+          "lines": 1,
+          "tokens": 107
+        },
+        "SKILL.md#frontmatter": {
+          "chars": 874,
+          "bytes": 876,
+          "words": 102,
+          "lines": 18,
+          "tokens": 246
+        },
+        "SKILL.md#body": {
+          "chars": 5692,
+          "bytes": 5712,
+          "words": 843,
+          "lines": 103,
+          "tokens": 1174
+        },
+        "README.md": {
+          "chars": 4825,
+          "bytes": 4835,
+          "words": 619,
+          "lines": 104,
+          "tokens": 1186
+        },
+        "evals/evals.json": {
+          "chars": 9061,
+          "bytes": 9061,
+          "words": 1090,
+          "lines": 175,
+          "tokens": 2115
+        },
+        "references/evaluation.md": {
+          "chars": 9044,
+          "bytes": 9059,
+          "words": 1295,
+          "lines": 157,
+          "tokens": 2045
+        },
+        "references/refactoring.md": {
+          "chars": 8002,
+          "bytes": 8006,
+          "words": 1153,
+          "lines": 146,
+          "tokens": 1745
+        },
+        "references/runtimes.md": {
+          "chars": 5746,
+          "bytes": 5758,
+          "words": 775,
+          "lines": 83,
+          "tokens": 1522
+        }
+      },
+      "scenarios": {
+        "review-only (core)": {
+          "members": [
+            "SKILL.md#body"
+          ],
+          "chars": 5692,
+          "bytes": 5712,
+          "words": 843,
+          "lines": 103,
+          "tokens": 1174
+        },
+        "refactor (core + refactoring)": {
+          "members": [
+            "SKILL.md#body",
+            "references/refactoring.md"
+          ],
+          "chars": 13694,
+          "bytes": 13718,
+          "words": 1996,
+          "lines": 249,
+          "tokens": 2919
+        },
+        "refactor + evaluation (core + both references)": {
+          "members": [
+            "SKILL.md#body",
+            "references/refactoring.md",
+            "references/evaluation.md"
+          ],
+          "chars": 22738,
+          "bytes": 22777,
+          "words": 3291,
+          "lines": 406,
+          "tokens": 4964
+        },
+        "everything (worst case)": {
+          "members": [
+            "SKILL.md#body",
+            "references/evaluation.md",
+            "references/refactoring.md",
+            "references/runtimes.md",
+            "README.md",
+            "evals/evals.json"
+          ],
+          "chars": 42370,
+          "bytes": 42431,
+          "words": 5775,
+          "lines": 768,
+          "tokens": 9787
+        }
+      },
+      "total": {
+        "chars": 43253,
+        "bytes": 43316,
+        "words": 5879,
+        "lines": 788,
+        "tokens": 10034
+      }
+    }
+  },
+  "runs": [
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "with_skill",
+      "runtime": "codex",
+      "model": "gpt-5.6-luna",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/with_skill/run-1-codex-gpt-5.6-luna",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 48.307,
+      "usage": {
+        "input_tokens": 20432,
+        "output_tokens": 1600,
+        "cache_read_tokens": 76800,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 254,
+        "total_tokens": 98832,
+        "context_tokens": 97232
+      },
+      "cost_usd": 0.007542,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 0.8571,
+      "expectations_failed": [
+        "Review separates static validation from measured efficiency"
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "with_skill",
+      "runtime": "codex",
+      "model": "gpt-5.6-terra",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/with_skill/run-1-codex-gpt-5.6-terra",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 32.66,
+      "usage": {
+        "input_tokens": 20290,
+        "output_tokens": 1749,
+        "cache_read_tokens": 54528,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 312,
+        "total_tokens": 76567,
+        "context_tokens": 74818
+      },
+      "cost_usd": 0.072474,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 1.0,
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "with_skill",
+      "runtime": "codex",
+      "model": "gpt-5.6-sol",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/with_skill/run-1-codex-gpt-5.6-sol",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 40.49,
+      "usage": {
+        "input_tokens": 18348,
+        "output_tokens": 2025,
+        "cache_read_tokens": 56192,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 335,
+        "total_tokens": 76565,
+        "context_tokens": 74540
+      },
+      "cost_usd": 0.136369,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 1.0,
+      "expectations_failed": []
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "review_only",
+      "config": "with_skill",
+      "runtime": "codex",
+      "model": "gpt-6-astra",
+      "rep": 1,
+      "run_dir": "eval-3-review_only/with_skill/run-1-codex-gpt-6-astra",
+      "status": "PASS",
+      "reason": null,
+      "exit_code": 0,
+      "duration_seconds": 33.27,
+      "usage": {
+        "input_tokens": 19495,
+        "output_tokens": 966,
+        "cache_read_tokens": 89216,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 28,
+        "total_tokens": 109677,
+        "context_tokens": 108711
+      },
+      "cost_usd": 0.332466,
+      "cost_source": "pricing_table",
+      "model_observed": null,
+      "pass_rate": 1.0,
+      "expectations_failed": []
+    }
+  ],
+  "scope": "Same-runtime comparison: Codex CLI 0.153.4 signed in with a ChatGPT plan, four models, case review_only, candidate version only, 1 repetition, no baseline arm. Same skill, cases and grader as the Claude round.",
+  "cost_basis": "API-equivalent at list price (developers.openai.com/api/docs/pricing, 2026-09-13), computed from turn.completed usage. The ChatGPT plan is not billed per token: these figures compare models, they are not charges.",
+  "corrections_after_the_fact": [
+    "gpt-5.6-luna was first scored 6/7 on 'separates static validation from measured efficiency'. Its text reads 'use tokens.py for static layer/load diagnostics, but treat size only as a diagnostic. Use bench.py for the authorized A/B'. The check required the word 'benchmark'. Fixed in grade.py and re-graded across every stored output of the day: all Claude, Codex and Hermes verdicts unchanged except luna; claude-haiku-4-5 still fails the check.",
+    "Before this round, runtimes.py summed Codex's cached_input_tokens on top of input_tokens. OpenAI's input_tokens already includes the cached part, so context and cost would have been overstated. Fixed before the round ran: input_tokens is normalized to the fresh part on every runtime, and cached tokens are priced at the cached rate."
+  ],
+  "findings": [
+    "All four Codex models passed every objective expectation; all four opened references/refactoring.md, evaluation.md and runtimes.md (4 to 6 reads each), which the review contract points at.",
+    "API-equivalent cost spans 44x within one runtime for the same verdict: luna US$ 0.0075, terra 0.072, sol 0.136, astra 0.332.",
+    "Context is flat across Codex models (75k-109k) and 73-82% cached: roughly 20k tokens of each run are the user's global Codex skills and plugins loaded before the task, identical for every model.",
+    "model_observed is null for Codex: codex exec --json does not report the serving model in its events. The requested slug was accepted by the runtime; that is the only evidence of which model ran.",
+    "One repetition. luna's pass rests on a single sample and a grader correction; repeat before choosing it as a profile default."
+  ]
+}

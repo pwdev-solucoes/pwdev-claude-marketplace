@@ -181,29 +181,33 @@ def forbidden_documentation_claims(text):
 
 class TestQaCatalog(unittest.TestCase):
     def test_catalogs_append_qa_without_reordering_or_changing_marketplace_identity(self):
+        # pwdev-qa was appended after the sixteen existing entries without reordering or changing any
+        # of them. Later plugins may be appended after it; the entries up to and including pwdev-qa
+        # stay pinned by position and content, so a reorder or an edit still fails here.
         claude = load_json(".claude-plugin/marketplace.json")
         self.assertEqual(
             {key: value for key, value in claude.items() if key != "plugins"},
             CLAUDE_TOP_LEVEL,
         )
+        names = tuple(plugin["name"] for plugin in claude["plugins"])
+        qa_index = len(CLAUDE_EXISTING_ORDER)
+        self.assertEqual(names[: qa_index + 1], CLAUDE_EXISTING_ORDER + ("pwdev-qa",))
+        self.assertEqual(len(set(names)), len(names), "a plugin is listed twice")
         self.assertEqual(
-            tuple(plugin["name"] for plugin in claude["plugins"]),
-            CLAUDE_EXISTING_ORDER + ("pwdev-qa",),
-        )
-        self.assertEqual(
-            tuple(canonical_digest(plugin) for plugin in claude["plugins"][:-1]),
+            tuple(canonical_digest(plugin) for plugin in claude["plugins"][:qa_index]),
             CLAUDE_EXISTING_DIGESTS,
         )
-        qa_claude = claude["plugins"][-1]
+        qa_claude = claude["plugins"][qa_index]
         self.assertEqual(qa_claude["source"], "./plugins/pwdev-qa")
         self.assertTrue(qa_claude["strict"])
 
         codex = load_json(".agents/plugins/marketplace.json")
         self.assertEqual(codex["name"], "pwdev-flow")
         self.assertEqual(codex["interface"], {"displayName": "Pwdev Flow"})
-        self.assertEqual(tuple(codex["plugins"][:-1]), CODEX_EXISTING)
+        codex_qa_index = len(CODEX_EXISTING)
+        self.assertEqual(tuple(codex["plugins"][:codex_qa_index]), CODEX_EXISTING)
         self.assertEqual(
-            codex["plugins"][-1],
+            codex["plugins"][codex_qa_index],
             {
                 "name": "pwdev-qa",
                 "source": {"source": "local", "path": "./plugins/pwdev-qa"},
@@ -211,6 +215,8 @@ class TestQaCatalog(unittest.TestCase):
                 "category": "Developer Tools",
             },
         )
+        codex_names = tuple(plugin["name"] for plugin in codex["plugins"])
+        self.assertEqual(len(set(codex_names)), len(codex_names), "a plugin is listed twice")
 
     def test_bilingual_readmes_publish_the_exact_inventory(self):
         actual_skills = {path.parent.name for path in (PLUGIN / "skills").glob("*/SKILL.md")}

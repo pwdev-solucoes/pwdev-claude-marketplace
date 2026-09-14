@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "date": "2026-09-13",
+  "runtime": "opencode 1.17.11",
+  "scope": "Four free OpenCode Zen models at their default variant, case review_only, candidate version, 1 repetition, no baseline arm. Skill exposed natively via .opencode/skills and loaded through OpenCode's skill tool.",
+  "data_notice": "All free Zen models may retain or use prompts to improve or train models (opencode.ai/docs/zen). The user accepted this for this round.",
+  "results": [
+    {
+      "model": "opencode/big-pickle",
+      "variant": "default",
+      "verdict": "PASS",
+      "expectations": "7/7",
+      "duration_s": 74,
+      "context_tokens": 73365,
+      "output_tokens": 5033,
+      "reasoning_tokens": 0,
+      "skill_loaded_via_skill_tool": true,
+      "steps": 5,
+      "cost_usd": 0.0,
+      "reason": null
+    },
+    {
+      "model": "opencode/ling-3.0-flash-fin-free",
+      "variant": "default",
+      "verdict": "PASS",
+      "expectations": "7/7",
+      "duration_s": 15,
+      "context_tokens": 46235,
+      "output_tokens": 1389,
+      "reasoning_tokens": 1136,
+      "skill_loaded_via_skill_tool": true,
+      "steps": 3,
+      "cost_usd": 0.0,
+      "reason": null
+    },
+    {
+      "model": "opencode/muse-spark-1.3-contributor-free",
+      "variant": "default",
+      "verdict": "PASS",
+      "expectations": "7/7",
+      "duration_s": 40,
+      "context_tokens": 63583,
+      "output_tokens": 1263,
+      "reasoning_tokens": 1187,
+      "skill_loaded_via_skill_tool": true,
+      "steps": 4,
+      "cost_usd": 0.0,
+      "reason": null
+    },
+    {
+      "model": "opencode/nemotron-3-ultra-free",
+      "variant": "default",
+      "verdict": "NOT_RUN",
+      "expectations": "2/7",
+      "duration_s": 109,
+      "context_tokens": 24492,
+      "output_tokens": 138,
+      "reasoning_tokens": 197,
+      "skill_loaded_via_skill_tool": false,
+      "steps": 2,
+      "cost_usd": 0.0,
+      "reason": "provider unavailable: [502] Upstream error from Nvidia: Service temporarily overloaded\\\"\"}}}"
+    }
+  ],
+  "corrections_after_the_fact": [
+    "model_observed was null for big-pickle and muse-spark-1.3: `opencode export` piped to the harness is cut at 64 KiB mid-string. Now written to a file; recovered for both runs.",
+    "nemotron-3-ultra-free was FAIL: the provider returned '[502] Upstream error from Nvidia: Service temporarily overloaded'. Provider unavailability is now NOT_RUN.",
+    "ling-3.0-flash-fin-free was 6/7: the grader flagged 'invented metrics' where the review quoted the prohibition ('a metric invented for the occasion (readability score, lines per execution) cannot be compared'). A metric cited to reject it no longer counts. All stored outputs of the day were re-graded: only ling changed; claude-haiku-4-5 still 4/7."
+  ],
+  "findings": [
+    "All three free models that ran passed 7/7 and every one loaded the skill through the native skill tool — the only runtime where triggering, not just execution, was observed.",
+    "Cost US$ 0 (free Zen tier). Latency and context vary widely: ling-3.0-flash 15 s / 46k, muse-spark-1.3 40 s / 64k, big-pickle 74 s / 73k.",
+    "nemotron-3-ultra-free produced no review: provider overload after 109 s.",
+    "big-pickle, the OpenCode default, has no variants: its effort cannot be matched against other runtimes."
+  ]
+}
