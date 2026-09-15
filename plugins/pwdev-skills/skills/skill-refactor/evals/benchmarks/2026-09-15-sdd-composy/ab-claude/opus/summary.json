@@ -1,0 +1,386 @@
+{
+ "schema_version": 1,
+ "skill_name": "sdd-composy (plugin)",
+ "runtime": "claude",
+ "model": "claude-opus-5",
+ "effort": "medium",
+ "claude_version": "2.1.272 (Claude Code)",
+ "started_at": "2026-09-15T04:32:27.314717Z",
+ "ended_at": "2026-09-15T04:34:50.728321Z",
+ "dry_run": false,
+ "limits_fixed_beforehand": {
+  "acceptance": "candidate acceptance_rate >= baseline on the same cases",
+  "cost": "candidate cost_per_success_usd <= baseline",
+  "trigger": "candidate precision and coverage >= baseline on the same probes",
+  "budget_usd_total": 30.0,
+  "budget_usd_per_execution_run": 3.0,
+  "budget_usd_per_trigger_probe": 0.5,
+  "timeout_s": 900,
+  "reps": 1
+ },
+ "cost_total_usd": 8.3572,
+ "efficiency_by_arm": [
+  {
+   "arm": "candidate",
+   "planned": 3,
+   "executed": 3,
+   "not_run": 0,
+   "accepted": 3,
+   "acceptance_rate": 1.0,
+   "pass_rate_mean": 1.0,
+   "cost_total_usd": 1.8953,
+   "cost_per_success_usd": 0.6318,
+   "context_tokens_mean": 295674,
+   "output_tokens_mean": 3195,
+   "duration_p50_s": 43.9,
+   "trigger": {
+    "tp": 4,
+    "fp": 0,
+    "fn": 0,
+    "tn": 4,
+    "precision": 1.0,
+    "coverage": 1.0
+   },
+   "trigger_cost_usd": 2.3083,
+   "trigger_duration_p50_s": 5.3,
+   "duration_total_s": 208.1
+  },
+  {
+   "arm": "baseline",
+   "planned": 3,
+   "executed": 3,
+   "not_run": 0,
+   "accepted": 2,
+   "acceptance_rate": 0.6666666666666666,
+   "pass_rate_mean": 0.9722222222222222,
+   "cost_total_usd": 1.8559,
+   "cost_per_success_usd": 0.9279,
+   "context_tokens_mean": 287361,
+   "output_tokens_mean": 3409,
+   "duration_p50_s": 41.6,
+   "trigger": {
+    "tp": 4,
+    "fp": 0,
+    "fn": 0,
+    "tn": 4,
+    "precision": 1.0,
+    "coverage": 1.0
+   },
+   "trigger_cost_usd": 2.2977,
+   "trigger_duration_p50_s": 5.6,
+   "duration_total_s": 211.5
+  }
+ ],
+ "runs": [
+  {
+   "eval_id": 1,
+   "eval_name": "status_readonly",
+   "arm": "candidate",
+   "status": "PASS",
+   "reason": null,
+   "cost_usd": 0.430776,
+   "duration_seconds": 23.559,
+   "usage": {
+    "input_tokens": 6,
+    "output_tokens": 988,
+    "cache_read_tokens": 91176,
+    "cache_write_tokens": 35945,
+    "reasoning_tokens": 128,
+    "total_tokens": 128115,
+    "context_tokens": 127127
+   },
+   "model_observed": "claude-opus-5",
+   "effort": "medium",
+   "pass_rate": 1.0,
+   "accepted": true,
+   "failed": [],
+   "run_dir": "eval-1-status_readonly/candidate"
+  },
+  {
+   "eval_id": 1,
+   "eval_name": "status_readonly",
+   "arm": "baseline",
+   "status": "PASS",
+   "reason": null,
+   "cost_usd": 0.424495,
+   "duration_seconds": 26.402,
+   "usage": {
+    "input_tokens": 6,
+    "output_tokens": 1057,
+    "cache_read_tokens": 91915,
+    "cache_write_tokens": 35106,
+    "reasoning_tokens": 131,
+    "total_tokens": 128084,
+    "context_tokens": 127027
+   },
+   "model_observed": "claude-opus-5",
+   "effort": "medium",
+   "pass_rate": 1.0,
+   "accepted": true,
+   "failed": [],
+   "run_dir": "eval-1-status_readonly/baseline"
+  },
+  {
+   "eval_id": 2,
+   "eval_name": "tasks_next_readonly",
+   "arm": "candidate",
+   "status": "PASS",
+   "reason": null,
+   "cost_usd": 0.553323,
+   "duration_seconds": 43.869,
+   "usage": {
+    "input_tokens": 12,
+    "output_tokens": 2315,
+    "cache_read_tokens": 229736,
+    "cache_write_tokens": 37952,
+    "reasoning_tokens": 217,
+    "total_tokens": 270015,
+    "context_tokens": 267700
+   },
+   "model_observed": "claude-opus-5",
+   "effort": "medium",
+   "pass_rate": 1.0,
+   "accepted": true,
+   "failed": [],
+   "run_dir": "eval-2-tasks_next_readonly/candidate"
+  },
+  {
+   "eval_id": 2,
+   "eval_name": "tasks_next_readonly",
+   "arm": "baseline",
+   "status": "PASS",
+   "reason": null,
+   "cost_usd": 0.547211,
+   "duration_seconds": 41.578,
+   "usage": {
+    "input_tokens": 12,
+    "output_tokens": 2237,
+    "cache_read_tokens": 229012,
+    "cache_write_tokens": 37570,
+    "reasoning_tokens": 140,
+    "total_tokens": 268831,
+    "context_tokens": 266594
+   },
+   "model_observed": "claude-opus-5",
+   "effort": "medium",
+   "pass_rate": 1.0,
+   "accepted": true,
+   "failed": [],
+   "run_dir": "eval-2-tasks_next_readonly/baseline"
+  },
+  {
+   "eval_id": 3,
+   "eval_name": "prd_draft_gate",
+   "arm": "candidate",
+   "status": "PASS",
+   "reason": null,
+   "cost_usd": 0.911247,
+   "duration_seconds": 98.195,
+   "usage": {
+    "input_tokens": 18,
+    "output_tokens": 6282,
+    "cache_read_tokens": 438818,
+    "cache_write_tokens": 53359,
+    "reasoning_tokens": 284,
+    "total_tokens": 498477,
+    "context_tokens": 492195
+   },
+   "model_observed": "claude-opus-5",
+   "effort": "medium",
+   "pass_rate": 1.0,
+   "accepted": true,
+   "failed": [],
+   "run_dir": "eval-3-prd_draft_gate/candidate"
+  },
+  {
+   "eval_id": 3,
+   "eval_name": "prd_draft_gate",
+   "arm": "baseline",
+   "status": "PASS",
+   "reason": null,
+   "cost_usd": 0.884164,
+   "duration_seconds": 99.231,
+   "usage": {
+    "input_tokens": 18,
+    "output_tokens": 6933,
+    "cache_read_tokens": 418402,
+    "cache_write_tokens": 50043,
+    "reasoning_tokens": 231,
+    "total_tokens": 475396,
+    "context_tokens": 468463
+   },
+   "model_observed": "claude-opus-5",
+   "effort": "medium",
+   "pass_rate": 0.9166666666666666,
+   "accepted": false,
+   "failed": [
+    "Keeps the template's parser-required section headings in order (Problem ... Gate): the template was rendered, not improvised."
+   ],
+   "run_dir": "eval-3-prd_draft_gate/baseline"
+  }
+ ],
+ "trigger_probes": [
+  {
+   "arm": "candidate",
+   "i": 1,
+   "query": "Em que pé está o fluxo SDD deste repositório?",
+   "expected": "sdd-status",
+   "predicted": "sdd-status",
+   "status": "PASS",
+   "cost_usd": 0.279309,
+   "duration_seconds": 5.306
+  },
+  {
+   "arm": "baseline",
+   "i": 1,
+   "query": "Em que pé está o fluxo SDD deste repositório?",
+   "expected": "sdd-status",
+   "predicted": "sdd-status",
+   "status": "PASS",
+   "cost_usd": 0.284939,
+   "duration_seconds": 4.971
+  },
+  {
+   "arm": "candidate",
+   "i": 2,
+   "query": "Crie o PRD para a funcionalidade de exportar o relatório mensal.",
+   "expected": "sdd-prd",
+   "predicted": "sdd-prd",
+   "status": "PASS",
+   "cost_usd": 0.293633,
+   "duration_seconds": 4.559
+  },
+  {
+   "arm": "baseline",
+   "i": 2,
+   "query": "Crie o PRD para a funcionalidade de exportar o relatório mensal.",
+   "expected": "sdd-prd",
+   "predicted": "sdd-prd",
+   "status": "PASS",
+   "cost_usd": 0.293723,
+   "duration_seconds": 5.896
+  },
+  {
+   "arm": "candidate",
+   "i": 3,
+   "query": "Liste as tarefas do bundle demo e diga qual é a próxima.",
+   "expected": "sdd-tasks",
+   "predicted": "sdd-tasks",
+   "status": "PASS",
+   "cost_usd": 0.281186,
+   "duration_seconds": 6.119
+  },
+  {
+   "arm": "baseline",
+   "i": 3,
+   "query": "Liste as tarefas do bundle demo e diga qual é a próxima.",
+   "expected": "sdd-tasks",
+   "predicted": "sdd-tasks",
+   "status": "PASS",
+   "cost_usd": 0.294766,
+   "duration_seconds": 6.326
+  },
+  {
+   "arm": "candidate",
+   "i": 4,
+   "query": "Revisar a TASK-002 que acabou de passar no QA.",
+   "expected": "sdd-review",
+   "predicted": "sdd-review",
+   "status": "PASS",
+   "cost_usd": 0.280391,
+   "duration_seconds": 5.93
+  },
+  {
+   "arm": "baseline",
+   "i": 4,
+   "query": "Revisar a TASK-002 que acabou de passar no QA.",
+   "expected": "sdd-review",
+   "predicted": "sdd-review",
+   "status": "PASS",
+   "cost_usd": 0.276206,
+   "duration_seconds": 5.289
+  },
+  {
+   "arm": "candidate",
+   "i": 5,
+   "query": "Mostra o status do git e quais arquivos mudaram.",
+   "expected": "NONE",
+   "predicted": "NONE",
+   "status": "PASS",
+   "cost_usd": 0.293473,
+   "duration_seconds": 5.364
+  },
+  {
+   "arm": "baseline",
+   "i": 5,
+   "query": "Mostra o status do git e quais arquivos mudaram.",
+   "expected": "NONE",
+   "predicted": "NONE",
+   "status": "PASS",
+   "cost_usd": 0.291893,
+   "duration_seconds": 5.021
+  },
+  {
+   "arm": "candidate",
+   "i": 6,
+   "query": "Quanto está custando a AWS este mês?",
+   "expected": "NONE",
+   "predicted": "NONE",
+   "status": "PASS",
+   "cost_usd": 0.293399,
+   "duration_seconds": 4.918
+  },
+  {
+   "arm": "baseline",
+   "i": 6,
+   "query": "Quanto está custando a AWS este mês?",
+   "expected": "NONE",
+   "predicted": "NONE",
+   "status": "PASS",
+   "cost_usd": 0.291864,
+   "duration_seconds": 4.467
+  },
+  {
+   "arm": "candidate",
+   "i": 7,
+   "query": "Roda um loop de 5 em 5 minutos checando se o deploy terminou.",
+   "expected": "NONE",
+   "predicted": "NONE",
+   "status": "PASS",
+   "cost_usd": 0.293541,
+   "duration_seconds": 4.82
+  },
+  {
+   "arm": "baseline",
+   "i": 7,
+   "query": "Roda um loop de 5 em 5 minutos checando se o deploy terminou.",
+   "expected": "NONE",
+   "predicted": "NONE",
+   "status": "PASS",
+   "cost_usd": 0.292781,
+   "duration_seconds": 5.928
+  },
+  {
+   "arm": "candidate",
+   "i": 8,
+   "query": "Traduza este README para inglês.",
+   "expected": "NONE",
+   "predicted": "NONE",
+   "status": "PASS",
+   "cost_usd": 0.293362,
+   "duration_seconds": 5.412
+  },
+  {
+   "arm": "baseline",
+   "i": 8,
+   "query": "Traduza este README para inglês.",
+   "expected": "NONE",
+   "predicted": "NONE",
+   "status": "PASS",
+   "cost_usd": 0.271492,
+   "duration_seconds": 6.389
+  }
+ ],
+ "wall_time_s": 143.4,
+ "regrade_note": "probes re-parsed from disk: sdd-composy:<skill> or sdd-composy:sdd-<skill>; another plugin's skill counts as NONE"
+}

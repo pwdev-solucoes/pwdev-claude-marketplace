@@ -156,11 +156,11 @@ def one_probe(*, arm, plugin_root, probe, i, spec, tpl, out, args, protected):
         try: answer = json.loads(Path(rec["stdout_path"]).read_text()).get("result", "") or ""
         except Exception: answer = ""
     low = answer.lower()
-    m = re.search(r"sdd-composy:([a-z]+)", low) or re.search(r"\bsdd-(?!composy)([a-z]+)\b", low)
+    m = re.search(r"sdd-composy:(?:sdd-)?([a-z]+)", low) or re.search(r"\bsdd-(?!composy)([a-z]+)\b", low)
     # A skill from another installed plugin (e.g. pwdev-devops:custo) is NONE for this plugin's precision.
     predicted = f"sdd-{m.group(1)}" if m else ("NONE" if ("none" in low or re.search(r"[a-z0-9-]+:[a-z-]+", low)) else "?")
     (run_dir / "record.json").write_text(json.dumps(rec, indent=1, default=str)); (run_dir / "answer.txt").write_text(rt.sanitize(answer))
-    return {"arm": arm, "i": i, "query": probe["query"], "expected": probe["expected"], "predicted": predicted, "status": rec["status"], "cost_usd": rec.get("cost_usd")}
+    return {"arm": arm, "i": i, "query": probe["query"], "expected": probe["expected"], "predicted": predicted, "status": rec["status"], "cost_usd": rec.get("cost_usd"), "duration_seconds": rec.get("duration_seconds")}
 
 def prf(rows):
     tp = sum(1 for r in rows if r["expected"] != "NONE" and r["predicted"] == r["expected"])
@@ -174,8 +174,28 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--out", required=True); ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--only-case", type=int, default=None); ap.add_argument("--skip-trigger", action="store_true"); ap.add_argument("--skip-exec", action="store_true")
     ap.add_argument("--concurrency", type=int, default=3); ap.add_argument("--arms", default="candidate,baseline")
+    ap.add_argument("--model", default=None); ap.add_argument("--effort", default=None)
+    ap.add_argument("--exec-cap", type=float, default=None, help="per execution run budget cap (USD)")
+    ap.add_argument("--probe-cap", type=float, default=None, help="per trigger probe budget cap (USD)")
+    ap.add_argument("--total-cap", type=float, default=None, help="stop launching new runs once spent >= cap (USD)")
     args = ap.parse_args(); out = Path(args.out).resolve(); out.mkdir(parents=True, exist_ok=True)
     spec = json.load(open(HERE / "cases.json")); assert spec["approved"]
+    if args.model: spec["model"] = args.model
+    if args.effort: spec["effort"] = args.effort
+    if args.exec_cap: spec["limits_fixed_beforehand"]["budget_usd_per_execution_run"] = args.exec_cap
+    if args.probe_cap: spec["limits_fixed_beforehand"]["budget_usd_per_trigger_probe"] = args.probe_cap
+    if args.total_cap: spec["limits_fixed_beforehand"]["budget_usd_total"] = args.total_cap
+    SPENT = {"usd": 0.0}
+    import threading; LOCK = threading.Lock()
+    _run_real = rt.run
+    def guarded_run(runtime, request):
+        with LOCK:
+            if args.total_cap and SPENT["usd"] >= args.total_cap:
+                return {"status": "NOT_RUN", "reason": f"total budget cap reached (spent {SPENT['usd']:.2f} >= {args.total_cap})", "usage": None, "cost_usd": None, "duration_seconds": None, "stdout_path": None, "command": None, "model_observed": None}
+        rec = _run_real(runtime, request)
+        with LOCK: SPENT["usd"] += rec.get("cost_usd") or 0
+        return rec
+    rt.run = guarded_run
     plugins = build_plugins(out); tpl = build_fixture(out, spec); protected = [PLUGIN, BASELINE_MD, tpl]
     arms = args.arms.split(","); started = now(); jobs = []
     with ThreadPoolExecutor(max_workers=args.concurrency) as ex:
@@ -200,17 +220,19 @@ def main():
                     "context_tokens_mean": round(statistics.mean(ctx)) if ctx else None, "output_tokens_mean": round(statistics.mean(outt)) if outt else None,
                     "duration_p50_s": round(statistics.median(dur), 1) if dur else None,
                     "trigger": prf([p for p in probes if p["arm"] == arm]) if probes else None,
-                    "trigger_cost_usd": round(sum(p["cost_usd"] or 0 for p in probes if p["arm"] == arm), 4)})
+                    "trigger_cost_usd": round(sum(p["cost_usd"] or 0 for p in probes if p["arm"] == arm), 4),
+                    "trigger_duration_p50_s": (round(statistics.median([p["duration_seconds"] for p in probes if p["arm"] == arm and p.get("duration_seconds")]), 1) if any(p.get("duration_seconds") for p in probes if p["arm"] == arm) else None),
+                    "duration_total_s": round(sum((r["duration_seconds"] or 0) for r in rs) + sum((p.get("duration_seconds") or 0) for p in probes if p["arm"] == arm), 1)})
     summary = {"schema_version": 1, "skill_name": "sdd-composy (plugin)", "runtime": "claude", "model": spec["model"], "effort": spec["effort"],
                "claude_version": rt.runtime_version("claude", None), "started_at": started, "ended_at": now(), "dry_run": args.dry_run,
                "limits_fixed_beforehand": spec["limits_fixed_beforehand"], "cost_total_usd": round(sum((r["cost_usd"] or 0) for r in runs) + sum((p["cost_usd"] or 0) for p in probes), 4),
-               "efficiency_by_arm": eff, "runs": runs, "trigger_probes": probes}
+               "efficiency_by_arm": eff, "runs": runs, "trigger_probes": probes, "wall_time_s": round((datetime.now(timezone.utc) - datetime.fromisoformat(started.replace("Z", "+00:00"))).total_seconds(), 1)}
     (out / "summary.json").write_text(json.dumps(summary, indent=1, ensure_ascii=False))
     lines = [f"# A/B Claude — sdd-composy ({spec['model']}, effort {spec['effort']}, dry_run={args.dry_run})", "",
-             "| arm | planned | executed | accepted | acceptance | US$ total | US$/accepted | context mean | out mean | p50 s | trigger P | trigger C |", "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
+             "| arm | planned | executed | accepted | acceptance | US$ total | US$/accepted | context mean | out mean | exec p50 s | exec+probe total s | trigger P | trigger C | probe p50 s |", "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for e in eff:
         t = e["trigger"] or {}
-        lines.append(f"| {e['arm']} | {e['planned']} | {e['executed']} | {e['accepted']} | {e['acceptance_rate']} | {e['cost_total_usd']} | {e['cost_per_success_usd']} | {e['context_tokens_mean']} | {e['output_tokens_mean']} | {e['duration_p50_s']} | {t.get('precision')} | {t.get('coverage')} |")
+        lines.append(f"| {e['arm']} | {e['planned']} | {e['executed']} | {e['accepted']} | {e['acceptance_rate']} | {e['cost_total_usd']} | {e['cost_per_success_usd']} | {e['context_tokens_mean']} | {e['output_tokens_mean']} | {e['duration_p50_s']} | {e.get('duration_total_s')} | {t.get('precision')} | {t.get('coverage')} | {e.get('trigger_duration_p50_s')} |")
     lines += ["", "| case | arm | status | pass_rate | accepted | US$ | context | s | failed checks |", "|---|---|---|---:|---|---:|---:|---:|---|"]
     for r in sorted(runs, key=lambda r: (r["eval_id"], r["arm"])):
         lines.append(f"| {r['eval_id']} {r['eval_name']} | {r['arm']} | {r['status']} | {r['pass_rate']:.2f} | {r['accepted']} | {r['cost_usd']} | {(r['usage'] or {}).get('context_tokens')} | {r['duration_seconds']} | {'; '.join(r['failed'])[:160]} |")
@@ -220,6 +242,6 @@ def main():
             by = {p["arm"]: p for p in probes if p["i"] == i}
             lines.append(f"| {by[arms[0]]['query'][:60]} | {by[arms[0]]['expected']} | {by.get('candidate', {}).get('predicted')} | {by.get('baseline', {}).get('predicted')} |")
     (out / "benchmark.md").write_text("\n".join(lines) + "\n"); print("\n".join(lines))
-    print("\ncost_total_usd:", summary["cost_total_usd"])
+    print("\ncost_total_usd:", summary["cost_total_usd"], "| wall_time_s:", summary["wall_time_s"])
 
 if __name__ == "__main__": main()

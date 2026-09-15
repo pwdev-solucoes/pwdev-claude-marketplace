@@ -28,6 +28,11 @@ verified:
     at: "2026-09-15T04:22:29Z"
     scope: "ab-claude/round-1 (3 cases x 2 arms + 8 trigger probes x 2 arms), diag-case3 (stream-json, 2 runs), ab-claude/round-2a and round-2b (case 3 x 2 arms) — claude-sonnet-5, effort medium, Claude Code 2.1.272"
     source: "ab-claude/run_ab.py over skill-refactor scripts/runtimes.py; objective checks in ab-claude/cases.json; probes regraded from disk; protected paths unchanged in every record; total spent US$ 6.41"
+  - event: behavioral_evaluation
+    by: "agent:claude"
+    at: "2026-09-15T04:37:16Z"
+    scope: "ab-claude/opus and ab-claude/fable: 3 cases x 2 arms + 8 probes x 2 arms each, claude-opus-5 and claude-fable-5-1, effort medium, 1 rep; Fable smoke on case 1 first (US$ 0.95) to size the caps"
+    source: "ab-claude/run_ab.py --model … --exec-cap/--probe-cap/--total-cap; probes regraded from disk; protected paths unchanged; consolidated table ab-claude/benchmark-3-models.md; session total US$ 32.26 of 80 authorized"
   - event: static_validation
     by: "agent:claude"
     at: "2026-09-15T03:51:22Z"
@@ -134,14 +139,43 @@ que só o helper produz), não observação direta; sondas de disparo com 8 cons
 condicional) com ≥ 3 repetições, e Codex/Hermes/OpenCode. Hipótese a testar: a candidata explora mais o
 workspace (mais turnos) porque o núcleo perdeu o contexto inline que a baseline carregava.
 
+## Três modelos Claude (2026-09-15, orçamento autorizado US$ 80)
+
+Mesmos casos, sondas, tetos por run (Opus 3 / 0,5; Fable 6 / 2) e 1 repetição; sondas reclassificadas do disco
+(o Fable responde `sdd-composy:sdd-prd`). Tabela completa, com tempo por run, p50 e tempo de parede:
+`ab-claude/benchmark-3-models.md`; resumos em `ab-claude/{sonnet,opus,fable}/summary.json`.
+
+| modelo | braço | aceitos | US$/aceito | contexto médio | exec p50 s | sondas P / C |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| claude-sonnet-5 | candidata | 3/3 | 0,338 | 614 671 | 49,5 | 1,0 / 1,0 |
+| claude-sonnet-5 | baseline | 3/3 | 0,289 | 447 407 | 44,6 | 0,6 / 0,75 |
+| claude-opus-5 | candidata | 3/3 | 0,632 | 295 674 | 43,9 | 1,0 / 1,0 |
+| claude-opus-5 | baseline | **2/3** | 0,928 | 287 361 | 41,6 | 1,0 / 1,0 |
+| claude-fable-5-1 | candidata | 3/3 | 1,090 | 288 340 | 61,5 | 1,0 / 1,0 |
+| claude-fable-5-1 | baseline | 3/3 | 1,198 | 308 742 | 30,3 | 1,0 / 1,0 |
+
+- **Opus:** a baseline reprovou no caso PRD (escreveu o PRD sem os cabeçalhos do template: ['## Problema', '## Objetivos', '## Métricas de sucesso', '## Escopo']…), a candidata
+  corrigida passou 3/3; custo por tarefa aceita da candidata **menor** (0,63 vs 0,93) por efeito do aceite; custo
+  bruto por run praticamente igual (+1 %). Disparo igual (8/8 nos dois braços).
+- **Fable:** 3/3 nos dois braços; candidata **mais barata** por tarefa aceita (1,09 vs 1,20), sobretudo no caso PRD
+  (1,42 vs 1,81); tempo p50 maior na candidata (61 s vs 30 s, puxado pelo caso 2: 62 s vs 28 s). Disparo 8/8 nos dois.
+- **Sonnet:** único modelo em que a candidata custou mais por tarefa aceita (+17 %); único em que a baseline errou
+  sondas (`qa` por "revisar", `status` por "status do git").
+- Tempo de parede por grade de 22 runs com 3 processos em paralelo: Opus 143 s, Fable 157 s.
+
+**Decisão contra os limites fixados, por modelo:** aceite — candidata ≥ baseline nos três (Opus: melhor); disparo —
+≥ nos três (Sonnet: melhor); custo por tarefa aceita — candidata ≤ baseline em Opus e Fable, > em Sonnet. A
+refatoração passa nos limites em Opus e Fable e falha no custo em Sonnet, com 1 repetição por modelo: um resultado
+por direção, não uma prova. Não há base para um perfil por modelo além de `guided` para todos.
+
 ## Modelos executados
 
-`claude-sonnet-5` (Claude Code 2.1.272, effort medium), custo real reportado pelo runtime. Codex, Hermes e
-OpenCode: não executados.
+`claude-sonnet-5`, `claude-opus-5`, `claude-fable-5-1` (Claude Code 2.1.272, effort medium), custo real reportado
+pelo runtime. Codex, Hermes e OpenCode: não executados.
 
 ## Rótulos
 
-`refactored` · `statically validated` · `behaviorally evaluated` (só para claude-sonnet-5, nos 3 casos e 8 sondas acima). Eficiência **não** demonstrada: custo por tarefa aceita acima da baseline.
+`refactored` · `statically validated` · `behaviorally evaluated` (claude-sonnet-5, claude-opus-5, claude-fable-5-1; 3 casos e 8 sondas, 1 repetição). Eficiência: candidata dentro dos limites em Opus e Fable, fora no custo em Sonnet; sem prova estatística.
 
 ## Limites e próximos passos
 
