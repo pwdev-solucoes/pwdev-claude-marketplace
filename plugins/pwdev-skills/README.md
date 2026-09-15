@@ -19,7 +19,6 @@ benchmark drives.
 | `scripts/tokens.py` | Size per file, context layer and load scenario with a generic tokenizer (`tiktoken`) |
 | `scripts/bench.py` + `runtimes.py` + `grade.py` | Headless A/B benchmark across runtimes and models — arms `candidate`, `baseline` and `no_skill` — in two modes: `refactor` (skill-refactor on a fixture skill, graded from invariants) and `task` (**any skill doing its own job**, graded by the checks each case declares), under a budget |
 | `scripts/cases.py` | Cases for a skill: `refactor` kind (invariants and defects by script, requests proposed by one headless call) or `task` kind (tasks with synthetic input files and objective checks proposed by one call, schema-validated); human approval pinned to the source hash |
-| `evals/evals.json` | Fixture, cases, trigger and routing checks, default matrix and dated pricing |
 | [`.opencode-plugin/install.py`](./.opencode-plugin/install.py) | OpenCode adapter: links or copies the skills into `~/.config/opencode/skills/` or `<project>/.opencode/skills/`, and uninstalls only what it installed |
 
 Ships 1 skill. No commands, subagents, hooks or MCP server.
@@ -70,23 +69,49 @@ from the installed folder. A Claude Code *plugin* install lives in Claude's plug
 `~/.claude/skills/`, so it does not make the skill visible to OpenCode — the installer does. See
 [`.opencode-plugin/README.md`](./.opencode-plugin/README.md).
 
-## Measuring a skill
+## Using the skill
 
-```bash
-cd plugins/pwdev-skills/skills/skill-refactor
-python3 scripts/discover.py                          # runtimes, defaults, models available here
-python3 scripts/tokens.py <skill-dir> --baseline <previous-version>
-python3 scripts/bench.py --skill <skill-dir> --baseline git:<sha> --no-skill-arm --runtimes auto \
-  --out "$(mktemp -d)" --publish evals/benchmarks/$(date +%F) --budget-usd 5
+Ask in natural language, in the runtime that loaded the plugin (Codex: `$skill-refactor`; Hermes:
+`skill_view("pwdev-skills:skill-refactor")`; OpenCode loads it through its `skill` tool). Say whether
+you want a **review** (read-only) or a **refactor** (edits authorized), and where artifacts may go.
 
-# any skill on its own tasks: generate cases (kind task), approve them, then the same A/B on that skill
-python3 scripts/cases.py --extract <skill-dir> --kind task && python3 scripts/cases.py --propose <skill-dir>/evals/cases/<name> --runtime claude --model claude-sonnet-5
-python3 scripts/cases.py --approve <skill-dir>/evals/cases/<name> --skill <skill-dir>
-python3 scripts/bench.py --skill <skill-dir> --baseline <previous-version> --no-skill-arm --cases <skill-dir>/evals/cases/<name> ...
+**Review a skill without touching it**
+
+```text
+Review plugins/my-plugin/skills/reports/SKILL.md without editing any file.
+Consumers: small models in the lean profile. Tell me how to measure the effect.
 ```
 
-Use a temporary `--out`: a round writes workspaces and version copies that contain `SKILL.md`
-files. `--publish` copies only `summary.json`, `benchmark.md` and `tokens.json` into the skill.
+You get three parts: findings named by category (duplication, contradiction, unconditional
+reading, over-broad or under-specific description, procedure without purpose) with the lines they
+come from; proposed changes tied to the requirement each one preserves; and how to verify the
+effect — static size first, then an A/B by cost per accepted task. Nothing is written to disk.
+
+**Refactor with edits authorized**
+
+```text
+Refactor plugins/my-plugin/skills/reports/SKILL.md and its resources.
+Consumers: Sonnet in lean, every other model in guided.
+Preserve the name, paths, metadata and exact output labels. Do not run benchmarks.
+Baseline and report in .planning/refactor/reports/.
+```
+
+The skill keeps a baseline of the original files, applies the change, checks frontmatter, links and
+mandatory behavior, and closes with every label it earned: `refactored`, `statically validated`
+and — only after paired runs on real models — `behaviorally evaluated`.
+
+**Measure a skill on real models**
+
+```text
+Compare the previous version of plugins/my-plugin/skills/reports with the candidate on the
+same cases, on Sonnet 5 and gpt-5.6-terra at medium effort, two repetitions, budget US$ 5.
+```
+
+The skill plans the A/B from what `discover.py` finds on this machine and runs it with `bench.py`
+only under an explicit budget. The result is a paired table per case and model — previous ×
+candidate × no skill — decided by cost per accepted task, never by file size. Any skill can be
+measured on its own tasks (`task` mode); the [usage guide](./docs/guia-de-uso.md) walks through
+each scenario and the [manual](./docs/manual-de-uso.md) documents every script option.
 
 ## Security
 

@@ -19,7 +19,6 @@ executa.
 | `scripts/tokens.py` | Tamanho por arquivo, camada de contexto e cenário de carga com tokenizador genérico (`tiktoken`) |
 | `scripts/bench.py` + `runtimes.py` + `grade.py` | Benchmark A/B headless entre runtimes e modelos — braços `candidate`, `baseline` e `no_skill` — em dois modos: `refactor` (skill-refactor sobre uma skill-fixture, avaliada por invariantes) e `task` (**qualquer skill fazendo a própria tarefa**, avaliada pelas verificações que cada caso declara), com orçamento |
 | `scripts/cases.py` | Casos para uma skill: tipo `refactor` (invariantes e defeitos por script, pedidos propostos por uma chamada headless) ou `task` (tarefas com arquivos sintéticos e verificações objetivas propostas por uma chamada, validadas por esquema); aprovação humana amarrada ao hash de origem |
-| `evals/evals.json` | Fixture, casos, verificações de acionamento e roteamento, matriz padrão e preços datados |
 | [`.opencode-plugin/install.py`](./.opencode-plugin/install.py) | Adaptador OpenCode: linka ou copia as skills em `~/.config/opencode/skills/` ou `<projeto>/.opencode/skills/`, e desinstala só o que instalou |
 
 Inclui 1 skill. Sem comandos, subagentes, hooks ou servidor MCP.
@@ -70,23 +69,50 @@ pasta instalada. Uma instalação por *plugin* no Claude Code fica no cache de p
 `~/.claude/skills/`, e por isso não torna a skill visível ao OpenCode — o instalador torna. Veja
 [`.opencode-plugin/README.md`](./.opencode-plugin/README.md).
 
-## Medindo uma skill
+## Usando a skill
 
-```bash
-cd plugins/pwdev-skills/skills/skill-refactor
-python3 scripts/discover.py                          # runtimes, padrões e modelos disponíveis aqui
-python3 scripts/tokens.py <pasta-da-skill> --baseline <versao-anterior>
-python3 scripts/bench.py --skill <pasta-da-skill> --baseline git:<sha> --no-skill-arm --runtimes auto \
-  --out "$(mktemp -d)" --publish evals/benchmarks/$(date +%F) --budget-usd 5
+Peça em linguagem natural, no runtime que carregou o plugin (Codex: `$skill-refactor`; Hermes:
+`skill_view("pwdev-skills:skill-refactor")`; o OpenCode a carrega pela ferramenta `skill`). Diga se
+quer uma **revisão** (só leitura) ou uma **refatoração** (edição autorizada), e onde os artefatos
+podem ser gravados.
 
-# qualquer skill na tarefa dela: gere os casos (tipo task), aprove, e rode o mesmo A/B sobre essa skill
-python3 scripts/cases.py --extract <pasta-da-skill> --kind task && python3 scripts/cases.py --propose <pasta-da-skill>/evals/cases/<nome> --runtime claude --model claude-sonnet-5
-python3 scripts/cases.py --approve <pasta-da-skill>/evals/cases/<nome> --skill <pasta-da-skill>
-python3 scripts/bench.py --skill <pasta-da-skill> --baseline <versao-anterior> --no-skill-arm --cases <pasta-da-skill>/evals/cases/<nome> ...
+**Revisar uma skill sem tocar nela**
+
+```text
+Revise plugins/meu-plugin/skills/relatorios/SKILL.md sem editar nenhum arquivo.
+Consumidores: modelos pequenos em lean. Diga como medir o efeito.
 ```
 
-Use um `--out` temporário. Uma rodada grava workspaces e cópias de versão que contêm arquivos
-`SKILL.md`. O `--publish` copia para dentro da skill só `summary.json`, `benchmark.md` e `tokens.json`.
+A resposta vem em três partes: achados nomeados por categoria (duplicação, contradição, leitura
+incondicional, descrição ampla ou restrita demais, procedimento sem finalidade) com as linhas de
+origem; mudanças propostas ligadas ao requisito que cada uma preserva; e como verificar o efeito —
+tamanho estático primeiro, depois A/B por custo por tarefa aceita. Nada é gravado em disco.
+
+**Refatorar com edição autorizada**
+
+```text
+Refatore plugins/meu-plugin/skills/relatorios/SKILL.md e seus recursos.
+Consumidores: Sonnet em lean, demais modelos em guided.
+Preserve nome, paths, metadata e os rótulos exatos de saída. Não rode benchmark.
+Baseline e relatório em .planning/refactor/relatorios/.
+```
+
+A skill guarda um baseline dos arquivos originais, aplica a mudança, confere frontmatter, links e
+comportamento obrigatório, e fecha com todos os rótulos conquistados: `refactored`, `statically
+validated` e — só depois de runs pareados em modelos reais — `behaviorally evaluated`.
+
+**Medir uma skill em modelos reais**
+
+```text
+Compare a versão anterior de plugins/meu-plugin/skills/relatorios com a candidata nos mesmos
+casos, no Sonnet 5 e no gpt-5.6-terra em esforço medium, duas repetições, orçamento US$ 5.
+```
+
+A skill planeja o A/B a partir do que o `discover.py` encontra nesta máquina e só o executa com
+`bench.py` sob orçamento explícito. O resultado é uma tabela pareada por caso e modelo — anterior ×
+candidata × sem skill — decidida por custo por tarefa aceita, nunca por tamanho de arquivo. Qualquer
+skill pode ser medida na própria tarefa (modo `task`); o [guia de uso](./docs/guia-de-uso.md)
+percorre cada cenário e o [manual](./docs/manual-de-uso.md) documenta cada opção dos scripts.
 
 ## Segurança
 
