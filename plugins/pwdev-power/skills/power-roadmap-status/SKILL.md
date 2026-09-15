@@ -8,8 +8,9 @@ description: Use when the status, progress, completeness, traceability, or next 
 Report the roadmap's health from its durable artifacts. This workflow is **read-only**: never
 create, repair, approve, reject, or otherwise edit an artifact while reporting status.
 
-Read [artifacts](../../references/artifacts.md) and
-[collaboration](../../references/collaboration.md) before acting.
+When a path or field below is unfamiliar, [artifacts](../../references/artifacts.md) has the tree
+and [collaboration](../../references/collaboration.md) §Gates says where each human gate is
+recorded.
 
 ## Sources of truth
 

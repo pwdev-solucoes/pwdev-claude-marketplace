@@ -5,18 +5,16 @@ description: Use when a design or set of requirements exists and work needs deco
 
 # Write an Executable Plan
 
-Read [artifacts](../../references/artifacts.md), [collaboration](../../references/collaboration.md),
-[context](../../references/context.md), and [model-profiles](../../references/model-profiles.md)
-before acting.
-
 If no approved design exists, stop and use `pwdev-power:power-brainstorm` first. A plan
 without a spec is a guess with numbered steps.
 
 Read `.planning/power/context/project.md` and `.planning/power/context/stack.md` when they
-exist. `File Structure` must
-name paths that exist in this repository, and every verification step must use the project's real
+exist ([context](../../references/context.md) says what each holds). `File Structure` must name
+paths that exist in this repository, and every verification step must use the project's real
 commands — a plan step that runs `npm test` against a `pytest` project fails on the first task,
-for the most avoidable reason there is.
+for the most avoidable reason there is. Read [artifacts](../../references/artifacts.md) before
+writing `plan.md` or `state.md`, and [collaboration](../../references/collaboration.md) at the
+gate: approval is the human's, never inferred.
 
 ## Who you are writing for
 

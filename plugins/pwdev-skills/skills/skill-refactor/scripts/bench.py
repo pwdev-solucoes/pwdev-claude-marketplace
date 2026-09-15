@@ -84,8 +84,8 @@ def resolve_version(spec: str, skill: Path, dest: Path) -> Path:
         subprocess.run(["tar", "-x", "-C", str(dest)], input=archive.stdout, check=True)
         return dest / rel
     source = Path(spec)
-    if not (source / "SKILL.md").is_file():
-        raise SystemExit(f"{source} has no SKILL.md")
+    if not (source / "SKILL.md").is_file() and not rt.is_plugin_root(source):
+        raise SystemExit(f"{source} has no SKILL.md and is not a plugin root (manifest + skills/)")
     target = dest / source.name
     if target.exists():
         # A second invocation into the same --out (one runtime at a time, or a resumed round)
@@ -118,9 +118,23 @@ def build_plan(cases: List[Dict[str, Any]], targets: List[Tuple[str, Optional[st
     return plan
 
 
+def fresh_workspace(run_dir: Path) -> Path:
+    """A run starts from nothing: a second invocation into the same --out must not inherit files."""
+    workspace = run_dir / "workspace"
+    if workspace.exists():
+        shutil.rmtree(workspace)
+    for stale in ("plugin", "home", "settings.json"):
+        path = run_dir / stale
+        if path.is_dir():
+            shutil.rmtree(path)
+        elif path.exists():
+            path.unlink()
+    return workspace
+
+
 def materialize(case: Dict[str, Any], fixture_md: str, run_dir: Path,
                 fixture_files: Optional[Dict[str, str]] = None) -> Tuple[Path, str]:
-    workspace = run_dir / "workspace"
+    workspace = fresh_workspace(run_dir)
     (workspace / "target").mkdir(parents=True, exist_ok=True)
     (workspace / "artifacts").mkdir(exist_ok=True)
     (workspace / "target" / "SKILL.md").write_text(fixture_md, encoding="utf-8")
@@ -145,7 +159,7 @@ def spec_kind(spec: Dict[str, Any]) -> str:
 
 def materialize_task(case: Dict[str, Any], fixture_files: Dict[str, str], run_dir: Path) -> Tuple[Path, str]:
     """A task workspace: the spec's input files plus the case's own, at the workspace root."""
-    workspace = run_dir / "workspace"
+    workspace = fresh_workspace(run_dir)
     (workspace / "artifacts").mkdir(parents=True, exist_ok=True)
     files = dict(fixture_files or {})
     if isinstance(case.get("files"), dict):
@@ -456,6 +470,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--dry-run", action="store_true", help="use fake executables from --fake-bin; no paid calls")
     parser.add_argument("--fake-bin", type=Path, default=None)
     parser.add_argument("--acknowledge-hermes-automation", action="store_true")
+    parser.add_argument("--claude-disable-plugin", action="append", default=[], metavar="ID",
+                        help="switch this installed Claude Code plugin off in every run (e.g. pwdev-power@pwdev-claude-marketplace); repeatable")
+    parser.add_argument("--isolate-user-skills", action="store_true",
+                        help="OpenCode runs with a fresh HOME so the user's global skills stay out of every arm (free models only)")
     parser.add_argument("--skill-creator", type=Path, default=DEFAULT_SKILL_CREATOR)
     parser.add_argument("--no-skill-creator", action="store_true")
     args = parser.parse_args(argv)
@@ -542,6 +560,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     configs: Tuple[str, ...] = tuple(arm for arm in ARMS if arm in versions)
     tokenizer = Tokenizer()
     static = {config: measure_skill(path, tokenizer) for config, path in versions.items() if path is not None}
+    if rt.is_plugin_root(skill):
+        # a plugin root: static size per skill, so the summary shows what each activation costs
+        static = {config: {"plugin": measure_skill(path, tokenizer),
+                           "skills": {s.name: measure_skill(s, tokenizer) for s in rt.plugin_skills(path)}}
+                  for config, path in versions.items() if path is not None}
     write_json(out / "tokens.json", static)
 
     plan = build_plan(cases, targets, args.reps, pricing, configs)
@@ -549,6 +572,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     per_claude_budget = max(0.05, round(args.budget_usd / claude_runs, 4)) if claude_runs else None
     meta = {"skill_name": spec.get("skill_name", skill.name), "skill_path": str(skill), "baseline": args.baseline,
             "arms": list(configs), "cases_source": str(cases_path), "kind": kind,
+            "claude_disabled_plugins": list(args.claude_disable_plugin), "isolate_user_skills": args.isolate_user_skills,
             "started_at": utc_now(), "budget_usd": args.budget_usd, "dry_run": args.dry_run, "reps": args.reps,
             "runtime_versions": {r: rt.runtime_version(r) for r in runtimes_wanted},
             "targets": [{"runtime": r, "model": m} for r, m in targets],
@@ -589,6 +613,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                                effort=getattr(args, f"{item['runtime']}_effort"),
                                timeout=args.timeout, budget_usd=per_claude_budget if item["runtime"] == "claude" else None,
                                hermes_automation_acknowledged=args.acknowledge_hermes_automation or args.dry_run,
+                               disable_claude_plugins=tuple(args.claude_disable_plugin),
+                               isolate_user_skills=args.isolate_user_skills,
                                # Only the copy handed to the runtime is a run-level verdict. The live
                                # skill is checked once per round instead: editing it mid-round is an
                                # operator mistake, and charging it to the model misreads the result.

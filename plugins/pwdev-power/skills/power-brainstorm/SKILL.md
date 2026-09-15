@@ -5,15 +5,16 @@ description: Use before any creative work - creating a feature, building a compo
 
 # Brainstorm Before Building
 
-Read [collaboration](../../references/collaboration.md),
-[artifacts](../../references/artifacts.md), and [context](../../references/context.md) before
-acting.
+Ask one question at a time, and treat every approval as the human's to give — never inferred
+from silence ([collaboration](../../references/collaboration.md), when you reach a gate).
 
 If the codebase map exists, read `.planning/power/context/project.md` and
-`.planning/power/context/domain.md` first. They tell you the
-architecture you are extending and the words this code already uses — proposing `Patient` where
-the code says `Beneficiary` produces a design nobody can map onto the repository. The map informs;
-it never decides. Where it disagrees with the code, the code is right and the map is stale.
+`.planning/power/context/domain.md` first ([context](../../references/context.md) defines them).
+They tell you the architecture you are extending and the words this code already uses —
+proposing `Patient` where the code says `Beneficiary` produces a design nobody can map onto the
+repository. The map informs; it never decides. Where it disagrees with the code, the code is
+right and the map is stale. Read [artifacts](../../references/artifacts.md) before writing
+`spec.md` or `state.md`.
 
 ## Step 1 — Classify, out loud, before the first question
 

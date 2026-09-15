@@ -113,6 +113,16 @@ Hermes additionally requires `hermes_automation_acknowledged=True`
 - OpenCode can exit `0` after an `error` event (rate limit, provider failure). An error event is
   never a `PASS`; a rate-limit message is `NOT_RUN`. Free Zen models are rate-limited.
 
+## A plugin root as the measured skill
+
+`skill_dir` may be a plugin root (`.claude-plugin/plugin.json` + `skills/`). The plugin is then
+exposed whole so `../../references` and `../../scripts` resolve: Claude Code gets the copy as
+`--plugin-dir` (manifest, hooks and all skills, as installed); Codex and Hermes get it under
+`workspace/plugin/` with an `AGENTS.md` naming every `skills/<name>/SKILL.md`; OpenCode gets
+`skills/`, `references/`, `scripts/` and `templates/` under `.opencode/` — never `agents/` or
+`commands/`, which OpenCode parses as its own configuration and rejects. `evals/` and
+`benchmarks/` are never copied.
+
 ## Models through OpenRouter (Hermes and OpenCode)
 
 The catalogue in `evals/evals.json` lists three OpenRouter models the user asked to keep under

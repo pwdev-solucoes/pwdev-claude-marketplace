@@ -1,0 +1,175 @@
+{
+  "tokenizer": "tiktoken:o200k_base",
+  "references": {
+    "collaboration.md": 543,
+    "cmux.md": 1685,
+    "model-profiles.md": 706,
+    "claude-tools.md": 383,
+    "hermes-tools.md": 589,
+    "context.md": 1090,
+    "safety.md": 626,
+    "kanban.md": 1106,
+    "codex-tools.md": 551,
+    "artifacts.md": 1085,
+    "fleet.md": 2598,
+    "audit-schema.md": 540,
+    "runtime.md": 889
+  },
+  "skills": {
+    "power": {
+      "description": 30,
+      "body": 791,
+      "unconditional_refs": [],
+      "conditional_refs": [
+        "claude-tools.md",
+        "codex-tools.md",
+        "hermes-tools.md"
+      ],
+      "load_per_activation": 791
+    },
+    "power-brainstorm": {
+      "description": 28,
+      "body": 880,
+      "unconditional_refs": [
+        "artifacts.md",
+        "collaboration.md",
+        "context.md"
+      ],
+      "conditional_refs": [],
+      "load_per_activation": 3598
+    },
+    "power-debug": {
+      "description": 17,
+      "body": 692,
+      "unconditional_refs": [],
+      "conditional_refs": [],
+      "load_per_activation": 692
+    },
+    "power-execute": {
+      "description": 25,
+      "body": 1568,
+      "unconditional_refs": [
+        "collaboration.md",
+        "model-profiles.md",
+        "runtime.md",
+        "safety.md"
+      ],
+      "conditional_refs": [
+        "hermes-tools.md"
+      ],
+      "load_per_activation": 4332
+    },
+    "power-finish": {
+      "description": 27,
+      "body": 481,
+      "unconditional_refs": [
+        "safety.md"
+      ],
+      "conditional_refs": [],
+      "load_per_activation": 1107
+    },
+    "power-fleet": {
+      "description": 34,
+      "body": 1743,
+      "unconditional_refs": [
+        "artifacts.md",
+        "cmux.md",
+        "fleet.md",
+        "safety.md"
+      ],
+      "conditional_refs": [
+        "kanban.md"
+      ],
+      "load_per_activation": 7737
+    },
+    "power-init": {
+      "description": 32,
+      "body": 1538,
+      "unconditional_refs": [
+        "artifacts.md",
+        "context.md",
+        "runtime.md",
+        "safety.md"
+      ],
+      "conditional_refs": [],
+      "load_per_activation": 5228
+    },
+    "power-plan": {
+      "description": 21,
+      "body": 838,
+      "unconditional_refs": [
+        "artifacts.md",
+        "collaboration.md",
+        "context.md",
+        "model-profiles.md"
+      ],
+      "conditional_refs": [],
+      "load_per_activation": 4262
+    },
+    "power-product": {
+      "description": 32,
+      "body": 745,
+      "unconditional_refs": [
+        "artifacts.md",
+        "collaboration.md"
+      ],
+      "conditional_refs": [
+        "runtime.md"
+      ],
+      "load_per_activation": 2373
+    },
+    "power-quick": {
+      "description": 44,
+      "body": 463,
+      "unconditional_refs": [
+        "collaboration.md",
+        "safety.md"
+      ],
+      "conditional_refs": [],
+      "load_per_activation": 1632
+    },
+    "power-review": {
+      "description": 20,
+      "body": 527,
+      "unconditional_refs": [],
+      "conditional_refs": [],
+      "load_per_activation": 527
+    },
+    "power-roadmap-status": {
+      "description": 25,
+      "body": 777,
+      "unconditional_refs": [
+        "artifacts.md",
+        "collaboration.md"
+      ],
+      "conditional_refs": [],
+      "load_per_activation": 2405
+    },
+    "power-tdd": {
+      "description": 14,
+      "body": 680,
+      "unconditional_refs": [],
+      "conditional_refs": [],
+      "load_per_activation": 680
+    },
+    "power-verify": {
+      "description": 25,
+      "body": 756,
+      "unconditional_refs": [
+        "artifacts.md",
+        "collaboration.md"
+      ],
+      "conditional_refs": [],
+      "load_per_activation": 2384
+    },
+    "power-worktree": {
+      "description": 19,
+      "body": 546,
+      "unconditional_refs": [],
+      "conditional_refs": [],
+      "load_per_activation": 546
+    }
+  },
+  "sum_bodies": 13025,
+  "sum_load_per_activation": 38294
+}

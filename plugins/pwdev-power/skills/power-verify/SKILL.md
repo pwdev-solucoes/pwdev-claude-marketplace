@@ -5,8 +5,9 @@ description: Use when about to claim work is complete, fixed, or passing, and wh
 
 # Evidence Before Claims
 
-Read [collaboration](../../references/collaboration.md) and
-[artifacts](../../references/artifacts.md) before acting.
+Read [collaboration](../../references/collaboration.md) when dispatching the `verifier` — its
+status is at most ten lines and its report is never pasted into your context — and
+[artifacts](../../references/artifacts.md) before writing `verdict.md` or `state.md`.
 
 ## Route
 

@@ -5,9 +5,11 @@ description: Use when approved phases should run in parallel — visually in a c
 
 # Operate a Fleet
 
-Read [fleet](../../references/fleet.md), [cmux](../../references/cmux.md),
-[safety](../../references/safety.md), and [artifacts](../../references/artifacts.md) before
-acting.
+Read [fleet](../../references/fleet.md) before launching, resuming, or tearing down;
+[cmux](../../references/cmux.md) before a visual panel; [safety](../../references/safety.md) before
+the first launch — the privileged flags and the fixed-runtime rule live there; and
+[artifacts](../../references/artifacts.md) when a `fleet/` record or path is unfamiliar. `--status`
+needs none of them.
 
 ## Routes
 

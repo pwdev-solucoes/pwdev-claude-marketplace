@@ -263,6 +263,8 @@ caso, a skill não está agregando ali — isso é um achado, não um ruído.
 | `--baseline <dir \| git:<sha> \| git:<sha>:<caminho>>` | nenhum | Versão anterior; habilita o braço `baseline`. `git:<sha>` acha a skill pelo nome se ela mudou de pasta; se houver mais de uma cópia naquele commit, informe o caminho |
 | `--no-skill-arm` | desligado | Acrescenta o braço `no_skill`: o runtime recebe só o fixture e o pedido |
 | `--cases <arquivo \| dir>` | `evals/evals.json` | Outro `evals.json`, ou uma pasta gerada por `cases.py` (lê `cases.json` e recusa conjunto não aprovado) |
+| `--claude-disable-plugin <id>` | nenhum | Desliga um plugin instalado no seu Claude Code só nas execuções da rodada (`--settings` por sessão); repetível. Obrigatório quando a skill medida também está instalada, senão ela entra em todos os braços |
+| `--isolate-user-skills` | desligado | OpenCode roda com um `HOME` novo, sem as suas skills globais (`~/.config/opencode`, `~/.claude/skills`, `~/.agents/skills`). Só para modelos que não precisam de credencial gravada |
 | `--out <dir>` | obrigatório | Diretório de trabalho da rodada. **Use um temporário** |
 | `--publish <dir>` | nenhum | Copia só `summary.json`, `benchmark.md` e `tokens.json` |
 | `--runtimes` | `claude,codex,hermes` | Lista, ou `auto` (tudo que o `discover.py` marca como utilizável) |
@@ -394,6 +396,12 @@ python3 scripts/bench.py --skill <pasta-da-skill> --baseline <versao-anterior> -
   --opencode-models opencode/big-pickle --reps 2 --budget-usd 5 --out "$(mktemp -d)" \
   --publish <pasta-da-skill>/evals/benchmarks/$(date +%F)
 ```
+
+`--skill` e `--baseline` também aceitam a **raiz de um plugin** (manifesto + `skills/`): o plugin
+inteiro é exposto — no Claude Code como `--plugin-dir` com seus hooks e manifesto; no Codex e no
+Hermes copiado para `workspace/plugin/` com um `AGENTS.md` que lista cada skill; no OpenCode com
+`skills/`, `references/`, `scripts/` e `templates/` sob `.opencode/` — para que `../../references`
+continue resolvendo. É assim que se mede um plugin multi-skill como o `pwdev-power`.
 
 Os casos podem ser escritos à mão ou gerados: `cases.py --extract <skill> --kind task` cria o
 esqueleto, `--propose` pede a um modelo 2–3 tarefas com arquivos sintéticos e verificações
@@ -603,7 +611,7 @@ ordem de grandeza, não tabela de preço.**
 - **No modo `task`, só o que o caso declara é avaliado.** Qualidade além das verificações (estilo, completude não declarada) precisa de leitura humana dos `outputs/`.
 - **`evals.json` mede a skill-refactor.** Para medir outra skill, gere os casos com `cases.py` (§7): tipo `task` para a tarefa dela, tipo `refactor` para a skill-refactor sobre ela.
 - **Cada runtime expõe a skill de um jeito:** o Claude Code por plugin gerado, o Codex e o Hermes por `AGENTS.md`, e o OpenCode de forma nativa. Só no OpenCode se mede acionamento real; comparações de tokens entre runtimes são aproximadas.
-- **Os runtimes carregam também as skills e plugins globais do usuário**, e isso entra no contexto medido.
+- **Os runtimes carregam também as skills e plugins globais do usuário**, e isso entra no contexto medido — e, quando a skill medida é uma delas, contamina os braços `baseline` e `no_skill` (aconteceu em 15/09 com o pwdev-power instalado). No Claude Code use `--claude-disable-plugin`; no OpenCode, `--isolate-user-skills`; Codex e Hermes não têm isolamento no harness — retire os links de `~/.agents/skills` e `~/.hermes/skills` antes, ou não os inclua na rodada.
 - **O Codex não informa o modelo usado.** A única evidência é o runtime ter aceito o slug.
 - **O Claude Code não tem comando para listar modelos.**
 - **Custos do Codex e do Hermes não são cobrança real:** equivalência de API e estimativa, respectivamente.

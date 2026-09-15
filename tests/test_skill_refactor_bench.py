@@ -10,6 +10,7 @@ import hashlib
 import importlib.util
 import io
 import re
+import shutil
 import sys
 import json
 import os
@@ -485,6 +486,65 @@ class RuntimesTest(unittest.TestCase):
         self.assertEqual(record["cost_source"], "runtime")
         self.assertEqual(record["usage"]["output_tokens"], 250)
         self.assertEqual(record["extra"]["stop_reason"], "tool_use")
+
+    def make_plugin(self) -> Path:
+        root = self.root / "plug"
+        write(root / ".claude-plugin" / "plugin.json", json.dumps({"name": "plug", "version": "1.0.0"}))
+        write(root / "skills" / "alpha" / "SKILL.md", "---\nname: alpha\ndescription: Use when alpha.\n---\nRead [r](../../references/r.md) before writing.\n")
+        write(root / "skills" / "beta" / "SKILL.md", "---\nname: beta\ndescription: Use when beta.\n---\nbeta\n")
+        write(root / "references" / "r.md", "# r\n")
+        write(root / "scripts" / "tool.sh", "#!/bin/sh\necho ok\n")
+        write(root / "agents" / "worker.md", "---\ntools: Read, Bash\n---\nnot an OpenCode agent\n")
+        write(root / "commands" / "go.md", "---\ndescription: x\n---\n/go\n")
+        write(root / "evals" / "benchmarks" / "x" / "summary.json", "{}")
+        return root
+
+    def test_a_plugin_root_is_exposed_whole_so_relative_references_resolve(self):
+        plugin = self.make_plugin()
+        # Claude: the plugin itself, manifest and all, becomes --plugin-dir
+        record = self.runtimes.run("claude", self.request(skill_dir=plugin, skill_name="plug", protected_paths=[plugin]))
+        self.assertEqual(record["status"], "PASS")
+        plugin_dir = Path(record["command"][record["command"].index("--plugin-dir") + 1].replace("/[USER]", str(Path.home())))
+        self.assertEqual(json.loads((plugin_dir / ".claude-plugin" / "plugin.json").read_text())["name"], "plug")
+        self.assertTrue((plugin_dir / "skills" / "alpha" / "SKILL.md").is_file())
+        self.assertTrue((plugin_dir / "references" / "r.md").is_file())
+        self.assertFalse((plugin_dir / "evals").exists())
+        # Codex: the plugin is copied into the workspace and AGENTS.md names every skill
+        shutil.rmtree(self.root / "ws", ignore_errors=True); shutil.rmtree(self.root / "run", ignore_errors=True)
+        record = self.runtimes.run("codex", self.request(skill_dir=plugin, skill_name="plug", protected_paths=[plugin]))
+        self.assertEqual(record["status"], "PASS")
+        agents = (self.root / "ws" / "AGENTS.md").read_text()
+        self.assertIn("`plugin/skills/alpha/SKILL.md`", agents)
+        self.assertIn("`plugin/skills/beta/SKILL.md`", agents)
+        self.assertTrue((self.root / "ws" / "plugin" / "references" / "r.md").is_file())
+        # OpenCode: skills/ and its siblings land under .opencode/ so ../../references resolves
+        shutil.rmtree(self.root / "ws", ignore_errors=True); shutil.rmtree(self.root / "run", ignore_errors=True)
+        record = self.runtimes.run("opencode", self.request(skill_dir=plugin, skill_name="plug", protected_paths=[plugin],
+                                                             model="opencode/big-pickle"))
+        self.assertEqual(record["status"], "PASS")
+        oc = self.root / "ws" / ".opencode"
+        self.assertTrue((oc / "skills" / "alpha" / "SKILL.md").is_file())
+        self.assertTrue((oc / "skills" / "alpha" / ".." / ".." / "references" / "r.md").resolve().is_file())
+        self.assertFalse((oc / ".claude-plugin").exists())
+        self.assertFalse((oc / "evals").exists())
+        # agents/ and commands/ are OpenCode's own config namespaces: a plugin's copies break its startup
+        self.assertFalse((oc / "agents").exists())
+        self.assertFalse((oc / "commands").exists())
+        self.assertTrue((oc / "scripts" / "tool.sh").is_file())
+
+    def test_installed_plugins_can_be_switched_off_and_opencode_home_isolated(self):
+        record = self.runtimes.run("claude", self.request(disable_claude_plugins=("pwdev-power@pwdev-claude-marketplace",)))
+        argv = record["command"]
+        self.assertIn("--settings", argv)
+        settings = json.loads((self.root / "run" / "settings.json").read_text())
+        self.assertEqual(settings, {"enabledPlugins": {"pwdev-power@pwdev-claude-marketplace": False}})
+        shutil.rmtree(self.root / "ws", ignore_errors=True); shutil.rmtree(self.root / "run", ignore_errors=True)
+        record = self.runtimes.run("opencode", self.request(model="opencode/big-pickle", isolate_user_skills=True))
+        self.assertEqual(record["status"], "PASS")
+        self.assertIn("HOME", record["env_overrides"])
+        self.assertTrue((self.root / "run" / "home" / ".config").is_dir())
+        calls = [json.loads(l) for l in self.log.read_text().splitlines()]
+        self.assertTrue(any(c["exe"] == "opencode" for c in calls))
 
     def test_quota_words_inside_a_successful_run_are_not_a_quota(self):
         # Observed 2026-09-14: two Codex runs that read references/runtimes.md and quoted "hit your
@@ -1286,6 +1346,16 @@ class BenchTest(unittest.TestCase):
             self.bench.main(["--skill", str(self.candidate), "--cases", str(self.root / "task"), "--out", str(self.root / "o"),
                              "--runtimes", "claude", "--dry-run", "--fake-bin", str(self.bin), "--no-skill-creator"])
         self.assertEqual([c for c in self.calls() if "-p" in c["argv"]], [])
+
+    def test_a_second_invocation_starts_each_run_from_a_fresh_workspace(self):
+        code, out = self.run_bench("--only-case", "3", "--runtimes", "codex", "--codex-models", "gpt-5.6-luna", "--reps", "1")
+        self.assertEqual(code, 0)
+        run_dir = next(out.glob("eval-3-*/with_skill/run-1-codex-*"))
+        write(run_dir / "workspace" / "stale.txt", "left over")
+        code, _ = self.run_bench("--only-case", "3", "--runtimes", "codex", "--codex-models", "gpt-5.6-luna", "--reps", "1")
+        self.assertEqual(code, 0)
+        self.assertFalse((run_dir / "workspace" / "stale.txt").exists())
+        self.assertTrue((run_dir / "workspace" / "target" / "SKILL.md").is_file())
 
     def test_regrade_reclassifies_and_resummarizes_without_new_calls(self):
         code, out = self.run_bench("--only-case", "3", "--runtimes", "codex", "--codex-models", "gpt-5.6-luna", "--reps", "1")

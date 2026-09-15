@@ -5,7 +5,8 @@ description: Use when implementation is complete, tests pass, and the work needs
 
 # Finish a Branch
 
-Read [safety](../../references/safety.md) before acting.
+Never push, merge, or open a pull request unless the human asked in this session; read
+[safety](../../references/safety.md) before Step 5 and Step 6.
 
 ## Step 1 — Green first
 

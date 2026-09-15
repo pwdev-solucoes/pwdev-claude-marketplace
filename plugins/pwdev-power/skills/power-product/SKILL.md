@@ -5,8 +5,10 @@ description: Use when a product requirement, PRD, or executable roadmap is reque
 
 # Product Requirement and Roadmap
 
-Read [artifacts](../../references/artifacts.md) and
-[collaboration](../../references/collaboration.md) before acting.
+Read [artifacts](../../references/artifacts.md) before writing `prd.md` or the roadmap files, and
+[collaboration](../../references/collaboration.md) at each gate and when dispatching the
+`roadmap` subagent — one question at a time, statuses of at most ten lines, approval never
+inferred.
 
 ## Route
 

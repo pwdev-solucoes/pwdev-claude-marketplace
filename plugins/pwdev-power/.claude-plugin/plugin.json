@@ -1,7 +1,7 @@
 {
   "name": "pwdev-power",
   "displayName": "PWDEV Power — Disciplined Spec-Driven Development",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Fast, approval-gated development with PRD and roadmap, subagent-driven execution with a ledger and bounded fix loop, and isolated cmux fleets. Runs on Claude Code, Codex, and Hermes Agent.",
   "author": {
     "name": "Paulo Soares",

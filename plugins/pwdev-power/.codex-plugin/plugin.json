@@ -1,6 +1,6 @@
 {
   "name": "pwdev-power",
-  "version": "0.1.0+codex.20260906005641",
+  "version": "0.2.0+codex.20260915120000",
   "description": "Disciplined, approval-gated development: product requirements, executable roadmap, brainstorm-gated plans, subagent-driven execution with a ledger and bounded fix loop, adversarial verification, and isolated cmux fleets.",
   "author": {
     "name": "Paulo Soares",

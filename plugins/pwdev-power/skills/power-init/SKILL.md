@@ -5,8 +5,12 @@ description: Use when a repository has no PWDEV Power workspace yet, when resumi
 
 # Initialize a Power Workspace
 
-Read [artifacts](../../references/artifacts.md), [context](../../references/context.md),
-[runtime](../../references/runtime.md), and [safety](../../references/safety.md) before acting.
+Never read a secret, and never edit configuration outside the repository — print the command and
+let the human run it. Read [artifacts](../../references/artifacts.md) before writing `config.json`
+or `state.md` (Step 4), [context](../../references/context.md) before mapping (Step 5),
+[runtime](../../references/runtime.md) before dispatching the mapper, and
+[safety](../../references/safety.md) before touching `.gitignore` or anything outside
+`.planning/power/`.
 
 ## Routes
 
@@ -111,15 +115,10 @@ need rather than exploring for its own sake.
 
 ### Staleness
 
-`project.md` records the commit it was mapped at. On resume, compare it to `HEAD`:
-
-- same commit, or only `.planning/` changed since: the map is current.
-- the stack, a manifest, or a top-level directory changed since: say the map is stale and offer
-  `--map`.
-
-Never remap silently on every command. A map rewritten constantly is a map nobody reads. And never
-treat the map as authoritative over the code — when they disagree, the code is right and the map is
-stale.
+`project.md` records the commit it was mapped at. On resume, compare it to `HEAD`: same commit,
+or only `.planning/` changed, means current; a changed stack, manifest, or top-level directory
+means stale — say so and offer `--map`. Never remap silently, and when the map and the code
+disagree, the code is right ([context](../../references/context.md) §Staleness).
 
 ## Step 6 — Governance file, only if asked
 

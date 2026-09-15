@@ -250,6 +250,11 @@ python3 scripts/bench.py --skill plugins/meu-plugin/skills/resumo --baseline /tm
   --publish plugins/meu-plugin/skills/resumo/evals/benchmarks/$(date +%F)
 ```
 
+Se a skill medida também está instalada no seu Claude Code, passe `--claude-disable-plugin <id>`
+(e `--isolate-user-skills` para o OpenCode): sem isso a cópia instalada entra em todos os braços e
+"sem skill" deixa de existir. Um gate humano no meio da tarefa para um run headless; pré-aprove
+no prompt o que a tarefa pede, e só isso.
+
 Para não escrever os casos à mão: `cases.py --extract <skill> --kind task` gera o esqueleto,
 `--propose` pede a um modelo duas ou três tarefas com arquivos sintéticos e verificações (validadas
 por esquema), e `--approve` fecha o conjunto — leia cada verificação `script` antes de aprovar,

@@ -78,6 +78,11 @@ class RunRequest:
     executable: Optional[str] = None
     budget_usd: Optional[float] = None
     effort: Optional[str] = None  # None = the runtime's configured default, recorded as such
+    # The user's own skills and plugins load into every arm and blur the comparison. Claude Code
+    # can switch a listed plugin off per session (--settings enabledPlugins); OpenCode can only be
+    # isolated by a fresh HOME, which works for models that need no stored credentials.
+    disable_claude_plugins: Sequence[str] = ()
+    isolate_user_skills: bool = False
     hermes_automation_acknowledged: bool = False
     protected_paths: List[Path] = field(default_factory=list)
     pricing: Dict[str, Dict[str, float]] = field(default_factory=dict)
@@ -168,12 +173,69 @@ def _copy_skill(request: RunRequest, destination: Path) -> Path:
     return target
 
 
+PLUGIN_IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", "benchmarks", "evals", ".git")
+
+
+def is_plugin_root(path: Optional[Path]) -> bool:
+    """A whole plugin (manifest + skills/) rather than one skill folder."""
+    return path is not None and (Path(path) / ".claude-plugin" / "plugin.json").is_file() and (Path(path) / "skills").is_dir()
+
+
+def plugin_skills(root: Path) -> List[Path]:
+    return sorted(p.parent for p in (root / "skills").glob("*/SKILL.md"))
+
+
+def _copy_plugin(request: RunRequest, destination: Path) -> Path:
+    """Copy a plugin root whole, so `../../references` and `../../scripts` keep resolving."""
+    if request.skill_dir is None:
+        raise RuntimeBlocked("a skill_dir is required to expose the plugin to the runtime")
+    if any(p.is_symlink() for p in Path(request.skill_dir).rglob("*")):
+        raise RuntimeBlocked("plugin tree contains symlinks; refusing to copy it into a workspace")
+    shutil.copytree(request.skill_dir, destination, symlinks=False, ignore=PLUGIN_IGNORE)
+    return destination
+
+
+def _claude_settings(request: RunRequest, prepared: Dict[str, Any]) -> None:
+    """A per-session settings file that switches the user's installed copies of the measured plugin off."""
+    if not request.disable_claude_plugins:
+        return
+    path = request.run_dir / "settings.json"
+    path.write_text(json.dumps({"enabledPlugins": {name: False for name in request.disable_claude_plugins}}, indent=2) + "\n",
+                    encoding="utf-8")
+    prepared["settings_path"] = str(path)
+
+
+def _isolated_home(request: RunRequest, prepared: Dict[str, Any]) -> None:
+    """OpenCode reads ~/.config/opencode, ~/.claude and ~/.agents skills: a fresh HOME hides them all."""
+    if not request.isolate_user_skills:
+        return
+    home = request.run_dir / "home"
+    (home / ".config").mkdir(parents=True, exist_ok=True)
+    prepared.setdefault("env", {}).update({"HOME": str(home), "XDG_CONFIG_HOME": str(home / ".config")})
+
+
+def _agents_md_for(skills: List[Tuple[str, str]]) -> str:
+    """AGENTS.md naming every skill file the runtime may follow (Codex and Hermes have no plugin)."""
+    lines = ["# Workspace instructions", "",
+             "Skills are available in this workspace. Read a skill's `description` first and follow the",
+             "skill when the task matches it; otherwise ignore it. Do not modify the skill folders.", ""]
+    lines += [f"- `{rel}/SKILL.md`" for _, rel in skills]
+    return "\n".join(lines) + "\n"
+
+
 def prepare(runtime: str, request: RunRequest) -> Dict[str, Any]:
-    """Expose the skill the way each runtime discovers skills, without touching user config."""
+    """Expose the skill the way each runtime discovers skills, without touching user config.
+
+    `skill_dir` may be one skill folder or a whole plugin root (manifest + skills/): a plugin is
+    copied whole, so relative references and scripts keep working, and every skill in it is exposed.
+    """
     request.run_dir.mkdir(parents=True, exist_ok=True)
     request.workspace.mkdir(parents=True, exist_ok=True)
     prepared: Dict[str, Any] = {"runtime": runtime}
+    if is_plugin_root(request.skill_dir):
+        return _prepare_plugin(runtime, request, prepared)
     if runtime == "claude":
+        _claude_settings(request, prepared)
         if request.skill_dir is None:
             # A no-skill run loads no plugin at all: the control arm sees only the workspace.
             return prepared
@@ -220,12 +282,56 @@ def prepare(runtime: str, request: RunRequest) -> Dict[str, Any]:
         prepared["env"] = {"TERMINAL_CWD": str(request.workspace.resolve())}
         prepared["usage_path"] = str(request.run_dir / "usage.json")
     elif runtime == "opencode":
+        _isolated_home(request, prepared)
         if request.skill_dir is not None:
             # Native discovery: OpenCode loads `.opencode/skills/<name>/SKILL.md` walking up from the
             # working directory to the git worktree root, and exposes each skill to its `skill` tool.
             # A git repository at the workspace bounds that walk, so nothing above the workspace is
             # picked up; global skills in the user's profile still load, as they do for every runtime.
             prepared["skill_path"] = str(_copy_skill(request, request.workspace / ".opencode" / "skills"))
+        if not (request.workspace / ".git").exists():
+            subprocess.run(["git", "init", "-q", str(request.workspace)], capture_output=True, check=False)
+    else:
+        raise ValueError(f"unknown runtime: {runtime}")
+    return prepared
+
+
+def _prepare_plugin(runtime: str, request: RunRequest, prepared: Dict[str, Any]) -> Dict[str, Any]:
+    root = Path(request.skill_dir)
+    names = [p.name for p in plugin_skills(root)]
+    prepared["plugin_skills"] = names
+    if runtime == "claude":
+        _claude_settings(request, prepared)
+        # The plugin as the user would install it: its own manifest, hooks and skills.
+        plugin_dir = _copy_plugin(request, request.run_dir / "plugin")
+        prepared["plugin_dir"] = str(plugin_dir)
+        prepared["skill_path"] = str(plugin_dir / "skills")
+    elif runtime in ("codex", "hermes"):
+        if runtime == "hermes" and not request.hermes_automation_acknowledged:
+            raise RuntimeBlocked("hermes -z bypasses approvals; pass hermes_automation_acknowledged=True "
+                                 "only inside an isolated workspace")
+        copied = _copy_plugin(request, request.workspace / "plugin")
+        prepared["skill_path"] = str(copied / "skills")
+        (request.workspace / "AGENTS.md").write_text(
+            _agents_md_for([(n, f"plugin/skills/{n}") for n in names]), encoding="utf-8")
+        if runtime == "hermes":
+            prepared["env"] = {"TERMINAL_CWD": str(request.workspace.resolve())}
+            prepared["usage_path"] = str(request.run_dir / "usage.json")
+        else:
+            prepared["last_message_path"] = str(request.run_dir / "last-message.txt")
+    elif runtime == "opencode":
+        # OpenCode reads .opencode/skills/<name>/SKILL.md; the plugin's siblings go next to
+        # skills/ so `../../references` resolves from inside .opencode/.
+        # Only what skills link to. OpenCode parses .opencode/agents/ and .opencode/commands/ as
+        # its own configuration (different frontmatter), and a plugin's copies make it refuse to start.
+        _isolated_home(request, prepared)
+        target = request.workspace / ".opencode"
+        target.mkdir(parents=True, exist_ok=True)
+        for name in ("skills", "references", "scripts", "templates", "assets"):
+            child = root / name
+            if child.is_dir():
+                shutil.copytree(child, target / name, symlinks=False, ignore=PLUGIN_IGNORE, dirs_exist_ok=True)
+        prepared["skill_path"] = str(target / "skills")
         if not (request.workspace / ".git").exists():
             subprocess.run(["git", "init", "-q", str(request.workspace)], capture_output=True, check=False)
     else:
@@ -242,6 +348,8 @@ def build_command(runtime: str, request: RunRequest, prepared: Dict[str, Any]) -
                    "--dangerously-skip-permissions", "--add-dir", str(request.workspace)]
         if "plugin_dir" in prepared:
             command += ["--plugin-dir", prepared["plugin_dir"]]
+        if "settings_path" in prepared:
+            command += ["--settings", prepared["settings_path"]]
         if request.model:
             command += ["--model", request.model]
         if request.effort:

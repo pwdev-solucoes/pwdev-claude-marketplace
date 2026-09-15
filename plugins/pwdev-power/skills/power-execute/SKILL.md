@@ -5,9 +5,12 @@ description: Use when an approved plan needs executing task by task in this sess
 
 # Execute a Plan, Task by Task
 
-Read [collaboration](../../references/collaboration.md), [runtime](../../references/runtime.md),
-[model-profiles](../../references/model-profiles.md), and [safety](../../references/safety.md)
-before acting.
+Two rules hold for the whole session: every gate is human, and a subagent's report never gets
+pasted into your context — you read its status and its path. Never edit the user's own
+configuration, never push, merge, or commit on a default branch unless the human asked.
+Read [collaboration](../../references/collaboration.md) at a gate or when a status comes back,
+[runtime](../../references/runtime.md) before the first dispatch, and
+[safety](../../references/safety.md) before any git or destructive operation.
 
 You are the controller. You dispatch, you adjudicate, you record. **You do not implement and
 you do not fix.** The moment you edit code yourself, every discipline below stops applying to
@@ -31,15 +34,14 @@ that edit.
 
 ## Model selection
 
-- **Codex** inherits host or session model and reasoning-effort settings by default. Override only
-  for an explicit user instruction, repository governance rule, configuration, or approved
-  profile, after confirming a supported model-and-effort combination on that host.
-- **Claude Code** keeps explicit model routing on every dispatch. Apply the configured profile and
-  the task's declared `Complexity` per [model-profiles](../../references/model-profiles.md), using
-  a model the runtime supports.
-- **Hermes Agent** follows [hermes-tools](../../references/hermes-tools.md) and the runtime mapping.
-  Use its documented Kanban route or run inline when per-dispatch selection is unavailable; never
-  invent model, provider, or effort parameters.
+- **Codex** inherits host or session model and reasoning-effort settings; override only for an
+  explicit instruction, governance rule, configuration, or approved profile, after confirming a
+  supported model-and-effort combination on that host.
+- **Claude Code** keeps explicit model routing on every dispatch: read
+  [model-profiles](../../references/model-profiles.md) before choosing, and apply the configured
+  profile to the task's declared `Complexity` with a model the runtime supports.
+- **Hermes Agent** follows [hermes-tools](../../references/hermes-tools.md); never invent model,
+  provider, or effort parameters.
 
 ## The loop, per task
 
@@ -139,7 +141,8 @@ re-review. There is no second wave.
 ## Waiting
 
 While you have local work, do it. When genuinely idle, wait in bounded stretches with a
-one-line status between them. Never poll in a tight loop; never wait silently forever.
+one-line status between them — never a tight loop, never silence.
+[runtime](../../references/runtime.md) gives the per-runtime wait call.
 
 ## Finish
 

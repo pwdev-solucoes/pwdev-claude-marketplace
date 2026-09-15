@@ -1,0 +1,171 @@
+{
+  "tokenizer": "tiktoken:o200k_base",
+  "references": {
+    "collaboration.md": 543,
+    "cmux.md": 1685,
+    "model-profiles.md": 706,
+    "claude-tools.md": 383,
+    "hermes-tools.md": 589,
+    "context.md": 1090,
+    "safety.md": 626,
+    "kanban.md": 1106,
+    "codex-tools.md": 551,
+    "artifacts.md": 1085,
+    "fleet.md": 2598,
+    "audit-schema.md": 540,
+    "runtime.md": 889
+  },
+  "skills": {
+    "power": {
+      "description": 30,
+      "body": 791,
+      "unconditional_refs": [],
+      "conditional_refs": [
+        "claude-tools.md",
+        "codex-tools.md",
+        "hermes-tools.md"
+      ],
+      "load_per_activation": 791
+    },
+    "power-brainstorm": {
+      "description": 28,
+      "body": 919,
+      "unconditional_refs": [],
+      "conditional_refs": [
+        "artifacts.md",
+        "collaboration.md",
+        "context.md"
+      ],
+      "load_per_activation": 919
+    },
+    "power-debug": {
+      "description": 17,
+      "body": 692,
+      "unconditional_refs": [],
+      "conditional_refs": [],
+      "load_per_activation": 692
+    },
+    "power-execute": {
+      "description": 25,
+      "body": 1622,
+      "unconditional_refs": [],
+      "conditional_refs": [
+        "collaboration.md",
+        "hermes-tools.md",
+        "model-profiles.md",
+        "runtime.md",
+        "safety.md"
+      ],
+      "load_per_activation": 1622
+    },
+    "power-finish": {
+      "description": 27,
+      "body": 505,
+      "unconditional_refs": [],
+      "conditional_refs": [
+        "safety.md"
+      ],
+      "load_per_activation": 505
+    },
+    "power-fleet": {
+      "description": 34,
+      "body": 1794,
+      "unconditional_refs": [],
+      "conditional_refs": [
+        "artifacts.md",
+        "cmux.md",
+        "fleet.md",
+        "kanban.md",
+        "safety.md"
+      ],
+      "load_per_activation": 1794
+    },
+    "power-init": {
+      "description": 32,
+      "body": 1579,
+      "unconditional_refs": [],
+      "conditional_refs": [
+        "artifacts.md",
+        "context.md",
+        "runtime.md",
+        "safety.md"
+      ],
+      "load_per_activation": 1579
+    },
+    "power-plan": {
+      "description": 21,
+      "body": 853,
+      "unconditional_refs": [],
+      "conditional_refs": [
+        "artifacts.md",
+        "collaboration.md",
+        "context.md"
+      ],
+      "load_per_activation": 853
+    },
+    "power-product": {
+      "description": 32,
+      "body": 788,
+      "unconditional_refs": [],
+      "conditional_refs": [
+        "artifacts.md",
+        "collaboration.md",
+        "runtime.md"
+      ],
+      "load_per_activation": 788
+    },
+    "power-quick": {
+      "description": 44,
+      "body": 463,
+      "unconditional_refs": [
+        "collaboration.md",
+        "safety.md"
+      ],
+      "conditional_refs": [],
+      "load_per_activation": 1632
+    },
+    "power-review": {
+      "description": 20,
+      "body": 527,
+      "unconditional_refs": [],
+      "conditional_refs": [],
+      "load_per_activation": 527
+    },
+    "power-roadmap-status": {
+      "description": 25,
+      "body": 798,
+      "unconditional_refs": [],
+      "conditional_refs": [
+        "artifacts.md",
+        "collaboration.md"
+      ],
+      "load_per_activation": 798
+    },
+    "power-tdd": {
+      "description": 14,
+      "body": 680,
+      "unconditional_refs": [],
+      "conditional_refs": [],
+      "load_per_activation": 680
+    },
+    "power-verify": {
+      "description": 25,
+      "body": 792,
+      "unconditional_refs": [],
+      "conditional_refs": [
+        "artifacts.md",
+        "collaboration.md"
+      ],
+      "load_per_activation": 792
+    },
+    "power-worktree": {
+      "description": 19,
+      "body": 546,
+      "unconditional_refs": [],
+      "conditional_refs": [],
+      "load_per_activation": 546
+    }
+  },
+  "sum_bodies": 13349,
+  "sum_load_per_activation": 14518
+}

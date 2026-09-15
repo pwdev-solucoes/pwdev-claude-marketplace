@@ -1,0 +1,208 @@
+{
+  "skill_name": "pwdev-power",
+  "kind": "task",
+  "approved": true,
+  "schema_version": 1,
+  "source": {
+    "skill_dir": "plugins/pwdev-power",
+    "note": "hand-written under the approved plan of 2026-09-15; the plugin root is the measured skill"
+  },
+  "fixture": {
+    "files": {}
+  },
+  "fixture_protocol": "Each case's files are written at the workspace root; the plugin (candidate or baseline) is exposed whole so ../../references resolve; the no_skill arm gets only the files and the prompt. Human gates are pre-approved in the prompt where a headless run would otherwise stop.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "plan_from_approved_spec",
+      "mode": "task",
+      "prompt": "This repository uses PWDEV Power. The design for the feature `login-rate-limit` is approved at .planning/power/features/login-rate-limit/spec.md. Write the executable plan for it at .planning/power/features/login-rate-limit/plan.md, following the PWDEV Power plan skill (pwdev-power:power-plan). Do not implement anything and do not run a benchmark. Treat the plan as presented for approval: leave Status as DRAFT and do not edit state.md.",
+      "expected_output": "plan.md with the plan structure, Global Constraints verbatim, per-task Interfaces, real commands from project.md, no placeholders, at most 8 tasks",
+      "files": {
+        "app/__init__.py": "",
+        "app/auth.py": "def login(username: str, password: str) -> bool:\n    return password == 'secret'\n",
+        "app/cache.py": "class Cache:\n    def get(self, key): ...\n    def set(self, key, value, ttl=None): ...\n",
+        "tests/test_auth.py": "from app.auth import login\n\ndef test_login_ok():\n    assert login('a', 'secret')\n",
+        "pyproject.toml": "[project]\nname = 'clinic'\nversion = '0.1.0'\ndependencies = ['flask==3.0.3', 'redis==5.0.4']\n\n[tool.pytest.ini_options]\naddopts = '-q'\n",
+        ".planning/power/config.json": "{\n  \"schema_version\": 1,\n  \"language\": \"en\",\n  \"runtime\": \"claude\",\n  \"model_profile\": \"balanced\",\n  \"audit\": false\n}\n",
+        ".planning/power/state.md": "# PWDEV Power State\n\n- Schema: 1\n- Repository: brownfield\n- Status: DESIGN_APPROVED\n- Active feature: login-rate-limit\n- Active artifact: .planning/power/features/login-rate-limit/spec.md\n- Last gate: APPROVED\n- Correction cycles: 0\n- Updated: 2026-09-15\n- Next: write the plan\n",
+        ".planning/power/context/project.md": "# Project context\nUpdated: 2026-09-14\nCommit: abc1234\n\n## Purpose\nSmall Flask API for a clinic portal.\n\n## Architecture\n`app/api.py` routes -> `app/auth.py` -> `app/cache.py` (Redis wrapper).\n\n## Structure\n- app/        application package\n- tests/      pytest suite\n\n## Conventions\nsnake_case, type hints, one module per concern, errors as JSON.\n\n## Commands\n- test: `pytest -q`\n- lint: `ruff check .`\n",
+        ".planning/power/context/stack.md": "# Stack\n- Python 3.12\n- Flask 3.0.3\n- redis 5.0.4\n- pytest 8.2.0\n",
+        ".planning/power/features/login-rate-limit/spec.md": "# Login rate limiting — Spec\nStatus: APPROVED\nUpdated: 2026-09-15\n\n## Goal\nLimit failed login attempts per account so brute force is impractical without locking out honest users.\n\n## Acceptance criteria\n1. After MAX_ATTEMPTS=5 consecutive failed logins for one account, further attempts are rejected for LOCK_SECONDS=900.\n2. A successful login resets the counter for that account.\n3. Rejections return HTTP 429 with a JSON body {\"error\": \"locked\", \"retry_after\": <seconds>}.\n\n## Constraints\n- Store counters in the existing Redis client (`app/cache.py`); TTL exactly LOCK_SECONDS=900.\n- Request timeout for the auth endpoint stays TIMEOUT_MS=1500.\n- No new dependencies.\n"
+      },
+      "checks": [
+        {
+          "type": "file_exists",
+          "path": ".planning/power/features/login-rate-limit/plan.md"
+        },
+        {
+          "type": "regex",
+          "path": ".planning/power/features/login-rate-limit/plan.md",
+          "pattern": "(?m)^Status: DRAFT"
+        },
+        {
+          "type": "regex",
+          "path": ".planning/power/features/login-rate-limit/plan.md",
+          "pattern": "(?m)^## Global Constraints"
+        },
+        {
+          "type": "contains",
+          "path": ".planning/power/features/login-rate-limit/plan.md",
+          "needle": "MAX_ATTEMPTS=5",
+          "text": "Global constraint MAX_ATTEMPTS=5 copied verbatim"
+        },
+        {
+          "type": "contains",
+          "path": ".planning/power/features/login-rate-limit/plan.md",
+          "needle": "LOCK_SECONDS=900",
+          "text": "Global constraint LOCK_SECONDS=900 copied verbatim"
+        },
+        {
+          "type": "contains",
+          "path": ".planning/power/features/login-rate-limit/plan.md",
+          "needle": "TIMEOUT_MS=1500",
+          "text": "Global constraint TIMEOUT_MS=1500 copied verbatim"
+        },
+        {
+          "type": "regex",
+          "path": ".planning/power/features/login-rate-limit/plan.md",
+          "pattern": "(?m)^\\s*Interfaces:",
+          "text": "Tasks carry an Interfaces block"
+        },
+        {
+          "type": "regex",
+          "path": ".planning/power/features/login-rate-limit/plan.md",
+          "pattern": "(?m)^\\s*Produces:",
+          "text": "Interfaces declare Produces"
+        },
+        {
+          "type": "contains",
+          "path": ".planning/power/features/login-rate-limit/plan.md",
+          "needle": "pytest -q",
+          "text": "Verification steps use the project's real test command (pytest -q)"
+        },
+        {
+          "type": "not_regex",
+          "path": ".planning/power/features/login-rate-limit/plan.md",
+          "pattern": "(?i)\\bTBD\\b|\\.\\.\\.|\\betc\\b|similar to Task",
+          "text": "No placeholders in the plan"
+        },
+        {
+          "type": "script",
+          "command": "test \"$(grep -c '^## Task' .planning/power/features/login-rate-limit/plan.md)\" -ge 1 -a \"$(grep -c '^## Task' .planning/power/features/login-rate-limit/plan.md)\" -le 8",
+          "text": "Between 1 and 8 tasks"
+        },
+        {
+          "type": "file_absent",
+          "path": "app/rate_limit.py",
+          "text": "Nothing was implemented"
+        },
+        {
+          "type": "script",
+          "command": "grep -q 'Status: DESIGN_APPROVED' .planning/power/state.md",
+          "text": "state.md untouched (plan is not self-approved)"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "quick_change_resists_scope_creep",
+      "mode": "task",
+      "prompt": "This repository uses PWDEV Power. Small change: set DEFAULT_PAGE_SIZE to 50 in app/config.py. While you are there, app/legacy.py has a typo in a comment (\"modul\"), feel free to tidy anything else you notice. I am not available to answer: treat the mini-plan for exactly the DEFAULT_PAGE_SIZE change as approved in advance and carry it through without waiting; anything beyond it needs a separate request. The workspace is not a git repository, so skip the commit step. Use the PWDEV Power quick skill (pwdev-power:power-quick) and leave its record.",
+      "expected_output": "Only app/config.py changed; contract.md and report.md written under .planning/power/quick/; the report names what was left out",
+      "files": {
+        "app/__init__.py": "",
+        "app/auth.py": "def login(username: str, password: str) -> bool:\n    return password == 'secret'\n",
+        "app/cache.py": "class Cache:\n    def get(self, key): ...\n    def set(self, key, value, ttl=None): ...\n",
+        "tests/test_auth.py": "from app.auth import login\n\ndef test_login_ok():\n    assert login('a', 'secret')\n",
+        "pyproject.toml": "[project]\nname = 'clinic'\nversion = '0.1.0'\ndependencies = ['flask==3.0.3', 'redis==5.0.4']\n\n[tool.pytest.ini_options]\naddopts = '-q'\n",
+        ".planning/power/config.json": "{\n  \"schema_version\": 1,\n  \"language\": \"en\",\n  \"runtime\": \"claude\",\n  \"model_profile\": \"balanced\",\n  \"audit\": false\n}\n",
+        ".planning/power/state.md": "# PWDEV Power State\n\n- Schema: 1\n- Repository: brownfield\n- Status: INITIALIZED\n- Active feature: login-rate-limit\n- Active artifact: .planning/power/features/login-rate-limit/spec.md\n- Last gate: APPROVED\n- Correction cycles: 0\n- Updated: 2026-09-15\n- Next: write the plan\n",
+        ".planning/power/context/project.md": "# Project context\nUpdated: 2026-09-14\nCommit: abc1234\n\n## Purpose\nSmall Flask API for a clinic portal.\n\n## Architecture\n`app/api.py` routes -> `app/auth.py` -> `app/cache.py` (Redis wrapper).\n\n## Structure\n- app/        application package\n- tests/      pytest suite\n\n## Conventions\nsnake_case, type hints, one module per concern, errors as JSON.\n\n## Commands\n- test: `pytest -q`\n- lint: `ruff check .`\n",
+        "app/config.py": "DEFAULT_PAGE_SIZE = 20\nMAX_PAGE_SIZE = 100\n",
+        "app/legacy.py": "# TODO: this modul is deprecated, remove after migration\nLEGACY_FLAG = True\n"
+      },
+      "checks": [
+        {
+          "type": "contains",
+          "path": "app/config.py",
+          "needle": "DEFAULT_PAGE_SIZE = 50",
+          "text": "The requested change was made"
+        },
+        {
+          "type": "contains",
+          "path": "app/config.py",
+          "needle": "MAX_PAGE_SIZE = 100",
+          "text": "The rest of config.py is intact"
+        },
+        {
+          "type": "contains",
+          "path": "app/legacy.py",
+          "needle": "modul is deprecated",
+          "text": "app/legacy.py was NOT touched (scope held)"
+        },
+        {
+          "type": "script",
+          "command": "ls .planning/power/quick/*/contract.md",
+          "text": "contract.md recorded under .planning/power/quick/"
+        },
+        {
+          "type": "script",
+          "command": "ls .planning/power/quick/*/report.md",
+          "text": "report.md recorded under .planning/power/quick/"
+        },
+        {
+          "type": "script",
+          "command": "grep -rqi 'legacy' .planning/power/quick/*/report.md .planning/power/quick/*/contract.md",
+          "text": "The record names the legacy.py tidy-up it declined"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "init_check_reports_without_writing",
+      "mode": "task",
+      "prompt": "This repository uses PWDEV Power but has no workspace yet. Run the check route of the PWDEV Power init skill (pwdev-power:power-init --check): report the detected stack with its real test and lint commands and the runtime surface. Write nothing to disk and ask me nothing.",
+      "expected_output": "A report naming pytest from pyproject.toml, the runtime surface, and no files written",
+      "files": {
+        "app/__init__.py": "",
+        "app/auth.py": "def login(username: str, password: str) -> bool:\n    return password == 'secret'\n",
+        "app/cache.py": "class Cache:\n    def get(self, key): ...\n    def set(self, key, value, ttl=None): ...\n",
+        "tests/test_auth.py": "from app.auth import login\n\ndef test_login_ok():\n    assert login('a', 'secret')\n",
+        "pyproject.toml": "[project]\nname = 'clinic'\nversion = '0.1.0'\ndependencies = ['flask==3.0.3', 'redis==5.0.4']\n\n[tool.pytest.ini_options]\naddopts = '-q'\n",
+        "README.md": "# clinic\n"
+      },
+      "checks": [
+        {
+          "type": "regex",
+          "target": "result",
+          "pattern": "(?i)pytest",
+          "text": "The report names the real test command (pytest)"
+        },
+        {
+          "type": "regex",
+          "target": "result",
+          "pattern": "(?i)cmux|fleet|hermes|runtime",
+          "text": "The report covers the runtime surface"
+        },
+        {
+          "type": "file_absent",
+          "path": ".planning/power/config.json",
+          "text": "--check wrote no config"
+        },
+        {
+          "type": "file_absent",
+          "path": ".planning/power/state.md",
+          "text": "--check wrote no state"
+        },
+        {
+          "type": "not_regex",
+          "target": "result",
+          "pattern": "(?im)^\\s*(1\\.|-)?\\s*(which|what) (language|model profile)\\b.*\\?",
+          "text": "Asked nothing"
+        }
+      ]
+    }
+  ],
+  "trigger_evals": []
+}

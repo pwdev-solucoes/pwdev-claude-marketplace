@@ -29,6 +29,13 @@ manifestos Codex e Hermes.
   `~/.config/opencode/skills/` (ou `<projeto>/.opencode/skills/`), idempotente, com `--uninstall`
   que remove só o que instalou, `--dry-run` e `XDG_CONFIG_HOME`; a skill carrega pela ferramenta
   nativa `skill` (READMEs, manual §2, guia, README da skill, tags do catálogo; 7 testes).
+- Isolamento dos braços: `--claude-disable-plugin <id>` desliga um plugin instalado só na sessão
+  headless (`--settings` com `enabledPlugins`); `--isolate-user-skills` dá ao OpenCode um `HOME`
+  novo; cada run começa de um workspace fresco mesmo numa segunda invocação no mesmo `--out`.
+- Raiz de plugin como skill medida: `bench.py --skill <plugin>` (e `--baseline`) expõe o plugin
+  inteiro por runtime (Claude `--plugin-dir`; Codex/Hermes `workspace/plugin/` + `AGENTS.md` com
+  todas as skills; OpenCode só `skills/`, `references/`, `scripts/`, `templates/` sob `.opencode/`),
+  para que `../../references` resolva; `summary.static_tokens` traz o tamanho por skill.
 - Modo **`task`** no harness: `bench.py` mede **qualquer skill na tarefa dela** (braços = versões
   dessa skill; workspace com os arquivos de entrada; `grade.py` avalia pelas verificações
   declaradas no caso — `file_exists`, `file_absent`, `contains`, `not_contains`, `regex`, `not_regex`,
