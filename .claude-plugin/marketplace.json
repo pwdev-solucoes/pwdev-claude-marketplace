@@ -141,6 +141,15 @@
       "strict": true
     },
     {
+      "name": "pwdev-excalidraw",
+      "displayName": "PWDEV Excalidraw — Planejamento Visual",
+      "source": "./plugins/pwdev-excalidraw",
+      "description": "Planejamento visual com diagramas Excalidraw via servidor MCP oficial — arquitetura, fluxos, dependências, decisões e roadmaps editáveis.",
+      "category": "planning",
+      "tags": ["excalidraw", "planning", "architecture", "diagram", "mcp", "pt-br"],
+      "strict": true
+    },
+    {
       "name": "pwdev-brain",
       "displayName": "PWDEV Brain — Segundo Cérebro em LLM Wiki",
       "source": "./plugins/pwdev-brain",

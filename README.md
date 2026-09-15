@@ -23,6 +23,7 @@ Restart the runtime after installation. Read each plugin README for its setup an
 | Quality assurance | [pwdev-qa](./plugins/pwdev-qa/) |
 | Skill engineering | [pwdev-skills](./plugins/pwdev-skills/) |
 | Copy and social content | [pwdev-copy](./plugins/pwdev-copy/), [pwdev-social-media](./plugins/pwdev-social-media/) |
+| Visual planning | [pwdev-excalidraw](./plugins/pwdev-excalidraw/) |
 | DevOps and operations | [pwdev-devops](./plugins/pwdev-devops/) |
 | Knowledge and integrations | [pwdev-brain](./plugins/pwdev-brain/), [pwdev-glpi](./plugins/pwdev-glpi/), [pwdev-obsidian](./plugins/pwdev-obsidian/), [pwdev-postgres](./plugins/pwdev-postgres/), [pwdev-youtrack](./plugins/pwdev-youtrack/) |
 | Terminal support | [pwdev-statusline](./plugins/pwdev-statusline/) |
@@ -67,6 +68,7 @@ Commands: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 | [**pwdev-postgres**](./plugins/pwdev-postgres/) | PostgreSQL — own MCP server via npx (@soarescbm/postgres-mcp): AST-validated read-only SELECT, schema inspection, DML/DDL with mandatory dry-run | 1.0.0 | Apache-2.0 |
 | [**pwdev-obsidian**](./plugins/pwdev-obsidian/) | Obsidian vault — MCP server built into the Local REST API community plugin: read, write and structurally edit notes (heading/block/frontmatter), JsonLogic and free-text search, tags, active file, command palette | 1.0.0 | Apache-2.0 |
 | [**pwdev-brain**](./plugins/pwdev-brain/) | Second brain as an LLM Wiki (Karpathy pattern) in Open Knowledge Format v0.2 — discussed ingest with per-claim citations, cited query, compliance lint; 2 subagents, embedded read-only MCP (6 tools) | 1.1.0 | Apache-2.0 |
+| [**pwdev-excalidraw**](./plugins/pwdev-excalidraw/) | Visual planning with Excalidraw diagrams through the official MCP server — architecture, flows, dependencies, decisions and editable roadmaps | 0.1.0 | Apache-2.0 |
 | [**pwdev-statusline**](./plugins/pwdev-statusline/) | Rich terminal status line — dynamic colors, formatted tokens, fully configurable | 1.1.0 | Apache-2.0 |
 
 ### pwdev-power
@@ -409,6 +411,15 @@ raw/ (immutable) ─▶ ingest (discussed) ─▶ wiki/ OKF v0.2 ─▶ query (c
 
 See the [full plugin documentation](./plugins/pwdev-brain/README.md).
 
+### pwdev-excalidraw
+
+**Visual planning** with the official Excalidraw MCP server: architecture diagrams, flows,
+dependency maps, decision records and roadmaps that stay editable in Excalidraw.
+
+**Ships:** 1 skill · MCP server (official Excalidraw)
+
+See the [full plugin documentation](./plugins/pwdev-excalidraw/README.md).
+
 ### pwdev-statusline
 
 Rich terminal **status line** for Claude Code. Displays model, git branch, context usage, rate limits, and token counts in a colorful single-line bar — every segment toggleable.
@@ -498,6 +509,9 @@ claude plugin install pwdev-brain@pwdev-claude-marketplace
 
 # Rich terminal status line
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
+
+# Visual planning with Excalidraw (official MCP server)
+claude plugin install pwdev-excalidraw@pwdev-claude-marketplace
 ```
 
 Install only the plugins you need. Each one works independently.
