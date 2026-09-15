@@ -32,6 +32,10 @@ _SECRET_PARTS = {
     "certificate", "certificates",
 }
 _SECRET_SUFFIXES = {".pem", ".key", ".p12", ".pfx", ".crt", ".cer"}
+# Whole names and name stems that hold credentials regardless of extension.
+_SECRET_NAMES = {".npmrc", ".pypirc", ".netrc", ".git-credentials", ".dockercfg", ".htpasswd",
+                 "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519"}
+_SECRET_STEMS = {"credentials", "credential", "secret", "secrets", "service-account", "service_account"}
 _SKIP_DIRS = {".git", ".hg", ".svn", "node_modules", "vendor", "target",
               "__pycache__", ".venv", "venv", "dist", "build", ".tox",
               ".mypy_cache", ".pytest_cache", ".worktrees"}
@@ -62,6 +66,8 @@ def _sensitive(relative: str) -> bool:
     if any(part in _SECRET_PARTS or part.startswith(".env") for part in lowered):
         return True
     if name.endswith(tuple(_SECRET_SUFFIXES)):
+        return True
+    if name in _SECRET_NAMES or name.split(".", 1)[0] in _SECRET_STEMS:
         return True
     if ("fleet" in lowered or ".planning" in lowered) and ("env" in name or name.startswith(".env")):
         return True
@@ -96,12 +102,17 @@ def _read_text(path: Path, limit: int = 250_000) -> str | None:
         return None
 
 
+def _valid_commit(value: str) -> bool:
+    """A full object name: SHA-1 (40) or SHA-256 (64) repositories."""
+    return bool(re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", value))
+
+
 def _git_commit(root: Path) -> str:
     try:
         proc = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root,
                               text=True, capture_output=True, check=True, timeout=5)
         value = proc.stdout.strip()
-        return value if re.fullmatch(r"[0-9a-f]{40}", value) else "UNKNOWN"
+        return value if _valid_commit(value) else "UNKNOWN"
     except (OSError, subprocess.SubprocessError):
         return "UNKNOWN"
 
@@ -127,17 +138,17 @@ def _manifest_commands(relative: str, path: Path) -> list[dict[str, str]]:
                 data = {}
             project = data.get("project", {})
             for script in sorted((project.get("scripts") or {})):
-                commands.append({"name": script, "command": f"python -m {script}", "source": relative})
+                # A console script is installed as an executable named after its key.
+                commands.append({"name": script, "command": script, "source": relative})
             tool = data.get("tool", {})
-            pytest = tool.get("pytest", {})
-            pytest_config = pytest or tool.get("pytest", {}).get("ini_options", {})
-            if pytest_config or "pytest" in tool or re.search(r"(?m)^\[tool\.pytest(?:\.|\])", text):
+            if "pytest" in tool or re.search(r"(?m)^\[tool\.pytest(?:\.|\])", text):
                 commands.append({"name": "test", "command": "pytest", "source": relative})
         except (ValueError, OSError):
             pass
     elif name in {"Makefile", "justfile"}:
         text = _read_text(path) or ""
-        for target in sorted(set(re.findall(r"(?m)^([A-Za-z][A-Za-z0-9_.-]*):", text))):
+        # `NAME :=`, `NAME ::=`, and `NAME:=` are variable assignments, not targets.
+        for target in sorted(set(re.findall(r"(?m)^([A-Za-z][A-Za-z0-9_.-]*)[ \t]*:(?![:=])", text))):
             commands.append({"name": target, "command": f"make {target}" if name == "Makefile" else f"just {target}", "source": relative})
     elif name == "Taskfile.yml":
         text = _read_text(path) or ""

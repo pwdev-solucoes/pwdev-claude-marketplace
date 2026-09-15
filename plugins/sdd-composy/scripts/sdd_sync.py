@@ -84,13 +84,16 @@ def _yaml_scalar(value: Any) -> str:
 def _replace_task(text: str, task: dict[str, Any]) -> str:
     m = re.match(r"^(---\r?\n)([\s\S]*?)(\r?\n---\r?\n?)([\s\S]*)$", text)
     if not m: raise ValueError("missing frontmatter")
+    newline = "\r\n" if "\r\n" in m.group(1) else "\n"
     lines = ["task:"]
     for key in sorted(task): lines.append(f"  {key}: {_yaml_scalar(task[key])}")
+    block = newline.join(lines) + newline
     raw = m.group(2)
-    match = re.search(r"(?m)^task:\n(?:^[ \t]+.*\n?)*", raw)
-    if match: raw = raw[:match.start()] + "\n".join(lines) + "\n" + raw[match.end():]
-    else: raw = raw.rstrip() + "\n" + "\n".join(lines) + "\n"
-    return m.group(1) + raw.rstrip("\n") + m.group(3) + m.group(4)
+    # Match the existing block with either line ending so it is replaced, never duplicated.
+    match = re.search(r"(?m)^task:\r?\n(?:^[ \t]+.*(?:\r?\n|$))*", raw)
+    if match: raw = raw[:match.start()] + block + raw[match.end():]
+    else: raw = raw.rstrip() + newline + block
+    return m.group(1) + raw.rstrip("\r\n") + m.group(3) + m.group(4)
 
 def _new_markdown(task: dict[str, Any]) -> str:
     lines = ["---", "type: TASK", 'okf_version: "0.2"', "task:"]
@@ -173,7 +176,7 @@ def apply(markdown_root: Path | str, state_path: Path | str, sync_plan: dict[str
         for tid, task in js.items():
             if tid in md:
                 destination = Path(md[tid]["path"])
-                _atomic_write(destination, _replace_task(destination.read_text(encoding="utf-8"), task).encode())
+                _atomic_write(destination, _replace_task(destination.read_bytes().decode("utf-8"), task).encode())
             else:
                 # JSON-only records receive a deterministic, repository-local contract.
                 destination = md_root / (tid.lower() + ".md")

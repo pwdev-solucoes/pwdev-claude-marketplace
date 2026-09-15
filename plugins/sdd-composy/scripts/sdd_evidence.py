@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fail-closed evidence manifest, HTML renderer, and optional PDF exporter."""
 from __future__ import annotations
-import argparse, hashlib, html, json, os, re, tempfile
+import argparse, base64, hashlib, html, json, os, re, shutil, signal, subprocess, tempfile, time
 import datetime as dt
 from pathlib import Path
 from sdd_language import resolve_language
@@ -148,6 +148,70 @@ def discover(evidence_root):
             found.append(str(path.relative_to(root)))
     return {"root": str(root), "files": found}
 
+IMAGE_TYPES = ((b"\x89PNG\r\n\x1a\n", "image/png"), (b"\xff\xd8\xff", "image/jpeg"),
+               (b"GIF87a", "image/gif"), (b"GIF89a", "image/gif"))
+PDF_BROWSERS = ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "microsoft-edge",
+                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+                "/Applications/Chromium.app/Contents/MacOS/Chromium",
+                "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge")
+
+def _image_data_uri(evidence_root, relative):
+    """Embed a screenshot so the report is self-contained; anything that is not an image fails."""
+    raw = _safe(evidence_root, relative).read_bytes()
+    mime = next((kind for magic, kind in IMAGE_TYPES if raw.startswith(magic)), None)
+    if mime is None or (raw.startswith(IMAGE_TYPES[0][0]) and b"IEND" not in raw[-16:]):
+        raise ValueError(f"expected image did not load: {relative}")
+    return f"data:{mime};base64," + base64.b64encode(raw).decode("ascii")
+
+def _pdf_browser():
+    """A headless Chromium-family browser; SDD_PDF_BROWSER overrides discovery."""
+    candidates = [os.environ["SDD_PDF_BROWSER"]] if os.environ.get("SDD_PDF_BROWSER") else list(PDF_BROWSERS)
+    for candidate in candidates:
+        found = shutil.which(candidate) if os.sep not in candidate else (candidate if os.access(candidate, os.X_OK) else None)
+        if found: return found
+    raise RuntimeError("PDF export unavailable: no PDF backend (a Chromium-family browser) was found; set SDD_PDF_BROWSER")
+
+def _print_pdf(html_path, pdf_path, *, timeout=120):
+    browser = _pdf_browser()
+    with tempfile.TemporaryDirectory(prefix="sdd-pdf-") as profile:
+        fd, temporary = tempfile.mkstemp(prefix=".evidence-", suffix=".pdf", dir=pdf_path.parent)
+        os.close(fd)
+        try:
+            command = [browser, "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
+                       f"--user-data-dir={profile}", "--no-pdf-header-footer", f"--print-to-pdf={temporary}",
+                       Path(html_path).absolute().as_uri()]
+            # Chrome on macOS can keep helper processes (and inherited pipes) alive after printing,
+            # so wait for a complete PDF instead of process exit, then stop the whole group.
+            try:
+                process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                           stderr=subprocess.DEVNULL, start_new_session=True)
+            except OSError as exc:
+                raise RuntimeError(f"PDF backend failed: {exc}") from exc
+            deadline = time.monotonic() + timeout
+            data = b""
+            try:
+                while time.monotonic() < deadline:
+                    data = Path(temporary).read_bytes() if Path(temporary).exists() else b""
+                    if data.startswith(b"%PDF-") and data.rstrip().endswith(b"%%EOF"): break
+                    if process.poll() is not None:
+                        data = Path(temporary).read_bytes() if Path(temporary).exists() else b""
+                        break
+                    time.sleep(0.1)
+            finally:
+                if process.poll() is None:
+                    try: os.killpg(process.pid, signal.SIGTERM)
+                    except OSError: pass
+                    try: process.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        try: os.killpg(process.pid, signal.SIGKILL)
+                        except OSError: pass
+            if not (data.startswith(b"%PDF-") and data.rstrip().endswith(b"%%EOF")):
+                raise RuntimeError("PDF backend did not produce a complete PDF")
+            os.replace(temporary, pdf_path)
+        finally:
+            if os.path.exists(temporary): os.unlink(temporary)
+    return pdf_path
+
 def render_html(manifest, evidence_root=None, *, language='en-US'):
     meta = _validate(manifest)
     if language not in {'pt-BR', 'en-US'}:
@@ -156,7 +220,10 @@ def render_html(manifest, evidence_root=None, *, language='en-US'):
     labels = ('Critério', 'Teste', 'Resultado', 'Tipo', 'Caminho', 'SHA-256') if language == 'pt-BR' else ('Criterion', 'Test', 'Result', 'Type', 'Path', 'SHA-256')
     rows = []
     for e in meta["entries"]:
-        rows.append("<tr>" + "".join(f"<td>{html.escape(str(e.get(k, '')))}</td>" for k in ("criterion_id", "test_id", "result", "evidence_type", "path", "sha256")) + "</tr>")
+        cells = "".join(f"<td>{html.escape(str(e.get(k, '')))}</td>" for k in ("criterion_id", "test_id", "result", "evidence_type", "path", "sha256"))
+        if e["evidence_type"] == "screenshot" and evidence_root is not None:
+            cells += f"<td><img alt='{html.escape(e['path'])}' src='{_image_data_uri(evidence_root, e['path'])}' style='max-width:320px'></td>"
+        rows.append("<tr>" + cells + "</tr>")
     return f"<!doctype html><html lang='{language}'><meta charset='utf-8'><title>{title}</title><h1>{title}</h1><table><thead><tr>" + ''.join(f'<th>{label}</th>' for label in labels) + '</tr></thead><tbody>' + ''.join(rows) + '</tbody></table></html>'
 
 def _bundle_layout(evidence_root):
@@ -176,11 +243,13 @@ def export(manifest, output, evidence_root=None, pdf=False, *, workspace_root=No
     if 'language' not in preference:
         raise ValueError('not_initialized: run_init')
     if pdf:
-        for e in _validate(manifest)["entries"]:
-            if e["evidence_type"] == "screenshot":
-                if evidence_root is None or not _safe(evidence_root, e["path"]).exists(): raise ValueError("expected image did not load")
-        raise RuntimeError("PDF export unavailable without a verified PDF backend")
-    return _atomic_output(bundle, out, render_html(manifest, evidence_root, language=preference['language']))
+        _pdf_browser()  # fail before writing anything when no backend exists
+    # Rendering embeds and checks every screenshot, so a missing or broken image fails here.
+    written = _atomic_output(bundle, out, render_html(manifest, evidence_root, language=preference['language']))
+    if pdf:
+        pdf_path = _safe(bundle, Path(written).absolute().relative_to(Path(bundle).absolute()).with_suffix(".pdf").as_posix())
+        _print_pdf(written, pdf_path)
+    return written
 
 def main():
     p=argparse.ArgumentParser(); sub=p.add_subparsers(dest="cmd", required=True)
@@ -194,7 +263,10 @@ def main():
         if a.cmd == "build":
             result=build(json.loads(Path(a.input).read_text(encoding="utf-8")), a.root, a.manifest, generated_at=a.generated_at)
         elif a.cmd == "verify": result=verify(a.manifest,a.root)
-        elif a.cmd == "export": result={"output": str(export(json.loads(Path(a.manifest).read_text(encoding="utf-8")), a.output, a.root, a.pdf, workspace_root=a.workspace_root))}
+        elif a.cmd == "export":
+            written = export(json.loads(Path(a.manifest).read_text(encoding="utf-8")), a.output, a.root, a.pdf, workspace_root=a.workspace_root)
+            result = {"output": str(written)}
+            if a.pdf: result["pdf"] = str(Path(written).with_suffix(".pdf"))
         else: result=discover(a.root)
     except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
         print(json.dumps({"ok":False,"errors":[str(exc)]},ensure_ascii=False)); raise SystemExit(1)

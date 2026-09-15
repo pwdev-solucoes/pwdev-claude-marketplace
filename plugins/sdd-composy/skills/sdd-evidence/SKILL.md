@@ -31,9 +31,10 @@ Language: when an operation emits human-facing summaries, run `scripts/sdd_langu
 4. `sdd_evidence.py export <manifest> <root> <output> [--workspace-root <repo>]` — HTML report.
    With the evidence root at `tasks/prd-<slug>/evidences/`, the output may be anywhere in that
    PRD bundle (normally `tasks/prd-<slug>/evidence-report.html`) and the workspace language is
-   read from the repository root without `--workspace-root`. PDF is optional: only when
-   explicitly requested, it must fail if expected screenshot images cannot load, and it may
-   report that no PDF backend is available.
+   read from the repository root without `--workspace-root`. PDF is optional: `--pdf`, only when
+   explicitly requested, writes `<output>.pdf` beside the HTML with a headless Chromium-family
+   browser (`SDD_PDF_BROWSER` overrides discovery). Screenshots are embedded in the report; a
+   missing or non-image screenshot fails, and without a browser the export fails before writing.
 
 Never infer approval, bypass lifecycle guards, or use paths outside the task root. Return the
 manifest and verification result unchanged to the caller.
