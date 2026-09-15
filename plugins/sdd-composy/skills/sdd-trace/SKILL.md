@@ -26,8 +26,8 @@ Language: when an operation emits human-facing summaries, run `scripts/sdd_langu
 - `query` and `verify-projection`: inspect the projection and check its source-event binding
   and integrity hash.
 
-`record` is the Python API (`sdd_trace.record(root, event)`) that the other helpers call after
-the represented action has succeeded; an event carries `actor_id`, `type`, `stage`, optional
+`record` is the Python API (`sdd_trace.record(root, event)`); semantic events are recorded only after
+the represented action has succeeded, never in anticipation of it. An event carries `actor_id`, `type`, `stage`, optional
 `task_id`, and small object `data`. Never record prompts, output dumps, environment variables,
 secrets, models, or private paths. Never edit `trace.json` directly and never repair an invalid
 audit trail automatically: on verification failure, report it and preserve the source bytes.

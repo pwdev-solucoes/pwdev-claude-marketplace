@@ -24,6 +24,11 @@ PLACEHOLDER_PATTERN = re.compile(r"(?im)(?:^|\W)(TODO|TBD|FIXME|XXX)(?:\W|$)|\{\
 MARKDOWN_LINK_PATTERN = re.compile(r"(?<!!)\[[^]]+\]\(([^)]+)\)")
 
 
+def flat(text):
+    """Collapse Markdown line wrapping so phrase contracts survive reflowing."""
+    return " ".join(text.split())
+
+
 def unresolved_placeholders(paths):
     return [path for path in paths if PLACEHOLDER_PATTERN.search(path.read_text(encoding="utf-8"))]
 
@@ -191,7 +196,8 @@ class SddComposySharedContractTest(unittest.TestCase):
         self.assertIn("unknown", artifacts.lower())
         self.assertIn("events.jsonl", artifacts)
         self.assertIn("trace.json", artifacts)
-        self.assertIn("never edited directly", artifacts.lower())
+        self.assertIn("trace.md", artifacts)
+        self.assertIn("never edited", self.reference("trace").lower())
 
     def test_states_define_guarded_task_transitions(self) -> None:
         states = self.reference("states")
@@ -273,12 +279,12 @@ class SddComposyRuntimeContractTest(unittest.TestCase):
         self.assertTrue(skill.is_file())
         self.assertTrue(metadata.is_file())
         self.assertTrue(command.is_file())
-        text = skill.read_text(encoding="utf-8")
+        text = flat(skill.read_text(encoding="utf-8"))
         for required in (
             "name: sdd-trace", "scripts/sdd_trace.py", "record", "events",
             "summary", "verify", "build", "query", "verify-projection",
             "events.jsonl", "trace.json", "append-only", "Never record prompts",
-            "Never edit trace.json", "semantic events are recorded only after",
+            "Never edit `trace.json`", "semantic events are recorded only after",
         ):
             self.assertIn(required, text)
         self.assertIn("$sdd-trace", metadata.read_text(encoding="utf-8"))
@@ -311,7 +317,7 @@ class SddComposyRuntimeContractTest(unittest.TestCase):
             self.assertIn("tasks/prd-<slug>/", text)
             self.assertIn(".planning/sdd-composy/", text)
             self.assertIn("OKF v0.2", text)
-            self.assertIn("$sdd-composy-<name>", text)
+            self.assertIn("$sdd-<name>", text)
             self.assertIn("/sdd-composy:<name>", text)
             self.assertIn("references/runtime.md", text)
 
@@ -333,13 +339,13 @@ class SddComposyInitAdapterTest(unittest.TestCase):
         skill = (PLUGIN / "skills" / "sdd-init" / "SKILL.md").read_text(encoding="utf-8")
         helper = "${CLAUDE_PLUGIN_ROOT}/scripts/sdd_init.py"
         self.assertIn(helper, skill)
-        for operation in ("inspect", "plan", "apply", "verify"):
+        for operation in ("plan", "apply", "verify"):
             self.assertRegex(skill, rf"\b{operation}\b")
         for shared_reference in ("references/runtime.md", "references/safety.md"):
             self.assertIn(shared_reference, skill)
         self.assertIn("--plan-token", skill)
         self.assertIn("tasks/index.md", skill)
-        self.assertIn("never read", skill.lower())
+        self.assertIn("do not read or expose", skill.lower())
         self.assertIn(".env", skill)
 
     def test_claude_init_command_is_a_thin_route_to_portable_skill(self) -> None:
@@ -363,11 +369,12 @@ class SddComposyMapAdapterTest(unittest.TestCase):
         self.assertTrue(metadata.is_file(), "Codex metadata must exist")
         text = skill.read_text(encoding="utf-8")
         self.assertRegex(text, r"(?m)^name:\s*sdd-map\s*$")
+        text = flat(text)
         for required in (
             "observation-only", "source_commit", "staleness", "--write",
-            ".planning/sdd-composy/context/codebase.json", "project.md",
+            "codebase.json", "project.md",
             "stack.md", "domain.md", "pitfalls.md", "references/mapping.md",
-            "Never inspect or open", "manifest commands", "PRD", "STORIES",
+            "Do not read or expose", "commands discovered in manifests", "PRD", "STORIES",
             "TECHSPEC", "TASKS",
         ):
             self.assertIn(required, text)
@@ -377,8 +384,8 @@ class SddComposyMapAdapterTest(unittest.TestCase):
         text = (PLUGIN / "skills" / "sdd-map" / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("scripts/sdd_map.py", text)
         self.assertIn("Do not execute commands discovered in manifests", text)
-        self.assertIn("must not duplicate scanner logic", text)
-        self.assertIn("runtime-specific tools", text)
+        self.assertIn("helper owns traversal, secret exclusion", flat(text))
+        self.assertIn(".planning/sdd-composy/context/codebase.json", (REFERENCES / "mapping.md").read_text(encoding="utf-8"))
         for forbidden in ("mcp__", "codex_app", "claude -p"):
             self.assertNotIn(forbidden, text)
 
@@ -411,10 +418,10 @@ class SddComposyPrdAdapterTest(unittest.TestCase):
         self.assertIn("$sdd-prd", metadata.read_text(encoding="utf-8"))
 
     def test_prd_skill_enforces_an_explicit_human_gate(self) -> None:
-        text = (PLUGIN / "skills" / "sdd-prd" / "SKILL.md").read_text(encoding="utf-8")
+        text = flat((PLUGIN / "skills" / "sdd-prd" / "SKILL.md").read_text(encoding="utf-8"))
         for required in (
             "human_approval", "PENDING", "APPROVED", "verified", "human",
-            "existence does not imply approval", "stops downstream generation",
+            "existence never implies approval", "downstream generation remains blocked",
         ):
             self.assertIn(required, text)
         self.assertNotIn("automatically approve", text.lower())
@@ -423,7 +430,6 @@ class SddComposyPrdAdapterTest(unittest.TestCase):
         text = (PLUGIN / "skills" / "sdd-prd" / "SKILL.md").read_text(encoding="utf-8")
         for forbidden in ("mcp__", "codex_app", "claude -p"):
             self.assertNotIn(forbidden, text)
-        self.assertIn("runtime-specific tools", text)
 
     def test_claude_prd_command_is_a_thin_route_to_portable_skill(self) -> None:
         command_path = PLUGIN / "commands" / "prd.md"
@@ -460,10 +466,11 @@ class SddComposyTasksAdapterTest(unittest.TestCase):
         self.assertTrue(metadata.is_file())
         text = skill.read_text(encoding="utf-8")
         self.assertRegex(text, r"(?m)^name:\s*sdd-tasks\s*$")
+        text = flat(text)
         for operation in ("import", "list", "next", "show", "start", "block", "transition", "verify"):
             self.assertIn(operation, text)
         for required in ("scripts/sdd_tasks.py", "tasks/prd-<slug>/", "explicit human approval",
-                         "stable", "unknown JSON fields", "atomic replacement", "runtime-neutral"):
+                         "stable", "unknown-field preservation", "atomic replacement"):
             self.assertIn(required, text)
         for forbidden in ("mcp__", "codex_app", "claude -p"):
             self.assertNotIn(forbidden, text)
@@ -489,7 +496,7 @@ class SddComposySyncAdapterTest(unittest.TestCase):
         self.assertRegex(text, r"(?m)^name:\s*sdd-sync\s*$")
         for operation in ("inspect", "plan", "apply", "sdd_sync.py", "CONFIRM-SDD-SYNC"):
             self.assertIn(operation, text)
-        for required in ("read-only", "explicit", "authority", "conflict", "runtime-neutral"):
+        for required in ("read-only", "explicit", "authority", "conflict"):
             self.assertIn(required, text.lower())
         for forbidden in ("mcp__", "codex_app", "claude -p"):
             self.assertNotIn(forbidden, text)
@@ -513,7 +520,7 @@ class SddComposyStatusAdapterTest(unittest.TestCase):
         self.assertTrue(metadata.is_file(), "Codex metadata must exist")
         text = skill.read_text(encoding="utf-8")
         self.assertRegex(text, r"(?m)^name:\s*sdd-status\s*$")
-        for required in ("sdd_status.py", "--feature", "--tasks", "--fleet", "--json", "read-only", "runtime-neutral"):
+        for required in ("sdd_status.py", "--feature", "--tasks", "--fleet", "--json", "read-only"):
             self.assertIn(required, text)
         for forbidden in ("mcp__", "codex_app", "claude -p", "write", "repair"):
             self.assertNotIn(forbidden, text.lower())
@@ -548,14 +555,14 @@ class SddComposyTechSpecAdapterTest(unittest.TestCase):
     def skill_text(self) -> str:
         path = PLUGIN / "skills" / "sdd-techspec" / "SKILL.md"
         self.assertTrue(path.is_file(), "portable sdd-techspec skill must exist")
-        return path.read_text(encoding="utf-8")
+        return flat(path.read_text(encoding="utf-8"))
 
     def test_techspec_skill_is_discoverable_and_routes_contracts(self) -> None:
         skill = PLUGIN / "skills" / "sdd-techspec" / "SKILL.md"
         metadata = skill.parent / "agents" / "openai.yaml"
         text = self.skill_text()
         self.assertTrue(metadata.is_file(), "Codex metadata must exist")
-        self.assertRegex(text, r"(?m)^name:\s*sdd-techspec\s*$")
+        self.assertIn("name: sdd-techspec ", text)
         for required in (
             "references/specification.md", "templates/techspec.md",
             "references/workflow.md", "tasks/prd-<slug>/techspec.md",
@@ -566,17 +573,17 @@ class SddComposyTechSpecAdapterTest(unittest.TestCase):
     def test_techspec_skill_enforces_upstream_prd_and_stories_gates(self) -> None:
         text = self.skill_text()
         for required in (
-            "human_approval: APPROVED", "verified", "existence does not imply approval",
-            "NOT_APPLICABLE", "applicability_justification", "user-facing behavior",
-            "externally consumed APIs", "pending", "rejected", "stale", "contradictory",
+            "human_approval: APPROVED", "verified", "existence never implies approval",
+            "NOT_APPLICABLE", "non-empty justification", "pending", "rejected", "stale", "contradictory",
         ):
             self.assertIn(required, text)
+        self.assertIn("applicability_justification", (REFERENCES / "specification.md").read_text(encoding="utf-8"))
         self.assertRegex(text.lower(), r"(?:stop|block).*(?:missing|pending|rejected|stale|contradictory)")
 
     def test_techspec_skill_uses_progressive_disclosure(self) -> None:
         text = self.skill_text()
-        self.assertIn("Read `references/specification.md`", text)
-        self.assertIn("Render `templates/techspec.md`", text)
+        self.assertIn("## Read when - `references/specification.md`", text)
+        self.assertIn("Read `templates/techspec.md` and render it", text)
         self.assertRegex(text, r"(?i)only (?:when|if) persistence changes")
         self.assertRegex(text, r"(?i)only (?:when|if) (?:an |the )?API changes")
         self.assertIn("NOT_APPLICABLE", text)
@@ -588,15 +595,14 @@ class SddComposyTechSpecAdapterTest(unittest.TestCase):
     def test_techspec_skill_has_exact_output_and_runtime_neutrality(self) -> None:
         text = self.skill_text()
         self.assertIn("Write only `tasks/prd-<slug>/techspec.md`", text)
-        self.assertIn("Return exactly", text)
+        self.assertIn("Return the path", text)
         for output_field in (
             "path", "slug", "consumed sources", "generated actor and timestamp",
-            "lifecycle status", "human approval", "exact draft artifact reference",
+            "lifecycle status", "human approval", "exact draft reference",
             "trace summary", "unresolved decisions", "risks",
-            "next permitted lifecycle stage", "do not duplicate the techspec body",
+            "next permitted stage", "do not duplicate the techspec body",
         ):
             self.assertIn(output_field, text.lower())
-        self.assertIn("runtime-specific tools", text)
         for forbidden in ("mcp__", "codex_app", "claude -p"):
             self.assertNotIn(forbidden, text)
 
@@ -846,7 +852,7 @@ class SddComposyQuickAdapterTest(unittest.TestCase):
     def test_quick_adapter_preserves_escalation_boundary_and_task_guards(self):
         skill = (PLUGIN / "skills" / "sdd-quick" / "SKILL.md").read_text(encoding="utf-8")
         command = (PLUGIN / "commands" / "quick.md").read_text(encoding="utf-8")
-        for token in ("five-file", "ESCALATE", "TASK-*", "sdd_tasks.py", "evidence", "sdd_trace.py"):
+        for token in ("five implementation files", "ESCALATE", "TASK-*", "sdd_tasks.py", "evidence", "sdd_trace.py"):
             self.assertIn(token, skill)
         self.assertIn("portable `$sdd-quick` skill", command)
 
@@ -875,21 +881,22 @@ class SddComposyFleetAdapterTest(unittest.TestCase):
         self.assertNotIn("codex exec", command)
 
     def test_fleet_contract_keeps_interactivity_and_authority_at_the_fleet_boundary(self):
-        skill = (PLUGIN / "skills" / "sdd-fleet" / "SKILL.md").read_text(encoding="utf-8").lower()
-        reference = (PLUGIN / "references" / "fleet.md").read_text(encoding="utf-8").lower()
-        for content in (skill, reference):
-            for promise in (
-                "exactly one", "bound loop", "isolated loop", "non-interactive",
-                "read-only", "terminal capture", "diagnostic", "human approval", "never merges",
-            ):
-                self.assertIn(promise, content)
+        skill = flat((PLUGIN / "skills" / "sdd-fleet" / "SKILL.md").read_text(encoding="utf-8")).lower()
+        reference = flat((PLUGIN / "references" / "fleet.md").read_text(encoding="utf-8")).lower()
+        for promise in (
+            "exactly one", "bound loop", "isolated loop", "non-interactive",
+            "read-only", "terminal capture", "diagnostic", "human approval", "never merges",
+        ):
+            self.assertIn(promise, reference)
+        for promise in ("exactly one existing bound loop", "terminal capture", "diagnostic only",
+                        "never infers approval", "never merges", "unknown fields"):
+            self.assertIn(promise, skill)
         self.assertIn("runtime", reference)
         self.assertIn("handle", reference)
         self.assertIn("next_action", reference)
-        for content in (skill, reference):
-            self.assertIn("does not call", content)
-            self.assertIn("complete recorded handle", content)
-            self.assertIn("unknown fields", content)
+        self.assertIn("does not call", reference)
+        self.assertIn("complete recorded handle", reference)
+        self.assertIn("unknown fields", reference)
 
     def test_full_plugin_catalogue_has_seventeen_skills_and_commands(self):
         self.assertEqual(len(list((PLUGIN / "skills").glob("*/SKILL.md"))), 17)

@@ -1,6 +1,6 @@
 ---
 description: Inspect, plan, and explicitly approve SDD Composy task synchronization
-argument-hint: "<inspect|plan> <markdown-root> <state> | apply <markdown-root> <state> <plan.json> --authority markdown|json --confirmation-token CONFIRM-SDD-SYNC"
+argument-hint: "<inspect|plan|apply> <markdown-root> <state> [plan.json]"
 ---
 
 # /sdd-composy:sync
