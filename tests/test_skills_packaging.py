@@ -75,7 +75,9 @@ class ManifestTest(unittest.TestCase):
         self.assertIn("$skill-refactor", openai)
 
     def test_the_plugin_ships_exactly_one_skill_and_no_claude_extras(self):
-        self.assertEqual([p.parent.name for p in PLUGIN.rglob("SKILL.md")], ["skill-refactor"])
+        # evals/benchmarks holds version copies and workspaces by design; they are gitignored and never ship
+        shipped = [p for p in PLUGIN.rglob("SKILL.md") if "benchmarks" not in p.parts]
+        self.assertEqual([p.parent.name for p in shipped], ["skill-refactor"])
         for absent in ("commands", "agents", "hooks", ".mcp.json"):
             self.assertFalse((PLUGIN / absent).exists(), absent)
 

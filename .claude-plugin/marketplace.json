@@ -141,15 +141,6 @@
       "strict": true
     },
     {
-      "name": "pwdev-excalidraw",
-      "displayName": "PWDEV Excalidraw — Planejamento Visual",
-      "source": "./plugins/pwdev-excalidraw",
-      "description": "Planejamento visual com diagramas Excalidraw via servidor MCP oficial — arquitetura, fluxos, dependências, decisões e roadmaps editáveis.",
-      "category": "planning",
-      "tags": ["excalidraw", "planning", "architecture", "diagram", "mcp", "pt-br"],
-      "strict": true
-    },
-    {
       "name": "pwdev-brain",
       "displayName": "PWDEV Brain — Segundo Cérebro em LLM Wiki",
       "source": "./plugins/pwdev-brain",
@@ -174,6 +165,15 @@
       "description": "Review, refactor and benchmark Agent Skills across Claude Code, Codex, Hermes Agent and OpenCode: a smaller always-loaded core, lean/guided profiles chosen by measurement, runtime and model discovery, generic token sizing, and objective headless A/B benchmarks under a budget; 1 skill",
       "category": "workflow",
       "tags": ["agent-skills", "skill-refactoring", "benchmark", "evaluation", "claude", "codex", "hermes", "opencode", "portable"],
+      "strict": true
+    },
+    {
+      "name": "pwdev-excalidraw",
+      "displayName": "PWDEV Excalidraw — Planejamento Visual",
+      "source": "./plugins/pwdev-excalidraw",
+      "description": "Planejamento visual com diagramas Excalidraw via servidor MCP oficial — arquitetura, fluxos, dependências, decisões e roadmaps editáveis.",
+      "category": "planning",
+      "tags": ["excalidraw", "planning", "architecture", "diagram", "mcp", "pt-br"],
       "strict": true
     }
   ]
