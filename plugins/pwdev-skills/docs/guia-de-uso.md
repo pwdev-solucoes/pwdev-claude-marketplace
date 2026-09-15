@@ -25,11 +25,13 @@ aplicação da skill a si mesma em 14/09/2026
 
 ```bash
 claude plugin install pwdev-skills@pwdev-claude-marketplace   # ou: claude --plugin-dir ./plugins/pwdev-skills
+python3 plugins/pwdev-skills/.opencode-plugin/install.py       # OpenCode: linka a skill em ~/.config/opencode/skills
 cd plugins/pwdev-skills/skills/skill-refactor
 python3 scripts/discover.py                                    # o que roda nesta máquina, sem custo
 ```
 
-Depois, numa sessão do Claude Code (Codex: `$skill-refactor`; Hermes: `skill_view("pwdev-skills:skill-refactor")`):
+Depois, numa sessão do Claude Code (Codex: `$skill-refactor`; Hermes: `skill_view("pwdev-skills:skill-refactor")`;
+OpenCode: o agente carrega a skill sozinho pela ferramenta `skill`):
 
 ```text
 Revise plugins/meu-plugin/skills/resumo/SKILL.md sem editar arquivos.
@@ -125,7 +127,8 @@ python3 scripts/bench.py --skill plugins/pwdev-code/skills/reports --baseline /t
 - `candidate` = a skill em `--skill`; `baseline` = a versão anterior; `no_skill` = o runtime recebe só
   o fixture e o pedido. O terceiro braço responde "a skill acrescenta alguma coisa?" — se ele empata
   com a candidata num caso, a skill não agrega ali, e isso é um achado.
-- `--reps 2` no mínimo para afirmar direção; uma repetição por célula é indicação, não prova.
+- `--reps 2` no mínimo para afirmar direção e `--reps 3` antes de uma decisão que vai ser publicada;
+  uma repetição por célula é indicação, não prova (o manual, §13, mostra o mesmo modelo dando 7/7 e 6/7).
 - Iguale o esforço antes de comparar runtimes (`--claude-effort`, `--codex-effort`): esforços
   diferentes comparam configurações, não modelos.
 - Não edite a skill enquanto a rodada roda: o resumo passa a `PASS_WITH_SOURCE_DRIFT`.
@@ -208,7 +211,7 @@ perfil padrão da skill, porque é assim que ela vai ser usada. Referência (13/
 caso de revisão): Opus em `high` 7/7 a US$ 0,67; Sol em `low` 7/7 a 0,14; Hermes com deepseek em
 `medium` 6/7 a 0,01. Mesmo caso, três configurações — não três modelos.
 
-Antes de escrever "o runtime X é mais eficiente", confira: mesmo caso, mesmo esforço, ≥ 2 reps,
+Antes de escrever "o runtime X é mais eficiente", confira: mesmo caso, mesmo esforço, ≥ 3 reps,
 `cost_source` igual ou declarado, e a diferença maior que a variação entre as repetições.
 
 ## 6. Cenário E — casos no domínio da skill-alvo
@@ -275,6 +278,6 @@ reuniões; ela refatora a skill que resume).
 - [ ] Nome, `paths`, metadados, rótulos de saída e proibições da skill-alvo continuam lá.
 - [ ] O que saiu do núcleo está numa referência **com condição de leitura** escrita no núcleo.
 - [ ] `tokens.py --baseline` mostra o corte no `SKILL.md#body`, não na `description`.
-- [ ] Se houve benchmark: ≥ 2 reps, esforço igual entre runtimes, decisão por modelo em `paired_by_case`.
+- [ ] Se houve benchmark: ≥ 2 reps para direção (≥ 3 para decidir), esforço igual entre runtimes, decisão por modelo em `paired_by_case`.
 - [ ] Nenhum caminho pessoal nem segredo nos artefatos publicados (`summary.json` é sanitizado).
 - [ ] Nada foi commitado, publicado ou instalado sem pedido.

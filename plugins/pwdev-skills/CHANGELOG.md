@@ -24,6 +24,15 @@ manifestos Codex e Hermes.
   (`--hermes-provider openrouter`) e OpenCode (`openrouter/<id>`, exige `opencode providers
   login`), com preços datados de openrouter.ai.
 
+- OpenCode declarado como quarto runtime suportado para **usar** a skill, não só para o benchmark,
+  com adaptador próprio: `.opencode-plugin/install.py` linka ou copia as skills do plugin em
+  `~/.config/opencode/skills/` (ou `<projeto>/.opencode/skills/`), idempotente, com `--uninstall`
+  que remove só o que instalou, `--dry-run` e `XDG_CONFIG_HOME`; a skill carrega pela ferramenta
+  nativa `skill` (READMEs, manual §2, guia, README da skill, tags do catálogo; 7 testes).
+- `docs/metodologia-de-refatoracao.md` revisada com o que a aplicação de 14/09 ensinou: `evals/`
+  fora do modelo de custo, invariantes extraídos por `cases.py`, bloco movido leva guardas, status
+  do run vem do runtime, runs guardados para `--regrade`, regra de decisão em três braços, rótulos
+  cumulativos, regra 8 sem prometer o que o `summary.json` não grava, sumário e checklist atualizados.
 - `docs/guia-de-uso.md`: roteiro por cenário (revisar, refatorar, medir em três braços, casos por
   contexto, rodada com problema, como pedir), com os números da aplicação de 14/09.
 - `bench.py --regrade <out>`: reclassifica e reavalia uma rodada já executada a partir do

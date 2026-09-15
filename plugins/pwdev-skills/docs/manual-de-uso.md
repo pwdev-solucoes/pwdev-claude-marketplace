@@ -6,7 +6,7 @@ entre modelos e ler os resultados. Para um roteiro por cenário — o que dizer 
 esperar — comece pelo [Guia de uso](./guia-de-uso.md); o método por trás de cada passo está
 detalhado em [Metodologia de refatoração](./metodologia-de-refatoracao.md).
 
-> Versão do plugin: 0.1.0 · Runtimes: Claude Code, Codex, Hermes Agent (o benchmark também roda OpenCode)
+> Versão do plugin: 0.1.0 · Runtimes: Claude Code, Codex, Hermes Agent e OpenCode — para usar a skill e para o benchmark
 
 ## Sumário
 
@@ -83,6 +83,31 @@ hermes plugins doctor plugins/pwdev-skills
 
 O adaptador registra a skill sem hook. Como ela é maior que o limite de injeção inicial do
 Hermes, fica listada e carrega sob demanda com `skill_view("pwdev-skills:skill-refactor")`.
+
+### OpenCode
+
+O OpenCode não instala plugins de skills: ele descobre pastas `<nome>/SKILL.md` em
+`.opencode/skills/` (projeto) e `~/.config/opencode/skills/` (global), além das pastas compatíveis
+`.claude/skills/`, `~/.claude/skills/`, `.agents/skills/` e `~/.agents/skills/`
+([opencode.ai/docs/skills](https://opencode.ai/docs/skills)).
+
+```bash
+python3 plugins/pwdev-skills/.opencode-plugin/install.py                # link em ~/.config/opencode/skills
+python3 plugins/pwdev-skills/.opencode-plugin/install.py --project .    # link em ./.opencode/skills
+python3 plugins/pwdev-skills/.opencode-plugin/install.py --copy         # cópia, para máquina sem o checkout
+python3 plugins/pwdev-skills/.opencode-plugin/install.py --uninstall    # remove só o que ele instalou
+python3 plugins/pwdev-skills/.opencode-plugin/install.py --dry-run      # mostra o plano
+```
+
+O instalador respeita `XDG_CONFIG_HOME`, recusa substituir uma pasta que não criou (a não ser com
+`--force`) e não toca em `opencode.json`. Fazer à mão dá no mesmo:
+`ln -s "$PWD/plugins/pwdev-skills/skills/skill-refactor" ~/.config/opencode/skills/skill-refactor`.
+
+O agente vê a skill na lista e a carrega sob demanda com a ferramenta `skill`; peça em linguagem
+natural, como nos outros runtimes. Os scripts rodam a partir da pasta instalada. Atenção: a
+instalação por plugin no Claude Code fica em `~/.claude/plugins/cache/`, que o OpenCode **não** lê —
+sem o instalador (ou o link), a skill não aparece lá. É a exposição nativa que o benchmark usa
+(`.opencode/skills/` no workspace).
 
 ## 3. Fluxo recomendado
 
@@ -507,7 +532,7 @@ ordem de grandeza, não tabela de preço.**
 ## 13. Limites
 
 - **Uma repetição não caracteriza nada.** Na validação, o mesmo modelo Hermes deu 7/7 e 6/7 em execuções diferentes. Use `--reps` ≥ 3 antes de decidir.
-- **`bench.py` e `grade.py` avaliam a própria skill-refactor.** Para outras skills, escreva casos próprios.
+- **O fixture padrão de `bench.py` é a skill-refactor.** Para medir outra skill com casos do domínio dela, gere-os com `cases.py` (§7); a avaliação lê os invariantes do caso.
 - **Cada runtime expõe a skill de um jeito:** o Claude Code por plugin gerado, o Codex e o Hermes por `AGENTS.md`, e o OpenCode de forma nativa. Só no OpenCode se mede acionamento real; comparações de tokens entre runtimes são aproximadas.
 - **Os runtimes carregam também as skills e plugins globais do usuário**, e isso entra no contexto medido.
 - **O Codex não informa o modelo usado.** A única evidência é o runtime ter aceito o slug.

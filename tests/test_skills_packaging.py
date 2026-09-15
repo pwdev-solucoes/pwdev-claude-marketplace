@@ -1,4 +1,4 @@
-"""pwdev-skills packaging for Claude Code, Codex and Hermes Agent.
+"""pwdev-skills packaging for Claude Code, Codex and Hermes Agent (OpenCode loads the skill folder directly).
 
 The plugin ships one skill. These tests pin what each runtime needs to find it: consistent
 manifests, the Codex skills path and interface, and a Hermes adapter that registers exactly that
@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import re
 import shutil
 import sys
@@ -167,6 +168,85 @@ class HermesAdapterTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "skills directory not found"):
             load_adapter(adapter).register(ctx)
         self.assertEqual(ctx.skills, [])
+
+
+INSTALLER = PLUGIN / ".opencode-plugin" / "install.py"
+
+
+class OpenCodeInstallerTest(unittest.TestCase):
+    """OpenCode reads skill folders, not plugins: the installer links or copies ours there, and only ours."""
+
+    def setUp(self):
+        self.installer = load_adapter(INSTALLER)
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.plugin = self.root / "plugin"
+        (self.plugin / "skills" / "skill-refactor").mkdir(parents=True)
+        (self.plugin / "skills" / "skill-refactor" / "SKILL.md").write_text("---\nname: skill-refactor\n---\n# x\n")
+        (self.plugin / "skills" / "skill-refactor" / "__pycache__").mkdir()
+        (self.plugin / "skills" / "skill-refactor" / "__pycache__" / "m.pyc").write_bytes(b"x")
+        (self.plugin / "skills" / "not-a-skill").mkdir()  # no SKILL.md: ignored
+        self.config = self.root / "xdg"
+        self._env = dict(os.environ)
+        os.environ["XDG_CONFIG_HOME"] = str(self.config)
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self._env)
+        self.tmp.cleanup()
+
+    def run_installer(self, *args: str) -> int:
+        return self.installer.main(["--root", str(self.plugin), *args])
+
+    def test_links_every_skill_into_the_global_dir_and_is_idempotent(self):
+        self.assertEqual(self.run_installer(), 0)
+        target = self.config / "opencode" / "skills" / "skill-refactor"
+        self.assertTrue(target.is_symlink())
+        self.assertEqual(target.resolve(), (self.plugin / "skills" / "skill-refactor").resolve())
+        self.assertFalse((self.config / "opencode" / "skills" / "not-a-skill").exists())
+        self.assertEqual(self.run_installer(), 0)  # second run: nothing to redo, no error
+        self.assertTrue(target.is_symlink())
+
+    def test_project_scope_uses_the_opencode_folder_of_that_project(self):
+        project = self.root / "proj"
+        project.mkdir()
+        self.assertEqual(self.run_installer("--project", str(project)), 0)
+        self.assertTrue((project / ".opencode" / "skills" / "skill-refactor" / "SKILL.md").is_file())
+        self.assertFalse((self.config / "opencode").exists())
+
+    def test_copy_mode_copies_without_caches_and_marks_the_copy(self):
+        self.assertEqual(self.run_installer("--copy"), 0)
+        target = self.config / "opencode" / "skills" / "skill-refactor"
+        self.assertFalse(target.is_symlink())
+        self.assertTrue((target / "SKILL.md").is_file())
+        self.assertTrue((target / self.installer.MARKER).is_file())
+        self.assertFalse((target / "__pycache__").exists())
+
+    def test_refuses_to_replace_a_skill_it_did_not_install_unless_forced(self):
+        foreign = self.config / "opencode" / "skills" / "skill-refactor"
+        foreign.mkdir(parents=True)
+        (foreign / "SKILL.md").write_text("the user's own\n")
+        self.assertEqual(self.run_installer(), 1)
+        self.assertEqual((foreign / "SKILL.md").read_text(), "the user's own\n")
+        self.assertEqual(self.run_installer("--uninstall"), 0)
+        self.assertTrue(foreign.is_dir())  # never removes what it did not install
+        self.assertEqual(self.run_installer("--force"), 0)
+        self.assertTrue(foreign.is_symlink())
+
+    def test_uninstall_removes_links_and_marked_copies_only(self):
+        self.run_installer()
+        self.assertEqual(self.run_installer("--uninstall"), 0)
+        self.assertFalse((self.config / "opencode" / "skills" / "skill-refactor").exists())
+        self.run_installer("--copy")
+        self.assertEqual(self.run_installer("--uninstall"), 0)
+        self.assertFalse((self.config / "opencode" / "skills" / "skill-refactor").exists())
+
+    def test_dry_run_changes_nothing(self):
+        self.assertEqual(self.run_installer("--dry-run"), 0)
+        self.assertFalse((self.config / "opencode").exists())
+
+    def test_real_plugin_has_exactly_one_installable_skill(self):
+        self.assertEqual([p.name for p in self.installer.skills_of(PLUGIN)], ["skill-refactor"])
 
 
 if __name__ == "__main__":

@@ -164,7 +164,7 @@
       "source": "./plugins/pwdev-skills",
       "description": "Review, refactor and benchmark Agent Skills across Claude Code, Codex, Hermes Agent and OpenCode: a smaller always-loaded core, lean/guided profiles chosen by measurement, runtime and model discovery, generic token sizing, and objective headless A/B benchmarks under a budget; 1 skill",
       "category": "workflow",
-      "tags": ["agent-skills", "skill-refactoring", "benchmark", "evaluation", "claude", "codex", "hermes", "portable"],
+      "tags": ["agent-skills", "skill-refactoring", "benchmark", "evaluation", "claude", "codex", "hermes", "opencode", "portable"],
       "strict": true
     }
   ]

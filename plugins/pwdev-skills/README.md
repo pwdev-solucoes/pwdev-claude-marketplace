@@ -1,8 +1,9 @@
-# PWDEV Skills — Skill Engineering (Claude Code, Codex, Hermes)
+# PWDEV Skills — Skill Engineering (Claude Code, Codex, Hermes, OpenCode)
 
-Review, refactor and benchmark Agent Skills in Claude Code, Codex and Hermes Agent. The
-benchmark also drives OpenCode. The plugin ships one skill, `skill-refactor`, and the scripts it
-uses to measure a skill on the models that are actually available on this machine.
+Review, refactor and benchmark Agent Skills in Claude Code, Codex, Hermes Agent and OpenCode.
+The plugin ships one skill, `skill-refactor`, and the scripts it uses to measure a skill on the
+models that are actually available on this machine. The same four runtimes are the ones the
+benchmark drives.
 
 > [Versão em Português](./README.pt-BR.md) · [Guia de uso (PT-BR)](./docs/guia-de-uso.md) · [Manual de uso (PT-BR)](./docs/manual-de-uso.md) · [Metodologia de refatoração (PT-BR)](./docs/metodologia-de-refatoracao.md)
 
@@ -19,6 +20,7 @@ uses to measure a skill on the models that are actually available on this machin
 | `scripts/bench.py` + `runtimes.py` + `grade.py` | Headless A/B benchmark across runtimes and models — arms `candidate`, `baseline` and `no_skill` — graded from each case's invariants, under a budget |
 | `scripts/cases.py` | Cases derived from the skill under refactoring: invariants and defects by script, requests and trigger queries proposed by one headless call, human approval pinned to the source hash |
 | `evals/evals.json` | Fixture, cases, trigger and routing checks, default matrix and dated pricing |
+| [`.opencode-plugin/install.py`](./.opencode-plugin/install.py) | OpenCode adapter: links or copies the skills into `~/.config/opencode/skills/` or `<project>/.opencode/skills/`, and uninstalls only what it installed |
 
 Ships 1 skill. No commands, subagents, hooks or MCP server.
 
@@ -52,6 +54,21 @@ hermes plugins doctor plugins/pwdev-skills
 The adapter registers `skill-refactor` as a `pathlib.Path` with no hook. The skill is larger than
 Hermes' inline bootstrap limit, so it is listed and loaded on demand with
 `skill_view("pwdev-skills:skill-refactor")`.
+
+**OpenCode** — OpenCode has no plugin mechanism for skills; it discovers `SKILL.md` folders
+([opencode.ai/docs/skills](https://opencode.ai/docs/skills)). The plugin ships an installer that
+links (or copies) its skills where OpenCode looks, and removes only what it installed:
+
+```bash
+python3 plugins/pwdev-skills/.opencode-plugin/install.py               # ~/.config/opencode/skills (symlink)
+python3 plugins/pwdev-skills/.opencode-plugin/install.py --project .   # ./.opencode/skills of a project
+python3 plugins/pwdev-skills/.opencode-plugin/install.py --uninstall
+```
+
+The agent lists the skill and loads it on demand through its native `skill` tool; the scripts run
+from the installed folder. A Claude Code *plugin* install lives in Claude's plugin cache, not in
+`~/.claude/skills/`, so it does not make the skill visible to OpenCode — the installer does. See
+[`.opencode-plugin/README.md`](./.opencode-plugin/README.md).
 
 ## Measuring a skill
 

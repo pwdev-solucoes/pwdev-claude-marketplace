@@ -56,10 +56,13 @@ Profiles come from the request â€” an unspecified profile resolves to `guided` â
 ## Distribution and validation
 
 The folder ships in the `pwdev-skills` plugin (`plugins/pwdev-skills/skills/skill-refactor`),
-exposed as `pwdev-skills:skill-refactor` in Claude Code, `$skill-refactor` in Codex and
-`skill_view("pwdev-skills:skill-refactor")` in Hermes. It can also be copied as a unit
-to any runtime compatible with Agent Skills. Invocation syntax and discovery depend on
-the host. A change in this source tree does not install or update user caches.
+exposed as `pwdev-skills:skill-refactor` in Claude Code, `$skill-refactor` in Codex,
+`skill_view("pwdev-skills:skill-refactor")` in Hermes, and through OpenCode's native `skill`
+tool once `.opencode-plugin/install.py` has linked this folder into `.opencode/skills/` or
+`~/.config/opencode/skills/`. It
+can also be copied as a unit to any runtime compatible with Agent Skills. Invocation syntax
+and discovery depend on the host. A change in this source tree does not install or update
+user caches.
 
 `SKILL.md` follows the Agent Skills format, with provenance under `metadata`. This
 README and `references/` follow OKF v0.2. The sibling skills in this plugin do not use

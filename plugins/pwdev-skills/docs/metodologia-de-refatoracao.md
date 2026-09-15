@@ -1,7 +1,8 @@
 # Metodologia de refatoração de skills
 
 Como a `skill-refactor` diagnostica, refatora, verifica e avalia uma skill. Este documento detalha
-o método; o [manual de uso](./manual-de-uso.md) mostra como executá-lo com o plugin.
+o método; o [guia de uso](./guia-de-uso.md) mostra o que pedir e o que esperar em cada cenário, e o
+[manual de uso](./manual-de-uso.md) documenta cada opção dos scripts.
 
 > Fontes normativas, na ordem de precedência: `skills/skill-refactor/SKILL.md`,
 > `references/refactoring.md`, `references/evaluation.md` e `references/runtimes.md`. Este
@@ -23,8 +24,9 @@ o método; o [manual de uso](./manual-de-uso.md) mostra como executá-lo com o p
 12. [As dez regras de otimização](#12-as-dez-regras-de-otimização)
 13. [Exemplo trabalhado](#13-exemplo-trabalhado)
 14. [Lições da validação de 13/09](#14-lições-da-validação-de-1309)
-15. [Anti-padrões](#15-anti-padrões)
-16. [Checklist final](#16-checklist-final)
+15. [Aplicada a si mesma (14/09/2026)](#15-aplicada-a-si-mesma-14092026)
+16. [Anti-padrões](#16-anti-padrões)
+17. [Checklist final](#17-checklist-final)
 
 ---
 
@@ -61,6 +63,8 @@ e é essa frequência que define onde otimizar primeiro:
 │                                  atendida                                │  necessária
 ├──────────────────────────────────────────────────────────────────────────┤
 │ 4. scripts/, assets/           → executados ou copiados, não lidos       │  ~zero contexto
+├──────────────────────────────────────────────────────────────────────────┤
+│ 5. evals/ (casos, benchmarks)  → nunca entram no contexto de um runtime  │  zero
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -72,6 +76,8 @@ Consequências práticas:
   todo pedido acaba lendo continua custando o mesmo e ainda soma uma consulta a mais.
 - **Scripts reduzem contexto de verdade**: um procedimento determinístico executado não ocupa a
   janela. Mesmo assim, só crie scripts quando isso estiver no escopo, e com verificação real.
+- **`evals/` não é contexto.** Casos, fixtures gerados e resumos de benchmark vivem na skill para
+  versionamento, mas nenhum runtime os carrega; `tokens.py` os deixa fora da medição.
 - **O custo real de uma execução não é o tamanho do arquivo.** É a entrada acumulada ao longo dos
   turnos (fresca + cache lido + cache gravado), mais a saída, mais as referências efetivamente
   abertas. `tokens.py` mede o estático; `bench.py` mede o real.
@@ -142,7 +148,11 @@ Antes de procurar defeitos, liste o que a refatoração não pode quebrar:
   extensões desconhecidas).
 - **Condições de conclusão**: o que conta como terminado.
 
-Essa lista vira a matriz de verificação da fase 5.
+Essa lista vira a matriz de verificação da fase 5. No plugin, `scripts/cases.py --extract <skill>`
+produz um rascunho dela por script — os **invariantes** (nome, `paths`, metadados estáveis,
+literais, rótulos de saída, proibições, blocos condicionais com guardas, idioma) — que o avaliador
+depois confere objetivamente. O rascunho é heurístico: leia e cure antes de aprovar (uma afirmação
+com "never" não é necessariamente uma proibição).
 
 ### 5.2 As cinco categorias de defeito
 
@@ -194,7 +204,9 @@ que um que só obedece a um MUST.
 **3. Extrair detalhes para referências com condição explícita.**
 Cada referência declara quando deve ser lida ("se o usuário pedir exportação CSV, leia
 `references/csv-export.md`"). Agrupe por fluxo, não por tipo de conteúdo: fragmentar demais
-multiplica consultas e pode custar mais que o texto economizado.
+multiplica consultas e pode custar mais que o texto economizado. **Um bloco que sai do núcleo leva
+consigo suas regras de guarda e termos obrigatórios**: na medição de 14/09, modelos que moveram o
+CSV perderam "não exportar sem pedido" no caminho — a regra saiu do núcleo e não chegou à referência.
 
 **4. Consolidar repetições numa fonte única.**
 Preserve nome, recursos, campos desconhecidos, `paths`, integrações e metadados do runtime. Um
@@ -346,7 +358,9 @@ cobertura = TP / (TP + FN)      acionou quando devia / todas as vezes que devia
 
 Uma decisão binária por execução; chamadas repetidas são diagnóstico, não acertos novos.
 Denominador vazio é `N/A`, não zero. Descrições mais enfáticas precisam ser testadas **em cada
-modelo**.
+modelo**. No harness do plugin só o OpenCode expõe a skill por descoberta nativa (`.opencode/skills/`);
+Claude Code recebe um plugin gerado e Codex e Hermes um `AGENTS.md` que a nomeia — nesses três, o
+acionamento se mede fora do `bench.py`, no catálogo real, com as consultas de `trigger_evals`.
 
 ### 10.4 Correção dos artefatos
 
@@ -358,6 +372,14 @@ modelo**.
 - **Citar uma prática proibida para rejeitá-la é conformidade**, não violação.
 - Evidência ausente conta como critério não demonstrado.
 - Falhar um requisito obrigatório invalida a tarefa, mesmo com média alta.
+- **O status de um run vem do runtime, não do texto da resposta.** Cota, sobrecarga e modelo
+  rejeitado contam só com saída diferente de zero ou envelope quebrado, lidos do stderr e dos
+  eventos de erro; um agente que *cita* "rate limit" ao explicar a documentação completou o run.
+- **O relatório mora onde a skill mandou gravar.** O avaliador lê a área de artefatos ao lado do
+  alvo, não só a resposta em chat; senão reprova entregas corretas.
+- **Guarde stdout, stderr, artefatos e snapshots de cada run.** O avaliador e o classificador também
+  erram; com os runs no disco, uma correção reavalia a rodada sem nova chamada
+  (`bench.py --regrade`). Sem isso, cada correção custa uma rodada.
 - **Leia a evidência antes de acreditar num veredito.**
 
 ### 10.5 Medidas e decisão
@@ -372,6 +394,17 @@ modelo**.
 **Regra de decisão:** só há ganho com qualidade dentro dos limites fixados antes. Resultado fora de
 qualquer limite não é ganho, mesmo que a média melhore. Média e desvio descrevem a amostra; não
 provam melhora. Dados insuficientes = **inconclusivo**.
+
+Com três braços, a regra fica concreta, e é escrita **antes** da rodada:
+
+1. aceite da candidata ≥ baseline **em cada modelo** que rodou os mesmos casos;
+2. custo por tarefa aceita da candidata ≤ baseline no mesmo modelo;
+3. o braço sem skill é controle: se empata ou vence a candidata num caso, a skill não agrega ali
+   — um achado, não um ruído;
+4. regressão em qualquer modelo → manter a versão anterior e registrar o motivo.
+
+A comparação pareada por caso e modelo (`paired_by_case`) é onde essa regra se aplica; a média
+geral por modelo esconde exatamente o que a regra 1 pergunta.
 
 Detalhes de fontes de uso e custo por runtime estão em `references/runtimes.md`.
 
@@ -396,6 +429,11 @@ A revisão diz com clareza o que é diagnóstico estático e o que depende de me
 | `refactored` | O alvo foi alterado |
 | `statically validated` | A fase 5 foi concluída |
 | `behaviorally evaluated` | A fase 6 rodou; vale **apenas** para os pares (runtime, modelo) executados |
+
+Os rótulos **se acumulam**: a entrega fecha com uma linha nomeando todos os conquistados — uma
+refatoração sem benchmark termina `refactored, statically validated`. A redação antiga do núcleo
+("`refactored`, `statically validated` **ou** `behaviorally evaluated`") era lida pelos modelos
+como escolha, e foi a expectativa mais reprovada na medição de 14/09.
 
 ### 11.3 O que a entrega contém
 
@@ -423,7 +461,7 @@ Cada regra nomeia a medição que a decide: regra sem medição é opinião.
 | 5 | **Uma alteração por vez** (ablação), depois a combinação | Δ por componente contra base fixa |
 | 6 | **Acionamento medido à parte da execução** | Precisão e cobertura por modelo |
 | 7 | **Contexto é entrada acumulada + pico + referências carregadas** | `usage.context_tokens` e transcrição |
-| 8 | **Limites fixados antes de rodar** | Limites registrados no `summary.json` |
+| 8 | **Limites fixados antes de rodar** | Critérios escritos no plano ou no relatório antes da rodada; o `summary.json` grava matriz, esforço e orçamento, não os limites |
 | 9 | **Custo completo**: falhas, retentativas e fallback no numerador | `cost_usd` + `cost_source` por execução |
 | 10 | **Evidência rotulada por (runtime, modelo)** | Rótulo de entrega |
 
@@ -592,7 +630,7 @@ A `skill-refactor` 0.2.1 foi refatorada com este processo, medindo antes, sem sk
 - [ ] Nenhum requisito obrigatório depende de referência opcional
 - [ ] Toda referência tem condição de leitura explícita
 - [ ] Repetições consolidadas; metadados e campos desconhecidos preservados
-- [ ] Cada trecho movido ou removido mapeado para a regra que o substitui
+- [ ] Cada trecho movido ou removido mapeado para a regra que o substitui; bloco movido levou suas guardas
 - [ ] Idioma e rótulos exatos preservados
 
 **Perfis**
@@ -608,9 +646,11 @@ A `skill-refactor` 0.2.1 foi refatorada com este processo, medindo antes, sem sk
 **Avaliação (se autorizada)**
 - [ ] Casos, rubrica, modelos, esforço, orçamento e limites congelados antes
 - [ ] A/B dentro de cada modelo; esforço igual e registrado
+- [ ] Braço sem skill quando a pergunta inclui "a skill agrega alguma coisa?"
 - [ ] Acionamento medido à parte
-- [ ] Evidência de toda falha lida antes de aceitar o veredito
-- [ ] Decisão por custo por tarefa aceita dentro dos limites; repetições suficientes
+- [ ] Evidência de toda falha lida antes de aceitar o veredito; status vindo do runtime, não do texto
+- [ ] Runs guardados no disco para reavaliar sem pagar de novo
+- [ ] Decisão por custo por tarefa aceita dentro dos limites, por modelo; repetições suficientes
 
 **Entrega**
 - [ ] Revisão em três partes (achados, mudanças, como medir)

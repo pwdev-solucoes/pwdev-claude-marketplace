@@ -58,7 +58,7 @@ Commands: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 | [**pwdev-feat**](./plugins/pwdev-feat/) | Simplified feature development — PWDEVIA 7-question plans inline + executor and advisor subagents | 2.1.1 | Apache-2.0 |
 | [**pwdev-prd**](./plugins/pwdev-prd/) | Interview-driven PRD creation — 12-step inline interview, Markdown + canonical JSON | 2.0.1 | Apache-2.0 |
 | [**pwdev-qa**](./plugins/pwdev-qa/) | Portable quality assurance for Claude Code, Codex and Hermes Agent — 10 workflows, 17 specialist guides, tool recommendation, auditable evidence, offline HTML and PDF reports | 0.1.0 | Apache-2.0 |
-| [**pwdev-skills**](./plugins/pwdev-skills/) | Skill engineering for Claude Code, Codex and Hermes Agent — review and refactor skills, lean/guided profiles by measurement, runtime and model discovery, objective headless A/B benchmarks across Claude Code, Codex, Hermes and OpenCode | 0.1.0 | Apache-2.0 |
+| [**pwdev-skills**](./plugins/pwdev-skills/) | Skill engineering for Claude Code, Codex, Hermes Agent and OpenCode — review and refactor skills, lean/guided profiles by measurement, runtime and model discovery, objective headless A/B benchmarks across the same four runtimes | 0.1.0 | Apache-2.0 |
 | [**pwdev-copy**](./plugins/pwdev-copy/) | Trainable copywriting framework — 20 skills across the full cycle (VOC research → copy → review → analysis), 5 real subagents | 1.1.0 | Apache-2.0 |
 | [**pwdev-social-media**](./plugins/pwdev-social-media/) | AI creative generation for social — API orchestration (Ideogram, Leonardo, Flux, Runway, Freepik) with spend guard, 19 skills, 4 subagents | 2.0.1 | Apache-2.0 |
 | [**pwdev-devops**](./plugins/pwdev-devops/) | Platform, operations & incident response — safe-execution posture with guard script, 24 skills, 4 subagents | 1.0.0 | Apache-2.0 |
@@ -241,11 +241,14 @@ See the [full plugin documentation](./plugins/pwdev-qa/README.md).
 
 ### pwdev-skills
 
-**Skill engineering** for Claude Code, Codex and Hermes Agent: review or refactor an existing
+**Skill engineering** for Claude Code, Codex, Hermes Agent and OpenCode: review or refactor an existing
 `SKILL.md` into a smaller always-loaded core with conditional references, choose lean/guided
 profiles by measurement, discover the runtimes and models available here, size skills with a
 generic tokenizer, and compare a candidate with the previous version through headless A/B
-benchmarks across Claude Code, Codex, Hermes and OpenCode, graded objectively under a budget.
+benchmarks across the same four runtimes, graded objectively under a budget. Claude Code, Codex and
+Hermes load it as a plugin; OpenCode has no plugin format for skills, so the plugin ships its own
+adapter — `python3 plugins/pwdev-skills/.opencode-plugin/install.py` links the skill into
+`~/.config/opencode/skills/` (or `--project .`), `--uninstall` removes only what it installed.
 
 ```
 discover runtimes & models ─▶ review / refactor ─▶ tokens ─▶ A/B benchmark ─▶ per-model efficiency table
@@ -466,6 +469,8 @@ claude plugin install pwdev-qa@pwdev-claude-marketplace
 
 # Skill engineering: review, refactor and benchmark skills across runtimes
 claude plugin install pwdev-skills@pwdev-claude-marketplace
+#   also in OpenCode (no plugin format for skills; links the skill into ~/.config/opencode/skills):
+#   python3 plugins/pwdev-skills/.opencode-plugin/install.py     (--project . / --copy / --uninstall)
 
 # Trainable copywriting framework (20 skills, analysis loop)
 claude plugin install pwdev-copy@pwdev-claude-marketplace
