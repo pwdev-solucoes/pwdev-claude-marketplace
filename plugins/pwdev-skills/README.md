@@ -4,7 +4,7 @@ Review, refactor and benchmark Agent Skills in Claude Code, Codex and Hermes Age
 benchmark also drives OpenCode. The plugin ships one skill, `skill-refactor`, and the scripts it
 uses to measure a skill on the models that are actually available on this machine.
 
-> [Versão em Português](./README.pt-BR.md) · [Manual de uso (PT-BR)](./docs/manual-de-uso.md) · [Metodologia de refatoração (PT-BR)](./docs/metodologia-de-refatoracao.md)
+> [Versão em Português](./README.pt-BR.md) · [Guia de uso (PT-BR)](./docs/guia-de-uso.md) · [Manual de uso (PT-BR)](./docs/manual-de-uso.md) · [Metodologia de refatoração (PT-BR)](./docs/metodologia-de-refatoracao.md)
 
 ## What's inside
 

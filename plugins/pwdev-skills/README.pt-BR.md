@@ -4,7 +4,7 @@ Revisa, refatora e faz benchmark de Agent Skills no Claude Code, no Codex e no H
 benchmark também roda no OpenCode. O plugin traz uma skill, `skill-refactor`, e os scripts que ela
 usa para medir uma skill nos modelos realmente disponíveis nesta máquina.
 
-> [English version](./README.md) · [Manual de uso](./docs/manual-de-uso.md) · [Metodologia de refatoração](./docs/metodologia-de-refatoracao.md)
+> [English version](./README.md) · [Guia de uso](./docs/guia-de-uso.md) · [Manual de uso](./docs/manual-de-uso.md) · [Metodologia de refatoração](./docs/metodologia-de-refatoracao.md)
 
 ## O que vem dentro
 

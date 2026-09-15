@@ -2,8 +2,9 @@
 
 Guia prático do plugin `pwdev-skills` e da skill `skill-refactor`: instalar, pedir uma revisão
 ou refatoração, descobrir o que roda na sua máquina, medir tamanho em tokens, rodar benchmark
-entre modelos e ler os resultados. O método por trás de cada passo está detalhado em
-[Metodologia de refatoração](./metodologia-de-refatoracao.md).
+entre modelos e ler os resultados. Para um roteiro por cenário — o que dizer ao agente e o que
+esperar — comece pelo [Guia de uso](./guia-de-uso.md); o método por trás de cada passo está
+detalhado em [Metodologia de refatoração](./metodologia-de-refatoracao.md).
 
 > Versão do plugin: 0.1.0 · Runtimes: Claude Code, Codex, Hermes Agent (o benchmark também roda OpenCode)
 
@@ -123,7 +124,8 @@ Baseline e relatório em .planning/refactor/resumo/.
 ```
 
 A skill preserva um baseline dos arquivos originais, aplica a mudança, verifica frontmatter, links
-e comportamento obrigatório, e entrega o resultado com um de três rótulos:
+e comportamento obrigatório, e fecha a entrega com **todos os rótulos conquistados** (eles se
+acumulam; uma refatoração sem benchmark termina `refactored, statically validated`):
 
 | Rótulo | Significa |
 | --- | --- |

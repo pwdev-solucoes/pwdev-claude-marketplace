@@ -24,6 +24,8 @@ manifestos Codex e Hermes.
   (`--hermes-provider openrouter`) e OpenCode (`openrouter/<id>`, exige `opencode providers
   login`), com preços datados de openrouter.ai.
 
+- `docs/guia-de-uso.md`: roteiro por cenário (revisar, refatorar, medir em três braços, casos por
+  contexto, rodada com problema, como pedir), com os números da aplicação de 14/09.
 - `bench.py --regrade <out>`: reclassifica e reavalia uma rodada já executada a partir do
   disco, sem nova chamada, e reescreve o resumo (a rodada grava `meta.json` com os caminhos
   não sanitizados; rodadas anteriores passam `--cases`).
