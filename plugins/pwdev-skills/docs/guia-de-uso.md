@@ -316,7 +316,7 @@ reuniões; ela refatora a skill que resume).
 
 ## 10. Checklist de saída
 
-- [ ] A entrega distingue `refactored` / `statically validated` / `behaviorally evaluated`.
+- [ ] A entrega fecha com os rótulos conquistados — `refactored`, `statically validated` e, só com runs pareados, `behaviorally evaluated`.
 - [ ] Nome, `paths`, metadados, rótulos de saída e proibições da skill-alvo continuam lá.
 - [ ] O que saiu do núcleo está numa referência **com condição de leitura** escrita no núcleo.
 - [ ] `tokens.py --baseline` mostra o corte no `SKILL.md#body`, não na `description`.

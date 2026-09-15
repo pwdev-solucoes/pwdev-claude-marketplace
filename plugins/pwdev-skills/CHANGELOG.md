@@ -4,7 +4,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 Versionamento: `major.minor.patch` do plugin (`.claude-plugin/plugin.json`), igual nos
 manifestos Codex e Hermes.
 
-## [Não publicado] — 2026-09-14
+## [Não publicado] — 2026-09-14 a 2026-09-15
 
 ### Adicionado
 - `scripts/cases.py`: casos de benchmark derivados da skill em refatoração — `--extract`

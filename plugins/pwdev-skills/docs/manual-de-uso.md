@@ -50,7 +50,9 @@ literalmente, ou executar a tarefa da própria skill-alvo.
 | `SKILL.md` | Revisão e refatoração conduzidas pelo agente | Sim |
 | `scripts/discover.py` | Ver runtimes, modelos e padrões disponíveis | Sim (independe da skill) |
 | `scripts/tokens.py` | Medir tamanho por arquivo, camada e cenário | Sim |
-| `scripts/bench.py` + `runtimes.py` + `grade.py` | Benchmark A/B entre modelos | **Não**: usa os casos e a fixture da própria `skill-refactor` (veja [§7](#7-benchmark--benchpy)) |
+| `scripts/bench.py` + `runtimes.py` + `grade.py` | Benchmark A/B entre versões, modelos e runtimes, com braço de controle sem skill | Sim: modo `refactor` mede a skill-refactor sobre uma skill-fixture; modo `task` mede **qualquer skill na tarefa dela** ([§7](#7-benchmark--benchpy)) |
+| `scripts/cases.py` | Gerar os casos de benchmark de uma skill (extrair → propor → aprovar) | Sim, nos dois modos |
+| `.opencode-plugin/install.py` | Expor as skills do plugin ao OpenCode | — (instalação) |
 | `references/*.md` | Protocolo de refatoração, avaliação e contrato de runtime | — |
 
 ## 2. Instalação
@@ -459,14 +461,17 @@ python3 scripts/grade.py <run_dir> --case caso.json --fixture fixture.md
 Uma rodada gera, em `--out`:
 
 ```
-summary.json        tabela de eficiência por modelo, versões, custo, cada run
-benchmark.md        a mesma tabela em Markdown
+summary.json        tabela por modelo, comparação pareada por caso, versões, custo, cada run
+benchmark.md        as mesmas tabelas em Markdown
 tokens.json         tamanhos das versões comparadas
-eval-<id>-<caso>/<config>/run-<n>-<runtime>-<modelo>/
-    record.json     o que o runtime reportou
+meta.json           caminhos não sanitizados da rodada, para --regrade (nunca publicado)
+eval-<id>-<caso>/<with_skill|without_skill|no_skill>/run-<n>-<runtime>-<modelo>/
+    record.json     o que o runtime reportou (+ reclassified_from depois de um --regrade)
     grading.json    cada expectativa com passed e evidence
     result.txt      resposta do modelo
-    outputs/        artefatos do run
+    stdout.txt / stderr.txt   saída bruta, sanitizada; é daqui que o --regrade reconstrói
+    outputs/target/     a skill-fixture depois do run (modo refactor)
+    outputs/workspace/  o que a skill produziu (modo task)
 ```
 
 ### Status de um run (`record.json`)
@@ -507,7 +512,13 @@ resultados, todos já corrigidos:
 - a métrica proibida aparecia só citada, como proibição;
 - o termo estava em português ("precisão").
 
-Reprovação não é, automaticamente, falha do modelo.
+E na aplicação de 14/09, mais três, também corrigidos:
+- rótulos de entrega escritos só no relatório em `artifacts/`, que o avaliador não lia;
+- run limpo classificado como cota porque a *resposta* citava "rate limit" da documentação;
+- queda de conexão do provedor classificada como `FAIL` em vez de `NOT_RUN`.
+
+Reprovação não é, automaticamente, falha do modelo. Depois de corrigir o avaliador, reavalie a
+rodada com `--regrade` em vez de pagar de novo.
 
 ## 9. Perfis lean e guided
 
@@ -573,6 +584,9 @@ ordem de grandeza, não tabela de preço.**
 | Codex `NOT_RUN: runtime quota or usage limit` | Cota do plano esgotada | Esperar o reset informado na mensagem |
 | Claude `NOT_RUN: per-run budget … reached` | `--max-budget-usd` cortou o turno | Aumentar `--budget-usd` para esse modelo (com uma rodada só dele, o teto por run é o total) |
 | OpenCode `NOT_RUN: provider unavailable … 502 … overloaded` | Provedor gratuito sobrecarregado | Tentar mais tarde ou usar outro modelo |
+| OpenCode `NOT_RUN: runtime quota … Rate limit exceeded` (429, `FreeUsageLimitError`) ou `provider unavailable: Cannot connect to API` | Limite ou instabilidade do nível gratuito do Zen | Poucos runs por vez, ou um modelo pago via OpenRouter (`opencode providers login`) |
+| Run limpo marcado `NOT_RUN` por cota, mas a resposta só *cita* "rate limit" | Versão antiga do classificador lia o texto da resposta | Atualizar o `runtimes.py` e rodar `--regrade` |
+| `task cases without usable checks` antes de qualquer chamada | Caso sem `checks`, tipo desconhecido ou caminho absoluto/`..` | Corrigir o `cases.json`; a lista de problemas vem na mensagem |
 | Hermes estoura o timeout | Contexto enorme ou lentidão do provedor | Aumentar `--timeout` (1800) e repetir; o tempo varia muito entre execuções |
 | Hermes: `Unknown skill(s)` | Uso de `--skills` com um nome não confiado | O harness não usa essa opção; se aparecer, a versão do `runtimes.py` está desatualizada |
 | Run `FAIL: a protected path changed` | Algo foi escrito fora do workspace, ou a cópia da skill foi editada | Ver `record.protected_diff` |
@@ -586,7 +600,8 @@ ordem de grandeza, não tabela de preço.**
 ## 13. Limites
 
 - **Uma repetição não caracteriza nada.** Na validação, o mesmo modelo Hermes deu 7/7 e 6/7 em execuções diferentes. Use `--reps` ≥ 3 antes de decidir.
-- **O fixture padrão de `bench.py` é a skill-refactor.** Para medir outra skill com casos do domínio dela, gere-os com `cases.py` (§7); a avaliação lê os invariantes do caso.
+- **No modo `task`, só o que o caso declara é avaliado.** Qualidade além das verificações (estilo, completude não declarada) precisa de leitura humana dos `outputs/`.
+- **`evals.json` mede a skill-refactor.** Para medir outra skill, gere os casos com `cases.py` (§7): tipo `task` para a tarefa dela, tipo `refactor` para a skill-refactor sobre ela.
 - **Cada runtime expõe a skill de um jeito:** o Claude Code por plugin gerado, o Codex e o Hermes por `AGENTS.md`, e o OpenCode de forma nativa. Só no OpenCode se mede acionamento real; comparações de tokens entre runtimes são aproximadas.
 - **Os runtimes carregam também as skills e plugins globais do usuário**, e isso entra no contexto medido.
 - **O Codex não informa o modelo usado.** A única evidência é o runtime ter aceito o slug.
@@ -608,10 +623,22 @@ python3 scripts/tokens.py <skill> --baseline <versao-anterior>
 python3 scripts/bench.py --skill . --only-case 3 --runtimes claude \
   --claude-models claude-haiku-4-5-20251001 --budget-usd 1 --out "$(mktemp -d)"
 
-# A/B completo, publicando os resumos
-python3 scripts/bench.py --skill . --baseline git:<sha> --runtimes auto --hermes-model default \
+# A/B completo em três braços, publicando os resumos
+python3 scripts/bench.py --skill . --baseline git:<sha> --no-skill-arm --runtimes auto --hermes-model default \
   --acknowledge-hermes-automation --budget-usd 5 --reps 3 \
   --out "$(mktemp -d)" --publish evals/benchmarks/$(date +%F)
+
+# qualquer skill na tarefa dela (modo task): casos gerados e aprovados, depois o A/B
+python3 scripts/cases.py --extract <skill> --kind task
+python3 scripts/cases.py --propose <skill>/evals/cases/<nome> --runtime claude --model claude-sonnet-5
+python3 scripts/cases.py --approve <skill>/evals/cases/<nome> --skill <skill>
+python3 scripts/bench.py --skill <skill> --baseline <versao-anterior> --no-skill-arm --cases <skill>/evals/cases/<nome> ...
+
+# corrigiu o avaliador? reavalie a rodada paga sem nova chamada
+python3 scripts/bench.py --regrade <out> --cases evals/evals.json --publish evals/benchmarks/<data>
+
+# OpenCode: expor a skill (link em ~/.config/opencode/skills)
+python3 ../../.opencode-plugin/install.py
 
 # pipeline sem custo (na raiz do marketplace)
 python3 -m unittest tests.test_skill_refactor_bench tests.test_skills_packaging

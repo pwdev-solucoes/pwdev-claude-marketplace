@@ -31,7 +31,7 @@ Inclui 1 skill. Sem comandos, subagentes, hooks ou servidor MCP.
 
 ## Setup
 
-Clone este marketplace e trabalhe a partir da raiz. Nada se instala sozinho nem altera configuração pessoal.
+Clone este marketplace e trabalhe a partir da raiz. Nada se instala sozinho; o único passo que grava fora do checkout é o instalador do OpenCode abaixo, só na pasta de skills do OpenCode, e só quando você o roda.
 
 **Claude Code**: instale pelo marketplace ou carregue o checkout para uma sessão:
 
@@ -76,8 +76,13 @@ pasta instalada. Uma instalação por *plugin* no Claude Code fica no cache de p
 cd plugins/pwdev-skills/skills/skill-refactor
 python3 scripts/discover.py                          # runtimes, padrões e modelos disponíveis aqui
 python3 scripts/tokens.py <pasta-da-skill> --baseline <versao-anterior>
-python3 scripts/bench.py --skill <pasta-da-skill> --baseline git:<sha> --runtimes auto \
+python3 scripts/bench.py --skill <pasta-da-skill> --baseline git:<sha> --no-skill-arm --runtimes auto \
   --out "$(mktemp -d)" --publish evals/benchmarks/$(date +%F) --budget-usd 5
+
+# qualquer skill na tarefa dela: gere os casos (tipo task), aprove, e rode o mesmo A/B sobre essa skill
+python3 scripts/cases.py --extract <pasta-da-skill> --kind task && python3 scripts/cases.py --propose <pasta-da-skill>/evals/cases/<nome> --runtime claude --model claude-sonnet-5
+python3 scripts/cases.py --approve <pasta-da-skill>/evals/cases/<nome> --skill <pasta-da-skill>
+python3 scripts/bench.py --skill <pasta-da-skill> --baseline <versao-anterior> --no-skill-arm --cases <pasta-da-skill>/evals/cases/<nome> ...
 ```
 
 Use um `--out` temporário. Uma rodada grava workspaces e cópias de versão que contêm arquivos
@@ -97,3 +102,4 @@ Use um `--out` temporário. Uma rodada grava workspaces e cópias de versão que
 - O Codex em plano ChatGPT não é cobrado por token; os custos dele são equivalentes ao preço de API.
 - O Claude Code não tem comando para listar modelos; a descoberta mostra os aliases documentados e as opções em cache.
 - Cada runtime expõe a skill de um jeito: o Claude Code por plugin gerado, o Codex e o Hermes por `AGENTS.md`, e o OpenCode de forma nativa. Por isso, comparações de tokens entre runtimes são aproximadas.
+- No modo `task`, só as verificações declaradas são avaliadas; qualidade além delas exige leitura humana dos `outputs/`.

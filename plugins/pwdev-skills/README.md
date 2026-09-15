@@ -31,7 +31,7 @@ Ships 1 skill. No commands, subagents, hooks or MCP server.
 
 ## Setup
 
-Clone this marketplace and work from its root. Nothing installs itself or changes personal configuration.
+Clone this marketplace and work from its root. Nothing installs itself; the only step that writes outside the checkout is the OpenCode installer below, and only into OpenCode's skills folder, when you run it.
 
 **Claude Code** — install from the marketplace, or load the checkout for one session:
 
@@ -76,8 +76,13 @@ from the installed folder. A Claude Code *plugin* install lives in Claude's plug
 cd plugins/pwdev-skills/skills/skill-refactor
 python3 scripts/discover.py                          # runtimes, defaults, models available here
 python3 scripts/tokens.py <skill-dir> --baseline <previous-version>
-python3 scripts/bench.py --skill <skill-dir> --baseline git:<sha> --runtimes auto \
+python3 scripts/bench.py --skill <skill-dir> --baseline git:<sha> --no-skill-arm --runtimes auto \
   --out "$(mktemp -d)" --publish evals/benchmarks/$(date +%F) --budget-usd 5
+
+# any skill on its own tasks: generate cases (kind task), approve them, then the same A/B on that skill
+python3 scripts/cases.py --extract <skill-dir> --kind task && python3 scripts/cases.py --propose <skill-dir>/evals/cases/<name> --runtime claude --model claude-sonnet-5
+python3 scripts/cases.py --approve <skill-dir>/evals/cases/<name> --skill <skill-dir>
+python3 scripts/bench.py --skill <skill-dir> --baseline <previous-version> --no-skill-arm --cases <skill-dir>/evals/cases/<name> ...
 ```
 
 Use a temporary `--out`: a round writes workspaces and version copies that contain `SKILL.md`
@@ -97,3 +102,4 @@ files. `--publish` copies only `summary.json`, `benchmark.md` and `tokens.json` 
 - Codex on a ChatGPT plan is not billed per token. Its costs are API-price equivalents.
 - Claude Code has no model-listing command: discovery reports the documented aliases and cached options.
 - Runtimes expose the skill differently: Claude Code through a generated plugin, Codex and Hermes through `AGENTS.md`, OpenCode natively. Token comparisons across runtimes are approximate.
+- In task mode only the declared checks are graded; quality beyond them needs a human reading of `outputs/`.
