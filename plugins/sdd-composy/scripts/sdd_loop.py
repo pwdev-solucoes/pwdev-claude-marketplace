@@ -248,16 +248,21 @@ def cancel(root, loop_id, reason="Cancelled by user", now=None):
 
 def orchestrate(root, task_id, engine, *, loop_id=None, max_iterations=3,
                 human_approved=False, task_publish=None, trace_publish=None,
-                cancel_check=None, now=None):
+                cancel_check=None, now=None, contract_extra=None):
     """Run the five canonical stages through a validated runtime engine.
 
     ``engine`` receives a stage contract and returns the runtime result contract.
+    ``contract_extra`` carries runtime authorization (consent, isolation, permission
+    mode) into every stage contract; it can never replace the stage identity.
     Publication is performed only after the result is validated and successful;
     optional publishers receive the task/trace event and are never used to
     decide lifecycle state.  This keeps provider policy out of the core loop.
     """
     if not human_approved:
         raise LoopError("human approval is required")
+    extra = dict(contract_extra or {})
+    if not set(extra).isdisjoint({"stage", "task_id", "iteration"}):
+        raise LoopError("contract extras cannot override stage identity")
     if loop_id:
         try:
             data = status(root, loop_id)
@@ -279,7 +284,7 @@ def orchestrate(root, task_id, engine, *, loop_id=None, max_iterations=3,
         stage = resume_state["next_stage"]
         if stage is None:
             return continue_loop(root, loop_id, outcome="complete", now=now)
-        contract = {"stage": stage, "task_id": task_id, "iteration": data["iteration"] + 1}
+        contract = {**extra, "stage": stage, "task_id": task_id, "iteration": data["iteration"] + 1}
         try:
             result = engine(contract)
         except Exception as exc:

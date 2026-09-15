@@ -58,8 +58,10 @@ python3 plugins/sdd-composy/.opencode-plugin/install.py --uninstall  # remove o 
 
 Ele linka, nunca copia: `scripts/`, `references/` e `templates/` são alcançados pelo link. Uma
 instalação como *plugin* do Claude Code fica no cache de plugins do Claude e não torna as skills
-visíveis ao OpenCode; o instalador torna. `LOOP` e `FLEET` não têm engine OpenCode nesta versão:
-no OpenCode eles reportam `NOT_RUN`, nunca um fallback para outro provider.
+visíveis ao OpenCode; o instalador torna. `LOOP` e `FLEET` rodam no OpenCode por adaptadores
+dedicados (`scripts/loop-engine-opencode.py`, `scripts/fleet/engine-opencode.sh`) com o vetor
+`opencode run --dir <worktree> --format json [--auto]`; veja [opencode-tools.md](./references/opencode-tools.md).
+Testes offline de adaptador estabelecem suporte, não aceitação real de provider.
 
 A automação Hermes de LOOP/fleet usa `hermes -z <prompt> --in <worktree>` somente após
 comprovar isolamento independente ou obter consentimento específico do usuário. Nenhum adaptador

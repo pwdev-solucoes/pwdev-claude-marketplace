@@ -52,7 +52,7 @@ Commands: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 | Plugin | Description | Version | License |
 |--------|-------------|:-------:|:-------:|
 | [**pwdev-flow**](./plugins/pwdev-flow/) | Portable spec-driven development for Claude Code **and** Codex — one `.planning/flow` contract, 17 commands, semantic opt-in audit, guarded external CLI delegation, isolated native fleets (`claude -p` / `codex exec`) | 0.6.0 | Apache-2.0 |
-| [**sdd-composy**](./plugins/sdd-composy/) | Portable spec-driven development for Claude Code and Codex — shared contracts, durable state, OKF v0.2 artifacts, traceability, bounded loops, and isolated fleets | 0.1.0 | Apache-2.0 |
+| [**sdd-composy**](./plugins/sdd-composy/) | Portable spec-driven development for Claude Code, Codex, Hermes and OpenCode — shared contracts, durable state, OKF v0.2 artifacts, traceability, bounded loops, and isolated fleets | 0.1.0 | Apache-2.0 |
 | [**pwdev-power**](./plugins/pwdev-power/) | Disciplined spec-driven development for Claude Code, Codex **and** Hermes Agent — brainstorm gate, plans with verbatim constraints, subagent-driven execution with a ledger and bounded fix loop, adversarial verification, codebase map, isolated cmux fleets as a visual panel or unattended | 0.2.0 | Apache-2.0 |
 | [**pwdev-code**](./plugins/pwdev-code/) | Spec-driven development — 8 real subagents (incl. advisor), per-task model routing, memory graph, opt-in parallel waves, external CLI delegation (Codex/OpenCode/Kimi/Gemini/Kiro), 23 commands | 2.4.0 | Apache-2.0 |
 | [**pwdev-uiux**](./plugins/pwdev-uiux/) | UI/UX engineering — 6 real subagents, 5-phase workflow with gates, Figma, WCAG 2.1 AA | 2.0.1 | Apache-2.0 |

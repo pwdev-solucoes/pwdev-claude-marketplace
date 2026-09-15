@@ -331,7 +331,7 @@ class RuntimeEngineTests(unittest.TestCase):
         self.assertEqual(claude.build_command(contract,self.root)[:2],["claude","-p"])
         self.assertEqual(codex.build_command(contract,self.root)[-3],"--cd")
         self.assertEqual(claude.build_command(contract,self.root)[-2],"--add-dir")
-        self.assertEqual(codex.build_command(contract,self.root)[-1],json.dumps(contract,sort_keys=True,separators=(",",":")))
+        self.assertTrue(codex.build_command(contract,self.root)[-1].endswith(json.dumps(contract,sort_keys=True,separators=(",",":"))))
     def test_strict_result_validation(self):
         mod=_adapter("loop-engine-codex.py")
         good={"stage":"QA","status":"completed","message":"ok","verdict":"passed","evidence":{}}

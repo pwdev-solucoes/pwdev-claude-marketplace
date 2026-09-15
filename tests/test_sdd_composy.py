@@ -734,7 +734,7 @@ class SddComposyOperationalSchemaTest(unittest.TestCase):
     def test_fleet_runtime_ui_and_terminal_enums(self) -> None:
         member = self.schema("fleet-member")
         result = self.schema("fleet-result")
-        self.assertEqual(member["definitions"]["runtime"]["enum"], ["claude-code", "codex", "hermes"])
+        self.assertEqual(member["definitions"]["runtime"]["enum"], ["claude-code", "codex", "hermes", "opencode"])
         self.assertEqual(member["definitions"]["ui"]["enum"], ["cmux", "tmux", "headless"])
         assert_schema_valid(self, member, {"schema_version": "2", "id": "member-001", "task_id": "TASK-005", "status": "running", "runtime": "hermes", "ui": "headless", "branch": "codex/schemas", "worktree_path": "/tmp/worktree", "repository_root": "/tmp/repository", "started_at": "2026-09-08T12:00:00Z", "updated_at": "2026-09-08T12:01:00Z", "owner": {"kind":"sdd-composy-fleet","fleet_id":"demo","member_id":"member-001"}, "resources": {"branch":"codex/schemas","worktree_path":"/tmp/worktree","port":43000,"compose_project":"sdd_fleet_demo","compose_file":".planning/sdd-composy/fleet/demo/docker-compose.yml","compose_allocated":False}, "x-host": "local"})
         assert_schema_valid(self, result, {"schema_version": "1", "member_id": "member-001", "task_id": "TASK-005", "status": "completed", "commit": "0123456789abcdef0123456789abcdef01234567", "verification": [{"command": "python3 -m unittest", "result": "passed", "output_sha256": "a" * 64}], "completed_at": "2026-09-08T12:30:00Z", "x-review": True})

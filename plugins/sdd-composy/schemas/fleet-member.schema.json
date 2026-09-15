@@ -60,7 +60,7 @@
     "member_id": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._-]*$"},
     "task_id": {"type": "string", "pattern": "^TASK-[0-9]{3,}$"},
     "member_status": {"enum": ["pending", "running", "completed", "failed", "blocked", "cancelled"]},
-    "runtime": {"enum": ["claude-code", "codex", "hermes"]},
+    "runtime": {"enum": ["claude-code", "codex", "hermes", "opencode"]},
     "ui": {"enum": ["cmux", "tmux", "headless"]},
     "interaction_state": {"enum": ["starting", "running", "awaiting_human", "completed", "inconclusive", "blocked", "failed"]},
     "relative_path": {"type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},

@@ -21,6 +21,7 @@ def load(path, name):
 
 CODEX = load(PLUGIN / "scripts/loop-engine-codex.py", "sdd_loop_codex_test")
 HERMES = load(PLUGIN / "scripts/loop-engine-hermes.py", "sdd_loop_hermes_test")
+OPENCODE = load(PLUGIN / "scripts/loop-engine-opencode.py", "sdd_loop_opencode_test")
 
 
 def contract(stage="plan", **extra):
@@ -85,7 +86,8 @@ print(json.dumps({result()!r}))
                 HERMES.run(contract(), Path(directory), executable="must-not-run")
 
     def test_adapters_fail_closed_for_process_error_timeout_and_invalid_output(self):
-        for adapter, permission in ((CODEX, {}), (HERMES, {"automation_consent": True})):
+        for adapter, permission in ((CODEX, {}), (HERMES, {"automation_consent": True}),
+                                    (OPENCODE, {"automation_consent": True})):
             with self.subTest(adapter=adapter.__name__), tempfile.TemporaryDirectory() as directory:
                 bad = executable(directory, "bad", "import sys; sys.exit(19)\n")
                 with self.assertRaisesRegex(adapter.RuntimeError_, "status 19"):
@@ -100,7 +102,7 @@ print(json.dumps({result()!r}))
                     adapter.run(contract(**permission), Path(directory), executable=str(Path(directory) / "missing"))
 
     def test_adapters_reject_stage_identity_and_synthetic_canonical_verify(self):
-        for adapter in (CODEX, HERMES):
+        for adapter in (CODEX, HERMES, OPENCODE):
             with self.subTest(adapter=adapter.__name__):
                 with self.assertRaisesRegex(adapter.RuntimeError_, "requested stage"):
                     adapter.validate_result(result("qa"), "plan")
@@ -113,7 +115,7 @@ print(json.dumps({result()!r}))
                                             stage_contract=contract("VERIFY"))
 
     def test_adapters_verify_canonical_record_against_durable_loop(self):
-        for adapter in (CODEX, HERMES):
+        for adapter in (CODEX, HERMES, OPENCODE):
             with self.subTest(adapter=adapter.__name__), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 loops = root / ".planning/sdd-composy/loops"
@@ -210,6 +212,82 @@ class FleetInteractiveAdapterTests(unittest.TestCase):
             "quote ' ; $HOME",
         ])
         self.assert_safe(argv)
+
+    def test_opencode_interactive_vector_targets_worktree_with_prompt(self):
+        cwd, argv = self.interactive_command("opencode")
+        self.assertEqual(cwd, "")
+        self.assertEqual(argv[:4], ["opencode", "/work tree", "--prompt", "quote ' ; $HOME"])
+        self.assert_safe(argv)
+
+
+class OpenCodeLoopAdapterTests(unittest.TestCase):
+    def test_uses_confirmed_native_vector_with_consent_prompt_and_json_ndjson(self):
+        with tempfile.TemporaryDirectory() as directory:
+            capture = Path(directory) / "capture.json"
+            wanted = contract(automation_consent=True, prompt="quote ' ; $(touch nope)")
+            final = json.dumps(result())
+            fake = executable(directory, "opencode", f'''import json, os, pathlib, sys
+pathlib.Path({str(capture)!r}).write_text(json.dumps({{"argv": sys.argv[1:], "cwd": os.getcwd()}}))
+print(json.dumps({{"type": "text", "part": {{"type": "text", "text": {final!r}}}}}))
+''')
+            self.assertEqual(OPENCODE.run(wanted, Path(directory), executable=str(fake)), result())
+            called = json.loads(capture.read_text())
+            argv, cwd = called["argv"], called["cwd"]
+            self.assertEqual(argv[0], "run")
+            self.assertEqual(argv[1:3], ["--dir", directory])
+            self.assertEqual(Path(cwd).resolve(), Path(directory).resolve())
+            self.assertIn("--format", argv)
+            self.assertEqual(argv[argv.index("--format") + 1], "json")
+            self.assertNotIn("--auto", argv)
+            self.assertNotIn("--dangerously-skip-permissions", argv)
+            self.assertIn(wanted["prompt"], argv[-1])
+
+    def test_requires_isolation_or_specific_consent(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(OPENCODE.RuntimeError_, "isolation or automation consent"):
+                OPENCODE.run(contract(), Path(directory), executable="must-not-run")
+
+
+class OpenCodeFleetEngineTests(unittest.TestCase):
+    SCRIPT = PLUGIN / "scripts/fleet/engine-opencode.sh"
+
+    def stage_command(self, env=None):
+        shell = (f'source "{self.SCRIPT}"\n'
+                 'sdd_engine_opencode_stage_command "/work tree" "/schema" "/result" "quote \' ; \\$HOME"\n'
+                 'printf "cwd=%s\\n" "$FLOW_ENGINE_CWD"\n'
+                 'printf "stdout=%s\\n" "$FLOW_ENGINE_RESULT_FROM_STDOUT"\n'
+                 'printf "%s\\n" "${FLOW_ENGINE_COMMAND[@]}"\n')
+        return subprocess.run(["/bin/bash", "-c", shell], env={**os.environ, **(env or {})},
+                              text=True, capture_output=True, check=False)
+
+    def test_fleet_vector_is_native_and_requires_explicit_authorization(self):
+        denied = self.stage_command()
+        self.assertNotEqual(denied.returncode, 0)
+        allowed = self.stage_command({"SDD_OPENCODE_AUTOMATION_CONSENT": "1"})
+        self.assertEqual(allowed.returncode, 0, allowed.stderr)
+        self.assertEqual(allowed.stdout.splitlines()[2:],
+                         ["opencode", "run", "--dir", "/work tree", "--format", "json", "quote ' ; $HOME"])
+
+    def test_safe_mode_never_auto_approves_and_danger_mode_does(self):
+        allowed = self.stage_command({"SDD_OPENCODE_AUTOMATION_CONSENT": "1"})
+        self.assertNotIn("--auto", allowed.stdout.splitlines()[2:])
+        elevated = self.stage_command({"SDD_OPENCODE_AUTOMATION_CONSENT": "1",
+                                       "SDD_FLEET_PERMISSION_MODE": "danger-full-access"})
+        self.assertIn("--auto", elevated.stdout.splitlines()[2:])
+
+    def test_publish_result_decodes_the_last_text_part_and_fails_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            raw = Path(directory) / "raw"
+            result_path = Path(directory) / "result.json"
+            good = json.dumps({"type": "text", "part": {"type": "text", "text": json.dumps(result())}}) + "\n"
+            raw.write_text('{"type":"other"}\n' + good, encoding="utf-8")
+            shell = (f'source "{self.SCRIPT}"\n'
+                     f'sdd_engine_opencode_publish_result "{raw}" "{result_path}"\n')
+            self.assertEqual(subprocess.run(["/bin/bash", "-c", shell]).returncode, 0)
+            self.assertEqual(json.loads(result_path.read_text()), result())
+            raw.write_text('{"type":"other"}\n')
+            shell += 'exit 0\n'
+            self.assertNotEqual(subprocess.run(["/bin/bash", "-c", shell]).returncode, 0)
 
 
 class HermesBootstrapTests(unittest.TestCase):

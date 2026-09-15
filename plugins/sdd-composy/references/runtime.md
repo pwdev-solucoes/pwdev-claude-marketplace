@@ -43,10 +43,18 @@ truth. No adapter falls back to another provider.
 
 | Runtime | Vector | Engine adapters |
 |---|---|---|
-| Claude Code | `claude -p` with JSON output | `scripts/loop-engine-claude.py`, `scripts/fleet/engine-claude.sh` |
-| Codex | `codex exec` with an output schema and result file | `scripts/loop-engine-codex.py`, `scripts/fleet/engine-codex.sh` |
+| Claude Code | `claude -p <contract> --output-format json --no-session-persistence --permission-mode acceptEdits --add-dir <worktree>`; `--dangerously-skip-permissions` replaces the permission mode only for `danger-full-access` with isolation or consent | `scripts/loop-engine-claude.py`, `scripts/fleet/engine-claude.sh` |
+| Codex | `codex exec --sandbox workspace-write` with a result file (the fleet adapter also passes the output schema) | `scripts/loop-engine-codex.py`, `scripts/fleet/engine-codex.sh` |
 | Hermes Agent | `hermes -z <prompt> --in <worktree>`, only after independently established isolation or the user's specific consent | `scripts/loop-engine-hermes.py`, `scripts/fleet/engine-hermes.sh` |
-| OpenCode | `opencode run --format json --dir <worktree> --auto` (observed in OpenCode 1.18.31; earlier releases used `--dangerously-skip-permissions`) | **none in this release**: LOOP and FLEET on OpenCode are `NOT_RUN`, never a fallback |
+| OpenCode | `opencode run --dir <worktree> --format json [--auto]`; `--auto` obeys the same isolation and consent rules as every other runtime (safe fleet mode never passes it; `danger-full-access` does) | `scripts/loop-engine-opencode.py`, `scripts/fleet/engine-opencode.sh`; see [opencode-tools.md](opencode-tools.md) |
+
+The four LOOP engines share `scripts/loop_engine_common.py`: one result validator (the five
+result keys plus the orchestrator guard signals such as `destructive` and `scope_changed`), one
+VERIFY command-record check against the LOOP record in the main repository root (never the
+member worktree), one consent rule, and one provider environment that keeps authentication and
+locale variables (`HOME`, `XDG_*`, `*_API_KEY`, provider prefixes) and drops everything else.
+A fleet member passes its authorization as `SDD_<RUNTIME>_ISOLATED=1` or
+`SDD_<RUNTIME>_AUTOMATION_CONSENT=1` plus `SDD_FLEET_PERMISSION_MODE`.
 
 Hermes Kanban is not implemented, so it is unavailable rather than an alternate orchestration
 route. Fleet Compose is runtime-neutral; its central file, project name, and teardown identity are

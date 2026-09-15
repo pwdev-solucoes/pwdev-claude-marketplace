@@ -116,11 +116,11 @@ fi
 [[ $# -eq 2 || $# -eq 3 ]] || usage
 SLUG=$1; WORKTREE_INPUT=$2
 EXPECTED_RUNTIME=${SDD_FLEET_RUNTIME:-}
-case "$EXPECTED_RUNTIME" in codex|hermes) CLI_RUNTIME=$EXPECTED_RUNTIME;; claude-code) CLI_RUNTIME=claude;; '') fail 'fleet runtime is required';; *) fail "unsupported fleet runtime: $EXPECTED_RUNTIME";; esac
+case "$EXPECTED_RUNTIME" in codex|hermes|opencode) CLI_RUNTIME=$EXPECTED_RUNTIME;; claude-code) CLI_RUNTIME=claude;; '') fail 'fleet runtime is required';; *) fail "unsupported fleet runtime: $EXPECTED_RUNTIME";; esac
 [[ $SLUG =~ ^[A-Za-z0-9][A-Za-z0-9-]*$ && $SLUG != dashboard && $SLUG != DASHBOARD ]] || fail "invalid slug: $SLUG"
 SDD_FLEET_PERMISSION_MODE=safe
 if [[ $# -eq 3 ]]; then [[ $3 == danger-full-access ]] || fail 'permission mode must be danger-full-access'; SDD_FLEET_PERMISSION_MODE=danger-full-access; fi
-# $EXPECTED_RUNTIME is constrained to codex|claude above, so it names the provider binary.
+# $EXPECTED_RUNTIME is constrained to codex|hermes|opencode|claude above, so it names the provider binary.
 for binary in git jq "$CLI_RUNTIME" shasum awk python3 sleep; do command -v "$binary" >/dev/null 2>&1 || fail "required binary unavailable: $binary"; done
 PYTHON3_BIN=$(command -v python3)
 
@@ -237,7 +237,7 @@ if [[ -n $BOUND_LOOP_ID ]]; then
   [[ $BOUND_LOOP_TASK == "$BOUND_TASK_ID" ]] || fail 'bound headless LOOP task identity diverges'
   # A bound member uses the canonical LOOP orchestrator. The legacy fleet
   # stage machine below remains only for pre-interactive v2 records.
-  python3 - "$SCRIPT_DIR/../sdd_loop.py" "$SCRIPT_DIR/../loop-engine-$CLI_RUNTIME.py" "$MAIN_ROOT" "$WORKTREE" "$BOUND_TASK_ID" "$BOUND_LOOP_ID" <<'PY'
+  python3 - "$SCRIPT_DIR/../sdd_loop.py" "$SCRIPT_DIR/../loop-engine-$CLI_RUNTIME.py" "$MAIN_ROOT" "$WORKTREE" "$BOUND_TASK_ID" "$BOUND_LOOP_ID" "$CLI_RUNTIME" <<'PY'
 import importlib.util,json,sys
 def load(name,path):
     spec=importlib.util.spec_from_file_location(name,path); module=importlib.util.module_from_spec(spec)
@@ -245,7 +245,16 @@ def load(name,path):
 loops=load("sdd_fleet_headless_loop",sys.argv[1]); engine_module=load("sdd_fleet_headless_engine",sys.argv[2])
 record=loops.status(sys.argv[3],sys.argv[6])
 if record["id"] != sys.argv[6] or record["task_id"] != sys.argv[5]: raise SystemExit(2)
-result=loops.orchestrate(sys.argv[3],sys.argv[5],lambda contract: engine_module.run(contract,sys.argv[4]),loop_id=sys.argv[6],max_iterations=record["max_iterations"],human_approved=True)
+import os
+from pathlib import Path
+# Authorization mirrors the fleet engine adapters: SDD_<RUNTIME>_ISOLATED or
+# SDD_<RUNTIME>_AUTOMATION_CONSENT, plus SDD_FLEET_PERMISSION_MODE.
+prefix="SDD_"+sys.argv[7].upper()+"_"
+extra={"permission_mode":os.environ.get("SDD_FLEET_PERMISSION_MODE","safe")}
+if os.environ.get(prefix+"ISOLATED")=="1": extra["isolation_confirmed"]=True
+if os.environ.get(prefix+"AUTOMATION_CONSENT")=="1": extra["automation_consent"]=True
+engine=lambda contract: engine_module.run(contract,Path(sys.argv[4]),loop_root=Path(sys.argv[3]))
+result=loops.orchestrate(sys.argv[3],sys.argv[5],engine,loop_id=sys.argv[6],max_iterations=record["max_iterations"],human_approved=True,contract_extra=extra)
 print(json.dumps(result,sort_keys=True))
 raise SystemExit(0 if result["status"] == "completed" else 1)
 PY

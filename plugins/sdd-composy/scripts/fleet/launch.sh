@@ -2,14 +2,14 @@
 set -euo pipefail
 HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$HERE/common.sh"
-usage(){ echo "usage: launch.sh --runtime claude|codex|hermes --root ROOT --fleet-id ID --base-branch BRANCH --task TASK.json [--task TASK.json ...] [--compose] [--ui auto|cmux|tmux|headless]" >&2; exit 2; }
+usage(){ echo "usage: launch.sh --runtime claude|codex|hermes|opencode --root ROOT --fleet-id ID --base-branch BRANCH --task TASK.json [--task TASK.json ...] [--compose] [--ui auto|cmux|tmux|headless]" >&2; exit 2; }
 root= fleet_id= base_branch= compose=0; ui=auto; tasks=(); prepare=0; runtime=
 while (($#)); do case "$1" in
   --root) root=${2:-}; shift 2;; --fleet-id) fleet_id=${2:-}; shift 2;;
   --prepare-only) prepare=1; shift;; --runtime) runtime=${2:-}; shift 2;;
   --base-branch) base_branch=${2:-}; shift 2;; --task) tasks+=("${2:-}"); shift 2;; --compose) compose=1; shift;; --ui) ui=${2:-}; shift 2;; *) usage;; esac; done
 [[ -n "$root" && -n "$fleet_id" && -n "$base_branch" && ${#tasks[@]} -gt 0 ]] || usage
-case "$runtime" in claude) record_runtime=claude-code; cli_runtime=claude;; codex|hermes) record_runtime=$runtime; cli_runtime=$runtime;; '') fleet_die 'launch runtime is required';; *) fleet_die 'unsupported fleet runtime';; esac
+case "$runtime" in claude) record_runtime=claude-code; cli_runtime=claude;; codex|hermes|opencode) record_runtime=$runtime; cli_runtime=$runtime;; '') fleet_die 'launch runtime is required';; *) fleet_die 'unsupported fleet runtime';; esac
 root=$(fleet_abs "$root"); [[ -d "$root/.git" || -f "$root/.git" ]] || fleet_die "root is not a git repository"
 root=$(cd -- "$root" && pwd -P)
 git_root=$(git -C "$root" rev-parse --show-toplevel 2>/dev/null) || fleet_die 'root is not a git repository'
