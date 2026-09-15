@@ -13,8 +13,14 @@ import zlib
 from pathlib import Path
 from unittest import mock
 
-import pdfplumber
-from pypdf import PdfReader
+try:
+    import pdfplumber
+    from pypdf import PdfReader
+except ImportError as exc:  # verification-only dependencies, as test_qa_scenarios already treats them
+    raise unittest.SkipTest(
+        "requires the declared PDF verification environment: Python 3.12 with "
+        "plugins/pwdev-qa/requirements.txt and requirements-dev.txt"
+    ) from exc
 
 from tests.test_qa_contract import load_contract_module, valid_manifest
 from tests.test_qa_verdict import inspections

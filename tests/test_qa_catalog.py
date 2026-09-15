@@ -73,7 +73,8 @@ CLAUDE_EXISTING_ORDER = (
     "pwdev-brain",
 )
 CLAUDE_EXISTING_DIGESTS = (
-    "a7bae3f539ee7311f396da48aeba36a8b0ac1a77586cb92eac77109f0ad18658",
+    # sdd-composy: description and tags name all four supported runtimes.
+    "2652111a1d2cfb45c32f010db347ca084ff3310f62bbebb2dcceac88ee50afc4",
     "4fedf976f5ab35a55d8e61307517e370e1e1396816e50eebf08f73fa4c4a1634",
     "29682dd6eed0918853e4854a0defcc687e2fe36f8f40c5aa55c4370f1e7330ed",
     "c1ef5068d662c6692af9ae4b0935955acc7dad6692990a1fa85c597f6ba935a5",
@@ -202,8 +203,9 @@ class TestQaCatalog(unittest.TestCase):
         self.assertTrue(qa_claude["strict"])
 
         codex = load_json(".agents/plugins/marketplace.json")
-        self.assertEqual(codex["name"], "pwdev-flow")
-        self.assertEqual(codex["interface"], {"displayName": "Pwdev Flow"})
+        # One marketplace identity for both runtimes: the repository name.
+        self.assertEqual(codex["name"], claude["name"])
+        self.assertEqual(codex["interface"], {"displayName": "PWDEV Marketplace"})
         codex_qa_index = len(CODEX_EXISTING)
         self.assertEqual(tuple(codex["plugins"][:codex_qa_index]), CODEX_EXISTING)
         self.assertEqual(

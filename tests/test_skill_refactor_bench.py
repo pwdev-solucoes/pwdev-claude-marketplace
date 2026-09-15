@@ -1430,6 +1430,19 @@ class BenchTest(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self.bench.main(["--skill", str(self.candidate), "--out", str(self.root / "o"), "--runtimes", "hermes"])
 
+    def test_skill_creator_tools_run_on_a_python_that_supports_their_syntax(self):
+        # skill-creator's viewer uses PEP 604 annotations (`dict | None`), so it needs Python >= 3.10
+        # even when the bench itself runs on an older interpreter.
+        fakes = self.root / "pythons"; fakes.mkdir()
+        for name, version in (("python3", "3.9.6"), ("python3.12", "3.12.4")):
+            exe = fakes / name
+            exe.write_text(f"#!/bin/sh\necho {version}\n"); exe.chmod(0o755)
+        chosen = self.bench.tool_python(minimum=(3, 10), search_path=str(fakes), current=(3, 9))
+        self.assertEqual(Path(chosen).name, "python3.12")
+        self.assertEqual(self.bench.tool_python(minimum=(3, 10), search_path=str(fakes), current=(3, 11)), sys.executable)
+        empty = self.root / "none"; empty.mkdir()
+        self.assertIsNone(self.bench.tool_python(minimum=(3, 10), search_path=str(empty), current=(3, 9)))
+
     @unittest.skipUnless(load("bench").skill_creator_tools(load("bench").DEFAULT_SKILL_CREATOR), "skill-creator not installed")
     def test_skill_creator_aggregator_and_static_viewer_consume_the_layout(self):
         out = self.root / "out"

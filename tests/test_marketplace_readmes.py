@@ -11,6 +11,8 @@ drifts silently; a manifest does not.
 
 import json
 import re
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -83,13 +85,22 @@ def inventory_claims(text):
     return claims
 
 
-def plugin_inventory(name):
+def distributed_skills(plugin):
+    """SKILL.md files git would ship: tracked or untracked, never ignored (benchmark copies are)."""
+    listed = subprocess.run(
+        ["git", "-C", str(plugin), "ls-files", "--cached", "--others", "--exclude-standard", "--", "skills"],
+        capture_output=True, text=True, check=True,
+    ).stdout.splitlines()
+    return sum(1 for line in set(listed) if Path(line).name == "SKILL.md" and (plugin / line).is_file())
+
+
+def plugin_inventory(name, root=ROOT):
     """Actual inventory from a plugin directory."""
-    plugin = ROOT / "plugins" / name
+    plugin = root / "plugins" / name
     return {
         "commands": sum(path.is_file() for path in (plugin / "commands").glob("*.md")),
         "subagents": sum(path.is_file() for path in (plugin / "agents").glob("*.md")),
-        "skills": sum(path.is_file() for path in (plugin / "skills").rglob("SKILL.md")),
+        "skills": distributed_skills(plugin),
         "MCP": (plugin / ".mcp.json").is_file(),
         "hooks": (plugin / "hooks").is_dir(),
     }
@@ -162,6 +173,21 @@ class TestMarketplaceCoverage(unittest.TestCase):
                             f"{name}: {plugin} states {stated[dimension]}, "
                             f"real value is {actual[dimension]}",
                         )
+
+
+class TestPluginInventory(unittest.TestCase):
+    def test_skills_ignored_by_git_are_not_counted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            plugin = root / "plugins" / "demo"
+            (plugin / "skills" / "real").mkdir(parents=True)
+            (plugin / "skills" / "real" / "SKILL.md").write_text("---\nname: real\n---\n")
+            copy = plugin / "skills" / "real" / "evals" / "baseline" / "skills" / "copied"
+            copy.mkdir(parents=True)
+            (copy / "SKILL.md").write_text("---\nname: copied\n---\n")
+            (root / ".gitignore").write_text("**/evals/baseline/\n")
+            self.assertEqual(plugin_inventory("demo", root)["skills"], 1)
 
 
 if __name__ == "__main__":

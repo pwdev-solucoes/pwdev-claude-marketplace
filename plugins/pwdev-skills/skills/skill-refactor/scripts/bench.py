@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import statistics
 import subprocess
@@ -426,13 +427,45 @@ def skill_creator_tools(base: Optional[Path]) -> Optional[Dict[str, Path]]:
     return None
 
 
+SKILL_CREATOR_MIN_PYTHON = (3, 10)
+PYTHON_CANDIDATES = ("python3.14", "python3.13", "python3.12", "python3.11", "python3.10", "python3")
+
+
+def tool_python(minimum=SKILL_CREATOR_MIN_PYTHON, search_path: Optional[str] = None,
+                current: Optional[tuple] = None) -> Optional[str]:
+    """An interpreter able to run skill-creator's scripts, which use Python >= 3.10 syntax.
+
+    The bench may run on an older interpreter; the external tools are then run on the newest
+    compatible python3.x found on PATH. None means no compatible interpreter exists.
+    """
+    if tuple(current or sys.version_info[:2]) >= tuple(minimum):
+        return sys.executable
+    for name in PYTHON_CANDIDATES:
+        found = shutil.which(name, path=search_path)
+        if not found:
+            continue
+        try:
+            probe = subprocess.run([found, "-c", "import sys; print('%d.%d' % sys.version_info[:2])"],
+                                   capture_output=True, text=True, timeout=10)
+        except (OSError, subprocess.SubprocessError):
+            continue
+        match = re.match(r"(\d+)\.(\d+)", (probe.stdout or "").strip())
+        if probe.returncode == 0 and match and (int(match.group(1)), int(match.group(2))) >= tuple(minimum):
+            return found
+    return None
+
+
 def run_skill_creator(tools: Dict[str, Path], out: Path, skill_name: str, skill_path: Path) -> Dict[str, Any]:
     result: Dict[str, Any] = {}
-    agg = subprocess.run([sys.executable, "-m", "scripts.aggregate_benchmark", str(out), "--skill-name", skill_name,
+    python = tool_python()
+    if python is None:
+        message = "skill-creator needs Python >= %d.%d and none was found on PATH" % SKILL_CREATOR_MIN_PYTHON
+        return {"aggregate": {"exit_code": 127, "stderr": message}}
+    agg = subprocess.run([python, "-m", "scripts.aggregate_benchmark", str(out), "--skill-name", skill_name,
                           "--skill-path", str(skill_path)], cwd=str(tools["root"]), capture_output=True, text=True)
     result["aggregate"] = {"exit_code": agg.returncode, "stderr": agg.stderr[-500:]}
     if agg.returncode == 0 and (out / "benchmark.json").is_file():
-        view = subprocess.run([sys.executable, str(tools["viewer"]), str(out), "--skill-name", skill_name,
+        view = subprocess.run([python, str(tools["viewer"]), str(out), "--skill-name", skill_name,
                                "--benchmark", str(out / "benchmark.json"), "--static", str(out / "review.html")],
                               capture_output=True, text=True)
         result["viewer"] = {"exit_code": view.returncode, "stderr": view.stderr[-500:]}

@@ -335,6 +335,14 @@ class SddComposyRuntimeContractTest(unittest.TestCase):
             self.assertIn("references/runtime.md", text)
 
 
+class SddComposyMarketplaceEntryTest(unittest.TestCase):
+    def test_marketplace_entry_names_every_supported_runtime(self):
+        entry = next(p for p in json.loads(CLAUDE_MARKETPLACE.read_text(encoding="utf-8"))["plugins"] if p["name"] == "sdd-composy")
+        for runtime in ("Claude Code", "Codex", "Hermes", "OpenCode"):
+            self.assertIn(runtime, entry["description"])
+        self.assertTrue({"claude", "codex", "hermes", "opencode"}.issubset(entry["tags"]))
+
+
 class SddComposyInitAdapterTest(unittest.TestCase):
     def test_init_skill_is_discoverable_with_codex_metadata(self) -> None:
         skill = PLUGIN / "skills" / "sdd-init" / "SKILL.md"

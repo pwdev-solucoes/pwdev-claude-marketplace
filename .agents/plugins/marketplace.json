@@ -1,7 +1,7 @@
 {
-  "name": "pwdev-flow",
+  "name": "pwdev-claude-marketplace",
   "interface": {
-    "displayName": "Pwdev Flow"
+    "displayName": "PWDEV Marketplace"
   },
   "plugins": [
     {

@@ -12,8 +12,14 @@ import unittest
 from pathlib import Path
 from typing import List, Optional
 
-import pdfplumber
-from pypdf import PdfReader
+try:
+    import pdfplumber
+    from pypdf import PdfReader
+except ImportError as exc:  # verification-only dependencies, as test_qa_scenarios already treats them
+    raise unittest.SkipTest(
+        "requires the declared PDF verification environment: Python 3.12 with "
+        "plugins/pwdev-qa/requirements.txt and requirements-dev.txt"
+    ) from exc
 
 
 ROOT = Path(__file__).resolve().parents[1]

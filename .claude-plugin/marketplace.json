@@ -9,9 +9,9 @@
       "name": "sdd-composy",
       "displayName": "SDD Composy — Portable Spec-Driven Development",
       "source": "./plugins/sdd-composy",
-      "description": "Portable spec-driven development for Claude Code and Codex with human-readable contracts, durable operational state, traceability, bounded autonomous correction, and isolated fleets.",
+      "description": "Portable spec-driven development for Claude Code, Codex, Hermes and OpenCode with human-readable contracts, durable operational state, traceability, bounded autonomous correction, and isolated fleets.",
       "category": "workflow",
-      "tags": ["sdd", "workflow", "codex", "claude", "traceability", "verification", "fleet", "portable"],
+      "tags": ["sdd", "workflow", "codex", "claude", "hermes", "opencode", "traceability", "verification", "fleet", "portable"],
       "strict": true
     },
     {
