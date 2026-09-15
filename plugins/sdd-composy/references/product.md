@@ -20,12 +20,8 @@ topology, or an implementation approach. Those decisions belong to the downstrea
 
 ## OKF v0.2 metadata
 
-The PRD is an OKF v0.2 `PRD` concept. Its frontmatter records upstream `sources`, the
-generating actor and timestamp under `generated`, lifecycle `status`, and `verified` gate
-events. The user-problem source is required. Codebase and domain resources are included only
-when they were actually consumed; unused optional source entries are removed when rendering.
-Timestamps use ISO 8601 with an explicit UTC offset, and actors follow the configured OKF
-actor contract.
+The PRD is an OKF v0.2 `PRD` concept with the frontmatter defined in [okf.md](okf.md). The
+user-problem source is required; codebase and domain resources appear only when consumed.
 
 ## Human gate
 

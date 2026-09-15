@@ -1,4 +1,4 @@
 interface:
   display_name: "SDD Quick"
-  short_description: "Bounded five-file SDD change with evidence"
-  default_prompt: "Use $sdd-quick for a precise bounded change; register its TASK record, preserve lifecycle guards, and escalate when scope or verification is not provable."
+  short_description: "Bounded change through the quick path"
+  default_prompt: "Use $sdd-quick for a precise change of at most five files inside an initialized SDD workspace."

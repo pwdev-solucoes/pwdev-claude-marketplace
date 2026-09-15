@@ -1,3 +1,4 @@
-display_name: "SDD QA"
-short_description: "Run portable SDD quality gates and record regression evidence"
-default_prompt: "Use $sdd-qa to assess the qa_required task and produce a traceable QA report."
+interface:
+  display_name: "SDD QA"
+  short_description: "Quality assurance for a task in qa_required"
+  default_prompt: "Use $sdd-qa to assess a qa_required task and produce its QA report."

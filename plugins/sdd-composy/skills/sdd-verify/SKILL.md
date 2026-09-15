@@ -1,33 +1,40 @@
 ---
 name: sdd-verify
-description: Independently verify fresh truth claims for an SDD Composy task.
+description: >
+  Adversarial verification of one SDD Composy task in verify_required: reproduce
+  every claim with fresh commands, build the truth table, refute stale evidence, and
+  produce the verdict that gates complete. Use when review is done and the task
+  claims to be finished — 'verificar a TASK-003', 'a task está pronta mesmo?', 'is
+  this task really complete'. Do NOT use for QA, code review, or a general 'verify
+  my work' outside an SDD task.
 metadata:
   version: 0.1.0
 ---
 
 # SDD Verify
 
-## Workspace language
+This portable skill is the adversarial gate for a task in `verify_required`: independently
+reproduce every required claim with a fresh command, build the truth table, and attempt to refute
+the earlier evidence. Read `templates/verdict.md` and render it, keeping its frontmatter keys and
+headings exactly (translate prose only).
 
-Before generating artifacts, run the bundled `scripts/sdd_language.py <repo-root>`.
-Consume only the persisted `.planning/sdd-composy/config.json` language. If the
-result is `not_initialized`, return it with `next_action: run_init`; do not ask
-for a language here. For `pt-BR`, write human narrative, summaries, descriptions,
-and labels in Brazilian Portuguese; for `en-US`, use English. Translate template
-placeholder prose when rendering, preserving IDs, schema keys, enum values,
-filenames, commands, and parser-required headings. Do not translate user evidence.
+Language: before writing human-facing prose, run `scripts/sdd_language.py <repo-root>` and use the persisted language; on `not_initialized`, return it with `next_action: run_init`. Localization rules: `references/language.md`.
 
-This portable skill reads `references/verification.md` and renders
-`templates/verdict.md` for a task in `verify_required`. independently reproduce
-every required claim with a fresh command, build the truth table, and attempt
-to refute earlier evidence. Record confined evidence paths, SHA-256 digests,
-exit codes, environment, and separate generation and verification actors.
+## Contract
 
-Use only `PASS`, `FAIL`, `STALE`, `ENVIRONMENT_FAILURE`, and `NOT_RUN` verdicts.
-Classify an environment failure separately from a failed test. Reject stale,
-contradictory, missing, or hash-inconsistent evidence. Only all fresh PASS
-claims with non-blocking QA/review and explicit human approval can request
-`COMPLETE`; all other outcomes request `REJECTED` with a sanitized blocker and
-next action. Do not silently change claims, contracts, or source.
+Record confined evidence paths, SHA-256 digests, exit codes, and environment, and keep generation
+and verification actors separate. Use only `PASS`, `FAIL`, `STALE`, `ENVIRONMENT_FAILURE`, and
+`NOT_RUN` verdicts; classify an environment failure separately from a failed test. Reject stale,
+contradictory, missing, or hash-inconsistent evidence.
 
-Do not commit. Do not read or expose secrets. Do not stop user-owned services.
+Only all-fresh `PASS` claims with non-blocking QA/review and explicit human approval approve the
+verdict and request the guarded task transition `verify_required -> complete` (the `COMPLETE`
+workflow stage); every other outcome sets the verdict to `REJECTED` and the task to `rejected`,
+with a sanitized blocker and next action. Do not silently change claims, contracts, or source,
+and do not stop user-owned services.
+
+## Read when
+
+- `references/verification.md` — writing the verdict (verdict semantics, staleness, refutation).
+
+Safety: Do not commit, push, or publish. Do not read or expose `.env`, credentials, tokens, private keys, certificates, or fleet environment files. Full contract: `references/safety.md`.

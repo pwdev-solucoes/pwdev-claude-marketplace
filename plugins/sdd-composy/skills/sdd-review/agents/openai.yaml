@@ -1,3 +1,4 @@
-display_name: "SDD Review"
-short_description: "Review an explicit diff against approved SDD contracts"
-default_prompt: "Use $sdd-review to produce a traceable CODE_REVIEW report and gate the task for verification."
+interface:
+  display_name: "SDD Review"
+  short_description: "Code review of a task in review_required"
+  default_prompt: "Use $sdd-review to review a task's diff against its approved contracts."

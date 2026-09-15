@@ -37,11 +37,8 @@ this product contract.
 
 ## OKF v0.2 and lifecycle
 
-Stories are an OKF v0.2 `STORIES` concept. Frontmatter records every consumed upstream
-resource in `sources`, the generating actor and timestamp under `generated`, lifecycle
-status, applicability, one `human_approval` field, and `verified` gate events. Remove an
-unused optional project source when rendering. Actors follow the configured OKF actor
-contract and timestamps use ISO 8601 with an explicit UTC offset.
+Stories are an OKF v0.2 `STORIES` concept with the frontmatter defined in [okf.md](okf.md) plus
+an `applicability` field.
 
 A draft begins with `lifecycle.status: DRAFT`, `applicability: REQUIRED`,
 `human_approval: PENDING`, and no invented verification event. Approval requires a human to

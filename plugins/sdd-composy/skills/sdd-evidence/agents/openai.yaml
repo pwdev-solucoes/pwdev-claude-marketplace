@@ -1,3 +1,4 @@
-display_name: SDD Evidence
-short_description: Build and verify confined SDD evidence manifests
-default_prompt: Route evidence discovery, rebuild, verification, and optional export through $sdd-evidence without bypassing lifecycle guards.
+interface:
+  display_name: "SDD Evidence"
+  short_description: "Evidence manifests for a task"
+  default_prompt: "Use $sdd-evidence to discover, build, verify, or export a task's evidence manifest."

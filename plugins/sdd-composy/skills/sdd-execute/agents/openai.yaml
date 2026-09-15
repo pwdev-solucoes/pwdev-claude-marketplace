@@ -1,4 +1,4 @@
 interface:
   display_name: "SDD Execute"
-  short_description: "Execute one approved task with auditable evidence"
-  default_prompt: "Use $sdd-execute to execute one ready SDD Composy task with TDD, allowed paths, real verification commands, and guarded transitions."
+  short_description: "Execute one ready task with real evidence"
+  default_prompt: "Use $sdd-execute to implement one ready SDD Composy task."

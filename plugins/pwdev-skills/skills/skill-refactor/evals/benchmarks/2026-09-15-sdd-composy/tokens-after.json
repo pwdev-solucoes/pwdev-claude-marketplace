@@ -1,0 +1,1685 @@
+{
+ "sdd-evidence": {
+  "skill_dir": "plugins/sdd-composy/skills/sdd-evidence",
+  "tokens_source": "estimate:chars/4",
+  "files": {
+   "SKILL.md": {
+    "chars": 2264,
+    "bytes": 2279,
+    "words": 302,
+    "lines": 43,
+    "tokens": 566
+   },
+   "agents/openai.yaml": {
+    "chars": 199,
+    "bytes": 199,
+    "words": 23,
+    "lines": 4,
+    "tokens": 50
+   }
+  },
+  "layers": {
+   "SKILL.md#description": {
+    "chars": 423,
+    "bytes": 428,
+    "words": 62,
+    "lines": 1,
+    "tokens": 106
+   },
+   "SKILL.md#frontmatter": {
+    "chars": 496,
+    "bytes": 501,
+    "words": 69,
+    "lines": 10,
+    "tokens": 124
+   },
+   "SKILL.md#body": {
+    "chars": 1759,
+    "bytes": 1769,
+    "words": 231,
+    "lines": 31,
+    "tokens": 440
+   },
+   "agents/openai.yaml": {
+    "chars": 199,
+    "bytes": 199,
+    "words": 23,
+    "lines": 4,
+    "tokens": 50
+   }
+  },
+  "scenarios": {
+   "review-only (core)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1759,
+    "bytes": 1769,
+    "words": 231,
+    "lines": 31,
+    "tokens": 440
+   },
+   "refactor (core + refactoring)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1759,
+    "bytes": 1769,
+    "words": 231,
+    "lines": 31,
+    "tokens": 440
+   },
+   "refactor + evaluation (core + both references)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1759,
+    "bytes": 1769,
+    "words": 231,
+    "lines": 31,
+    "tokens": 440
+   },
+   "everything (worst case)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1759,
+    "bytes": 1769,
+    "words": 231,
+    "lines": 31,
+    "tokens": 440
+   }
+  },
+  "total": {
+   "chars": 2463,
+   "bytes": 2478,
+   "words": 325,
+   "lines": 47,
+   "tokens": 616
+  }
+ },
+ "sdd-execute": {
+  "skill_dir": "plugins/sdd-composy/skills/sdd-execute",
+  "tokens_source": "estimate:chars/4",
+  "files": {
+   "SKILL.md": {
+    "chars": 2403,
+    "bytes": 2412,
+    "words": 322,
+    "lines": 47,
+    "tokens": 601
+   },
+   "agents/openai.yaml": {
+    "chars": 184,
+    "bytes": 184,
+    "words": 22,
+    "lines": 4,
+    "tokens": 46
+   }
+  },
+  "layers": {
+   "SKILL.md#description": {
+    "chars": 447,
+    "bytes": 450,
+    "words": 67,
+    "lines": 1,
+    "tokens": 112
+   },
+   "SKILL.md#frontmatter": {
+    "chars": 519,
+    "bytes": 522,
+    "words": 74,
+    "lines": 10,
+    "tokens": 130
+   },
+   "SKILL.md#body": {
+    "chars": 1875,
+    "bytes": 1881,
+    "words": 246,
+    "lines": 35,
+    "tokens": 469
+   },
+   "agents/openai.yaml": {
+    "chars": 184,
+    "bytes": 184,
+    "words": 22,
+    "lines": 4,
+    "tokens": 46
+   }
+  },
+  "scenarios": {
+   "review-only (core)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1875,
+    "bytes": 1881,
+    "words": 246,
+    "lines": 35,
+    "tokens": 469
+   },
+   "refactor (core + refactoring)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1875,
+    "bytes": 1881,
+    "words": 246,
+    "lines": 35,
+    "tokens": 469
+   },
+   "refactor + evaluation (core + both references)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1875,
+    "bytes": 1881,
+    "words": 246,
+    "lines": 35,
+    "tokens": 469
+   },
+   "everything (worst case)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1875,
+    "bytes": 1881,
+    "words": 246,
+    "lines": 35,
+    "tokens": 469
+   }
+  },
+  "total": {
+   "chars": 2587,
+   "bytes": 2596,
+   "words": 344,
+   "lines": 51,
+   "tokens": 647
+  }
+ },
+ "sdd-fleet": {
+  "skill_dir": "plugins/sdd-composy/skills/sdd-fleet",
+  "tokens_source": "estimate:chars/4",
+  "files": {
+   "SKILL.md": {
+    "chars": 3051,
+    "bytes": 3059,
+    "words": 418,
+    "lines": 53,
+    "tokens": 763
+   },
+   "agents/openai.yaml": {
+    "chars": 194,
+    "bytes": 194,
+    "words": 25,
+    "lines": 4,
+    "tokens": 48
+   }
+  },
+  "layers": {
+   "SKILL.md#description": {
+    "chars": 456,
+    "bytes": 460,
+    "words": 73,
+    "lines": 1,
+    "tokens": 114
+   },
+   "SKILL.md#frontmatter": {
+    "chars": 526,
+    "bytes": 530,
+    "words": 80,
+    "lines": 10,
+    "tokens": 132
+   },
+   "SKILL.md#body": {
+    "chars": 2516,
+    "bytes": 2520,
+    "words": 336,
+    "lines": 41,
+    "tokens": 629
+   },
+   "agents/openai.yaml": {
+    "chars": 194,
+    "bytes": 194,
+    "words": 25,
+    "lines": 4,
+    "tokens": 48
+   }
+  },
+  "scenarios": {
+   "review-only (core)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2516,
+    "bytes": 2520,
+    "words": 336,
+    "lines": 41,
+    "tokens": 629
+   },
+   "refactor (core + refactoring)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2516,
+    "bytes": 2520,
+    "words": 336,
+    "lines": 41,
+    "tokens": 629
+   },
+   "refactor + evaluation (core + both references)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2516,
+    "bytes": 2520,
+    "words": 336,
+    "lines": 41,
+    "tokens": 629
+   },
+   "everything (worst case)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2516,
+    "bytes": 2520,
+    "words": 336,
+    "lines": 41,
+    "tokens": 629
+   }
+  },
+  "total": {
+   "chars": 3245,
+   "bytes": 3253,
+   "words": 443,
+   "lines": 57,
+   "tokens": 811
+  }
+ },
+ "sdd-init": {
+  "skill_dir": "plugins/sdd-composy/skills/sdd-init",
+  "tokens_source": "estimate:chars/4",
+  "files": {
+   "SKILL.md": {
+    "chars": 3618,
+    "bytes": 3622,
+    "words": 494,
+    "lines": 75,
+    "tokens": 904
+   },
+   "agents/openai.yaml": {
+    "chars": 211,
+    "bytes": 211,
+    "words": 26,
+    "lines": 4,
+    "tokens": 53
+   }
+  },
+  "layers": {
+   "SKILL.md#description": {
+    "chars": 457,
+    "bytes": 459,
+    "words": 73,
+    "lines": 1,
+    "tokens": 114
+   },
+   "SKILL.md#frontmatter": {
+    "chars": 526,
+    "bytes": 528,
+    "words": 80,
+    "lines": 10,
+    "tokens": 132
+   },
+   "SKILL.md#body": {
+    "chars": 3083,
+    "bytes": 3085,
+    "words": 412,
+    "lines": 63,
+    "tokens": 771
+   },
+   "agents/openai.yaml": {
+    "chars": 211,
+    "bytes": 211,
+    "words": 26,
+    "lines": 4,
+    "tokens": 53
+   }
+  },
+  "scenarios": {
+   "review-only (core)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 3083,
+    "bytes": 3085,
+    "words": 412,
+    "lines": 63,
+    "tokens": 771
+   },
+   "refactor (core + refactoring)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 3083,
+    "bytes": 3085,
+    "words": 412,
+    "lines": 63,
+    "tokens": 771
+   },
+   "refactor + evaluation (core + both references)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 3083,
+    "bytes": 3085,
+    "words": 412,
+    "lines": 63,
+    "tokens": 771
+   },
+   "everything (worst case)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 3083,
+    "bytes": 3085,
+    "words": 412,
+    "lines": 63,
+    "tokens": 771
+   }
+  },
+  "total": {
+   "chars": 3829,
+   "bytes": 3833,
+   "words": 520,
+   "lines": 79,
+   "tokens": 957
+  }
+ },
+ "sdd-loop": {
+  "skill_dir": "plugins/sdd-composy/skills/sdd-loop",
+  "tokens_source": "estimate:chars/4",
+  "files": {
+   "SKILL.md": {
+    "chars": 3206,
+    "bytes": 3211,
+    "words": 427,
+    "lines": 56,
+    "tokens": 802
+   },
+   "agents/openai.yaml": {
+    "chars": 208,
+    "bytes": 208,
+    "words": 27,
+    "lines": 4,
+    "tokens": 52
+   }
+  },
+  "layers": {
+   "SKILL.md#description": {
+    "chars": 452,
+    "bytes": 455,
+    "words": 72,
+    "lines": 1,
+    "tokens": 113
+   },
+   "SKILL.md#frontmatter": {
+    "chars": 521,
+    "bytes": 524,
+    "words": 79,
+    "lines": 10,
+    "tokens": 130
+   },
+   "SKILL.md#body": {
+    "chars": 2676,
+    "bytes": 2678,
+    "words": 346,
+    "lines": 44,
+    "tokens": 669
+   },
+   "agents/openai.yaml": {
+    "chars": 208,
+    "bytes": 208,
+    "words": 27,
+    "lines": 4,
+    "tokens": 52
+   }
+  },
+  "scenarios": {
+   "review-only (core)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2676,
+    "bytes": 2678,
+    "words": 346,
+    "lines": 44,
+    "tokens": 669
+   },
+   "refactor (core + refactoring)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2676,
+    "bytes": 2678,
+    "words": 346,
+    "lines": 44,
+    "tokens": 669
+   },
+   "refactor + evaluation (core + both references)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2676,
+    "bytes": 2678,
+    "words": 346,
+    "lines": 44,
+    "tokens": 669
+   },
+   "everything (worst case)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2676,
+    "bytes": 2678,
+    "words": 346,
+    "lines": 44,
+    "tokens": 669
+   }
+  },
+  "total": {
+   "chars": 3414,
+   "bytes": 3419,
+   "words": 454,
+   "lines": 60,
+   "tokens": 854
+  }
+ },
+ "sdd-map": {
+  "skill_dir": "plugins/sdd-composy/skills/sdd-map",
+  "tokens_source": "estimate:chars/4",
+  "files": {
+   "SKILL.md": {
+    "chars": 3328,
+    "bytes": 3334,
+    "words": 441,
+    "lines": 65,
+    "tokens": 832
+   },
+   "agents/openai.yaml": {
+    "chars": 202,
+    "bytes": 202,
+    "words": 25,
+    "lines": 4,
+    "tokens": 50
+   }
+  },
+  "layers": {
+   "SKILL.md#description": {
+    "chars": 458,
+    "bytes": 462,
+    "words": 70,
+    "lines": 1,
+    "tokens": 114
+   },
+   "SKILL.md#frontmatter": {
+    "chars": 526,
+    "bytes": 530,
+    "words": 77,
+    "lines": 10,
+    "tokens": 132
+   },
+   "SKILL.md#body": {
+    "chars": 2793,
+    "bytes": 2795,
+    "words": 362,
+    "lines": 53,
+    "tokens": 698
+   },
+   "agents/openai.yaml": {
+    "chars": 202,
+    "bytes": 202,
+    "words": 25,
+    "lines": 4,
+    "tokens": 50
+   }
+  },
+  "scenarios": {
+   "review-only (core)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2793,
+    "bytes": 2795,
+    "words": 362,
+    "lines": 53,
+    "tokens": 698
+   },
+   "refactor (core + refactoring)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2793,
+    "bytes": 2795,
+    "words": 362,
+    "lines": 53,
+    "tokens": 698
+   },
+   "refactor + evaluation (core + both references)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2793,
+    "bytes": 2795,
+    "words": 362,
+    "lines": 53,
+    "tokens": 698
+   },
+   "everything (worst case)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2793,
+    "bytes": 2795,
+    "words": 362,
+    "lines": 53,
+    "tokens": 698
+   }
+  },
+  "total": {
+   "chars": 3530,
+   "bytes": 3536,
+   "words": 466,
+   "lines": 69,
+   "tokens": 882
+  }
+ },
+ "sdd-prd": {
+  "skill_dir": "plugins/sdd-composy/skills/sdd-prd",
+  "tokens_source": "estimate:chars/4",
+  "files": {
+   "SKILL.md": {
+    "chars": 3931,
+    "bytes": 3941,
+    "words": 557,
+    "lines": 69,
+    "tokens": 983
+   },
+   "agents/openai.yaml": {
+    "chars": 200,
+    "bytes": 200,
+    "words": 25,
+    "lines": 4,
+    "tokens": 50
+   }
+  },
+  "layers": {
+   "SKILL.md#description": {
+    "chars": 415,
+    "bytes": 419,
+    "words": 62,
+    "lines": 1,
+    "tokens": 104
+   },
+   "SKILL.md#frontmatter": {
+    "chars": 483,
+    "bytes": 487,
+    "words": 69,
+    "lines": 10,
+    "tokens": 121
+   },
+   "SKILL.md#body": {
+    "chars": 3439,
+    "bytes": 3445,
+    "words": 486,
+    "lines": 57,
+    "tokens": 860
+   },
+   "agents/openai.yaml": {
+    "chars": 200,
+    "bytes": 200,
+    "words": 25,
+    "lines": 4,
+    "tokens": 50
+   }
+  },
+  "scenarios": {
+   "review-only (core)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 3439,
+    "bytes": 3445,
+    "words": 486,
+    "lines": 57,
+    "tokens": 860
+   },
+   "refactor (core + refactoring)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 3439,
+    "bytes": 3445,
+    "words": 486,
+    "lines": 57,
+    "tokens": 860
+   },
+   "refactor + evaluation (core + both references)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 3439,
+    "bytes": 3445,
+    "words": 486,
+    "lines": 57,
+    "tokens": 860
+   },
+   "everything (worst case)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 3439,
+    "bytes": 3445,
+    "words": 486,
+    "lines": 57,
+    "tokens": 860
+   }
+  },
+  "total": {
+   "chars": 4131,
+   "bytes": 4141,
+   "words": 582,
+   "lines": 73,
+   "tokens": 1033
+  }
+ },
+ "sdd-qa": {
+  "skill_dir": "plugins/sdd-composy/skills/sdd-qa",
+  "tokens_source": "estimate:chars/4",
+  "files": {
+   "SKILL.md": {
+    "chars": 2374,
+    "bytes": 2380,
+    "words": 308,
+    "lines": 44,
+    "tokens": 594
+   },
+   "agents/openai.yaml": {
+    "chars": 191,
+    "bytes": 191,
+    "words": 25,
+    "lines": 4,
+    "tokens": 48
+   }
+  },
+  "layers": {
+   "SKILL.md#description": {
+    "chars": 445,
+    "bytes": 449,
+    "words": 62,
+    "lines": 1,
+    "tokens": 111
+   },
+   "SKILL.md#frontmatter": {
+    "chars": 512,
+    "bytes": 516,
+    "words": 69,
+    "lines": 10,
+    "tokens": 128
+   },
+   "SKILL.md#body": {
+    "chars": 1853,
+    "bytes": 1855,
+    "words": 237,
+    "lines": 32,
+    "tokens": 463
+   },
+   "agents/openai.yaml": {
+    "chars": 191,
+    "bytes": 191,
+    "words": 25,
+    "lines": 4,
+    "tokens": 48
+   }
+  },
+  "scenarios": {
+   "review-only (core)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1853,
+    "bytes": 1855,
+    "words": 237,
+    "lines": 32,
+    "tokens": 463
+   },
+   "refactor (core + refactoring)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1853,
+    "bytes": 1855,
+    "words": 237,
+    "lines": 32,
+    "tokens": 463
+   },
+   "refactor + evaluation (core + both references)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1853,
+    "bytes": 1855,
+    "words": 237,
+    "lines": 32,
+    "tokens": 463
+   },
+   "everything (worst case)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1853,
+    "bytes": 1855,
+    "words": 237,
+    "lines": 32,
+    "tokens": 463
+   }
+  },
+  "total": {
+   "chars": 2565,
+   "bytes": 2571,
+   "words": 333,
+   "lines": 48,
+   "tokens": 642
+  }
+ },
+ "sdd-quick": {
+  "skill_dir": "plugins/sdd-composy/skills/sdd-quick",
+  "tokens_source": "estimate:chars/4",
+  "files": {
+   "SKILL.md": {
+    "chars": 2961,
+    "bytes": 2966,
+    "words": 408,
+    "lines": 50,
+    "tokens": 740
+   },
+   "agents/openai.yaml": {
+    "chars": 215,
+    "bytes": 215,
+    "words": 28,
+    "lines": 4,
+    "tokens": 54
+   }
+  },
+  "layers": {
+   "SKILL.md#description": {
+    "chars": 528,
+    "bytes": 531,
+    "words": 82,
+    "lines": 1,
+    "tokens": 132
+   },
+   "SKILL.md#frontmatter": {
+    "chars": 600,
+    "bytes": 603,
+    "words": 89,
+    "lines": 11,
+    "tokens": 150
+   },
+   "SKILL.md#body": {
+    "chars": 2352,
+    "bytes": 2354,
+    "words": 317,
+    "lines": 37,
+    "tokens": 588
+   },
+   "agents/openai.yaml": {
+    "chars": 215,
+    "bytes": 215,
+    "words": 28,
+    "lines": 4,
+    "tokens": 54
+   }
+  },
+  "scenarios": {
+   "review-only (core)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2352,
+    "bytes": 2354,
+    "words": 317,
+    "lines": 37,
+    "tokens": 588
+   },
+   "refactor (core + refactoring)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2352,
+    "bytes": 2354,
+    "words": 317,
+    "lines": 37,
+    "tokens": 588
+   },
+   "refactor + evaluation (core + both references)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2352,
+    "bytes": 2354,
+    "words": 317,
+    "lines": 37,
+    "tokens": 588
+   },
+   "everything (worst case)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2352,
+    "bytes": 2354,
+    "words": 317,
+    "lines": 37,
+    "tokens": 588
+   }
+  },
+  "total": {
+   "chars": 3176,
+   "bytes": 3181,
+   "words": 436,
+   "lines": 54,
+   "tokens": 794
+  }
+ },
+ "sdd-review": {
+  "skill_dir": "plugins/sdd-composy/skills/sdd-review",
+  "tokens_source": "estimate:chars/4",
+  "files": {
+   "SKILL.md": {
+    "chars": 2940,
+    "bytes": 2944,
+    "words": 410,
+    "lines": 52,
+    "tokens": 735
+   },
+   "agents/openai.yaml": {
+    "chars": 196,
+    "bytes": 196,
+    "words": 24,
+    "lines": 4,
+    "tokens": 49
+   }
+  },
+  "layers": {
+   "SKILL.md#description": {
+    "chars": 432,
+    "bytes": 434,
+    "words": 68,
+    "lines": 1,
+    "tokens": 108
+   },
+   "SKILL.md#frontmatter": {
+    "chars": 503,
+    "bytes": 505,
+    "words": 75,
+    "lines": 10,
+    "tokens": 126
+   },
+   "SKILL.md#body": {
+    "chars": 2428,
+    "bytes": 2430,
+    "words": 333,
+    "lines": 40,
+    "tokens": 607
+   },
+   "agents/openai.yaml": {
+    "chars": 196,
+    "bytes": 196,
+    "words": 24,
+    "lines": 4,
+    "tokens": 49
+   }
+  },
+  "scenarios": {
+   "review-only (core)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2428,
+    "bytes": 2430,
+    "words": 333,
+    "lines": 40,
+    "tokens": 607
+   },
+   "refactor (core + refactoring)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2428,
+    "bytes": 2430,
+    "words": 333,
+    "lines": 40,
+    "tokens": 607
+   },
+   "refactor + evaluation (core + both references)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2428,
+    "bytes": 2430,
+    "words": 333,
+    "lines": 40,
+    "tokens": 607
+   },
+   "everything (worst case)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2428,
+    "bytes": 2430,
+    "words": 333,
+    "lines": 40,
+    "tokens": 607
+   }
+  },
+  "total": {
+   "chars": 3136,
+   "bytes": 3140,
+   "words": 434,
+   "lines": 56,
+   "tokens": 784
+  }
+ },
+ "sdd-status": {
+  "skill_dir": "plugins/sdd-composy/skills/sdd-status",
+  "tokens_source": "estimate:chars/4",
+  "files": {
+   "SKILL.md": {
+    "chars": 1809,
+    "bytes": 1816,
+    "words": 246,
+    "lines": 33,
+    "tokens": 452
+   },
+   "agents/openai.yaml": {
+    "chars": 180,
+    "bytes": 180,
+    "words": 20,
+    "lines": 4,
+    "tokens": 45
+   }
+  },
+  "layers": {
+   "SKILL.md#description": {
+    "chars": 365,
+    "bytes": 370,
+    "words": 60,
+    "lines": 1,
+    "tokens": 91
+   },
+   "SKILL.md#frontmatter": {
+    "chars": 434,
+    "bytes": 439,
+    "words": 67,
+    "lines": 9,
+    "tokens": 108
+   },
+   "SKILL.md#body": {
+    "chars": 1366,
+    "bytes": 1368,
+    "words": 177,
+    "lines": 22,
+    "tokens": 342
+   },
+   "agents/openai.yaml": {
+    "chars": 180,
+    "bytes": 180,
+    "words": 20,
+    "lines": 4,
+    "tokens": 45
+   }
+  },
+  "scenarios": {
+   "review-only (core)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1366,
+    "bytes": 1368,
+    "words": 177,
+    "lines": 22,
+    "tokens": 342
+   },
+   "refactor (core + refactoring)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1366,
+    "bytes": 1368,
+    "words": 177,
+    "lines": 22,
+    "tokens": 342
+   },
+   "refactor + evaluation (core + both references)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1366,
+    "bytes": 1368,
+    "words": 177,
+    "lines": 22,
+    "tokens": 342
+   },
+   "everything (worst case)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1366,
+    "bytes": 1368,
+    "words": 177,
+    "lines": 22,
+    "tokens": 342
+   }
+  },
+  "total": {
+   "chars": 1989,
+   "bytes": 1996,
+   "words": 266,
+   "lines": 37,
+   "tokens": 497
+  }
+ },
+ "sdd-stories": {
+  "skill_dir": "plugins/sdd-composy/skills/sdd-stories",
+  "tokens_source": "estimate:chars/4",
+  "files": {
+   "SKILL.md": {
+    "chars": 4067,
+    "bytes": 4078,
+    "words": 554,
+    "lines": 68,
+    "tokens": 1017
+   },
+   "agents/openai.yaml": {
+    "chars": 197,
+    "bytes": 197,
+    "words": 23,
+    "lines": 4,
+    "tokens": 49
+   }
+  },
+  "layers": {
+   "SKILL.md#description": {
+    "chars": 388,
+    "bytes": 393,
+    "words": 62,
+    "lines": 1,
+    "tokens": 97
+   },
+   "SKILL.md#frontmatter": {
+    "chars": 458,
+    "bytes": 463,
+    "words": 69,
+    "lines": 9,
+    "tokens": 114
+   },
+   "SKILL.md#body": {
+    "chars": 3600,
+    "bytes": 3606,
+    "words": 483,
+    "lines": 57,
+    "tokens": 900
+   },
+   "agents/openai.yaml": {
+    "chars": 197,
+    "bytes": 197,
+    "words": 23,
+    "lines": 4,
+    "tokens": 49
+   }
+  },
+  "scenarios": {
+   "review-only (core)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 3600,
+    "bytes": 3606,
+    "words": 483,
+    "lines": 57,
+    "tokens": 900
+   },
+   "refactor (core + refactoring)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 3600,
+    "bytes": 3606,
+    "words": 483,
+    "lines": 57,
+    "tokens": 900
+   },
+   "refactor + evaluation (core + both references)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 3600,
+    "bytes": 3606,
+    "words": 483,
+    "lines": 57,
+    "tokens": 900
+   },
+   "everything (worst case)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 3600,
+    "bytes": 3606,
+    "words": 483,
+    "lines": 57,
+    "tokens": 900
+   }
+  },
+  "total": {
+   "chars": 4264,
+   "bytes": 4275,
+   "words": 577,
+   "lines": 72,
+   "tokens": 1066
+  }
+ },
+ "sdd-sync": {
+  "skill_dir": "plugins/sdd-composy/skills/sdd-sync",
+  "tokens_source": "estimate:chars/4",
+  "files": {
+   "SKILL.md": {
+    "chars": 2621,
+    "bytes": 2632,
+    "words": 338,
+    "lines": 49,
+    "tokens": 655
+   },
+   "agents/openai.yaml": {
+    "chars": 191,
+    "bytes": 191,
+    "words": 19,
+    "lines": 4,
+    "tokens": 48
+   }
+  },
+  "layers": {
+   "SKILL.md#description": {
+    "chars": 425,
+    "bytes": 428,
+    "words": 64,
+    "lines": 1,
+    "tokens": 106
+   },
+   "SKILL.md#frontmatter": {
+    "chars": 494,
+    "bytes": 497,
+    "words": 71,
+    "lines": 10,
+    "tokens": 124
+   },
+   "SKILL.md#body": {
+    "chars": 2118,
+    "bytes": 2126,
+    "words": 265,
+    "lines": 37,
+    "tokens": 530
+   },
+   "agents/openai.yaml": {
+    "chars": 191,
+    "bytes": 191,
+    "words": 19,
+    "lines": 4,
+    "tokens": 48
+   }
+  },
+  "scenarios": {
+   "review-only (core)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2118,
+    "bytes": 2126,
+    "words": 265,
+    "lines": 37,
+    "tokens": 530
+   },
+   "refactor (core + refactoring)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2118,
+    "bytes": 2126,
+    "words": 265,
+    "lines": 37,
+    "tokens": 530
+   },
+   "refactor + evaluation (core + both references)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2118,
+    "bytes": 2126,
+    "words": 265,
+    "lines": 37,
+    "tokens": 530
+   },
+   "everything (worst case)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2118,
+    "bytes": 2126,
+    "words": 265,
+    "lines": 37,
+    "tokens": 530
+   }
+  },
+  "total": {
+   "chars": 2812,
+   "bytes": 2823,
+   "words": 357,
+   "lines": 53,
+   "tokens": 703
+  }
+ },
+ "sdd-tasks": {
+  "skill_dir": "plugins/sdd-composy/skills/sdd-tasks",
+  "tokens_source": "estimate:chars/4",
+  "files": {
+   "SKILL.md": {
+    "chars": 3337,
+    "bytes": 3354,
+    "words": 433,
+    "lines": 60,
+    "tokens": 834
+   },
+   "agents/openai.yaml": {
+    "chars": 211,
+    "bytes": 211,
+    "words": 25,
+    "lines": 4,
+    "tokens": 53
+   }
+  },
+  "layers": {
+   "SKILL.md#description": {
+    "chars": 475,
+    "bytes": 478,
+    "words": 71,
+    "lines": 1,
+    "tokens": 119
+   },
+   "SKILL.md#frontmatter": {
+    "chars": 547,
+    "bytes": 550,
+    "words": 78,
+    "lines": 11,
+    "tokens": 137
+   },
+   "SKILL.md#body": {
+    "chars": 2781,
+    "bytes": 2795,
+    "words": 353,
+    "lines": 47,
+    "tokens": 695
+   },
+   "agents/openai.yaml": {
+    "chars": 211,
+    "bytes": 211,
+    "words": 25,
+    "lines": 4,
+    "tokens": 53
+   }
+  },
+  "scenarios": {
+   "review-only (core)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2781,
+    "bytes": 2795,
+    "words": 353,
+    "lines": 47,
+    "tokens": 695
+   },
+   "refactor (core + refactoring)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2781,
+    "bytes": 2795,
+    "words": 353,
+    "lines": 47,
+    "tokens": 695
+   },
+   "refactor + evaluation (core + both references)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2781,
+    "bytes": 2795,
+    "words": 353,
+    "lines": 47,
+    "tokens": 695
+   },
+   "everything (worst case)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 2781,
+    "bytes": 2795,
+    "words": 353,
+    "lines": 47,
+    "tokens": 695
+   }
+  },
+  "total": {
+   "chars": 3548,
+   "bytes": 3565,
+   "words": 458,
+   "lines": 64,
+   "tokens": 887
+  }
+ },
+ "sdd-techspec": {
+  "skill_dir": "plugins/sdd-composy/skills/sdd-techspec",
+  "tokens_source": "estimate:chars/4",
+  "files": {
+   "SKILL.md": {
+    "chars": 4491,
+    "bytes": 4502,
+    "words": 609,
+    "lines": 74,
+    "tokens": 1123
+   },
+   "agents/openai.yaml": {
+    "chars": 216,
+    "bytes": 216,
+    "words": 23,
+    "lines": 4,
+    "tokens": 54
+   }
+  },
+  "layers": {
+   "SKILL.md#description": {
+    "chars": 457,
+    "bytes": 462,
+    "words": 68,
+    "lines": 1,
+    "tokens": 114
+   },
+   "SKILL.md#frontmatter": {
+    "chars": 532,
+    "bytes": 537,
+    "words": 75,
+    "lines": 11,
+    "tokens": 133
+   },
+   "SKILL.md#body": {
+    "chars": 3950,
+    "bytes": 3956,
+    "words": 532,
+    "lines": 61,
+    "tokens": 988
+   },
+   "agents/openai.yaml": {
+    "chars": 216,
+    "bytes": 216,
+    "words": 23,
+    "lines": 4,
+    "tokens": 54
+   }
+  },
+  "scenarios": {
+   "review-only (core)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 3950,
+    "bytes": 3956,
+    "words": 532,
+    "lines": 61,
+    "tokens": 988
+   },
+   "refactor (core + refactoring)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 3950,
+    "bytes": 3956,
+    "words": 532,
+    "lines": 61,
+    "tokens": 988
+   },
+   "refactor + evaluation (core + both references)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 3950,
+    "bytes": 3956,
+    "words": 532,
+    "lines": 61,
+    "tokens": 988
+   },
+   "everything (worst case)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 3950,
+    "bytes": 3956,
+    "words": 532,
+    "lines": 61,
+    "tokens": 988
+   }
+  },
+  "total": {
+   "chars": 4707,
+   "bytes": 4718,
+   "words": 632,
+   "lines": 78,
+   "tokens": 1177
+  }
+ },
+ "sdd-trace": {
+  "skill_dir": "plugins/sdd-composy/skills/sdd-trace",
+  "tokens_source": "estimate:chars/4",
+  "files": {
+   "SKILL.md": {
+    "chars": 2263,
+    "bytes": 2266,
+    "words": 301,
+    "lines": 44,
+    "tokens": 566
+   },
+   "agents/openai.yaml": {
+    "chars": 173,
+    "bytes": 173,
+    "words": 19,
+    "lines": 4,
+    "tokens": 43
+   }
+  },
+  "layers": {
+   "SKILL.md#description": {
+    "chars": 347,
+    "bytes": 348,
+    "words": 49,
+    "lines": 1,
+    "tokens": 87
+   },
+   "SKILL.md#frontmatter": {
+    "chars": 415,
+    "bytes": 416,
+    "words": 56,
+    "lines": 9,
+    "tokens": 104
+   },
+   "SKILL.md#body": {
+    "chars": 1839,
+    "bytes": 1841,
+    "words": 243,
+    "lines": 33,
+    "tokens": 460
+   },
+   "agents/openai.yaml": {
+    "chars": 173,
+    "bytes": 173,
+    "words": 19,
+    "lines": 4,
+    "tokens": 43
+   }
+  },
+  "scenarios": {
+   "review-only (core)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1839,
+    "bytes": 1841,
+    "words": 243,
+    "lines": 33,
+    "tokens": 460
+   },
+   "refactor (core + refactoring)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1839,
+    "bytes": 1841,
+    "words": 243,
+    "lines": 33,
+    "tokens": 460
+   },
+   "refactor + evaluation (core + both references)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1839,
+    "bytes": 1841,
+    "words": 243,
+    "lines": 33,
+    "tokens": 460
+   },
+   "everything (worst case)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1839,
+    "bytes": 1841,
+    "words": 243,
+    "lines": 33,
+    "tokens": 460
+   }
+  },
+  "total": {
+   "chars": 2436,
+   "bytes": 2439,
+   "words": 320,
+   "lines": 48,
+   "tokens": 609
+  }
+ },
+ "sdd-verify": {
+  "skill_dir": "plugins/sdd-composy/skills/sdd-verify",
+  "tokens_source": "estimate:chars/4",
+  "files": {
+   "SKILL.md": {
+    "chars": 2161,
+    "bytes": 2166,
+    "words": 297,
+    "lines": 40,
+    "tokens": 540
+   },
+   "agents/openai.yaml": {
+    "chars": 213,
+    "bytes": 213,
+    "words": 24,
+    "lines": 4,
+    "tokens": 53
+   }
+  },
+  "layers": {
+   "SKILL.md#description": {
+    "chars": 431,
+    "bytes": 434,
+    "words": 72,
+    "lines": 1,
+    "tokens": 108
+   },
+   "SKILL.md#frontmatter": {
+    "chars": 502,
+    "bytes": 505,
+    "words": 79,
+    "lines": 10,
+    "tokens": 126
+   },
+   "SKILL.md#body": {
+    "chars": 1650,
+    "bytes": 1652,
+    "words": 216,
+    "lines": 28,
+    "tokens": 412
+   },
+   "agents/openai.yaml": {
+    "chars": 213,
+    "bytes": 213,
+    "words": 24,
+    "lines": 4,
+    "tokens": 53
+   }
+  },
+  "scenarios": {
+   "review-only (core)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1650,
+    "bytes": 1652,
+    "words": 216,
+    "lines": 28,
+    "tokens": 412
+   },
+   "refactor (core + refactoring)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1650,
+    "bytes": 1652,
+    "words": 216,
+    "lines": 28,
+    "tokens": 412
+   },
+   "refactor + evaluation (core + both references)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1650,
+    "bytes": 1652,
+    "words": 216,
+    "lines": 28,
+    "tokens": 412
+   },
+   "everything (worst case)": {
+    "members": [
+     "SKILL.md#body"
+    ],
+    "chars": 1650,
+    "bytes": 1652,
+    "words": 216,
+    "lines": 28,
+    "tokens": 412
+   }
+  },
+  "total": {
+   "chars": 2374,
+   "bytes": 2379,
+   "words": 321,
+   "lines": 44,
+   "tokens": 593
+  }
+ }
+}

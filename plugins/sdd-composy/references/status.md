@@ -1,12 +1,3 @@
----
-type: REFERENCE
-okf_version: "0.2"
-title: Consolidated status
-status: DRAFT
-source: sdd-composy
-verified: 2026-09-09
----
-
 # Consolidated status
 
 `scripts/sdd_status.py ROOT [--feature SLUG] [--tasks] [--fleet] [--json]` is a
@@ -25,15 +16,14 @@ their existence never overrides live JSON or proves approval.
 
 The action is intentionally conservative: malformed sources require manual repair; blocked,
 divergent, looping, and fleet states identify the gate that must be handled before normal
-execution resumes. Top-level `status` may be `uninitialized`, `active`, `blocked`,
-`divergent`, `looping`, `fleet`, or `malformed`. When valid global state exists and no task,
-loop, fleet, blocker, or divergence overrides it, the value is the lowercase lifecycle stage,
-for example `init`, `map`, `prd`, `stories`, `techspec`, `tasks`, `execute`, `qa`, `evidence`,
-`review`, `verify`, or `complete`. Missing optional loop/fleet/trace sources are reported as
+execution resumes. The top-level `status` values and their precedence are those of `status()` in
+`scripts/sdd_status.py`: `malformed` and `uninitialized` first, then a running loop (`looping`),
+fleet, blocker, or divergence override, otherwise the lowercase lifecycle stage of the global
+state (`init` … `complete`). Missing optional loop/fleet/trace sources are reported as
 low-confidence `missing`, not silently fabricated.
 
 Unsafe symlink sources fail closed. Status never reconciles divergence, migrates fleet members,
 repairs trace history, chooses Markdown or JSON authority, or recommends editing `state.json`
 to simulate a gate. Use the explicit synchronization or migration operation after reviewing
-its diagnostic. The same output contract applies on Claude Code, Codex, and Hermes; it does
-not demonstrate real-provider acceptance.
+its diagnostic. The same output contract applies on every runtime; it does not demonstrate real-provider
+acceptance.

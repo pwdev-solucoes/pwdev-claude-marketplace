@@ -1,5 +1,18 @@
 # OKF v0.2
 
+## Generated document frontmatter
+
+Every generated human contract (PRD, stories, TechSpec, tasks, QA, review, verdict, quick) is an
+OKF v0.2 concept with a non-empty `type`; `sources` listing only the upstream resources actually
+consumed (each with `resource`); the generating actor and timestamp under `generated.by` /
+`generated.at`; `lifecycle.status`; exactly one `human_approval` field; and `verified` events only
+for an actual human gate, with the human actor in `by` and the timestamp in `at`. Timestamps use
+ISO 8601 with an explicit UTC offset; actors follow the configured `provider:name` contract.
+Unused optional source entries are removed when rendering. The lifecycle vocabulary is defined in
+[workflow.md](workflow.md).
+
+## Bundle rules
+
 Project Markdown documents use UTF-8 YAML frontmatter with a non-empty `type`.
 `generated.by`, `generated.at`, and `verified[].by`/`verified[].at` are checked
 when present (and compare consistently to the configured actor); `sources` entries require a

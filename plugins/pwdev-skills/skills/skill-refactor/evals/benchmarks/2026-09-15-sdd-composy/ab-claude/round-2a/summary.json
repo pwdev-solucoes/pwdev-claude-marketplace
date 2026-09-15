@@ -1,0 +1,107 @@
+{
+ "schema_version": 1,
+ "skill_name": "sdd-composy (plugin)",
+ "runtime": "claude",
+ "model": "claude-sonnet-5",
+ "effort": "medium",
+ "claude_version": "2.1.272 (Claude Code)",
+ "started_at": "2026-09-15T04:18:51.733879Z",
+ "ended_at": "2026-09-15T04:19:58.272593Z",
+ "dry_run": false,
+ "limits_fixed_beforehand": {
+  "acceptance": "candidate acceptance_rate >= baseline on the same cases",
+  "cost": "candidate cost_per_success_usd <= baseline",
+  "trigger": "candidate precision and coverage >= baseline on the same probes",
+  "budget_usd_total": 12.0,
+  "budget_usd_per_execution_run": 1.5,
+  "budget_usd_per_trigger_probe": 0.3,
+  "timeout_s": 900,
+  "reps": 1
+ },
+ "cost_total_usd": 0.6708,
+ "efficiency_by_arm": [
+  {
+   "arm": "candidate",
+   "planned": 1,
+   "executed": 1,
+   "not_run": 0,
+   "accepted": 1,
+   "acceptance_rate": 1.0,
+   "pass_rate_mean": 1.0,
+   "cost_total_usd": 0.3406,
+   "cost_per_success_usd": 0.3406,
+   "context_tokens_mean": 593324,
+   "output_tokens_mean": 4682,
+   "duration_p50_s": 66.3,
+   "trigger": null,
+   "trigger_cost_usd": 0
+  },
+  {
+   "arm": "baseline",
+   "planned": 1,
+   "executed": 1,
+   "not_run": 0,
+   "accepted": 1,
+   "acceptance_rate": 1.0,
+   "pass_rate_mean": 1.0,
+   "cost_total_usd": 0.3302,
+   "cost_per_success_usd": 0.3302,
+   "context_tokens_mean": 531145,
+   "output_tokens_mean": 4885,
+   "duration_p50_s": 60.1,
+   "trigger": null,
+   "trigger_cost_usd": 0
+  }
+ ],
+ "runs": [
+  {
+   "eval_id": 3,
+   "eval_name": "prd_draft_gate",
+   "arm": "candidate",
+   "status": "PASS",
+   "reason": null,
+   "cost_usd": 0.340636,
+   "duration_seconds": 66.331,
+   "usage": {
+    "input_tokens": 20,
+    "output_tokens": 4682,
+    "cache_read_tokens": 547514,
+    "cache_write_tokens": 45790,
+    "reasoning_tokens": 191,
+    "total_tokens": 598006,
+    "context_tokens": 593324
+   },
+   "model_observed": "claude-sonnet-5",
+   "effort": "medium",
+   "pass_rate": 1.0,
+   "accepted": true,
+   "failed": [],
+   "run_dir": "eval-3-prd_draft_gate/candidate"
+  },
+  {
+   "eval_id": 3,
+   "eval_name": "prd_draft_gate",
+   "arm": "baseline",
+   "status": "PASS",
+   "reason": null,
+   "cost_usd": 0.330195,
+   "duration_seconds": 60.08,
+   "usage": {
+    "input_tokens": 18,
+    "output_tokens": 4885,
+    "cache_read_tokens": 485344,
+    "cache_write_tokens": 45783,
+    "reasoning_tokens": 147,
+    "total_tokens": 536030,
+    "context_tokens": 531145
+   },
+   "model_observed": "claude-sonnet-5",
+   "effort": "medium",
+   "pass_rate": 1.0,
+   "accepted": true,
+   "failed": [],
+   "run_dir": "eval-3-prd_draft_gate/baseline"
+  }
+ ],
+ "trigger_probes": []
+}

@@ -1,79 +1,68 @@
 ---
 name: sdd-stories
 description: >
-  Create, revise, or resolve applicability for SDD Composy user stories from
-  an approved PRD and domain evidence, preserving stable US/SC traceability
-  and stopping at an explicit human gate.
+  Create, revise, or resolve applicability for SDD Composy user stories (US/SC) from
+  an approved PRD and domain evidence, stopping at the human gate. Use after the PRD
+  is approved — 'gerar as histórias de usuário', 'cenários de aceite', 'stories for
+  prd-SLUG', 'is stories NOT_APPLICABLE here'. Do NOT use before the PRD is
+  approved, for the TechSpec, or for user-story writing outside SDD.
 metadata:
   version: 0.1.0
 ---
 
 # SDD Stories
 
-## Workspace language
-
-Before generating artifacts, run the bundled `scripts/sdd_language.py <repo-root>`.
-Consume only the persisted `.planning/sdd-composy/config.json` language. If the
-result is `not_initialized`, return it with `next_action: run_init`; do not ask
-for a language here. For `pt-BR`, write human narrative, summaries, descriptions,
-and labels in Brazilian Portuguese; for `en-US`, use English. Translate template
-placeholder prose when rendering, preserving IDs, schema keys, enum values,
-filenames, commands, and parser-required headings. Do not translate user evidence.
-
-Create or revise `tasks/prd-<slug>/stories.md`. Read `references/stories.md` for the
-complete story and applicability contract, `templates/stories.md` for the document shape,
-and `references/workflow.md` for lifecycle rules. This skill is runtime-neutral and makes
-no architecture decisions.
+Create, revise, or resolve applicability for `tasks/prd-<slug>/stories.md`: stable `US-NNN`
+stories and `SC-NNN` scenarios derived from an approved PRD and domain evidence, stopping at an
+explicit human gate. This skill makes no architecture decisions.
 
 ## Inputs
 
-- A human-approved `prd.md` under the same PRD bundle is required. Confirm its explicit
-  approval field and matching human event in `verified`; existence alone is insufficient.
-- Consume the current `domain.md` as product-language and domain evidence.
-- Consume optional `project.md` only when it materially informs actors or journeys, and
-  omit it from rendered `sources` otherwise.
-- Require the configured OKF actor identifier and an ISO 8601 timestamp with explicit UTC
-  offset for generated metadata.
+- A human-approved `prd.md` in the same bundle: confirm its explicit approval field and matching
+  human event in `verified`; existence alone is insufficient.
+- The current `domain.md` as product-language and domain evidence; optional `project.md` only
+  when it materially informs actors or journeys (omit it from `sources` otherwise).
+- The configured OKF actor identifier and an ISO 8601 timestamp with explicit UTC offset.
 
-Stop if the PRD is missing, pending, rejected, stale, or lacks its matching human approval
-event. Do not infer approval from completeness, metadata, or confidence.
+Stop if the PRD is missing, pending, rejected, stale, or lacks its human approval event.
 
 ## Procedure
 
-1. Resolve the approved PRD and `tasks/prd-<slug>/stories.md`. Read an existing stories
-   document before revision and preserve assigned identifiers and human-authored content.
-2. Determine applicability from the approved scope. User-facing behavior and externally
-   consumed APIs require stories. Recommend `NOT_APPLICABLE` only for pure internal work,
-   provide a specific justification, and still stop for an explicit human decision.
-3. For required stories, derive actors, end-to-end journeys, dependencies, and edge cases
-   from approved RF and CA contracts plus domain evidence. Do not add scope or architecture.
-4. Assign unique stable `US-NNN` identifiers and link every story to applicable `RF-NNN`
-   identifiers. Assign unique stable `SC-NNN` identifiers and link every scenario to
-   applicable `CA-NNN` identifiers. Never renumber, reuse, or silently replace an ID.
-5. Render `templates/stories.md` with OKF v0.2 provenance, generated actor/timestamp,
-   lifecycle state, applicability, approval field, and verification events. Record only
-   sources actually consumed.
-6. Write only `tasks/prd-<slug>/stories.md`. A required draft begins `DRAFT` and `PENDING`.
-   A proposed internal exemption includes its justification but remains unresolved until a
-   human records the decision.
-7. Present the artifact, trace links, open issues, and applicability recommendation for
-   human review. Do not route to TechSpec while the gate remains pending.
-8. Only after a human explicitly approves this exact artifact or its justified
-   `NOT_APPLICABLE` disposition, set required stories to lifecycle `APPROVED`, or the
-   exemption to lifecycle `NOT_APPLICABLE`; in both cases set `human_approval: APPROVED`
-   and append a `verified` event with the human actor and timestamp. Rejection sets lifecycle
-   and human approval to `REJECTED` and records the matching human event
-   and blocks downstream work.
+1. Run `scripts/sdd_language.py <repo-root>` and use the persisted language for every human-facing
+   sentence; on `not_initialized`, stop and return `next_action: run_init` (rules: `references/language.md`).
+2. Resolve the approved PRD and `tasks/prd-<slug>/stories.md`; read an existing document before
+   revising it and preserve identifiers and human-authored content.
+3. Determine applicability from the approved scope: user-facing behavior and externally consumed
+   APIs require stories; recommend `NOT_APPLICABLE` only for pure internal work, with a specific
+   justification, and still stop for the explicit human decision.
+4. For required stories, derive actors, end-to-end journeys, dependencies, and edge cases from
+   the approved RF and CA contracts plus domain evidence. Do not add scope or architecture.
+5. Assign stable `US-NNN` (linked to `RF-NNN`) and `SC-NNN` (linked to `CA-NNN`) identifiers;
+   never renumber, reuse, or silently replace an ID.
+6. Read `templates/stories.md` and render it: keep its frontmatter keys and section headings exactly
+   (translate prose only), fill provenance, lifecycle, applicability, approval field, and
+   verification events, and record only sources actually consumed. Never write stories from
+   memory without the template.
+7. Write only `tasks/prd-<slug>/stories.md`. A required draft begins `DRAFT` and `PENDING`; a
+   proposed exemption includes its justification and stays unresolved until a human decides.
+8. Present the artifact, trace links, open issues, and applicability recommendation for human
+   review. Do not route to TechSpec while the gate is pending.
+9. Only after a human explicitly approves the exact artifact or its justified `NOT_APPLICABLE`
+   disposition: set lifecycle `APPROVED` (or `NOT_APPLICABLE`), `human_approval: APPROVED`, and
+   append a `verified` event with the human actor and timestamp. Rejection sets both to
+   `REJECTED`, records the human event, and blocks downstream work.
+
+## Read when
+
+- `references/stories.md` — writing a new stories document, or an applicability, content, or
+  traceability question is not answered above.
+- `references/workflow.md` ("Human-contract lifecycle vocabulary") — recording a decision.
+- `references/okf.md` — a frontmatter question the template does not answer.
 
 ## Output
 
-Return the stories path, slug, consumed sources, generated actor and timestamp,
-applicability and justification, lifecycle status, human approval value, RF/US and CA/SC
-trace summary, unresolved issues, and next permitted lifecycle stage. State clearly when
-downstream generation remains blocked.
+Return the stories path, slug, consumed sources, generated actor and timestamp, applicability and
+justification, lifecycle status, human approval value, RF/US and CA/SC trace summary, unresolved
+issues, and the next permitted stage; state clearly when downstream generation remains blocked.
 
-## Boundaries
-
-The story reference owns content and applicability semantics; the template owns document
-shape. Do not duplicate them in runtime adapters, invent human approval, alter the approved
-PRD, choose architecture, or depend on runtime-specific tool names.
+Safety: Do not commit, push, or publish. Do not read or expose `.env`, credentials, tokens, private keys, certificates, or fleet environment files. Full contract: `references/safety.md`.

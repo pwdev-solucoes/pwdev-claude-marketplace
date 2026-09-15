@@ -1,3 +1,4 @@
-display_name: SDD Trace
-short_description: Record and verify safe append-only trace history and projections
-default_prompt: Route semantic trace recording, inspection, projection building, and verification through $sdd-trace without exposing sensitive data or mutating source history.
+interface:
+  display_name: "SDD Trace"
+  short_description: "Append-only semantic trace"
+  default_prompt: "Use $sdd-trace to inspect, build, or verify the semantic trace."

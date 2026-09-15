@@ -30,5 +30,7 @@ action. Rejected QA cannot advance. human approval is explicit and is never
 inferred from generated metadata, artifact existence, or agent confidence.
 
 Reports identify generation actors separately from verification actors and use
-the canonical lifecycle values `DRAFT`, `APPROVED`, or `REJECTED`. Store
+the canonical document lifecycle values `DRAFT`, `APPROVED`, or `REJECTED` (QA,
+code-review, and verdict reports share this vocabulary; the task itself moves between the
+lowercase states in `states.md`). Store
 regression evidence under the PRD bundle and preserve deterministic ordering.

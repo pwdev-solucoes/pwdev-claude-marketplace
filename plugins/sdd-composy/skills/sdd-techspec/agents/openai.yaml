@@ -1,4 +1,4 @@
 interface:
   display_name: "SDD TechSpec"
-  short_description: "Design and gate a traceable technical specification"
-  default_prompt: "Use $sdd-techspec to create or revise a technical specification from approved upstream contracts and stop at its explicit human gate."
+  short_description: "Technical specification from approved contracts"
+  default_prompt: "Use $sdd-techspec to create or revise a TechSpec from approved upstream contracts."

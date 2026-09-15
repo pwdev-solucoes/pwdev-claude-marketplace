@@ -4,20 +4,11 @@ This is the portable workflow contract shared by every supported runtime. It def
 
 ## Language and artifact routing
 
-`/sdd-composy:init` is the only stage that asks for the artifact language. It accepts
-exactly `pt-BR` or `en-US` and persists the choice in
-`.planning/sdd-composy/config.json`. If no choice is supplied, init returns both choices
-and creates no artifacts. Every downstream stage reads that persisted `language` value and
-continues without prompting; before init it returns the machine response
-`{"status":"not_initialized","next_action":"run_init"}`.
-
-The selected language routes only human-facing artifact prose: PRDs, stories, TechSpecs,
-task descriptions, QA/evidence reports, status summaries, and other generated Markdown may
-be written in Portuguese (Brazil) or English (United States). Machine keys, IDs, schemas,
-filenames, lifecycle values, and command names remain in English in both routes. This keeps
-the same contracts portable between Claude Code and Codex while allowing the project team
-to read its artifacts in the language selected at initialization. Invalid language values
-fail without mutation.
+`/sdd-composy:init` is the only stage that asks for the artifact language, exactly `pt-BR` or
+`en-US`, and persists it in `.planning/sdd-composy/config.json`. Every downstream stage reads that
+value and never prompts; before init it returns `{"status":"not_initialized","next_action":"run_init"}`.
+Only human-facing prose is localized: machine keys, IDs, schemas, filenames, lifecycle values, and
+command names stay in English in every runtime. Full rules: [language contract](language.md).
 
 ## Canonical lifecycle
 
@@ -69,16 +60,10 @@ SCOPE -> CONTRACT -> IMPLEMENT -> TEST -> REVIEW -> VERIFY
 
 It is limited to **5 implementation files**. Before editing, escalate to the full lifecycle if the work crosses that limit or requires architecture decisions, migrations, destructive operations, scope changes, or unknown verification.
 
-`LOOP` repeats the task-level `EXECUTE -> QA -> EVIDENCE (when required) -> REVIEW -> VERIFY` sequence. Its default maximum is 3 iterations. It stops on completion, iteration cap, missing progress, scope expansion, architectural ambiguity, destructive action, external authorization, unrecoverable environment failure, or cancellation. Resume from the last durably published successful stage.
+`LOOP` repeats the task-level `EXECUTE -> QA -> EVIDENCE (when required) -> REVIEW -> VERIFY` sequence, at most 3 iterations by default, and stops on the terminal reasons defined in [loop.md](loop.md). Resume from the last durably published successful stage.
 
-`FLEET` may run only independent ready tasks with complete dependencies, explicit acceptance criteria, known verification commands, and no known overlapping paths. Each task runs in an isolated Git worktree. Integration and merge are separate, explicitly authorized human actions.
+`FLEET` runs only tasks that pass the admission criteria in [fleet.md](fleet.md), each in an isolated Git worktree. Integration and merge are separate, explicitly authorized human actions.
 
 ## Portable resumption
 
 The durable human contracts and operational state are the source for resumption. A runtime reads and validates them, determines the exact next valid action, and publishes successful transitions before reporting progress. Switching runtimes must not alter lifecycle meaning or repeat a successfully published stage.
-# Runtime Hermes
-
-Quando executado no Hermes Agent, o plugin usa `.hermes-plugin/__init__.py` para registrar as
-skills e o hook `pre_llm_call`. O runtime deve ser declarado como `hermes`; qualquer divergência
-de runtime deve interromper a execução. O bootstrap não substitui os contratos, schemas ou gates
-do fluxo compartilhado.

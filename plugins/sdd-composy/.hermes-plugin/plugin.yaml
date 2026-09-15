@@ -1,6 +1,6 @@
 name: sdd-composy
 version: 0.1.0
-description: SDD Composy portable spec-driven development workflow for Hermes Agent
+description: SDD Composy portable spec-driven development workflow (Claude Code, Codex, Hermes Agent, OpenCode); this manifest is the Hermes entry point
 author: Paulo Soares
 provides_hooks:
   - pre_llm_call

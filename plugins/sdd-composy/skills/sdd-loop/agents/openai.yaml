@@ -1,4 +1,4 @@
 interface:
   display_name: "SDD Loop"
-  short_description: "bounded autonomous SDD loop with safe-stop guards"
-  default_prompt: "Use $sdd-loop only after explicit human approval. Discover the current TASK, disclose the 3-iteration bound, run the canonical loop with fresh sdd-verify evidence, and safe-stop on scope, architecture, safety, cancellation, or no-progress conditions."
+  short_description: "Bounded correction loop for one task"
+  default_prompt: "Use $sdd-loop to start, inspect, continue, or cancel a bounded loop on one approved task."

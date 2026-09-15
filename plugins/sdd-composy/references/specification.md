@@ -59,10 +59,8 @@ Technical design must not change requirements, stories, acceptance criteria, or 
 scope. If implementation constraints reveal a needed product change, stop and return it to
 the owning upstream human gate; do not mutate product scope in the TechSpec.
 
-TechSpec is an OKF v0.2 `TECHSPEC` concept. Frontmatter lists every consumed artifact in
-`sources`, records the generating actor and timestamp under `generated`, begins with
-`lifecycle.status: DRAFT`, contains exactly one `human_approval: PENDING`, and begins with no
-invented `verified` events. Human approval of the exact document updates the lifecycle and
+TechSpec is an OKF v0.2 `TECHSPEC` concept with the frontmatter defined in [okf.md](okf.md); a
+draft begins at `lifecycle.status: DRAFT` with `human_approval: PENDING`. Human approval of the exact document updates the lifecycle and
 sets `lifecycle.status: APPROVED` and `human_approval: APPROVED`, then appends a matching
 `verified` event with actor in `by` and an ISO 8601 timestamp in `at`. Rejection sets
 `lifecycle.status: REJECTED` and `human_approval: REJECTED`, with a matching human event.

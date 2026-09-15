@@ -17,9 +17,8 @@ to a test file and (when available) its test anchor; a prose placeholder is insu
 Subtasks are bounded checklist items; `None` is valid only when no decomposition
 is appropriate. Verification commands must be reproducible and recorded before approval.
 
-Generated Markdown is OKF v0.2 with non-empty `type`, `sources` for the approved PRD,
-stories, and TechSpec, `generated.by`/`generated.at`, lifecycle metadata, and `verified`
-events only for an actual human gate. New or changed contracts begin `DRAFT` and
+Generated Markdown is OKF v0.2 with the frontmatter defined in [okf.md](okf.md) and `sources`
+for the approved PRD, stories, and TechSpec. New or changed contracts begin `DRAFT` and
 `human_approval: PENDING`; only an explicit human approval may make them `APPROVED`.
 
 The index `tasks.md` is a projection of linked `task-<id>.md` contracts. Markdown and JSON

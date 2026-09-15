@@ -1,91 +1,65 @@
 ---
 name: sdd-map
 description: >
-  Produce a deterministic, repository-bound evidence map for SDD Composy.
-  Scan only readable non-sensitive paths, report the source commit and
-  staleness, and publish the operational context bundle only when requested.
+  Produce a deterministic, read-only evidence map of the repository for SDD Composy
+  (languages, manifests, commands, modules, boundaries, staleness) and publish the
+  context bundle only on request. Use before a PRD or TechSpec, or when the map is
+  stale — 'mapear o repositório', 'atualizar o contexto do código', 'what does this
+  codebase look like for SDD'. Do NOT use for architecture decisions, code review,
+  or repository exploration without an SDD workspace.
 metadata:
   version: 0.1.0
 ---
 
 # SDD Map
 
-## Workspace language
+Create or inspect the SDD Composy codebase map. The bundled `scripts/sdd_map.py` helper owns
+traversal, secret exclusion, deterministic serialization, and atomic publication; this skill owns
+scope, approval, interpretation, and downstream routing.
 
-Before generating artifacts, run the bundled `scripts/sdd_language.py <repo-root>`.
-Consume only the persisted `.planning/sdd-composy/config.json` language. If the
-result is `not_initialized`, return it with `next_action: run_init`; do not ask
-for a language here. For `pt-BR`, write human narrative, summaries, descriptions,
-and labels in Brazilian Portuguese; for `en-US`, use English. Translate template
-placeholder prose when rendering, preserving IDs, schema keys, enum values,
-filenames, commands, and parser-required headings. Do not translate user evidence.
-
-Create or inspect the SDD Composy codebase map. The bundled `sdd_map.py` helper
-owns traversal, exclusion, deterministic serialization, and atomic publication;
-this skill owns scope, approval, interpretation, and downstream routing.
-Read `references/mapping.md` for the output contract and
-`references/workflow.md` for the lifecycle gate.
+Language: before writing human-facing prose, run `scripts/sdd_language.py <repo-root>` and use the persisted language; on `not_initialized`, return it with `next_action: run_init`. Localization rules: `references/language.md`.
 
 ## Inputs
 
-- Repository root: the current repository unless the user supplies another
-  real directory.
-- Optional output directory: it must remain inside the repository and defaults
-  to `.planning/sdd-composy/context`.
-- Optional request to publish the context bundle. A scan is observation-only;
-  publishing is the only permitted write and is limited to the context bundle.
+- Repository root: the current repository unless the user supplies another real directory.
+- Optional output directory: inside the repository, default `.planning/sdd-composy/context`.
+- Optional request to publish. A scan is observation-only; publishing is the only permitted
+  write and is limited to the context bundle.
 
-Never inspect or open sensitive environment-like material: environment files,
-credentials, tokens, secrets, passwords, private keys, certificates, or fleet
-environment files. Do not execute commands discovered in manifests, and do not
-modify source files, governance files, task artifacts, or architectural plans.
+Do not execute commands discovered in manifests, and do not modify source files, governance
+files, task artifacts, or architectural plans.
 
 ## Procedure
 
-1. Resolve and validate the repository root and output directory without
-   changing files.
-2. Run the bundled helper in its read-only form and present its JSON result:
+1. Resolve and validate the repository root and output directory without changing files.
+2. Run the read-only scan and present its JSON result, preserving `source_commit`,
+   `mapped_commit`, `observation_only`, confidence, observed languages, manifests, commands,
+   modules, boundaries, domain evidence, and staleness. Commands in the result are evidence
+   only; never run them.
 
    ```sh
    python3 "${CLAUDE_PLUGIN_ROOT}/scripts/sdd_map.py" --repo-root <repository-root> [--output-dir <context-dir>]
    ```
 
-   Runtimes without `CLAUDE_PLUGIN_ROOT` resolve the same bundled
-   `scripts/sdd_map.py` path from the installed plugin. Preserve the helper's
-   `source_commit`, `mapped_commit`, `observation_only`, confidence, observed
-   languages, manifests, commands, modules, boundaries, domain evidence, and
-   staleness fields. Commands in the result are evidence only; never run them.
-3. If the user explicitly requests publication, repeat with `--write` (and
-   the exact `--output-dir` when supplied):
-
-   ```sh
-   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/sdd_map.py" --repo-root <repository-root> [--output-dir <context-dir>] --write
-   ```
-
-   Publication writes only `.planning/sdd-composy/context/codebase.json`,
-   `project.md`, `stack.md`, `domain.md`, and `pitfalls.md` (or the supplied
-   in-repository output directory). Report those paths and the recorded source
-   commit. Do not claim that a map changed architectural intent.
-4. Check `staleness.stale`. A stale prior map is not valid downstream evidence:
-   report the previous and current commit, refresh the map before routing, and
-   do not silently reuse stale context. A missing or unknown commit is an
+3. Only when the user explicitly requests publication, repeat with `--write` (and the exact
+   `--output-dir` when supplied). Publication writes only `codebase.json`, `project.md`,
+   `stack.md`, `domain.md`, and `pitfalls.md` under the context directory. Report those paths
+   and the recorded source commit.
+4. Check `staleness.stale`. A stale prior map is not valid downstream evidence: report the
+   previous and current commit and refresh before routing. A missing or unknown commit is an
    uncertainty to report, not permission to invent one.
-5. Route a fresh map to the next approved lifecycle work: PRD first, then
-   STORIES, TECHSPEC, and TASKS as applicable. These downstream stages may
-   interpret evidence with their own approval gates; they must not turn file
-   observations into unapproved architecture. If the map is stale, route back
-   to MAP and reconcile downstream artifacts before reuse.
+5. Route a fresh map to the next approved lifecycle stage: PRD first, then STORIES, TECHSPEC,
+   and TASKS as applicable. Those stages interpret the evidence under their own human gates;
+   a map never turns file observations into unapproved architecture.
+
+## Read when
+
+- `references/mapping.md` — publishing the bundle, or interpreting the output schema and
+  staleness record.
 
 ## Output
 
-Return the helper JSON (or a concise faithful summary), publication status,
-output paths, source commit, staleness status, and the next lifecycle stage.
-State clearly that the map is observation-only and that manifest commands were
-not executed.
+Return the helper JSON or a faithful summary, publication status, output paths, source commit,
+the `observation_only` field, staleness status, and the next lifecycle stage.
 
-## Boundaries
-
-The Python helper owns the portable read/write contract, secret exclusion,
-atomic publication, and schema-shaped output. This skill must not duplicate scanner logic,
-infer architecture, execute discovered commands, or depend on runtime-specific tools.
-Runtime entry points only route to this skill.
+Safety: Do not commit, push, or publish. Do not read or expose `.env`, credentials, tokens, private keys, certificates, or fleet environment files. Full contract: `references/safety.md`.

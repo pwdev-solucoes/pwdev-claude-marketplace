@@ -1,40 +1,47 @@
 ---
 name: sdd-execute
-description: Execute one approved SDD Composy task with bounded paths, real evidence, and guarded lifecycle transitions.
+description: >
+  Implement exactly one SDD Composy task in the ready state with dependency
+  preflight, TDD RED evidence, allowed paths, real verification commands, and the
+  guarded transition to qa_required. Use when a ready task should be executed —
+  'executar a TASK-003', 'implementar a próxima tarefa', 'run task 4'. Do NOT use
+  for changes without an approved task (sdd-quick), for autonomous multi-stage
+  correction (sdd-loop), or for QA, review, or verification.
 metadata:
   version: 0.1.0
 ---
 
 # SDD Execute
 
-## Workspace language
+This portable skill implements exactly one `ready` task. The bundled `scripts/sdd_execute.py`
+functions `preflight`, `run_command`, and `finish` are the deterministic execution boundary;
+preserve their result fields and never create test-only bypasses.
 
-Before generating artifacts, run the bundled `scripts/sdd_language.py <repo-root>`.
-Consume only the persisted `.planning/sdd-composy/config.json` language. If the
-result is `not_initialized`, return it with `next_action: run_init`; do not ask
-for a language here. For `pt-BR`, write human narrative, summaries, descriptions,
-and labels in Brazilian Portuguese; for `en-US`, use English. Translate template
-placeholder prose when rendering, preserving IDs, schema keys, enum values,
-filenames, commands, and parser-required headings. Do not translate user evidence.
+Language: before writing human-facing prose, run `scripts/sdd_language.py <repo-root>` and use the persisted language; on `not_initialized`, return it with `next_action: run_init`. Localization rules: `references/language.md`.
 
-Read `references/execution.md`, `references/tasks.md`, `references/states.md`,
-`references/safety.md`, and the approved task contract before acting. This skill
-is portable across Claude Code and Codex; its adapter only routes requests and
-does not reimplement execution policy. The bundled `scripts/sdd_execute.py`
-functions `preflight`, `run_command`, and `finish` are the public deterministic
-execution boundary; adapters preserve their result fields and do not create
-test-only bypasses.
+## Contract
 
-Require exactly one `ready` task and a successful dependency preflight. Require
-TDD RED evidence before implementation, enforce the task's allowed paths, and
-run every declared verification commands as real commands. Record sanitized
-stdout/stderr, exit codes, SHA-256 evidence, environment ownership, and cleanup.
-Never modify approved contracts or user-owned processes.
+- Require exactly one `ready` task and a successful dependency preflight.
+- Require TDD RED evidence before implementation, enforce the task's allowed paths, and run the
+  declared verification commands, each as a real command. Record sanitized stdout/stderr, exit codes,
+  SHA-256 evidence, environment ownership, and cleanup.
+- Never modify approved contracts or user-owned processes.
 
-On success, request the guarded `running -> qa_required` transition. A concrete
-dependency, environment, QA, evidence, or cleanup blocker becomes `blocked`; a
-scope violation or rejected contract becomes `rejected`. Record the exact reason
-and next action, and stop on any review/QA blocker. Return the execution result,
-evidence manifest, changed paths, ownership/cleanup status, and permitted next
-lifecycle action. Do not commit, push, publish, or expose secrets.
-Do not read or expose credentials, private keys, certificates, or fleet environment files.
+On success, request the guarded `running -> qa_required` transition. A concrete dependency,
+environment, QA, evidence, or cleanup blocker becomes `blocked`; a scope violation or rejected
+contract becomes `rejected`. Record the exact reason and next action, and stop on any QA or review
+blocker.
+
+## Read when
+
+- `references/execution.md` — before the first `run_command` of a task (preflight fields, TDD
+  evidence, path and command rules, outcome classification).
+- `references/states.md` — a transition other than `running -> qa_required` is needed.
+- The approved task contract (`tasks/prd-<slug>/task-<id>.md`) — always, it is the input.
+
+## Output
+
+Return the execution result, evidence manifest, changed paths, ownership and cleanup status, and
+the permitted next lifecycle action.
+
+Safety: Do not commit, push, or publish. Do not read or expose `.env`, credentials, tokens, private keys, certificates, or fleet environment files. Full contract: `references/safety.md`.

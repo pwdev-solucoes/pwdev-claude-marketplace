@@ -1,58 +1,49 @@
 ---
 name: sdd-sync
-description: Reconcile SDD Composy task Markdown and JSON safely through an explicit inspect, plan, and approved apply workflow.
+description: >
+  Reconcile SDD Composy task Markdown and the JSON projection: read-only inspect and
+  plan, then apply only with an explicit authority and the CONFIRM-SDD-SYNC token.
+  Use when task contracts and operational state diverged — 'sincronizar as tarefas',
+  'o JSON das tasks está desatualizado', 'markdown and json disagree'. Do NOT use to
+  list or advance tasks (sdd-tasks), for a status overview (sdd-status), or to
+  simulate approval.
 metadata:
   version: 0.1.0
 ---
 
 # SDD Sync
 
-## Workspace language
+Synchronize the human task contracts (Markdown) and the operational JSON projection without
+silently selecting an authority, through the bundled `scripts/sdd_sync.py` helper.
 
-Before generating artifacts, run the bundled `scripts/sdd_language.py <repo-root>`.
-Consume only the persisted `.planning/sdd-composy/config.json` language. If the
-result is `not_initialized`, return it with `next_action: run_init`; do not ask
-for a language here. For `pt-BR`, write human narrative, summaries, descriptions,
-and labels in Brazilian Portuguese; for `en-US`, use English. Translate template
-placeholder prose when rendering, preserving IDs, schema keys, enum values,
-filenames, commands, and parser-required headings. Do not translate user evidence.
-
-Synchronize the human task contracts and operational JSON projection without
-silently selecting an authority. Read `references/synchronization.md`,
-`references/tasks.md`, and `references/safety.md` before operating. This skill
-is portable and runtime-neutral.
+Language: when an operation emits human-facing summaries, run `scripts/sdd_language.py <repo-root>` and use the persisted language; on `not_initialized`, return it with `next_action: run_init`. Localization rules: `references/language.md`.
 
 ## Operations
 
-Use the bundled `${CLAUDE_PLUGIN_ROOT}/scripts/sdd_sync.py` helper (or the
-same bundled path resolved by another runtime) for every operation:
-
-- `inspect <markdown-root> <state> [--root]` is read-only and reports stable,
-  deterministic classifications, including conflicts and malformed inputs.
-- `plan <markdown-root> <state> [--root]` is read-only and produces the exact
-  plan and input fingerprints that an apply must consume.
+- `inspect <markdown-root> <state> [--root]` — read-only; reports stable, deterministic
+  classifications, including conflicts and malformed inputs.
+- `plan <markdown-root> <state> [--root]` — read-only; produces the exact plan and input
+  fingerprints that an apply must consume.
 - `apply <markdown-root> <state> <plan-json-path> --authority markdown|json
-  --confirmation-token CONFIRM-SDD-SYNC [--root]` is the only mutating
-  operation. It requires explicit human approval for the selected authority;
-  never infer approval from a plan, a clean inspection, or model confidence.
+  --confirmation-token CONFIRM-SDD-SYNC [--root]` — the only mutating operation. It requires
+  explicit human approval of the selected authority; never infer approval from a plan, a clean
+  inspection, or model confidence. The CLI forwards the plan JSON to the guarded apply API; it
+  implements no second algorithm.
 
-The CLI loads the JSON emitted by `plan` from `plan-json-path` and forwards it
-to the guarded apply API; it does not implement a second synchronization
-algorithm.
+Present the inspect and plan results before asking for approval. A stale plan, changed input,
+invalid authority, missing exact `CONFIRM-SDD-SYNC` token, symlink, malformed artifact, or
+unresolved conflict stops the operation; conflicts are never overwritten silently. After apply,
+report the helper's post-apply verification and the exact paths changed. The helper owns
+repository confinement, temporary files, atomic replacement, unknown-field preservation, and
+deterministic output; do not duplicate those policies here.
 
-Present inspect and plan results before asking for approval. A stale plan,
-changed input, invalid authority, missing exact `CONFIRM-SDD-SYNC` token,
-symlink, malformed artifact, or unresolved conflict must stop the operation.
-Markdown/JSON conflicts are never overwritten silently. After apply, report
-the helper's post-apply verification and the exact paths changed. The helper
-owns repository confinement, same-directory temporary files, atomic
-replacement, unknown-field preservation, and deterministic output; do not
-duplicate those policies in this skill.
+## Read when
 
-## Output and boundaries
+- `references/synchronization.md` — before `apply`, or to explain a classification.
 
-Return the operation, repository-bound paths, classifications, selected
-authority (if any), approval status, plan/token status, verification result,
-and next permitted action. Inspection and planning must not write files.
-Do not read or expose `.env`, credentials, tokens, private keys, certificates,
-or fleet environment files. Do not mutate external services or commit.
+## Output
+
+Return the operation, repository-bound paths, classifications, selected authority (if any),
+approval status, plan/token status, verification result, and next permitted action.
+
+Safety: Do not commit, push, or publish. Do not read or expose `.env`, credentials, tokens, private keys, certificates, or fleet environment files. Full contract: `references/safety.md`.

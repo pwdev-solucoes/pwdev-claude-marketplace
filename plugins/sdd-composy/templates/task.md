@@ -26,7 +26,7 @@ task:
 
 ## Intent
 
-Describe the implementation outcome and link the approved requirement(s): [RF-001](../prd-{{SLUG}}/prd.md#rf-001), story [US-001](../prd-{{SLUG}}/stories.md#us-001), scenario [SC-001](../prd-{{SLUG}}/stories.md#sc-001), and acceptance criterion [CA-001](../prd-{{SLUG}}/stories.md#ca-001).
+Describe the implementation outcome and link the approved requirement(s): [RF-001](../prd-{{SLUG}}/prd.md#rf-001), story [US-001](../prd-{{SLUG}}/stories.md#us-001), scenario [SC-001](../prd-{{SLUG}}/stories.md#sc-001), and acceptance criterion [CA-001](../prd-{{SLUG}}/prd.md#ca-001).
 
 ## Dependencies
 

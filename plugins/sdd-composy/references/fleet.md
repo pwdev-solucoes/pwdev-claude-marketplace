@@ -34,7 +34,7 @@ terminal capture, or UI state is never completion evidence.
 ## Record authority and migration
 
 Fleet metadata lives under `.planning/sdd-composy/fleet/<fleet-id>/`. Schema v2 member records
-require an explicit `runtime` (`claude-code`, `codex`, or `hermes`), canonical absolute
+require an explicit `runtime` (`claude-code`, `codex`, or `hermes`; OpenCode has no fleet engine in this release), canonical absolute
 `repository_root` and `worktree_path`, an `owner` identity, and nested `resources`. Normal
 execution diagnoses any non-v2 member as `legacy fleet member requires explicit migration`.
 It never silently upgrades or discards one.
@@ -53,10 +53,8 @@ approval.
 
 ## Provider and resource ownership
 
-The runtime vectors are `claude -p`, `codex exec`, and
-`hermes -z <prompt> --in <worktree>`. There is no cross-provider fallback. Hermes automation
-also requires proven isolation or specific user consent. Hermes Kanban is not implemented and
-is unavailable.
+Runtime vectors and engine adapters are listed in [runtime.md](runtime.md); there is no
+cross-provider fallback.
 
 With `--compose`, the launcher copies the template to the single central path
 `.planning/sdd-composy/fleet/<fleet-id>/docker-compose.yml`, hashes that exact file, and starts
@@ -66,11 +64,9 @@ member's nested `resources` records the repository-relative `compose_file`,
 and worktree. Without `--compose`, the record explicitly contains `compose_allocated: false`;
 teardown then skips Compose and does not require a file or digest.
 
-For an allocated Compose resource, teardown requires the boolean flag, validates repository,
-fleet/member owner, branch/worktree, exact central path and project name, rejects symlinks, and
-compares the current central file with `compose_sha256`. Only then does it run
-`docker compose --project-name <project> -f <central-file> down`. It does not resolve the file
-inside a member worktree or trust legacy top-level mirrors. A missing flag, file, digest, or
+For an allocated Compose resource, `teardown.sh` validates the member's identity, the exact central
+file and project name, and `compose_sha256` before running `docker compose down`; it never resolves
+the file inside a member worktree or trusts legacy top-level mirrors. A missing flag, file, digest, or
 mismatched resource; failed Compose shutdown; dirty merge target; invalid result; or failing
 post-merge verification stops cleanup and preserves branch, worktree, and metadata for
 recovery. Without `--merge --confirm CONFIRM-SDD-MERGE`, teardown removes the member record

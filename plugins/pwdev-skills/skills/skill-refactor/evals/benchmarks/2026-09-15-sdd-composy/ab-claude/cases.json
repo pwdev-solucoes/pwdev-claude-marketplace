@@ -1,0 +1,201 @@
+{
+  "schema_version": 1,
+  "approved": true,
+  "frozen_at": "2026-09-15",
+  "purpose": "Minimal Claude-only A/B of the sdd-composy Markdown refactoring: candidate (working tree) vs baseline (versions/baseline). Objective checks only; the executor's claims are never evidence.",
+  "model": "claude-sonnet-5",
+  "effort": "medium",
+  "limits_fixed_beforehand": {
+    "acceptance": "candidate acceptance_rate >= baseline on the same cases",
+    "cost": "candidate cost_per_success_usd <= baseline",
+    "trigger": "candidate precision and coverage >= baseline on the same probes",
+    "budget_usd_total": 12.0,
+    "budget_usd_per_execution_run": 1.5,
+    "budget_usd_per_trigger_probe": 0.3,
+    "timeout_s": 900,
+    "reps": 1
+  },
+  "fixture": {
+    "recipe": "git init; empty commit; sdd_init.py plan+apply+verify --actor agent:bench --lang pt-BR; then the per-case files below.",
+    "files": {
+      ".planning/sdd-composy/tasks/demo.json": "{\"schema_version\": \"1\", \"prd_slug\": \"demo\", \"updated_at\": \"2026-09-15T00:00:00Z\", \"tasks\": [{\"id\": \"TASK-001\", \"title\": \"Exportar relatório em CSV\", \"state\": \"complete\", \"dependencies\": [], \"acceptance_criteria\": [\"CA-001\"], \"verification_commands\": [\"python3 -m unittest\"], \"allowed_paths\": [\"src/export.py\"], \"evidence_required\": false}, {\"id\": \"TASK-002\", \"title\": \"Agendar exportação semanal\", \"state\": \"pending\", \"dependencies\": [\"TASK-001\"], \"acceptance_criteria\": [\"CA-002\"], \"verification_commands\": [\"python3 -m unittest\"], \"allowed_paths\": [\"src/schedule.py\"], \"evidence_required\": true}, {\"id\": \"TASK-003\", \"title\": \"Notificar por e-mail\", \"state\": \"pending\", \"dependencies\": [\"TASK-002\"], \"acceptance_criteria\": [\"CA-003\"], \"verification_commands\": [\"python3 -m unittest\"], \"allowed_paths\": [\"src/notify.py\"], \"evidence_required\": true}]}"
+    }
+  },
+  "evals": [
+    {
+      "id": 1,
+      "name": "status_readonly",
+      "prompt": "Este repositório usa o plugin SDD Composy. Em que pé está o fluxo SDD aqui e qual é a próxima ação? Responda em português, de forma curta.",
+      "checks": [
+        {
+          "kind": "no_writes",
+          "text": "Writes no file in the workspace (status is read-only)."
+        },
+        {
+          "kind": "answer_regex",
+          "pattern": "TASK-002.{0,160}(proxim|next|eleg|ready|pronta|continuar|executar)|(proxim|next|eleg|continuar).{0,160}TASK-002",
+          "text": "Reports the helper's next action: TASK-002 is the eligible/next task to continue (status next_action: 'inspect the task queue and continue the next ready task')."
+        },
+        {
+          "kind": "answer_regex",
+          "pattern": "\\bINIT\\b|inicializ|\\bactive\\b|\\bativo\\b|\\bativa\\b",
+          "text": "Names the current stage (INIT / active) from the helper output."
+        },
+        {
+          "kind": "answer_lang",
+          "lang": "pt",
+          "text": "Answers in Portuguese (persisted language pt-BR)."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "tasks_next_readonly",
+      "prompt": "Este repositório usa o plugin SDD Composy. Liste as tarefas do bundle demo com o estado de cada uma e diga qual é a próxima tarefa a executar. Não altere nada.",
+      "checks": [
+        {
+          "kind": "no_writes",
+          "text": "Writes no file in the workspace (list/next are read-only)."
+        },
+        {
+          "kind": "answer_regex",
+          "pattern": "TASK-001.{0,80}(complete|conclu)|(complete|conclu).{0,80}TASK-001",
+          "text": "Reports TASK-001 as complete from the projection."
+        },
+        {
+          "kind": "answer_regex",
+          "pattern": "TASK-002.{0,120}(pr[oó]xim|next|ready|pronta|pode (ser|virar))|(pr[oó]xim|next).{0,120}TASK-002",
+          "text": "Identifies TASK-002 as the next task (pending with its dependency complete: what `next` promotes)."
+        },
+        {
+          "kind": "answer_regex",
+          "pattern": "TASK-003",
+          "text": "Lists TASK-003 as well (three tasks, not a subset)."
+        },
+        {
+          "kind": "answer_not_regex",
+          "pattern": "(?i)aprovad[oa]s? (por|pelo) (mim|agente)|approved by (me|the agent)",
+          "text": "Does not claim or infer approval."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "prd_draft_gate",
+      "prompt": "Este repositório usa o plugin SDD Composy. Crie o PRD para este problema, com slug `exportacao`: os gerentes de loja não conseguem exportar o relatório mensal de vendas em CSV e hoje copiam os números à mão, o que gera erros e atrasa o fechamento. Use o ator OKF `agent:bench` e o timestamp 2026-09-15T10:00:00-03:00. Não peça aprovação a ninguém agora: apenas gere o rascunho e me diga o que falta.",
+      "checks": [
+        {
+          "kind": "file_exists",
+          "path": "tasks/prd-exportacao/prd.md",
+          "text": "Writes the PRD at the exact human contract path."
+        },
+        {
+          "kind": "file_regex",
+          "path": "tasks/prd-exportacao/prd.md",
+          "pattern": "(?m)^type:\\s*PRD\\b",
+          "text": "Frontmatter declares type PRD (OKF v0.2)."
+        },
+        {
+          "kind": "file_regex",
+          "path": "tasks/prd-exportacao/prd.md",
+          "pattern": "human_approval:\\s*PENDING",
+          "text": "Starts with human_approval: PENDING."
+        },
+        {
+          "kind": "file_regex",
+          "path": "tasks/prd-exportacao/prd.md",
+          "pattern": "status:\\s*DRAFT",
+          "text": "Lifecycle status is DRAFT."
+        },
+        {
+          "kind": "file_not_regex",
+          "path": "tasks/prd-exportacao/prd.md",
+          "pattern": "human_approval:\\s*APPROVED|status:\\s*APPROVED",
+          "text": "Does not invent approval."
+        },
+        {
+          "kind": "file_regex",
+          "path": "tasks/prd-exportacao/prd.md",
+          "pattern": "RF-001",
+          "text": "Assigns RF-001."
+        },
+        {
+          "kind": "file_regex",
+          "path": "tasks/prd-exportacao/prd.md",
+          "pattern": "CA-001",
+          "text": "Assigns CA-001."
+        },
+        {
+          "kind": "file_lang",
+          "path": "tasks/prd-exportacao/prd.md",
+          "lang": "pt",
+          "text": "PRD prose is in Portuguese (persisted language)."
+        },
+        {
+          "kind": "file_not_regex",
+          "path": "tasks/prd-exportacao/prd.md",
+          "pattern": "(?i)\\b(postgres|mysql|react|vue|django|laravel|endpoint|microservi)",
+          "text": "No implementation or component choices in the PRD."
+        },
+        {
+          "kind": "writes_only_under",
+          "prefixes": [
+            "tasks/prd-exportacao/",
+            "tasks/index.md"
+          ],
+          "text": "Writes only the PRD (and at most the bundle index)."
+        },
+        {
+          "kind": "file_regex",
+          "path": "tasks/prd-exportacao/prd.md",
+          "pattern": "(?ms)^## Problem\\b.*^## Objectives\\b.*^## Success Metrics\\b.*^## Scope\\b.*^## Assumptions\\b.*^## Dependencies\\b.*^## Open Questions\\b.*^## Functional Requirements\\b.*^## Acceptance Criteria\\b.*^## Gate\\b",
+          "text": "Keeps the template's parser-required section headings in order (Problem ... Gate): the template was rendered, not improvised."
+        },
+        {
+          "kind": "file_regex",
+          "path": "tasks/prd-exportacao/prd.md",
+          "pattern": "(?m)^verified:",
+          "text": "Frontmatter keeps the template's `verified` key (empty event set on a draft)."
+        }
+      ]
+    }
+  ],
+  "trigger_evals": {
+    "prompt": "You have the SDD Composy plugin available. Which ONE of its skills, if any, is the right one for the request below? Reply with only the skill name (for example sdd-status) or NONE. Do not perform the request and do not run anything.\nRequest: {query}",
+    "probes": [
+      {
+        "query": "Em que pé está o fluxo SDD deste repositório?",
+        "expected": "sdd-status"
+      },
+      {
+        "query": "Crie o PRD para a funcionalidade de exportar o relatório mensal.",
+        "expected": "sdd-prd"
+      },
+      {
+        "query": "Liste as tarefas do bundle demo e diga qual é a próxima.",
+        "expected": "sdd-tasks"
+      },
+      {
+        "query": "Revisar a TASK-002 que acabou de passar no QA.",
+        "expected": "sdd-review"
+      },
+      {
+        "query": "Mostra o status do git e quais arquivos mudaram.",
+        "expected": "NONE"
+      },
+      {
+        "query": "Quanto está custando a AWS este mês?",
+        "expected": "NONE"
+      },
+      {
+        "query": "Roda um loop de 5 em 5 minutos checando se o deploy terminou.",
+        "expected": "NONE"
+      },
+      {
+        "query": "Traduza este README para inglês.",
+        "expected": "NONE"
+      }
+    ]
+  },
+  "round2_note": "2026-09-15: two checks added after round 1 showed a candidate PRD written without the template; round 2 reruns case 3 only, 2 reps per arm, on the corrected candidate."
+}

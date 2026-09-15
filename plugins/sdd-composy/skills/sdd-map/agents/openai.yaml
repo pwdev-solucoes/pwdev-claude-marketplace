@@ -1,4 +1,4 @@
 interface:
   display_name: "SDD Map"
-  short_description: "Build a safe evidence map of a repository"
-  default_prompt: "Use $sdd-map to inspect the repository, report map staleness, and publish context only when requested."
+  short_description: "Read-only evidence map of the repository"
+  default_prompt: "Use $sdd-map to scan the repository and, on request, publish the context bundle."

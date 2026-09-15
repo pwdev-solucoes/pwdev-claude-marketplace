@@ -39,7 +39,7 @@ Set `lifecycle.status: APPROVED`, `human_approval: APPROVED`, and append a
 verification actor event only when every required claim is `PASS`, evidence is
 fresh and hash-consistent, QA and review are non-blocking, and traceability is
 consistent. The permitted transition is `complete`.
-The verdict value for this approved outcome is `COMPLETE`.
+Per-claim verdict values stay within the list above; `complete` (the `COMPLETE` workflow stage) is the resulting task state, not a verdict value.
 
 Any `FAIL`, `STALE`, `ENVIRONMENT_FAILURE`, or `NOT_RUN` value sets
 `lifecycle.status: REJECTED`, records a sanitized blocker and next action, and

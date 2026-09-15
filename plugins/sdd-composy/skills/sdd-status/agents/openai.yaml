@@ -1,7 +1,4 @@
-name: sdd-status
-description: Inspect consolidated SDD Composy status without changing repository state.
-metadata:
-  version: 0.1.0
-display_name: SDD Status
-short_description: Read-only project status projection
-default_prompt: Use $sdd-status for status, feature, task, and fleet inspection.
+interface:
+  display_name: "SDD Status"
+  short_description: "Read-only consolidated status"
+  default_prompt: "Use $sdd-status for a read-only snapshot of the SDD Composy state."
