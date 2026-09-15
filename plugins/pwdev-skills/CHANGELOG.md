@@ -29,6 +29,12 @@ manifestos Codex e Hermes.
   `~/.config/opencode/skills/` (ou `<projeto>/.opencode/skills/`), idempotente, com `--uninstall`
   que remove só o que instalou, `--dry-run` e `XDG_CONFIG_HOME`; a skill carrega pela ferramenta
   nativa `skill` (READMEs, manual §2, guia, README da skill, tags do catálogo; 7 testes).
+- Modo **`task`** no harness: `bench.py` mede **qualquer skill na tarefa dela** (braços = versões
+  dessa skill; workspace com os arquivos de entrada; `grade.py` avalia pelas verificações
+  declaradas no caso — `file_exists`, `file_absent`, `contains`, `not_contains`, `regex`, `not_regex`,
+  `json_valid`, `script`; casos sem verificação utilizável são recusados antes de pagar).
+  `cases.py --kind task` gera o esqueleto e `--propose` pede tarefas com arquivos sintéticos e
+  verificações validadas por esquema. Antes, `bench.py`/`grade.py` só mediam a skill-refactor.
 - `docs/metodologia-de-refatoracao.md` revisada com o que a aplicação de 14/09 ensinou: `evals/`
   fora do modelo de custo, invariantes extraídos por `cases.py`, bloco movido leva guardas, status
   do run vem do runtime, runs guardados para `--regrade`, regra de decisão em três braços, rótulos

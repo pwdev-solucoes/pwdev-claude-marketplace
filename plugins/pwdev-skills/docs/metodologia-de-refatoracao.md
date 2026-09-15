@@ -321,6 +321,13 @@ conjunto, que fica amarrado ao hash do `SKILL.md` de origem. Nada que o modelo e
 verificação objetiva sem passar pelos invariantes extraídos e pela aprovação (no plugin:
 `scripts/cases.py`, etapas `--extract`, `--propose`, `--approve`).
 
+**A skill-alvo na tarefa dela.** O desenho acima mede a skill-refactor. Para medir qualquer skill
+fazendo o próprio trabalho, o harness tem um segundo modo (`kind: task`): os braços são versões
+**dessa** skill (candidata, anterior, nenhuma), o workspace recebe os arquivos de entrada da tarefa,
+e a nota vem de verificações declaradas no caso — arquivo existe ou não, contém ou não, casa ou não
+um padrão, JSON válido, script que sai com 0. Nada no avaliador conhece a skill; o que ele sabe está
+no caso, e um caso sem verificação utilizável é recusado antes da primeira chamada paga.
+
 **Condições:**
 - Compare A com B **dentro de cada modelo** antes de comparar modelos entre si.
 - Mesmo caso, contexto e arquivos reiniciados, ordem A/B alternada.

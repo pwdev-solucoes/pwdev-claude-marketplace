@@ -34,7 +34,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import runtimes as rt  # noqa: E402
-from grade import grade_run  # noqa: E402
+from grade import check_text, grade_run, grade_task, validate_checks  # noqa: E402
 from tokens import Tokenizer, measure_skill  # noqa: E402
 
 DEFAULT_SKILL_CREATOR = Path.home() / ".claude/plugins/cache/claude-plugins-official/skill-creator"
@@ -133,6 +133,43 @@ def materialize(case: Dict[str, Any], fixture_md: str, run_dir: Path,
         path.write_text(text, encoding="utf-8")
     prompt = case["prompt"].replace("{target}", "target/SKILL.md").replace("{run_dir}", "artifacts")
     return workspace, prompt
+
+
+def spec_kind(spec: Dict[str, Any]) -> str:
+    """'refactor' measures skill-refactor on a fixture skill; 'task' measures any skill on its own tasks."""
+    kind = spec.get("kind")
+    if kind in ("refactor", "task"):
+        return kind
+    return "refactor" if (spec.get("fixture") or {}).get("skill_md") else "task"
+
+
+def materialize_task(case: Dict[str, Any], fixture_files: Dict[str, str], run_dir: Path) -> Tuple[Path, str]:
+    """A task workspace: the spec's input files plus the case's own, at the workspace root."""
+    workspace = run_dir / "workspace"
+    (workspace / "artifacts").mkdir(parents=True, exist_ok=True)
+    files = dict(fixture_files or {})
+    if isinstance(case.get("files"), dict):
+        files.update(case["files"])
+    for rel, text in files.items():
+        if Path(rel).is_absolute() or ".." in Path(rel).parts:
+            continue
+        path = workspace / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+    prompt = case["prompt"].replace("{run_dir}", "artifacts").replace("{workspace}", ".")
+    return workspace, prompt
+
+
+def grade_case(kind: str, case: Dict[str, Any], *, fixture_md: str, run_dir: Path, result_text: str, record: Dict[str, Any],
+               snapshot_before: Optional[Dict[str, Any]], snapshot_after: Optional[Dict[str, Any]], tokenizer: Tokenizer) -> Dict[str, Any]:
+    if kind == "task":
+        return grade_task(case=case, workspace=run_dir / "workspace", result_text=result_text, record=record, tokenizer=tokenizer)
+    return grade_run(case=case, fixture_skill_md=fixture_md, target_dir=run_dir / "workspace" / "target", result_text=result_text,
+                     record=record, snapshot_before=snapshot_before, snapshot_after=snapshot_after, tokenizer=tokenizer)
+
+
+def case_assertions(kind: str, case: Dict[str, Any]) -> List[str]:
+    return [check_text(c) for c in case.get("checks") or []] if kind == "task" else list(case.get("expectations", []))
 
 
 def write_json(path: Path, value: Any) -> None:
@@ -241,7 +278,7 @@ PUBLISHED_FILES = ("summary.json", "benchmark.md", "tokens.json")
 
 META_KEYS = ("skill_name", "skill_path", "baseline", "arms", "cases_source", "started_at", "budget_usd", "dry_run", "reps",
              "runtime_versions", "targets", "pricing", "per_claude_run_budget_usd", "source_skill_changed_during_round",
-             "regraded_at")
+             "regraded_at", "kind")
 
 
 def run_entry(entry: Dict[str, Any], record: Dict[str, Any], grading: Dict[str, Any]) -> Dict[str, Any]:
@@ -299,7 +336,8 @@ def regrade(out: Path, cases_path: Optional[Path], tokenizer: Tokenizer) -> Dict
         raise SystemExit(f"--regrade needs the cases file the round used; pass --cases (recorded: {cases_path})")
     spec = json.loads(cases_path.read_text(encoding="utf-8"))
     cases = {c["id"]: c for c in spec["evals"]}
-    fixture_md = spec["fixture"]["skill_md"]
+    kind = spec_kind(spec)
+    fixture_md = (spec.get("fixture") or {}).get("skill_md", "")
     static = json.loads((out / "tokens.json").read_text(encoding="utf-8")) if (out / "tokens.json").is_file() else {}
     per_claude_budget = meta.get("per_claude_run_budget_usd")
     runs: List[Dict[str, Any]] = []
@@ -330,9 +368,9 @@ def regrade(out: Path, cases_path: Optional[Path], tokenizer: Tokenizer) -> Dict
         write_json(record_path, record)
         result_text = (run_dir / "result.txt").read_text(encoding="utf-8") if (run_dir / "result.txt").is_file() else ""
         snap = lambda name: json.loads((run_dir / name).read_text(encoding="utf-8")) if (run_dir / name).is_file() else None
-        grading = grade_run(case=cases[entry["eval_id"]], fixture_skill_md=fixture_md, target_dir=run_dir / "workspace" / "target",
-                            result_text=result_text, record=record, snapshot_before=snap("snapshot-before.json"),
-                            snapshot_after=snap("snapshot-after.json"), tokenizer=tokenizer)
+        grading = grade_case(kind, cases[entry["eval_id"]], fixture_md=fixture_md, run_dir=run_dir, result_text=result_text,
+                             record=record, snapshot_before=snap("snapshot-before.json"), snapshot_after=snap("snapshot-after.json"),
+                             tokenizer=tokenizer)
         write_json(run_dir / "grading.json", grading)
         runs.append(run_entry(entry, record, grading))
     meta["regraded_at"] = utc_now()
@@ -450,8 +488,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     spec = json.loads(cases_path.read_text(encoding="utf-8"))
     if spec.get("approved") is False:
         raise SystemExit(f"{cases_path} holds unapproved cases; run cases.py --approve first")
-    fixture_md = spec["fixture"]["skill_md"]
-    fixture_files = spec["fixture"].get("files") or {}
+    kind = spec_kind(spec)
+    fixture_md = (spec.get("fixture") or {}).get("skill_md", "")
+    fixture_files = (spec.get("fixture") or {}).get("files") or {}
+    if kind == "task":
+        # fail before paying: every task case must declare usable checks
+        bad = {c.get("name", c.get("id")): validate_checks(c.get("checks")) for c in spec["evals"]}
+        bad = {k: v for k, v in bad.items() if v}
+        if bad:
+            raise SystemExit("task cases without usable checks: " + json.dumps(bad, ensure_ascii=False))
     matrix = spec.get("matrix", {})
     pricing = {m: v for m, v in matrix.get("pricing", {}).items() if isinstance(v, dict) and "input" in v}
     cases = [c for c in spec["evals"] if not args.only_case or c["id"] in args.only_case]
@@ -503,7 +548,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     claude_runs = sum(1 for p in plan if p["runtime"] == "claude")
     per_claude_budget = max(0.05, round(args.budget_usd / claude_runs, 4)) if claude_runs else None
     meta = {"skill_name": spec.get("skill_name", skill.name), "skill_path": str(skill), "baseline": args.baseline,
-            "arms": list(configs), "cases_source": str(cases_path),
+            "arms": list(configs), "cases_source": str(cases_path), "kind": kind,
             "started_at": utc_now(), "budget_usd": args.budget_usd, "dry_run": args.dry_run, "reps": args.reps,
             "runtime_versions": {r: rt.runtime_version(r) for r in runtimes_wanted},
             "targets": [{"runtime": r, "model": m} for r, m in targets],
@@ -516,7 +561,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         case, config = item["case"], item["config"]
         eval_dir = out / f"eval-{case['id']}-{case['name']}"
         write_json(eval_dir / "eval_metadata.json", {"eval_id": case["id"], "eval_name": case["name"],
-                                                     "prompt": case["prompt"], "assertions": case.get("expectations", [])})
+                                                     "prompt": case["prompt"], "assertions": case_assertions(kind, case)})
         model_slug = (item["model"] or "default").replace("/", "_")
         run_dir = eval_dir / ARM_DIRS[config] / f"run-{item['rep']}-{item['runtime']}-{model_slug}"
         run_dir.mkdir(parents=True, exist_ok=True)
@@ -527,10 +572,14 @@ def main(argv: Optional[List[str]] = None) -> int:
             write_json(run_dir / "record.json", record)
             runs.append({**entry, **record, "pass_rate": None, "cost_usd": None, "usage": None, "duration_seconds": None})
             continue
-        workspace, prompt = materialize(case, fixture_md, run_dir, fixture_files)
+        if kind == "task":
+            workspace, prompt = materialize_task(case, fixture_files, run_dir)
+        else:
+            workspace, prompt = materialize(case, fixture_md, run_dir, fixture_files)
         # Only the fixture is the run's subject: the adapter itself writes AGENTS.md / skills/
         # into the workspace to expose the skill, and those must not count as the run's edits.
-        before = rt.snapshot(workspace / "target")
+        subject = workspace if kind == "task" else workspace / "target"
+        before = rt.snapshot(subject)
         write_json(run_dir / "snapshot-before.json", before)
         passthrough = tuple(rt.RunRequest.__dataclass_fields__["env_passthrough"].default)
         if args.dry_run:
@@ -546,19 +595,22 @@ def main(argv: Optional[List[str]] = None) -> int:
                                protected_paths=[p for p in [versions[config]] if p is not None],
                                pricing=pricing, env_passthrough=passthrough)
         record = rt.run(item["runtime"], request)
-        after = rt.snapshot(workspace / "target")
+        after = rt.snapshot(subject)
         write_json(run_dir / "snapshot-after.json", after)
         result_text = (run_dir / "result.txt").read_text(encoding="utf-8") if (run_dir / "result.txt").is_file() else ""
         outputs = run_dir / "outputs"
         outputs.mkdir(exist_ok=True)
         if (workspace / "target").is_dir():
             shutil.copytree(workspace / "target", outputs / "target", dirs_exist_ok=True)
+        elif kind == "task":
+            shutil.copytree(workspace, outputs / "workspace", dirs_exist_ok=True,
+                            ignore=shutil.ignore_patterns("skills", ".opencode", ".git", "AGENTS.md", "__pycache__"))
         (outputs / "report.md").write_text(result_text, encoding="utf-8")
         (run_dir / "transcript.md").write_text(f"## Eval Prompt\n\n{prompt}\n\n## Runtime stdout\n\n" +
                                                ((run_dir / "stdout.txt").read_text(encoding="utf-8") if (run_dir / "stdout.txt").is_file() else ""),
                                                encoding="utf-8")
-        grading = grade_run(case=case, fixture_skill_md=fixture_md, target_dir=workspace / "target", result_text=result_text,
-                            record=record, snapshot_before=before, snapshot_after=after, tokenizer=tokenizer)
+        grading = grade_case(kind, case, fixture_md=fixture_md, run_dir=run_dir, result_text=result_text, record=record,
+                             snapshot_before=before, snapshot_after=after, tokenizer=tokenizer)
         write_json(run_dir / "grading.json", grading)
         usage = record.get("usage") or {}
         write_json(run_dir / "timing.json", {"total_tokens": usage.get("total_tokens"),

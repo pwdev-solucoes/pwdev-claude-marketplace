@@ -236,8 +236,10 @@ exemplo `meeting-summary` (propositalmente com problemas):
 | 2 | `unknown_model_explicit_override` | Perfil padrão `guided` sem modelo conhecido; separação de perfis |
 | 3 | `review_only` | Revisão sem nenhuma escrita, com achados por categoria, A/B proposto e métricas do protocolo |
 
-Ou seja, por padrão ele avalia **uma versão da skill-refactor** nesses casos. Para avaliar outra
-skill com casos do domínio dela, gere-os com `cases.py` (abaixo) e passe a pasta em `--cases`.
+Ou seja, por padrão ele avalia **uma versão da skill-refactor** nesses casos (modo `refactor`).
+Para avaliar **qualquer outra skill na tarefa dela**, use o modo `task` (abaixo): os braços passam a
+ser versões dessa skill, o workspace recebe os arquivos de entrada da tarefa, e a nota vem das
+verificações declaradas em cada caso.
 
 **Braços.** Cada caso roda em até três braços, sempre no mesmo runtime e modelo:
 
@@ -343,6 +345,58 @@ O runtime recebe uma cópia, então editar a original não afeta os runs. Mesmo 
 passa a descrever um alvo em movimento: o `summary.json` lista os arquivos alterados em
 `source_skill_changed_during_round`, e uma rodada que passaria fica com o veredito
 `PASS_WITH_SOURCE_DRIFT`.
+
+### Medir qualquer skill na tarefa dela — modo `task`
+
+O modo `refactor` mede a skill-refactor. O modo `task` mede a skill que você quiser, fazendo o que
+ela faz: `--skill` é a candidata, `--baseline` a versão anterior, `--no-skill-arm` o controle sem ela,
+e o `bench.py` deixa de conhecer a skill — tudo vem do arquivo de casos:
+
+```json
+{
+  "skill_name": "meeting-summary", "kind": "task", "approved": true,
+  "fixture": {"files": {"notes/minutes.txt": "Alice: ship Friday.\nBob: budget approved.\n"}},
+  "evals": [{
+    "id": 1, "name": "summarize_minutes",
+    "prompt": "Summarize notes/minutes.txt into summary.md with Key points, Decisions and Actions.",
+    "expected_output": "summary.md with three labelled sections and no invented names",
+    "files": {},
+    "checks": [
+      {"type": "file_exists", "path": "summary.md"},
+      {"type": "regex", "path": "summary.md", "pattern": "(?im)^## (Key points|Decisions|Actions)"},
+      {"type": "not_regex", "path": "summary.md", "pattern": "(?i)\\bCarol\\b"},
+      {"type": "regex", "target": "result", "pattern": "(?i)summary\\.md"},
+      {"type": "script", "command": "python3 check_summary.py summary.md", "text": "summary parses"}
+    ]
+  }]
+}
+```
+
+| Verificação | Campos | Passa quando |
+| --- | --- | --- |
+| `file_exists` / `file_absent` | `path` | o arquivo existe / não existe no workspace |
+| `contains` / `not_contains` | `path` **ou** `target: "result"`, `needle` | o texto (com acentos normalizados) contém / não contém `needle` |
+| `regex` / `not_regex` | `path` ou `target: "result"`, `pattern` | o padrão casa / não casa (modo multilinha) |
+| `json_valid` | `path` | o arquivo é JSON válido |
+| `script` | `command`, opcional `text` | o comando, rodado no workspace, sai com 0 |
+
+Regras: caminhos sempre relativos ao workspace (absolutos e `..` são recusados antes de qualquer
+chamada); arquivo ausente passa só nas verificações negativas; `text` dá o rótulo que aparece no
+viewer. Os arquivos de `fixture.files` valem para todos os casos e os de `files` do caso só para
+ele; `{run_dir}` no prompt vira `artifacts/`. O harness acrescenta duas verificações suas: run
+concluído sem erro e nenhum caminho protegido alterado.
+
+```bash
+python3 scripts/bench.py --skill <pasta-da-skill> --baseline <versao-anterior> --no-skill-arm \
+  --cases <pasta-com-cases.json> --runtimes claude,opencode --claude-models claude-sonnet-5 \
+  --opencode-models opencode/big-pickle --reps 2 --budget-usd 5 --out "$(mktemp -d)" \
+  --publish <pasta-da-skill>/evals/benchmarks/$(date +%F)
+```
+
+Os casos podem ser escritos à mão ou gerados: `cases.py --extract <skill> --kind task` cria o
+esqueleto, `--propose` pede a um modelo 2–3 tarefas com arquivos sintéticos e verificações
+(validadas por esquema; verificações `script` são listadas para leitura antes do aceite) e
+`--approve` fecha o conjunto.
 
 ### Casos por contexto — `cases.py`
 

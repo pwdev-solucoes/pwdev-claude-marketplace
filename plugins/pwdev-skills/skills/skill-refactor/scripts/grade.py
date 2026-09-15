@@ -272,20 +272,166 @@ def _repeated_lines(body: str) -> List[str]:
     return [line for line, count in seen.items() if count > 1]
 
 
+# --- task mode: any skill, graded by the checks its case declares ------------------------------
+
+CHECK_TYPES = ("file_exists", "file_absent", "contains", "not_contains", "regex", "not_regex", "json_valid", "script")
+SCRIPT_TIMEOUT = 120
+
+
+def _safe_rel(path: Any) -> Optional[str]:
+    if not isinstance(path, str) or not path or Path(path).is_absolute() or ".." in Path(path).parts:
+        return None
+    return path
+
+
+def check_text(check: Dict[str, Any]) -> str:
+    """The label a check shows in the viewer: the case's own words, or a generated one."""
+    if check.get("text"):
+        return str(check["text"])
+    kind = check.get("type")
+    where = check.get("path") or ("the answer" if check.get("target") == "result" else "?")
+    return {
+        "file_exists": f"Creates {where}", "file_absent": f"Does not create {where}",
+        "contains": f"{where} contains {check.get('text_value', check.get('needle'))!r}",
+        "not_contains": f"{where} does not contain {check.get('needle')!r}",
+        "regex": f"{where} matches /{check.get('pattern')}/", "not_regex": f"{where} does not match /{check.get('pattern')}/",
+        "json_valid": f"{where} is valid JSON", "script": f"`{check.get('command')}` exits 0",
+    }.get(kind, f"unknown check {kind}")
+
+
+def validate_checks(checks: Any) -> List[str]:
+    """Problems with a case's checks, as messages; an empty list means usable."""
+    problems: List[str] = []
+    if not isinstance(checks, list) or not checks:
+        return ["checks must be a non-empty list"]
+    for i, check in enumerate(checks):
+        if not isinstance(check, dict) or check.get("type") not in CHECK_TYPES:
+            problems.append(f"checks[{i}]: type must be one of {CHECK_TYPES}")
+            continue
+        kind = check["type"]
+        if kind == "script":
+            if not isinstance(check.get("command"), str) or not check["command"].strip():
+                problems.append(f"checks[{i}]: script needs a command")
+            continue
+        if check.get("target") != "result" and _safe_rel(check.get("path")) is None:
+            problems.append(f"checks[{i}]: path must be relative to the workspace (or target: result)")
+        if kind in ("contains", "not_contains") and not isinstance(check.get("needle"), str):
+            problems.append(f"checks[{i}]: {kind} needs a needle")
+        if kind in ("regex", "not_regex"):
+            try:
+                re.compile(str(check.get("pattern")))
+            except re.error as exc:
+                problems.append(f"checks[{i}]: bad pattern: {exc}")
+    return problems
+
+
+def _subject(check: Dict[str, Any], workspace: Path, result_text: str) -> Tuple[Optional[str], str]:
+    if check.get("target") == "result":
+        return result_text, "the answer"
+    rel = _safe_rel(check.get("path"))
+    if rel is None:
+        return None, "unsafe path"
+    path = workspace / rel
+    if not path.is_file():
+        return None, f"{rel} missing"
+    try:
+        return path.read_text(encoding="utf-8"), rel
+    except UnicodeDecodeError:
+        return path.read_bytes().decode("utf-8", "replace"), rel
+
+
+def run_check(check: Dict[str, Any], workspace: Path, result_text: str, timeout: int = SCRIPT_TIMEOUT) -> Dict[str, Any]:
+    kind = check.get("type")
+    text = check_text(check)
+    if kind in ("file_exists", "file_absent"):
+        rel = _safe_rel(check.get("path"))
+        exists = rel is not None and (workspace / rel).exists()
+        return _expect(text, exists if kind == "file_exists" else not exists, f"{rel}: {'present' if exists else 'absent'}")
+    if kind == "script":
+        import subprocess
+        try:
+            proc = subprocess.run(check["command"], shell=True, cwd=workspace, capture_output=True, text=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            return _expect(text, False, f"timed out after {timeout}s")
+        tail = (proc.stdout + proc.stderr).strip()[-300:]
+        return _expect(text, proc.returncode == 0, f"exit {proc.returncode}: {tail}" if tail else f"exit {proc.returncode}")
+    subject, where = _subject(check, workspace, result_text)
+    if subject is None:
+        # an absent file passes only the negative checks
+        return _expect(text, kind in ("not_contains", "not_regex"), where)
+    if kind == "json_valid":
+        try:
+            json.loads(subject)
+            return _expect(text, True, f"{where}: parsed")
+        except json.JSONDecodeError as exc:
+            return _expect(text, False, f"{where}: {exc}")
+    if kind in ("contains", "not_contains"):
+        hit = fold(str(check.get("needle"))) in fold(subject)
+        return _expect(text, hit if kind == "contains" else not hit, f"{where}: {'found' if hit else 'not found'}")
+    if kind in ("regex", "not_regex"):
+        match = re.search(str(check.get("pattern")), subject, re.M)
+        return _expect(text, bool(match) if kind == "regex" else not match,
+                       f"{where}: {match.group(0)[:80]!r}" if match else f"{where}: no match")
+    return _expect(text, False, f"unknown check type {kind}")
+
+
+def grade_task(*, case: Dict[str, Any], workspace: Path, result_text: str, record: Dict[str, Any],
+               tokenizer: Optional[Tokenizer] = None) -> Dict[str, Any]:
+    """Grade a run of any skill on a task from its own domain, by the checks the case declares.
+
+    Nothing here knows the skill: the case says which files must exist, what they must or must not
+    contain, which patterns hold, or which script must exit 0. The run's own status and the
+    protected-path fingerprint are the only checks the harness adds.
+    """
+    tokenizer = tokenizer or Tokenizer()
+    expectations: List[Dict[str, Any]] = [
+        _expect("The runtime completed the task without error", record.get("status") == "PASS",
+                f"status={record.get('status')} reason={record.get('reason')}"),
+        _expect("No file outside the isolated workspace changed", not record.get("protected_changed"),
+                f"protected_changed={record.get('protected_changed')}"),
+    ]
+    problems = validate_checks(case.get("checks"))
+    if problems:
+        expectations.append(_expect("The case declares usable checks", False, "; ".join(problems)))
+    else:
+        for check in case["checks"]:
+            expectations.append(run_check(check, workspace, result_text))
+    passed = sum(1 for e in expectations if e["passed"])
+    produced = sorted(p.relative_to(workspace).as_posix() for p in workspace.rglob("*")
+                      if p.is_file() and not any(part in ("skills", ".opencode", "artifacts", ".git") or part == "AGENTS.md" for part in p.parts))
+    return {
+        "expectations": expectations,
+        "summary": {"passed": passed, "failed": len(expectations) - passed, "total": len(expectations),
+                    "pass_rate": round(passed / len(expectations), 4) if expectations else 0.0},
+        "execution_metrics": {"output_chars": len(result_text), "output_tokens_estimate": tokenizer.count(result_text),
+                              "workspace_files_after": produced[:50],
+                              "runtime_usage": record.get("usage"), "cost_usd": record.get("cost_usd"),
+                              "cost_source": record.get("cost_source"), "model_observed": record.get("model_observed")},
+        "timing": {"total_duration_seconds": record.get("duration_seconds") or 0},
+        "user_notes_summary": {"uncertainties": [], "needs_review": ["Only the declared checks are graded; judge quality beyond them by reading the outputs."],
+                               "workarounds": []},
+    }
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Grade one benchmark run.")
     parser.add_argument("run_dir", type=Path, help="run directory holding record.json, result.txt, workspace/")
     parser.add_argument("--case", type=Path, required=True, help="JSON file with the eval case (id, name, prompt, ...)")
-    parser.add_argument("--fixture", type=Path, required=True, help="the original fixture SKILL.md")
+    parser.add_argument("--fixture", type=Path, default=None, help="the original fixture SKILL.md (refactor mode)")
     args = parser.parse_args(argv)
     run_dir = args.run_dir
     case = json.loads(args.case.read_text(encoding="utf-8"))
     record = json.loads(read(run_dir / "record.json") or "{}")
-    before = json.loads(read(run_dir / "snapshot-before.json") or "null")
-    after = json.loads(read(run_dir / "snapshot-after.json") or "null")
-    grading = grade_run(case=case, fixture_skill_md=read(args.fixture), target_dir=run_dir / "workspace" / "target",
-                        result_text=read(run_dir / "result.txt"), record=record,
-                        snapshot_before=before, snapshot_after=after)
+    if case.get("checks") is not None:
+        grading = grade_task(case=case, workspace=run_dir / "workspace", result_text=read(run_dir / "result.txt"), record=record)
+    else:
+        if args.fixture is None:
+            parser.error("--fixture is required for refactor-mode cases")
+        before = json.loads(read(run_dir / "snapshot-before.json") or "null")
+        after = json.loads(read(run_dir / "snapshot-after.json") or "null")
+        grading = grade_run(case=case, fixture_skill_md=read(args.fixture), target_dir=run_dir / "workspace" / "target",
+                            result_text=read(run_dir / "result.txt"), record=record,
+                            snapshot_before=before, snapshot_after=after)
     (run_dir / "grading.json").write_text(json.dumps(grading, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(json.dumps(grading["summary"]))
     return 0

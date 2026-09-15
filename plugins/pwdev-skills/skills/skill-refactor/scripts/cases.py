@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
-"""Derive benchmark cases from the skill under refactoring, so the A/B measures that skill's own
-behavior instead of one fixed fixture.
+"""Derive benchmark cases for a skill, in one of two kinds.
+
+``refactor`` (default): cases that ask skill-refactor to review or refactor the target skill, so
+the A/B measures skill-refactor's behavior on that target instead of on one fixed fixture.
+
+``task``: cases that ask the *target skill itself* to do its own job — input files, a prompt in
+its domain and objective checks on the outputs — so bench.py can measure any skill (arms:
+candidate, previous version, no skill) with grade.py's check-driven task grading.
 
 Three stages, each leaving a file the next one reads:
 
@@ -36,7 +42,10 @@ from typing import Any, Dict, List, Optional, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import runtimes as rt  # noqa: E402
+from grade import CHECK_TYPES, validate_checks  # noqa: E402
 from tokens import description_of, split_frontmatter  # noqa: E402
+
+MAX_CASE_FILE_CHARS = 8000
 
 SCHEMA_VERSION = 1
 MAX_FIXTURE_FILE_BYTES = 200_000
@@ -320,6 +329,42 @@ def template_triggers(name: str, description: str) -> List[Dict[str, Any]]:
     ]
 
 
+def task_triggers(name: str, description: str) -> List[Dict[str, Any]]:
+    job = re.sub(r"(?i)^(use (?:this )?(?:when|for|to)\s*)", "", description.split(".")[0]).strip() or "its own task"
+    return [
+        {"query": f"{job[0].upper() + job[1:]}.", "should_trigger": True},
+        {"query": f"Use the {name} skill for this.", "should_trigger": True},
+        {"query": f"Review the {name} SKILL.md and tell me how to make it cheaper to load.", "should_trigger": False},
+        {"query": "Refactor this Python function to remove duplication.", "should_trigger": False},
+    ]
+
+
+def extract_task(skill_dir: Path) -> Dict[str, Any]:
+    """A task-kind draft: the target's identity and a skeleton the proposal (or a person) fills with tasks."""
+    skill_dir = Path(skill_dir).resolve()
+    skill_md = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
+    frontmatter, body = split_frontmatter(skill_md)
+    fields = frontmatter_fields(frontmatter)
+    description = description_of(frontmatter)
+    name = fields["name"] or skill_dir.name
+    return {
+        "schema_version": SCHEMA_VERSION, "stage": "draft", "approved": False, "kind": "task",
+        "skill_name": name,
+        "source": {"skill_dir": rt.sanitize(str(skill_dir)), "skill_md_sha256": sha256_text(skill_md),
+                   "extracted_at": utc_now(), "language": detect_language(body), "description": description,
+                   "references": sorted({m.group(2) for m in LINK.finditer(body)})},
+        "fixture": {"files": {}},
+        # the skill itself, shown to the proposal call under ./target; the harness never uses it as a fixture
+        "target": {"skill_md": rt.sanitize(skill_md), "files": {k: v for k, v in fixture_files(skill_dir).items() if k != "SKILL.md"}},
+        "fixture_protocol": "The harness writes fixture.files and each case's files at the workspace root, substitutes "
+                            "{run_dir} (artifact area) and {workspace} in the prompt, exposes the measured skill version "
+                            "to the runtime, and grades the outputs by the case's checks.",
+        "checks_allowed": list(CHECK_TYPES),
+        "evals": [],
+        "trigger_evals": task_triggers(name, description),
+    }
+
+
 def extract(skill_dir: Path) -> Dict[str, Any]:
     skill_dir = Path(skill_dir).resolve()
     skill_md = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
@@ -374,7 +419,29 @@ PROPOSAL_FILE = "proposal.json"
 MODES = ("review", "refactor")
 
 
+def task_proposal_prompt(draft: Dict[str, Any]) -> str:
+    return (
+        "You are designing benchmark tasks for the Agent Skill in ./target: read ./target/SKILL.md and the files it "
+        "references, and ./draft.json (identity, allowed check types). The tasks will be run by an agent that has "
+        "this skill loaded, by one that has an older version, and by one that has no skill at all; the outputs are "
+        f"graded objectively. Write ./{PROPOSAL_FILE} containing only JSON with this shape:\n"
+        '{"tasks": [2 to 3 objects {"name": snake_case, "prompt": a realistic request a user of this skill would make, '
+        'referring to input files by relative path and to the artifact area as {run_dir}; "expected_output": one '
+        'sentence; "files": {relative path: small synthetic content the task needs, plain text, at most a few KB each}; '
+        '"checks": [objects with "type" in ' + json.dumps(list(CHECK_TYPES)) + ' — "file_exists"/"file_absent" take '
+        '"path"; "contains"/"not_contains" take "path" (or "target": "result" for the answer text) and "needle"; '
+        '"regex"/"not_regex" take "path" or "target" and "pattern"; "json_valid" takes "path"; "script" takes "command" '
+        'run in the workspace and passes on exit 0 — every path relative to the workspace; prefer checks a good answer '
+        'must satisfy and a wrong one must fail}], '
+        '"trigger_evals": [8 to 10 objects {"query": string, "should_trigger": boolean}: positives phrased the way this '
+        "skill's users speak, and near-miss negatives in the same domain that should not load it]}\n"
+        "Do not modify anything under ./target, do not run provider CLIs, and put no prose outside the JSON."
+    )
+
+
 def proposal_prompt(draft: Dict[str, Any]) -> str:
+    if draft.get("kind") == "task":
+        return task_proposal_prompt(draft)
     return (
         "You are designing benchmark cases for a refactoring of the Agent Skill in ./target. Read ./target/SKILL.md "
         "and the files it references. ./draft.json holds invariants and defects extracted by script, three template "
@@ -432,6 +499,48 @@ def validate_proposal(obj: Any) -> Dict[str, Any]:
             "invariant_suggestions": suggestions}
 
 
+def validate_task_proposal(obj: Any) -> Dict[str, Any]:
+    """Raise ValueError unless the reply is 2-3 tasks with safe files and usable checks, plus triggers."""
+    if not isinstance(obj, dict):
+        raise ValueError("proposal is not a JSON object")
+    tasks = obj.get("tasks")
+    if not isinstance(tasks, list) or not 2 <= len(tasks) <= 3:
+        raise ValueError("tasks must hold 2 to 3 items")
+    names: List[str] = []
+    clean_tasks = []
+    for i, task in enumerate(tasks):
+        if not isinstance(task, dict):
+            raise ValueError(f"tasks[{i}] is not an object")
+        for key in ("name", "prompt", "expected_output"):
+            if not isinstance(task.get(key), str) or not task[key].strip():
+                raise ValueError(f"tasks[{i}].{key} missing or empty")
+        if not re.fullmatch(r"[a-z][a-z0-9_]*", task["name"]) or task["name"] in names:
+            raise ValueError(f"tasks[{i}].name must be unique snake_case")
+        names.append(task["name"])
+        files = task.get("files") or {}
+        if not isinstance(files, dict):
+            raise ValueError(f"tasks[{i}].files must be an object")
+        for rel, content in files.items():
+            if Path(rel).is_absolute() or ".." in Path(rel).parts or not isinstance(content, str):
+                raise ValueError(f"tasks[{i}].files[{rel!r}] must be a relative path with text content")
+            if len(content) > MAX_CASE_FILE_CHARS:
+                raise ValueError(f"tasks[{i}].files[{rel!r}] exceeds {MAX_CASE_FILE_CHARS} characters")
+        problems = validate_checks(task.get("checks"))
+        if problems:
+            raise ValueError(f"tasks[{i}].checks: " + "; ".join(problems))
+        clean_tasks.append({"name": task["name"], "prompt": task["prompt"], "expected_output": task["expected_output"],
+                            "files": files, "checks": task["checks"]})
+    triggers = obj.get("trigger_evals")
+    if not isinstance(triggers, list) or not 8 <= len(triggers) <= 10:
+        raise ValueError("trigger_evals must hold 8 to 10 items")
+    for i, trig in enumerate(triggers):
+        if not isinstance(trig, dict) or not isinstance(trig.get("query"), str) or not isinstance(trig.get("should_trigger"), bool):
+            raise ValueError(f"trigger_evals[{i}] must have a query and a boolean should_trigger")
+    if {t["should_trigger"] for t in triggers} != {True, False}:
+        raise ValueError("trigger_evals must contain both positives and negatives")
+    return {"tasks": clean_tasks, "trigger_evals": [{"query": t["query"], "should_trigger": t["should_trigger"]} for t in triggers]}
+
+
 def _json_from_text(text: str) -> Any:
     fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.S)
     candidate = fenced.group(1) if fenced else text[text.find("{"): text.rfind("}") + 1]
@@ -446,12 +555,13 @@ def propose(out_dir: Path, *, runtime: str, model: Optional[str], effort: Option
     run_dir, workspace = work / "run", work / "workspace"
     target = workspace / "target"
     target.mkdir(parents=True, exist_ok=True)
-    (target / "SKILL.md").write_text(draft["fixture"]["skill_md"], encoding="utf-8")
-    for rel, text in draft["fixture"].get("files", {}).items():
+    shown = draft.get("target") or draft["fixture"]  # task drafts carry the skill apart from the (input) fixture
+    (target / "SKILL.md").write_text(shown["skill_md"], encoding="utf-8")
+    for rel, text in shown.get("files", {}).items():
         path = target / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
-    slim = {k: draft[k] for k in ("skill_name", "invariants", "findings", "evals", "trigger_evals")}
+    slim = {k: draft[k] for k in ("skill_name", "kind", "invariants", "findings", "evals", "trigger_evals", "checks_allowed") if k in draft}
     write_json(workspace / "draft.json", slim)
     request = rt.RunRequest(prompt=proposal_prompt(draft), workspace=workspace, run_dir=run_dir, skill_dir=None,
                             model=model, provider=provider, effort=effort, budget_usd=budget_usd, timeout=timeout,
@@ -467,12 +577,24 @@ def propose(out_dir: Path, *, runtime: str, model: Optional[str], effort: Option
         raw = _json_from_text(Path(record["result_path"]).read_text(encoding="utf-8"))
     if record.get("status") != "PASS" or raw is None:
         raise SystemExit(f"proposal call did not complete: status={record.get('status')} reason={record.get('reason')}")
-    proposal = validate_proposal(raw)  # raises ValueError with the schema violation
+    origin = f"llm:{runtime}:{record.get('model_observed') or model or 'default'}"
     proposed = json.loads(json.dumps(draft))
-    next_id = max(c["id"] for c in proposed["evals"]) + 1
-    for req in proposal["requests"]:
+    next_id = max((c["id"] for c in proposed["evals"]), default=0) + 1
+    if draft.get("kind") == "task":
+        proposal = validate_task_proposal(raw)  # raises ValueError with the schema violation
+        for task in proposal["tasks"]:
+            proposed["evals"].append({"id": next_id, "name": task["name"], "mode": "task", "origin": origin,
+                                      "prompt": task["prompt"], "expected_output": task["expected_output"],
+                                      "files": task["files"], "checks": task["checks"]})
+            next_id += 1
+        proposed["needs_review"] = [f"{c['name']}: script check `{k['command']}`" for c in proposed["evals"]
+                                    for k in c.get("checks", []) if k.get("type") == "script"]
+        proposal["invariant_suggestions"] = {}
+    else:
+        proposal = validate_proposal(raw)  # raises ValueError with the schema violation
+    for req in proposal.get("requests", []):
         proposed["evals"].append({
-            "id": next_id, "name": req["name"], "mode": req["mode"], "origin": f"llm:{runtime}:{record.get('model_observed') or model or 'default'}",
+            "id": next_id, "name": req["name"], "mode": req["mode"], "origin": origin,
             "prompt": req["prompt"], "expected_output": req["expected_output"], "files": [],
             "expectations": REVIEW_EXPECTATIONS if req["mode"] == "review" else REFACTOR_EXPECTATIONS,
             "invariants": draft["invariants"],
@@ -480,7 +602,7 @@ def propose(out_dir: Path, *, runtime: str, model: Optional[str], effort: Option
         next_id += 1
     for trig in proposal["trigger_evals"]:
         proposed["trigger_evals"].append({**trig, "origin": "llm"})
-    proposed["llm_suggested_invariants"] = proposal["invariant_suggestions"]
+    proposed["llm_suggested_invariants"] = proposal.get("invariant_suggestions", {})
     proposed["proposal_run"] = {k: record.get(k) for k in ("runtime", "model_requested", "model_observed", "effort_requested",
                                                             "effort_observed", "status", "cost_usd", "cost_source", "usage")}
     proposed["proposal_run"]["protected_changed"] = record.get("protected_changed")
@@ -493,8 +615,10 @@ def propose(out_dir: Path, *, runtime: str, model: Optional[str], effort: Option
 
 def render_summary(spec: Dict[str, Any]) -> str:
     lines = [f"Cases for `{spec['skill_name']}` (source SKILL.md sha256 {spec['source']['skill_md_sha256'][:12]}…)", ""]
+    if spec.get("kind") == "task":
+        lines.append(f"Kind: task — the skill does its own job; graded by each case's checks ({len(spec.get('evals', []))} tasks)")
     lines.append("Invariants:")
-    for key, value in spec["invariants"].items():
+    for key, value in (spec.get("invariants") or {}).items():
         lines.append(f"  {key}: {json.dumps(value, ensure_ascii=False)}")
     lines.append("")
     lines.append("Findings by category:")
@@ -505,10 +629,14 @@ def render_summary(spec: Dict[str, Any]) -> str:
     for case in spec["evals"]:
         lines.append(f"  [{case['id']}] {case['name']} ({case.get('mode', '?')}, {case.get('origin', '?')})")
         lines.append(f"      {case['prompt'][:160]}{'…' if len(case['prompt']) > 160 else ''}")
+        if case.get("checks"):
+            lines.append(f"      files: {sorted(case.get('files') or {})} · checks: " + ", ".join(k['type'] for k in case['checks']))
     lines.append("")
     lines.append("Trigger queries:")
     for trig in spec["trigger_evals"]:
         lines.append(f"  {'+' if trig['should_trigger'] else '-'} {trig['query']}" + (" (llm)" if trig.get("origin") == "llm" else ""))
+    if spec.get("needs_review"):
+        lines += ["", "Script checks run shell commands in the workspace — read each one before approving:"] + [f"  {x}" for x in spec["needs_review"]]
     if spec.get("llm_suggested_invariants"):
         lines += ["", "Invariants the model suggested (NOT applied; move them into `invariants` by hand if they hold):",
                   "  " + json.dumps(spec["llm_suggested_invariants"], ensure_ascii=False)[:400]]
@@ -553,6 +681,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     stage.add_argument("--propose", type=Path, metavar="OUT_DIR")
     stage.add_argument("--approve", type=Path, metavar="OUT_DIR")
     stage.add_argument("--check", type=Path, metavar="OUT_DIR", help="exit 1 if the skill's SKILL.md drifted from cases.json")
+    parser.add_argument("--kind", choices=("refactor", "task"), default="refactor",
+                        help="refactor: cases that ask skill-refactor to work on the skill; task: cases where the skill does its own job")
     parser.add_argument("--out", type=Path, help="where --extract writes cases.draft.json (default: <skill>/evals/cases/<name>)")
     parser.add_argument("--skill", type=Path, help="skill dir for --approve/--check drift detection")
     parser.add_argument("--runtime", choices=list(rt.RUNTIMES), default="claude")
@@ -567,11 +697,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     if args.extract:
-        draft = extract(args.extract)
+        draft = extract_task(args.extract) if args.kind == "task" else extract(args.extract)
         out = args.out or (args.extract.resolve() / "evals" / "cases" / draft["skill_name"])
         write_json(out / "cases.draft.json", draft)
-        print(f"wrote {out / 'cases.draft.json'}: {len(draft['evals'])} requests, {len(draft['trigger_evals'])} trigger "
-              f"queries, findings: {[f['category'] for f in draft['findings']] or 'none'}")
+        print(f"wrote {out / 'cases.draft.json'} ({draft.get('kind', 'refactor')}): {len(draft['evals'])} requests, "
+              f"{len(draft['trigger_evals'])} trigger queries, findings: {[f['category'] for f in draft.get('findings', [])] or 'none'}")
         return 0
     if args.propose:
         proposed = propose(args.propose, runtime=args.runtime, model=args.model, effort=args.effort, budget_usd=args.budget_usd,

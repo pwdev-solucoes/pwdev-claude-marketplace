@@ -14,10 +14,11 @@ aplicação da skill a si mesma em 14/09/2026
 3. [Cenário B — refatorar com edição autorizada](#3-cenário-b--refatorar-com-edição-autorizada)
 4. [Cenário C — medir antes, sem skill e depois](#4-cenário-c--medir-antes-sem-skill-e-depois)
 5. [Cenário D — comparar modelos: mesmo runtime e runtimes diferentes](#5-cenário-d--comparar-modelos-mesmo-runtime-e-runtimes-diferentes)
-6. [Cenário E — casos no domínio da skill-alvo](#6-cenário-e--casos-no-domínio-da-skill-alvo)
-7. [Cenário F — a rodada deu errado](#7-cenário-f--a-rodada-deu-errado)
-8. [Como pedir bem](#8-como-pedir-bem)
-9. [Checklist de saída](#9-checklist-de-saída)
+6. [Cenário E — medir qualquer skill na tarefa dela](#6-cenário-e--medir-qualquer-skill-na-tarefa-dela)
+7. [Cenário F — casos no domínio da skill-alvo](#7-cenário-f--casos-no-domínio-da-skill-alvo)
+8. [Cenário G — a rodada deu errado](#8-cenário-g--a-rodada-deu-errado)
+9. [Como pedir bem](#9-como-pedir-bem)
+10. [Checklist de saída](#10-checklist-de-saída)
 
 ---
 
@@ -39,7 +40,7 @@ Aponte o que reduziria contexto e como medir o efeito.
 ```
 
 Se a resposta vier em três partes — achados por categoria, mudanças propostas, como medir — a skill
-foi acionada. Se vier uma opinião solta, ela não foi: veja [§8](#8-como-pedir-bem).
+foi acionada. Se vier uma opinião solta, ela não foi: veja [§9](#9-como-pedir-bem).
 
 ## 2. Cenário A — revisar uma skill sem tocar nela
 
@@ -214,10 +215,51 @@ caso de revisão): Opus em `high` 7/7 a US$ 0,67; Sol em `low` 7/7 a 0,14; Herme
 Antes de escrever "o runtime X é mais eficiente", confira: mesmo caso, mesmo esforço, ≥ 3 reps,
 `cost_source` igual ou declarado, e a diferença maior que a variação entre as repetições.
 
-## 6. Cenário E — casos no domínio da skill-alvo
+## 6. Cenário E — medir qualquer skill na tarefa dela
 
-**Quando:** o fixture padrão (`meeting-summary`) mede a skill-refactor, não a sua skill. Para medir a
-sua, os casos precisam vir dela.
+**Quando:** você refatorou a skill `resumo` (ou qualquer outra) e quer saber se a versão nova faz
+**o trabalho dela** tão bem quanto a anterior, e o que ela acrescenta em relação a nenhuma skill.
+Os cenários C e D medem a skill-refactor; este mede a sua.
+
+**O que muda:** os três braços passam a ser versões da sua skill; o workspace recebe os arquivos de
+entrada da tarefa; e a nota vem de **verificações declaradas no caso** — nada no harness conhece a
+skill. Um arquivo `cases.json` com `"kind": "task"`:
+
+```json
+{"skill_name": "resumo", "kind": "task", "approved": true,
+ "fixture": {"files": {"notes/ata.txt": "Ana: entregar sexta.\nBeto: orçamento aprovado.\n"}},
+ "evals": [{"id": 1, "name": "resumir_ata",
+   "prompt": "Resuma notes/ata.txt em resumo.md com Pontos-chave, Decisões e Ações.",
+   "expected_output": "resumo.md com as três seções e sem nomes inventados",
+   "checks": [{"type": "file_exists", "path": "resumo.md"},
+              {"type": "regex", "path": "resumo.md", "pattern": "(?im)^## (Pontos-chave|Decisões|Ações)"},
+              {"type": "not_regex", "path": "resumo.md", "pattern": "(?i)\\bCarla\\b"}]}]}
+```
+
+Tipos de verificação: `file_exists`, `file_absent`, `contains`, `not_contains`, `regex`, `not_regex`,
+`json_valid`, `script` (comando que precisa sair com 0). Caminhos são relativos ao workspace; um
+caminho absoluto ou com `..` é recusado antes de qualquer chamada paga. Escreva verificações que uma
+boa resposta **precisa** satisfazer e uma errada **precisa** falhar — é isso que separa os braços.
+
+```bash
+cp -r plugins/meu-plugin/skills/resumo /tmp/resumo-antes      # ou --baseline git:<sha>
+python3 scripts/bench.py --skill plugins/meu-plugin/skills/resumo --baseline /tmp/resumo-antes --no-skill-arm \
+  --cases plugins/meu-plugin/skills/resumo/evals/cases/resumo \
+  --runtimes claude,opencode --claude-models claude-sonnet-5 --opencode-models opencode/big-pickle \
+  --claude-effort medium --reps 2 --budget-usd 5 --out "$(mktemp -d)" \
+  --publish plugins/meu-plugin/skills/resumo/evals/benchmarks/$(date +%F)
+```
+
+Para não escrever os casos à mão: `cases.py --extract <skill> --kind task` gera o esqueleto,
+`--propose` pede a um modelo duas ou três tarefas com arquivos sintéticos e verificações (validadas
+por esquema), e `--approve` fecha o conjunto — leia cada verificação `script` antes de aprovar,
+porque ela roda um comando no workspace. A leitura do resultado é a do cenário C: `paired_by_case`,
+decisão por modelo, `no_skill` como controle.
+
+## 7. Cenário F — casos no domínio da skill-alvo
+
+**Quando:** você quer medir a **skill-refactor** trabalhando sobre a sua skill (não a sua skill na
+tarefa dela — isso é o cenário E). O fixture padrão é o `meeting-summary`; aqui os casos vêm da sua.
 
 ```bash
 python3 scripts/cases.py --extract plugins/pwdev-code/skills/reports          # sem custo
@@ -238,7 +280,7 @@ python3 scripts/bench.py --skill ... --cases plugins/pwdev-code/skills/reports/e
 - `--approve` grava `cases.json` amarrado ao hash do `SKILL.md`. Depois de refatorar, `--check`
   acusa deriva: é esperado, porque o fixture é a versão que os casos descrevem.
 
-## 7. Cenário F — a rodada deu errado
+## 8. Cenário G — a rodada deu errado
 
 | Sintoma | Significa | O que fazer |
 | --- | --- | --- |
@@ -258,7 +300,7 @@ python3 scripts/bench.py --regrade <out-da-rodada> --cases evals/evals.json --pu
 O `--regrade` reconstrói a rodada a partir do disco — inclusive uma rodada interrompida, ou
 completada em várias invocações no mesmo `--out` (um runtime por vez).
 
-## 8. Como pedir bem
+## 9. Como pedir bem
 
 | Diga | Porque |
 | --- | --- |
@@ -272,7 +314,7 @@ Evite: pedir "deixe mais curta" (tamanho não é a medida), pedir perfil por nom
 medição ("Haiku é lean"), ou pedir para a skill executar a tarefa da skill-alvo (ela não resume
 reuniões; ela refatora a skill que resume).
 
-## 9. Checklist de saída
+## 10. Checklist de saída
 
 - [ ] A entrega distingue `refactored` / `statically validated` / `behaviorally evaluated`.
 - [ ] Nome, `paths`, metadados, rótulos de saída e proibições da skill-alvo continuam lá.

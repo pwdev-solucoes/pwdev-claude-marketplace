@@ -170,7 +170,11 @@ if os.environ.get("FAKE_ESCAPE"):
 prompt = sys.argv[sys.argv.index("-p") + 1]
 result = "done: refactored"
 target = os.path.join(os.getcwd(), "target", "SKILL.md")
-if os.environ.get("FAKE_PROPOSAL") and "proposal.json" in prompt:
+if os.environ.get("FAKE_TASK") and os.path.isfile(os.path.join(os.getcwd(), "notes.txt")):
+    # a task-mode run: the skill under test summarizes notes.txt into summary.md
+    open(os.path.join(os.getcwd(), "summary.md"), "w").write(os.environ["FAKE_TASK"])
+    result = "Wrote summary.md with Key points, Decisions and Actions."
+elif os.environ.get("FAKE_PROPOSAL") and "proposal.json" in prompt:
     open(os.path.join(os.getcwd(), "proposal.json"), "w").write(os.environ["FAKE_PROPOSAL"])
     result = "wrote proposal.json"
 elif prompt.startswith("Review"):
@@ -689,6 +693,47 @@ class GradeTest(unittest.TestCase):
         self.assertTrue(any("behaviorally evaluated" in text for text in failed))
         self.assertLess(grading["summary"]["pass_rate"], 1.0)
 
+    def test_task_mode_grades_only_the_declared_checks(self):
+        case = {"id": 7, "name": "summarize_notes", "prompt": "Summarize notes.txt into summary.md",
+                "checks": [{"type": "file_exists", "path": "summary.md"},
+                           {"type": "contains", "path": "summary.md", "needle": "Decisões"},
+                           {"type": "regex", "path": "summary.md", "pattern": "(?im)^## Key points"},
+                           {"type": "not_regex", "path": "summary.md", "pattern": "(?i)lorem ipsum"},
+                           {"type": "not_contains", "path": "never-created.md", "needle": "x"},
+                           {"type": "json_valid", "path": "out.json"},
+                           {"type": "regex", "target": "result", "pattern": "(?i)wrote summary"},
+                           {"type": "script", "command": "grep -q 'Key points' summary.md", "text": "summary.md has a Key points heading"},
+                           {"type": "file_absent", "path": "notes.txt.bak"}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            ws = Path(tmp)
+            write(ws / "summary.md", "## Key points\n- a\n## Decisoes\n- b\n")
+            write(ws / "out.json", "{not json")
+            write(ws / "skills" / "x" / "SKILL.md", "adapter copy, not an output")
+            grading = self.grade.grade_task(case=case, workspace=ws, result_text="Wrote summary.md.",
+                                            record={"status": "PASS", "protected_changed": False}, tokenizer=self.tokenizer)
+        by = {e["text"]: e for e in grading["expectations"]}
+        self.assertTrue(by["Creates summary.md"]["passed"])
+        self.assertTrue(by["summary.md contains 'Decisões'"]["passed"])  # accent-folded
+        self.assertTrue(by["summary.md matches /(?im)^## Key points/"]["passed"])
+        self.assertTrue(by["summary.md does not match /(?i)lorem ipsum/"]["passed"])
+        self.assertTrue(by["never-created.md does not contain 'x'"]["passed"])  # absent file passes only negatives
+        self.assertFalse(by["out.json is valid JSON"]["passed"])
+        self.assertTrue(by["the answer matches /(?i)wrote summary/"]["passed"])
+        self.assertTrue(by["summary.md has a Key points heading"]["passed"])
+        self.assertTrue(by["Does not create notes.txt.bak"]["passed"])
+        self.assertEqual(grading["summary"]["total"], 11)  # 9 checks + run status + protected paths
+        self.assertNotIn("skills/x/SKILL.md", grading["execution_metrics"]["workspace_files_after"])
+
+    def test_task_checks_are_validated_before_anything_runs(self):
+        v = self.grade.validate_checks
+        self.assertEqual(v([{"type": "file_exists", "path": "a.md"}]), [])
+        self.assertTrue(v([]))
+        self.assertTrue(v([{"type": "file_exists", "path": "/etc/passwd"}]))
+        self.assertTrue(v([{"type": "contains", "path": "../x", "needle": "a"}]))
+        self.assertTrue(v([{"type": "regex", "path": "a", "pattern": "("}]))
+        self.assertTrue(v([{"type": "teleport", "path": "a"}]))
+        self.assertTrue(v([{"type": "script"}]))
+
     def test_delivery_labels_are_read_from_the_artifact_area_too(self):
         # The skill sends the report to {run_dir}/artifacts, beside target/: labels written only there
         # must count (observed 2026-09-14: Claude labelled the report file, not the chat answer).
@@ -938,6 +983,61 @@ class CasesTest(unittest.TestCase):
         self.assertFalse(proposed["approved"])
         self.assertFalse((self.skill / "evals" / "cases").exists())  # nothing landed in the skill tree
 
+    def test_task_kind_extracts_a_skeleton_and_accepts_a_valid_task_proposal(self):
+        draft = self.cases.extract_task(self.skill)
+        self.assertEqual(draft["kind"], "task")
+        self.assertEqual(draft["evals"], [])
+        self.assertEqual(draft["fixture"], {"files": {}})
+        self.assertEqual(draft["checks_allowed"], list(self.grade.CHECK_TYPES))
+        self.assertEqual({q["should_trigger"] for q in draft["trigger_evals"]}, {True, False})
+        write(self.out / "cases.draft.json", json.dumps(draft))
+        proposal = {
+            "tasks": [
+                {"name": "summarize_short_minutes", "prompt": "Summarize notes/minutes.txt into summary.md.",
+                 "expected_output": "Three labelled sections.",
+                 "files": {"notes/minutes.txt": "Alice: ship Friday.\nBob: budget approved.\n"},
+                 "checks": [{"type": "file_exists", "path": "summary.md"},
+                            {"type": "regex", "path": "summary.md", "pattern": "(?im)^## Decisions"},
+                            {"type": "script", "command": "test -s summary.md"}]},
+                {"name": "no_invented_owner", "prompt": "Summarize notes/minutes.txt; owners missing must be labelled.",
+                 "expected_output": "No invented names.", "files": {"notes/minutes.txt": "Someone: fix login.\n"},
+                 "checks": [{"type": "not_regex", "path": "summary.md", "pattern": "(?i)\\bCarol\\b"}]},
+            ],
+            "trigger_evals": [{"query": f"q{i}", "should_trigger": i % 2 == 0} for i in range(8)],
+        }
+        os.environ["FAKE_PROPOSAL"] = json.dumps(proposal)
+        proposed = self.cases.propose(self.out, runtime="claude", model="claude-sonnet-5", effort=None, budget_usd=1.0, timeout=60,
+                                      hermes_ack=False, work_dir=self.root / "work", env_passthrough=("FAKE_LOG", "FAKE_PROPOSAL"))
+        self.assertEqual([c["name"] for c in proposed["evals"]], ["summarize_short_minutes", "no_invented_owner"])
+        self.assertEqual(proposed["evals"][0]["mode"], "task")
+        self.assertEqual(proposed["evals"][0]["files"], {"notes/minutes.txt": "Alice: ship Friday.\nBob: budget approved.\n"})
+        self.assertEqual(len(proposed["evals"][0]["checks"]), 3)
+        self.assertEqual(proposed["needs_review"], ["summarize_short_minutes: script check `test -s summary.md`"])
+        self.assertEqual(len(proposed["trigger_evals"]), 4 + 8)
+        sink = io.StringIO()
+        path = self.cases.approve(self.out, skill_dir=self.skill, yes=True, stdout=sink)
+        self.assertIn("Script checks run shell commands", sink.getvalue())
+        approved = json.loads(path.read_text())
+        self.assertTrue(approved["approved"] and approved["kind"] == "task")
+
+    def test_task_proposal_schema_rejects_unsafe_files_and_bad_checks(self):
+        good = {"tasks": [{"name": "a", "prompt": "p", "expected_output": "e", "files": {}, "checks": [{"type": "file_exists", "path": "x"}]},
+                          {"name": "b", "prompt": "p", "expected_output": "e", "files": {}, "checks": [{"type": "file_exists", "path": "y"}]}],
+                "trigger_evals": [{"query": f"q{i}", "should_trigger": i % 2 == 0} for i in range(8)]}
+        self.assertEqual(len(self.cases.validate_task_proposal(good)["tasks"]), 2)
+        bad = {
+            "absolute file": {**good, "tasks": [{**good["tasks"][0], "files": {"/tmp/x": "y"}}, good["tasks"][1]]},
+            "parent file": {**good, "tasks": [{**good["tasks"][0], "files": {"../x": "y"}}, good["tasks"][1]]},
+            "huge file": {**good, "tasks": [{**good["tasks"][0], "files": {"x": "y" * 9000}}, good["tasks"][1]]},
+            "no checks": {**good, "tasks": [{**good["tasks"][0], "checks": []}, good["tasks"][1]]},
+            "unknown check": {**good, "tasks": [{**good["tasks"][0], "checks": [{"type": "vibes"}]}, good["tasks"][1]]},
+            "absolute check path": {**good, "tasks": [{**good["tasks"][0], "checks": [{"type": "contains", "path": "/etc/x", "needle": "a"}]}, good["tasks"][1]]},
+            "duplicate names": {**good, "tasks": [good["tasks"][0], good["tasks"][0]]},
+        }
+        for label, payload in bad.items():
+            with self.assertRaises(ValueError, msg=label):
+                self.cases.validate_task_proposal(payload)
+
     def test_propose_refuses_an_invalid_reply(self):
         write(self.out / "cases.draft.json", json.dumps(self.cases.extract(self.skill)))
         os.environ["FAKE_PROPOSAL"] = json.dumps({"requests": [], "trigger_evals": []})
@@ -1139,6 +1239,53 @@ class BenchTest(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "unapproved"):
             self.bench.main(["--skill", str(self.candidate), "--out", str(self.root / "o"), "--cases", str(cases_dir),
                              "--runtimes", "claude", "--dry-run", "--fake-bin", str(self.bin), "--no-skill-creator"])
+
+    def test_task_mode_measures_any_skill_on_its_own_task(self):
+        # The measured skill is an arbitrary one (here "demo"), not skill-refactor: arms are its versions,
+        # the workspace holds the task's input files, and grading comes from the case's checks.
+        spec = {"skill_name": "demo", "kind": "task", "approved": True,
+                "fixture": {"files": {"notes.txt": "Alice: ship Friday. Bob: budget ok.\n"}},
+                "evals": [{"id": 1, "name": "summarize_notes",
+                           "prompt": "Summarize notes.txt into summary.md with Key points, Decisions and Actions. Put nothing in {run_dir}.",
+                           "expected_output": "summary.md with three sections",
+                           "checks": [{"type": "file_exists", "path": "summary.md"},
+                                      {"type": "regex", "path": "summary.md", "pattern": "(?im)^## (Key points|Decisions|Actions)"},
+                                      {"type": "not_regex", "path": "summary.md", "pattern": "(?i)Carol"},
+                                      {"type": "regex", "target": "result", "pattern": "(?i)summary\\.md"}]}]}
+        write(self.root / "task" / "cases.json", json.dumps(spec))
+        os.environ["FAKE_TASK"] = "## Key points\n- ship Friday\n## Decisions\n- budget ok\n## Actions\n- none\n"
+        out = self.root / "task-out"
+        code = self.bench.main(["--skill", str(self.candidate), "--baseline", str(self.baseline), "--no-skill-arm",
+                                "--cases", str(self.root / "task"), "--out", str(out), "--runtimes", "claude",
+                                "--claude-models", "claude-haiku-4-5-20251001", "--reps", "1", "--dry-run",
+                                "--fake-bin", str(self.bin), "--no-skill-creator"])
+        self.assertEqual(code, 0)
+        summary = json.loads((out / "summary.json").read_text())
+        self.assertEqual(summary["kind"], "task")
+        self.assertEqual(summary["arms"], ["candidate", "baseline", "no_skill"])
+        self.assertEqual(len(summary["runs"]), 3)
+        self.assertTrue(all(r["status"] == "PASS" and r["pass_rate"] == 1.0 for r in summary["runs"]), summary["runs"])
+        run_dir = out / summary["runs"][0]["run_dir"]
+        self.assertTrue((run_dir / "workspace" / "notes.txt").is_file())
+        self.assertFalse((run_dir / "workspace" / "target").exists())
+        self.assertTrue((run_dir / "outputs" / "workspace" / "summary.md").is_file())
+        meta = json.loads((out / "eval-1-summarize_notes" / "eval_metadata.json").read_text())
+        self.assertIn("Creates summary.md", meta["assertions"])
+        plugin_calls = [c for c in self.calls() if c["exe"] == "claude" and "-p" in c["argv"] and "--plugin-dir" in c["argv"]]
+        self.assertEqual(len(plugin_calls), 2)  # candidate and baseline expose "demo"; no_skill exposes nothing
+        self.assertTrue(all((Path(c["argv"][c["argv"].index("--plugin-dir") + 1]) / "skills" / "skill-refactor").is_dir() for c in plugin_calls))
+        # regrade understands the mode
+        self.assertEqual(self.bench.main(["--regrade", str(out), "--fake-bin", str(self.bin), "--no-skill-creator"]), 0)
+        self.assertEqual(json.loads((out / "summary.json").read_text())["kind"], "task")
+
+    def test_task_cases_without_usable_checks_are_refused_before_any_call(self):
+        spec = {"skill_name": "demo", "kind": "task", "fixture": {"files": {}},
+                "evals": [{"id": 1, "name": "bad", "prompt": "x", "checks": [{"type": "file_exists", "path": "/etc/hosts"}]}]}
+        write(self.root / "task" / "cases.json", json.dumps(spec))
+        with self.assertRaisesRegex(SystemExit, "usable checks"):
+            self.bench.main(["--skill", str(self.candidate), "--cases", str(self.root / "task"), "--out", str(self.root / "o"),
+                             "--runtimes", "claude", "--dry-run", "--fake-bin", str(self.bin), "--no-skill-creator"])
+        self.assertEqual([c for c in self.calls() if "-p" in c["argv"]], [])
 
     def test_regrade_reclassifies_and_resummarizes_without_new_calls(self):
         code, out = self.run_bench("--only-case", "3", "--runtimes", "codex", "--codex-models", "gpt-5.6-luna", "--reps", "1")

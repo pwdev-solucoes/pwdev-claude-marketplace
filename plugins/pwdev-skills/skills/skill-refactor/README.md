@@ -94,7 +94,12 @@ python3 scripts/bench.py --skill . --baseline git:<sha> --no-skill-arm --out "$(
   --opencode-models opencode/big-pickle \
   --acknowledge-hermes-automation --budget-usd 5
 
-# cases in the domain of the skill being refactored: extract (free) -> propose (one call) -> approve (you)
+# any skill on its own tasks (kind task): arms are versions of THAT skill, grading from the case's checks
+python3 scripts/cases.py --extract /path/to/that-skill --kind task     # skeleton -> propose -> approve, then:
+python3 scripts/bench.py --skill /path/to/that-skill --baseline /path/to/its-previous-version --no-skill-arm \
+  --cases /path/to/that-skill/evals/cases/<name> ...
+
+# cases in the domain of the skill being refactored (kind refactor): extract (free) -> propose (one call) -> approve (you)
 python3 scripts/cases.py --extract /path/to/that-skill
 python3 scripts/cases.py --propose /path/to/that-skill/evals/cases/<name> --runtime claude --model claude-sonnet-5
 python3 scripts/cases.py --approve /path/to/that-skill/evals/cases/<name> --skill /path/to/that-skill

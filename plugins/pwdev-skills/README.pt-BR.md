@@ -17,8 +17,8 @@ executa.
 | `references/runtimes.md` | Contrato headless por runtime: comandos, fontes de uso e custo, regras de segurança |
 | `scripts/discover.py` | Quais runtimes estão instalados e autenticados, modelo e esforço padrão de cada um, e os modelos disponíveis |
 | `scripts/tokens.py` | Tamanho por arquivo, camada de contexto e cenário de carga com tokenizador genérico (`tiktoken`) |
-| `scripts/bench.py` + `runtimes.py` + `grade.py` | Benchmark A/B headless entre runtimes e modelos — braços `candidate`, `baseline` e `no_skill` — avaliado a partir dos invariantes de cada caso, com orçamento |
-| `scripts/cases.py` | Casos derivados da skill em refatoração: invariantes e defeitos por script, pedidos e consultas de acionamento propostos por uma chamada headless, aprovação humana amarrada ao hash de origem |
+| `scripts/bench.py` + `runtimes.py` + `grade.py` | Benchmark A/B headless entre runtimes e modelos — braços `candidate`, `baseline` e `no_skill` — em dois modos: `refactor` (skill-refactor sobre uma skill-fixture, avaliada por invariantes) e `task` (**qualquer skill fazendo a própria tarefa**, avaliada pelas verificações que cada caso declara), com orçamento |
+| `scripts/cases.py` | Casos para uma skill: tipo `refactor` (invariantes e defeitos por script, pedidos propostos por uma chamada headless) ou `task` (tarefas com arquivos sintéticos e verificações objetivas propostas por uma chamada, validadas por esquema); aprovação humana amarrada ao hash de origem |
 | `evals/evals.json` | Fixture, casos, verificações de acionamento e roteamento, matriz padrão e preços datados |
 | [`.opencode-plugin/install.py`](./.opencode-plugin/install.py) | Adaptador OpenCode: linka ou copia as skills em `~/.config/opencode/skills/` ou `<projeto>/.opencode/skills/`, e desinstala só o que instalou |
 
