@@ -12,7 +12,7 @@ def _bootstrap(root: str) -> str:
     return ("<EXTREMELY_IMPORTANT>\n"
             "SDD Composy routing is available through the registered skills. Read AGENTS.md "
             "before changing a project. Invoke the capability needed for the current request "
-            "with skill_view(\"sdd-composy:skill-name\"); load its referenced local resources "
+            "with skill_view(\"sdd-composy:sdd-<name>\"), for example skill_view(\"sdd-composy:sdd-status\"); load its referenced local resources "
             "only when needed. Use read_file, write_file or patch, terminal, search_files, and "
             "delegate_task according to that skill. Do not start a lifecycle, mutate project "
             "state, or dispatch work merely because this bootstrap loaded. Do not fall back "

@@ -28,9 +28,11 @@ and verification actors separate. Use only `PASS`, `FAIL`, `STALE`, `ENVIRONMENT
 contradictory, missing, or hash-inconsistent evidence.
 
 Only all-fresh `PASS` claims with non-blocking QA/review and explicit human approval approve the
-verdict and request the guarded task transition `verify_required -> complete` (the `COMPLETE`
-workflow stage); every other outcome sets the verdict to `REJECTED` and the task to `rejected`,
-with a sanitized blocker and next action. Do not silently change claims, contracts, or source,
+verdict (`verdict: COMPLETE`), record `scripts/sdd_tasks.py evidence <state> <TASK-ID> verify
+--status approved` and `trace --status consistent`, and request the guarded task transition
+`verify_required -> complete` (the `COMPLETE` workflow stage); every other outcome sets the
+verdict to `REJECTED`, records `verify --status rejected`, and moves the task to
+`rejected --reason <blocker>`, with a sanitized blocker and next action. Do not silently change claims, contracts, or source,
 and do not stop user-owned services.
 
 ## Read when

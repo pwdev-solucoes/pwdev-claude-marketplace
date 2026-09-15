@@ -298,14 +298,15 @@ class SddComposyGovernanceTemplateTests(unittest.TestCase):
             installed_root = Path(directory)
             installed_rules = installed_root / ".agents" / "rules"
             installed_rules.mkdir(parents=True)
-            canonical = (installed_root / ".agents" / "AGENTS.md").resolve()
+            # INIT writes the canonical contract at the repository root, two levels above .agents/rules/.
+            canonical = (installed_root / "AGENTS.md").resolve()
             canonical.write_text("# canonical governance\n", encoding="utf-8")
             for name, content in rules.items():
                 installed_path = installed_rules / f"{name}.md"
                 installed_path.write_text(content, encoding="utf-8")
                 destinations = MARKDOWN_LINK.findall(content)
-                self.assertIn("../AGENTS.md", destinations, name)
-                resolved = (installed_path.parent / "../AGENTS.md").resolve()
+                self.assertIn("../../AGENTS.md", destinations, name)
+                resolved = (installed_path.parent / "../../AGENTS.md").resolve()
                 self.assertTrue(resolved.is_file(), name)
                 self.assertEqual(resolved, canonical, name)
         owned_policy = {
@@ -414,9 +415,11 @@ class SddComposyInitRuntimeTests(unittest.TestCase):
             self.assertEqual(json.loads(state_path.read_text())["extension"], state["extension"])
 
     def test_conflicted_apply_does_not_publish_init_state(self):
+        # A user-owned regular file is preserved (see test_sdd_composy_init_quality_fixes); an unsafe
+        # destination such as a `.claude` regular file still blocks the INIT state.
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "AGENTS.md").write_text("user-owned\n", encoding="utf-8")
+            (root / ".claude").write_text("user-owned\n", encoding="utf-8")
             _, plan = self.run_init(root, "plan")
             result, payload = self.run_init(root, "apply", "--plan-token", plan["plan_token"])
             self.assertNotEqual(result.returncode, 0, payload)

@@ -15,8 +15,9 @@ tasks/
     ├── techspec.md
     ├── tasks.md
     ├── task-<id>.md
-    ├── qa.md
-    ├── codereview.md
+    ├── qa-<task-id>.md          (one per task)
+    ├── codereview-<task-id>.md  (one per task)
+    ├── verdict-<task-id>.md     (one per task)
     ├── evidence-report.html
     ├── evidence-report.pdf   (optional, on request)
     └── evidences/

@@ -1,7 +1,8 @@
 # SDD Composy quality contract
 
 The `$sdd-qa` skill consumes a task in `qa_required` plus approved CA/SC/test
-mappings and produces an OKF v0.2 `qa.md` report. It is portable: orchestration
+mappings and produces the OKF v0.2 report `tasks/prd-<slug>/qa-<task-id>.md` (one per task, so a
+later task never overwrites an earlier report). It is portable: orchestration
 may use any test runner or browser capability, but semantics and gates are
 owned here.
 
@@ -9,9 +10,12 @@ owned here.
 
 Every approved acceptance criterion (CA) must map to a story/scenario (SC) and
 an executable test. Record separate unit, integration, and end-to-end (E2E)
-results with command, environment, exit code, result, and evidence. E2E requires
-an available browser capability; unavailable capability is a blocker, not a
-pass. Record accessibility checks, responsive viewports, runtime environment,
+results with command, environment, exit code, result, and evidence. Unit tests are always
+required. Integration, E2E, accessibility, and responsiveness may instead be
+`{"status": "NOT_APPLICABLE", "justification": "..."}` when the approved TechSpec justifies it
+(for example a backend or CLI task without a user interface); a missing justification is a
+blocker. An executed E2E level requires an available browser capability; unavailable capability
+is a blocker, not a pass. Record accessibility checks, responsive viewports, runtime environment,
 regression results, and an evidence inventory.
 
 Evidence inventory entries use confined relative paths, known evidence types,

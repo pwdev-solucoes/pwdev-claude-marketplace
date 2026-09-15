@@ -26,7 +26,8 @@ fleet_hash() { sha256sum "$1" 2>/dev/null | awk '{print $1}' || shasum -a 256 "$
 fleet_lock() {
   local lock="$1" timeout="${2:-30}"; local end=$((SECONDS+timeout))
   while ! ( set -o noclobber; echo "$$" > "$lock" ) 2>/dev/null; do
-    (( SECONDS >= end )) && fleet_die "lock timeout: $lock"
+    # fleet_die only returns; inside $(...) a bare `&& fleet_die` would keep spinning.
+    if (( SECONDS >= end )); then fleet_die "lock timeout: $lock"; return 1; fi
     sleep 0.05
   done
 }
@@ -96,7 +97,7 @@ PY
 fleet_allocate_port() {
   local state="$1" start="${2:-43000}" end="${3:-43100}"; [[ "$start" =~ ^[0-9]+$ && "$end" =~ ^[0-9]+$ && "$start" -le "$end" ]] || fleet_die "invalid port range"
   local lock="$state/.ports.lock" p; mkdir -p "$state"
-  fleet_lock "$lock" 30
+  fleet_lock "$lock" "${SDD_FLEET_LOCK_TIMEOUT:-30}" || return 1
   for ((p=start;p<=end;p++)); do
     [[ -e "$state/port-$p" ]] && continue
     fleet_port_available "$p" || continue

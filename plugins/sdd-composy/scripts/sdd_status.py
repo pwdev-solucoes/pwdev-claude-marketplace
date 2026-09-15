@@ -76,8 +76,10 @@ def status(root: Path | str, feature: str | None = None, include_tasks: bool = F
     running_loops = [x for x in loops if isinstance(x, dict) and x.get("status") == "running"]
     if running_loops and not fatal and not divergent:
         state_name, next_action = "looping", "continue the loop or stop it at its configured guard"
-    fleet_active = [x for x in fleet if isinstance(x, dict) and x.get("status") in {"running", "pending"}]
-    if (fleet_active or fleet) and not fatal and not divergent:
+    # Members still running, or stopped and awaiting a human (failed/blocked), are current fleet
+    # activity; completed or cancelled members that were not torn down are history.
+    fleet_active = [x for x in fleet if isinstance(x, dict) and x.get("status") in {"running", "pending", "failed", "blocked"}]
+    if fleet_active and not fatal and not divergent:
         state_name, next_action = "fleet", "inspect fleet members and collect their results"
     if divergent and not fatal:
         state_name, next_action = "divergent", "verify trace integrity and resolve the reported divergence"
@@ -168,6 +170,7 @@ def main() -> int:
     p.add_argument("--json", action="store_true")
     a = p.parse_args()
     payload = status(a.root, feature=a.feature, include_tasks=a.tasks, include_fleet=a.fleet)
-    print(json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=None if a.json else 2)); return 0
+    print(json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=None if a.json else 2))
+    return 2 if payload["status"] == "malformed" else 0
 
 if __name__ == "__main__": raise SystemExit(main())

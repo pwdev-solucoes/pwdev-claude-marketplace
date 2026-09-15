@@ -28,19 +28,21 @@ Language: before writing human-facing prose, run `scripts/sdd_language.py <repo-
    machine-readable eligibility decision is needed, use the side-effect-free gate
    `scripts/sdd_quick.py <contract.json>`.
 3. Read `templates/quick-contract.md` and render the OKF `QUICK_CONTRACT` from it (keep its keys and headings), assign a `Q-*` identifier
-   (the Q-ID), and register a normal `TASK-*` record with `sdd_tasks.py`; quick work never bypasses
-   task lifecycle gates.
+   (the Q-ID), and register a normal `TASK-*` record: render `tasks/prd-<slug>/task-<id>.md` from
+   `templates/task.md` and run `scripts/sdd_tasks.py import`; quick work never bypasses task
+   lifecycle gates and records its gate evidence with `sdd_tasks.py evidence`.
 4. Write and run a failing test before implementation (TDD). If it cannot be run, escalate.
 5. Implement only within the closed allowed-file list and run the known verification.
 6. Collect acceptance evidence, review, and verification. Append semantic events with
-   `sdd_trace.py` only after their actions succeed; never write `trace.json` directly.
+   `scripts/sdd_trace.py record <repo-root> --event <event.json>` only after their actions
+   succeed; never write `trace.json` directly.
 7. Create the OKF `QUICK_REPORT` from `templates/quick-report.md`, link all evidence from the
    bundle index, verify the trace and artifact integrity, and publish a `COMPLETE` verified
    verdict only when every gate passes. Otherwise report `ESCALATED`, `REJECTED`, or `CAVEATS`.
 
 Never record prompts, output dumps, environment variables, secrets, models, or private paths. Do
-not silently expand scope. If quick work needs a task synchronization, the exact
-`CONFIRM-SDD-SYNC` token of `sdd-sync` still applies.
+not silently expand scope. If quick work needs a task synchronization, the plan-bound
+`CONFIRM-SDD-SYNC-…` token of `sdd-sync` still applies.
 
 ## Read when
 

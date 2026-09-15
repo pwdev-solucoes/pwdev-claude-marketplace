@@ -112,7 +112,11 @@ def validate_frontmatter(meta, actor=None, require_generated=False):
             if not isinstance(item,dict): errors.append(f'{section} entry must be mapping'); continue
             if 'by' in item and (not isinstance(item['by'],str) or not item['by'].strip()): errors.append(f'{section}.by invalid')
             if 'at' in item and (not isinstance(item['at'],str) or not _ISO.match(item['at'])): errors.append(f'{section}.at must be ISO timestamp')
-            if actor and item.get('by') and item['by'] != actor: errors.append(f'{section} actor mismatch: {item["by"]}')
+            if actor and item.get('by'):
+                # The generating agent writes `generated`; a `verified` event is a human gate and
+                # must never be recorded by that same actor.
+                if section == 'generated' and item['by'] != actor: errors.append(f'generated actor mismatch: {item["by"]}')
+                if section == 'verified' and item['by'] == actor: errors.append(f'verified actor cannot approve its own document: {item["by"]}')
     if isinstance(meta.get('sources'),list):
         for i, src in enumerate(meta['sources']):
             if not isinstance(src,dict) or not isinstance(src.get('resource'),str) or not src['resource'].strip(): errors.append(f'sources[{i}].resource required')

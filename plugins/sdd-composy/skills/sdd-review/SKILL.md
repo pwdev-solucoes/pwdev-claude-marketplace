@@ -33,9 +33,10 @@ Language: before writing human-facing prose, run `scripts/sdd_language.py <repo-
 5. Record every finding with a stable ID, severity (`BLOCKER`, `HIGH`, `MEDIUM`, `LOW`, `INFO`),
    file and line, evidence, and rule citations or contract citations. Do not silently fix, hide,
    or rewrite a finding; an unapproved change requires a new review.
-6. Produce an OKF v0.2 `CODE_REVIEW` report. A complete human-approved report transitions to
+6. Produce an OKF v0.2 `CODE_REVIEW` report. A complete human-approved report records
+   `scripts/sdd_tasks.py evidence <state> <TASK-ID> review --status approved` and transitions to
    `verify_required`; any blocker, missing evidence, scope ambiguity, contract violation, or
-   non-conformity transitions to `rejected`.
+   non-conformity records `review --status rejected` and transitions to `rejected --reason <text>`.
 
 ## Read when
 

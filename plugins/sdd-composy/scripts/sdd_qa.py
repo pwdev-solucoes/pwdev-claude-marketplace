@@ -1,4 +1,5 @@
 """Deterministic, runtime-neutral QA gate for SDD Composy."""
+from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
 import json
@@ -30,14 +31,28 @@ def _origin(data):
     return origin
 
 
-def _reject(reason, detail, *, origin=None, report_path=None, allowed_root=None, generated_by="sdd-composy", verified_by="sdd-composy"):
+def _now():
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _not_applicable(value):
+    """A level may be skipped only with an explicit, non-empty justification."""
+    return (isinstance(value, dict) and value.get("status") == "NOT_APPLICABLE"
+            and isinstance(value.get("justification"), str) and bool(value["justification"].strip()))
+
+
+def _passed(value):
+    return value == "passed" or (isinstance(value, dict) and value.get("status") == "passed")
+
+
+def _reject(reason, detail, *, origin=None, report_path=None, allowed_root=None, generated_by="sdd-composy", verified_by="sdd-composy", generated_at=None):
     result = {"status": "REJECTED", "transition": "rejected", "reason": reason,
             "blocker": str(detail).replace("token=", "token=[redacted]"),
             "next_action": "resolve the QA blocker and rerun the quality gate"}
     result["origin"] = origin or {}
     result["report"] = {"type":"QA_REPORT", "okf_version":"0.2", "title":"SDD Composy quality assurance report",
-        "sources":["qa_required task"], "generated":{"by":generated_by,"at":"deterministic"},
-        "verified":[{"by":verified_by,"at":"deterministic","event":"qa-gate"}],
+        "sources":[{"resource":"qa_required task"}], "generated":{"by":generated_by,"at":generated_at or _now()},
+        "verified":[],
         "lifecycle":{"status":"REJECTED","human_approval":"PENDING"}, "approval_event":{}, "transition":"rejected",
         "blockers":[{"reason":reason,"detail":result["blocker"]}], "next_action":result["next_action"],
         "coverage":[], "results":{}, "environment":{}, "regression":{}, "evidence":[], "origin": result["origin"]}
@@ -63,8 +78,13 @@ def _persist(report, path, allowed_root):
         if os.path.exists(tmp): os.unlink(tmp)
 
 
-def assess(data, *, evidence_root=None, report_path=None, allowed_root=None, generated_by="sdd-composy", verified_by="sdd-composy", title="SDD Composy quality assurance report"):
-    """Assess a qa_required payload and return a guarded transition result."""
+def assess(data, *, evidence_root=None, report_path=None, allowed_root=None, generated_by="sdd-composy", verified_by="sdd-composy", title="SDD Composy quality assurance report", generated_at=None):
+    """Assess a qa_required payload and return a guarded transition result.
+
+    Unit tests are always required. Integration, E2E, accessibility, and responsiveness may be
+    `{"status": "NOT_APPLICABLE", "justification": "..."}`; a browser is required only when E2E runs.
+    """
+    generated_at = generated_at or _now()
     if report_path and allowed_root is None: raise ValueError("allowed_root is required")
     language = 'en-US'
     if allowed_root is not None:
@@ -76,7 +96,7 @@ def assess(data, *, evidence_root=None, report_path=None, allowed_root=None, gen
         title = 'Relatório de garantia de qualidade SDD Composy'
     origin = _origin(data)
     def fail(reason, detail):
-        result = _reject(reason, detail, origin=origin, generated_by=generated_by, verified_by=verified_by)
+        result = _reject(reason, detail, origin=origin, generated_by=generated_by, verified_by=verified_by, generated_at=generated_at)
         result['report']['title'] = title
         if language == 'pt-BR':
             result['next_action'] = 'resolver o bloqueio de QA e executar novamente a verificação de qualidade'
@@ -95,13 +115,15 @@ def assess(data, *, evidence_root=None, report_path=None, allowed_root=None, gen
     results = data.get("results") or {}
     for name in ("unit", "integration", "e2e"):
         result = results.get(name) or {}
+        if name != "unit" and _not_applicable(result):
+            continue
         if not isinstance(result, dict) or result.get("status") != "passed" or not result.get("command") or not result.get("environment") or result.get("exit_code") != 0 or not result.get("evidence"):
-            return fail(name + "_failed", name + " requires passed status, command, environment, exit code, and evidence")
-    if not (data.get("browser") or {}).get("available"):
+            return fail(name + "_failed", name + " requires passed status, command, environment, exit code, and evidence, or NOT_APPLICABLE with a justification")
+    if not _not_applicable(results.get("e2e")) and not (data.get("browser") or {}).get("available"):
         return fail("browser_unavailable", "E2E browser capability unavailable")
     for name in ("accessibility", "responsiveness"):
-        if data.get(name) != "passed":
-            return fail(name + "_failed", name + " checks are not passed")
+        if not _passed(data.get(name)) and not _not_applicable(data.get(name)):
+            return fail(name + "_failed", name + " checks are not passed or justified as NOT_APPLICABLE")
     env = data.get("environment") or {}
     if not env.get("ready") or not env.get("runtime") or not env.get("versions"):
         return fail("environment_not_ready", "QA environment is not ready")
@@ -134,9 +156,9 @@ def assess(data, *, evidence_root=None, report_path=None, allowed_root=None, gen
         return fail("human_approval_missing", "explicit human approval is required")
     coverage = [{"ca": x["id"], "story": x["story"], "tests": sorted(x["tests"])} for x in acceptance]
     report = {"type": "QA_REPORT", "okf_version": "0.2", "title": title,
-              "sources": ["qa_required task", "approved CA/SC/test mappings"],
-              "generated": {"by": generated_by, "at": "deterministic"},
-              "verified": [{"by": verified_by, "at": "deterministic", "event": "qa-gate"}],
+              "sources": [{"resource": "qa_required task"}, {"resource": "approved CA/SC/test mappings"}],
+              "generated": {"by": generated_by, "at": generated_at},
+              "verified": [{"by": verified_by, "at": generated_at, "event": "qa-gate"}],
               "lifecycle": {"status": "APPROVED", "human_approval": "APPROVED"},
               "approval_event": {"by": verified_by, "event": "explicit-human-approval"},
               "coverage": coverage, "results": results, "accessibility": data["accessibility"],

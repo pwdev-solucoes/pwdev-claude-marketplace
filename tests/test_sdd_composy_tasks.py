@@ -52,19 +52,27 @@ class SynchronizationInspectionTest(unittest.TestCase):
         self.state = self.repo / ".planning" / "tasks.json"; self.state.parent.mkdir()
     def tearDown(self): self.tmp.cleanup()
     def md(self, title="First", state="pending"):
-        (self.src / "task-001.md").write_text(f"---\ntype: TASK\ntask:\n  id: TASK-001\n  title: {title}\n  state: {state}\n---\n", encoding="utf-8")
+        (self.src / "task-001.md").write_text(f"---\ntype: TASK\ntask:\n  id: TASK-001\n  title: {title}\n  state: {state}\n  dependencies: []\n  acceptance_criteria: [CA-001]\n---\n", encoding="utf-8")
     def js(self, task=None):
-        self.state.write_text(json.dumps({"tasks": task or [{"id":"TASK-001","title":"First","state":"pending"}], "unknown":"keep"}), encoding="utf-8")
+        # A real projection: every task carries the schema-required fields besides id/title/state.
+        defaults = {"dependencies": [], "acceptance_criteria": ["CA-001"], "verification_commands": ["true"],
+                    "allowed_paths": ["src"], "evidence_required": True}
+        tasks = [{**defaults, **item} for item in (task or [{"id":"TASK-001","title":"First","state":"pending"}])]
+        self.state.write_text(json.dumps({"schema_version": "1", "prd_slug": "demo", "updated_at": "2026-01-01T00:00:00Z",
+                                          "tasks": tasks, "unknown":"keep"}), encoding="utf-8")
+    def token(self):
+        return sdd_sync.plan(sdd_sync.inspect(self.src, self.state, root=self.repo))["confirmation_token"]
     def test_matrix_and_determinism(self):
         self.md(); self.js(); a=sdd_sync.inspect(self.src,self.state,root=self.repo); self.assertEqual(a["items"][0]["classification"],"no_change")
         self.js([{"id":"TASK-999","title":"Other","state":"pending"}]); b=sdd_sync.inspect(self.src,self.state,root=self.repo); self.assertEqual({x["classification"] for x in b["items"]},{"markdown_only","json_only"})
         self.js(); (self.src / "task-001.md").unlink(); self.assertEqual(sdd_sync.inspect(self.src,self.state,root=self.repo)["items"][0]["classification"],"json_only")
         self.md("Changed"); self.assertEqual(sdd_sync.inspect(self.src,self.state,root=self.repo)["items"][0]["classification"],"identity_changed")
         self.md(state="running"); self.assertEqual(sdd_sync.inspect(self.src,self.state,root=self.repo)["items"][0]["classification"],"status_divergence")
-        self.md(state="pending"); self.js([{"id":"TASK-001","title":"First"}]); self.assertEqual(sdd_sync.inspect(self.src,self.state,root=self.repo)["items"][0]["classification"],"status_divergence")
+        self.md(state="pending"); self.state.write_text(json.dumps({"tasks": [{"id":"TASK-001","title":"First","dependencies":[],"acceptance_criteria":["CA-001"]}]}), encoding="utf-8"); self.assertEqual(sdd_sync.inspect(self.src,self.state,root=self.repo)["items"][0]["classification"],"status_divergence")
         self.assertEqual(sdd_sync.inspect(self.src,self.state,root=self.repo), sdd_sync.inspect(self.src,self.state,root=self.repo))
         self.assertEqual(sdd_sync.plan(sdd_sync.inspect(self.src,self.state,root=self.repo)), sdd_sync.plan(sdd_sync.inspect(self.src,self.state,root=self.repo)))
-        self.assertEqual(sdd_sync.CONFIRMATION_TOKEN, "CONFIRM-SDD-SYNC")
+        first = self.token(); self.assertTrue(first.startswith("CONFIRM-SDD-SYNC-"))
+        self.md(title="Renamed"); self.assertNotEqual(first, self.token())
     def test_malformed_and_read_only_and_symlink_safety(self):
         self.md(); self.js(); before=(self.src / "task-001.md").read_bytes(), self.state.read_bytes()
         (self.src / "task-001.md").write_text("bad", encoding="utf-8"); self.assertEqual(sdd_sync.inspect(self.src,self.state,root=self.repo)["items"][0]["classification"],"malformed_markdown")
@@ -79,40 +87,43 @@ class SynchronizationInspectionTest(unittest.TestCase):
         self.md(state="running"); self.js(); plan = sdd_sync.plan(sdd_sync.inspect(self.src, self.state, root=self.repo))
         with self.assertRaises(ValueError): sdd_sync.apply(self.src, self.state, plan, authority="markdown", confirmation_token="wrong", root=self.repo)
         self.state.write_text(self.state.read_text() + "\n", encoding="utf-8")
-        with self.assertRaisesRegex(ValueError, "stale"): sdd_sync.apply(self.src, self.state, plan, authority="markdown", confirmation_token=sdd_sync.CONFIRMATION_TOKEN, root=self.repo)
+        with self.assertRaisesRegex(ValueError, "stale"): sdd_sync.apply(self.src, self.state, plan, authority="markdown", confirmation_token=plan["confirmation_token"], root=self.repo)
 
     def test_apply_explicit_authority_and_post_apply_verification(self):
         self.md(state="running"); self.js(); plan = sdd_sync.plan(sdd_sync.inspect(self.src, self.state, root=self.repo))
-        result = sdd_sync.apply(self.src, self.state, plan, authority="markdown", confirmation_token=sdd_sync.CONFIRMATION_TOKEN, root=self.repo)
-        self.assertTrue(result["verified"]); self.assertEqual(sdd_sync._json(self.state)["TASK-001"]["state"], "running")
+        before = self.state.read_bytes()
+        # Markdown may not move lifecycle state; that goes through sdd_tasks transition guards.
+        with self.assertRaisesRegex(ValueError, "sdd_tasks transition"):
+            sdd_sync.apply(self.src, self.state, plan, authority="markdown", confirmation_token=plan["confirmation_token"], root=self.repo)
+        self.assertEqual(before, self.state.read_bytes())
         self.md(state="complete"); self.js(); plan = sdd_sync.plan(sdd_sync.inspect(self.src, self.state, root=self.repo))
-        result = sdd_sync.apply(self.src, self.state, plan, authority="json", confirmation_token=sdd_sync.CONFIRMATION_TOKEN, root=self.repo)
+        result = sdd_sync.apply(self.src, self.state, plan, authority="json", confirmation_token=plan["confirmation_token"], root=self.repo)
         self.assertTrue(result["verified"]); self.assertIn('state: "pending"', (self.src / "task-001.md").read_text())
 
     def test_apply_rejects_symlink_destination(self):
         self.md(state="running"); self.js(); plan = sdd_sync.plan(sdd_sync.inspect(self.src, self.state, root=self.repo))
         real = self.repo / "real.json"; real.write_bytes(self.state.read_bytes()); self.state.unlink(); self.state.symlink_to(real)
-        with self.assertRaises(ValueError): sdd_sync.apply(self.src, self.state, plan, authority="markdown", confirmation_token=sdd_sync.CONFIRMATION_TOKEN, root=self.repo)
+        with self.assertRaises(ValueError): sdd_sync.apply(self.src, self.state, plan, authority="markdown", confirmation_token=plan["confirmation_token"], root=self.repo)
 
     def test_apply_authority_resolves_identity_conflicts(self):
         self.md(title="From Markdown"); self.js([{"id":"TASK-001","title":"From JSON","state":"pending"}])
         plan = sdd_sync.plan(sdd_sync.inspect(self.src, self.state, root=self.repo))
-        sdd_sync.apply(self.src, self.state, plan, authority="markdown", confirmation_token=sdd_sync.CONFIRMATION_TOKEN, root=self.repo)
+        sdd_sync.apply(self.src, self.state, plan, authority="markdown", confirmation_token=plan["confirmation_token"], root=self.repo)
         self.assertEqual(sdd_sync._json(self.state)["TASK-001"]["title"], "From Markdown")
         self.md(title="From Markdown"); self.js([{"id":"TASK-001","title":"From JSON","state":"pending"}])
         plan = sdd_sync.plan(sdd_sync.inspect(self.src, self.state, root=self.repo))
-        sdd_sync.apply(self.src, self.state, plan, authority="json", confirmation_token=sdd_sync.CONFIRMATION_TOKEN, root=self.repo)
+        sdd_sync.apply(self.src, self.state, plan, authority="json", confirmation_token=plan["confirmation_token"], root=self.repo)
         self.assertIn('title: "From JSON"', (self.src / "task-001.md").read_text())
 
     def test_json_authority_materializes_json_only_task(self):
         self.md()
         self.src.joinpath("task-001.md").unlink(); self.js([{"id":"TASK-002","title":"Second","state":"pending"}])
         plan = sdd_sync.plan(sdd_sync.inspect(self.src, self.state, root=self.repo))
-        result = sdd_sync.apply(self.src, self.state, plan, authority="json", confirmation_token=sdd_sync.CONFIRMATION_TOKEN, root=self.repo)
+        result = sdd_sync.apply(self.src, self.state, plan, authority="json", confirmation_token=plan["confirmation_token"], root=self.repo)
         self.assertTrue(result["verified"]); self.assertTrue((self.src / "task-002.md").exists())
 
     def test_public_cli_apply_loads_plan_and_requires_exact_approval(self):
-        self.md(state="running"); self.js()
+        self.md(title="Renamed"); self.js()
         script = PLUGIN / "scripts" / "sdd_sync.py"
         planned = subprocess.run(
             [sys.executable, str(script), "plan", str(self.src), str(self.state), "--root", str(self.repo)],
@@ -122,11 +133,11 @@ class SynchronizationInspectionTest(unittest.TestCase):
         applied = subprocess.run(
             [sys.executable, str(script), "apply", str(self.src), str(self.state), str(plan_path),
              "--root", str(self.repo), "--authority", "markdown",
-             "--confirmation-token", sdd_sync.CONFIRMATION_TOKEN],
+             "--confirmation-token", json.loads(planned.stdout)["confirmation_token"]],
             capture_output=True, text=True, check=True,
         )
         self.assertTrue(json.loads(applied.stdout)["verified"])
-        self.assertEqual(sdd_sync._json(self.state)["TASK-001"]["state"], "running")
+        self.assertEqual(sdd_sync._json(self.state)["TASK-001"]["title"], "Renamed")
 
     def test_public_cli_apply_rejects_wrong_token_and_authority(self):
         self.md(); self.js(); script = PLUGIN / "scripts" / "sdd_sync.py"
@@ -138,7 +149,7 @@ class SynchronizationInspectionTest(unittest.TestCase):
         for option, value in (("--confirmation-token", "wrong"), ("--authority", "neither")):
             args = [sys.executable, str(script), "apply", str(self.src), str(self.state), str(plan_path),
                     "--root", str(self.repo), "--authority", "markdown",
-                    "--confirmation-token", sdd_sync.CONFIRMATION_TOKEN]
+                    "--confirmation-token", json.loads(planned.stdout)["confirmation_token"]]
             index = args.index(option) if option in args else -1
             if index >= 0: args[index + 1] = value
             else: args[-1] = value
@@ -313,6 +324,7 @@ class TaskRuntimeTest(unittest.TestCase):
         record = lambda status: {"status": status, "timestamp": stamp}
         return {"schema_version":"1", "prd_slug":"demo", "updated_at":"2026-01-01T00:00:00Z", "tasks":[{
             "id":"TASK-001", "title":"evidence", "state":"running", "dependencies":[],
+            "attempt_started_at":"2026-01-01T00:00:00Z",
             "acceptance_criteria":["CA-001"], "verification_commands":["true"], "allowed_paths":["src/a"],
             "evidence_required":required, "evidence":{"tests":record("passed"), "qa":record("passed"),
             "review":record("approved"), "verify":record("approved"), "trace":record("consistent")}}]}

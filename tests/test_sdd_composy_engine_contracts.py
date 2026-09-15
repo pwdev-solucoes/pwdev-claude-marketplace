@@ -104,20 +104,14 @@ class OpenCodeRealFormatTests(unittest.TestCase):
                                            "permission_mode": "danger-full-access"}, Path("/w"))
         self.assertIn("--auto", elevated)
 
-    def test_fleet_engine_publishes_part_text_from_real_event_stream(self):
-        script = SCRIPTS / "fleet" / "engine-opencode.sh"
-        with tempfile.TemporaryDirectory() as directory:
-            raw, out = Path(directory) / "raw", Path(directory) / "result.json"
-            raw.write_text(opencode_events("thinking…", json.dumps({"stage": "plan"})), encoding="utf-8")
-            shell = f'source "{script}"\nsdd_engine_opencode_publish_result "{raw}" "{out}"\n'
-            completed = subprocess.run(["/bin/bash", "-c", shell], capture_output=True, text=True)
-            self.assertEqual(completed.returncode, 0, completed.stderr)
-            self.assertEqual(json.loads(out.read_text()), {"stage": "plan"})
-
 
 class ClaudeRealFormatTests(unittest.TestCase):
     def test_accepts_the_full_real_envelope(self):
         self.assertEqual(CLAUDE.parse_envelope(claude_envelope(json.dumps(result()))), result())
+
+    def test_envelope_decoding_leaves_verify_evidence_to_the_contextual_check(self):
+        verify = result("VERIFY", evidence={"status": "passed", "command_record": {"path": "e.json", "sha256": "0" * 64}})
+        self.assertEqual(CLAUDE.parse_envelope(claude_envelope(json.dumps(verify))), verify)
 
     def test_rejects_provider_errors_and_missing_core_keys(self):
         with self.assertRaisesRegex(CLAUDE.RuntimeError_, "reported an error"):

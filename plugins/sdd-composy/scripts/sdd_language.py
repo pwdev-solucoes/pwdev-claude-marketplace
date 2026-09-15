@@ -62,6 +62,7 @@ def persist_language(root: str | os.PathLike[str], language: str) -> dict[str, A
     parent.mkdir(parents=True, exist_ok=True)
     current = _read(target) or {}
     current["language"] = language
+    current.setdefault("schema_version", "1")
     fd, temporary = tempfile.mkstemp(prefix=".config.", dir=str(parent), text=True)
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:

@@ -33,9 +33,17 @@ Stop on missing, pending, rejected, stale, contradictory, or untraceable upstrea
   repository-bound JSON projection.
 - `list <state>`, `next <state>`, `show <state> <TASK-ID>` — read-only; safe without approval.
 - `start <state> <TASK-ID>`, `block <state> <TASK-ID> <reason>`, `transition <state> <TASK-ID>
-  <target>` — mutating. Request explicit human approval immediately before each; never infer it.
-  `block`, `rejected`, and `skipped` require a non-empty reason; `skipped` also requires human
-  authority.
+  <target> [--reason <text>] [--authority <actor>]` — mutating. Request explicit human approval
+  immediately before each; never infer it. `blocked` and `rejected` require `--reason` (any active
+  state may take either); `skipped` requires `--reason` and `--authority`.
+- `evidence <state> <TASK-ID> tests|qa|review|verify|trace --status <status> [--ref <path>]` —
+  records one fresh gate evidence entry on an active task and never moves state. Statuses: tests
+  `passed|failed`; qa `passed|failed|blocked|rejected`; review and verify `approved|rejected`;
+  trace `consistent|inconsistent`. Evidence belongs to the current attempt: anything recorded
+  before the task last entered `running`, or before a rejection, is stale.
+- `integrate <state> <TASK-ID> --qa <qa-TASK.md> --review <codereview-TASK.md> --verdict <verdict-TASK.md>` —
+  consumes the three human-approved reports and drives a `running` task through every gate to
+  `complete`; any unapproved report or failed gate leaves the projection unchanged.
 - `verify <state>` — read-only gate check: inspects fresh tests, QA, review, verification, and
   trace evidence and reports whether completion is permitted; it does not mutate the projection.
 

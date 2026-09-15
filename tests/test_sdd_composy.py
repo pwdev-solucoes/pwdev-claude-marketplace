@@ -119,6 +119,7 @@ def assert_schema_valid(test, schema, value, root=None, path="$"):
         test.assertNotIsInstance(value, bool, path)
         test.assertGreaterEqual(value, schema.get("minimum", value), path)
         test.assertLessEqual(value, schema.get("maximum", value), path)
+        test.assertLessEqual(value, schema.get("maximum", value), path)
     elif expected == "boolean":
         test.assertIsInstance(value, bool, path)
 
@@ -230,6 +231,18 @@ class SddComposySharedContractTest(unittest.TestCase):
         self.assertEqual(unresolved_placeholders(markdown), [])
         self.assertEqual(broken_relative_links(markdown), [])
 
+    def test_installed_rule_templates_link_to_the_root_contract(self) -> None:
+        # Rules are installed at .agents/rules/, so their links must resolve from there.
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary); rules = root / ".agents" / "rules"; rules.mkdir(parents=True)
+            (root / "AGENTS.md").write_text("# contract\n", encoding="utf-8")
+            installed = []
+            for template in sorted((PLUGIN / "templates" / "rules").glob("*.md")):
+                target = rules / template.name
+                target.write_text(template.read_text(encoding="utf-8"), encoding="utf-8")
+                installed.append(target)
+            self.assertEqual(broken_relative_links(installed), [])
+
     def test_structural_checks_reject_bad_fixtures(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -337,7 +350,7 @@ class SddComposyInitAdapterTest(unittest.TestCase):
 
     def test_init_skill_routes_through_the_shared_helper_contract(self) -> None:
         skill = (PLUGIN / "skills" / "sdd-init" / "SKILL.md").read_text(encoding="utf-8")
-        helper = "${CLAUDE_PLUGIN_ROOT}/scripts/sdd_init.py"
+        helper = "<plugin-root>/scripts/sdd_init.py"
         self.assertIn(helper, skill)
         for operation in ("plan", "apply", "verify"):
             self.assertRegex(skill, rf"\b{operation}\b")
@@ -641,7 +654,7 @@ class SddComposyCoreSchemaTest(unittest.TestCase):
 
     def test_valid_core_documents_include_portable_extensions(self) -> None:
         fixtures = {
-            "config": {"schema_version": "1", "actor_id": "agent:codex-1", "human_root": "tasks", "operational_root": ".planning/sdd-composy", "x-team": {"mode": "safe"}},
+            "config": {"schema_version": "1", "language": "en-US", "actor_id": "agent:codex-1", "human_root": "tasks", "operational_root": ".planning/sdd-composy", "x-team": {"mode": "safe"}},
             "state": {"schema_version": "1", "revision": 3, "stage": "EXECUTE", "active_prd": "billing-api", "active_task": "TASK-004", "last_gate": {"name": "TASKS", "status": "approved", "at": "2026-09-08T12:00:00+00:00", "actor_id": "human:paulo"}, "blockers": [], "loops": [], "fleet": [], "trace": {"healthy": True, "source_event_count": 8}, "updated_at": "2026-09-08T12:01:00Z", "next_action": "Run focused tests", "x-runtime": "codex"},
             "tasks": {"schema_version": "1", "prd_slug": "billing-api", "updated_at": "2026-09-08T12:01:00Z", "tasks": [{"id": "TASK-004", "title": "Add schemas", "state": "ready", "dependencies": ["TASK-003"], "acceptance_criteria": ["CA-001"], "verification_commands": ["python3 -m unittest"], "allowed_paths": ["plugins/sdd-composy/schemas/"], "evidence_required": False, "x-owner": "platform"}]},
             "trace": {"schema_version": "1", "source_event_count": 1, "generated_at": "2026-09-08T12:02:00Z", "events": [{"sequence": 1, "id": "EVT-000001", "at": "2026-09-08T12:01:00Z", "actor_id": "agent:codex-1", "type": "task.transitioned", "stage": "EXECUTE", "task_id": "TASK-004", "data": {"from": "ready", "to": "running"}, "x-host": "codex"}]},
@@ -650,7 +663,7 @@ class SddComposyCoreSchemaTest(unittest.TestCase):
             assert_schema_valid(self, self.schema(name), fixture)
 
     def test_invalid_identifiers_states_and_roots_are_rejected(self) -> None:
-        config = {"schema_version": "1", "actor_id": "agent:codex-1", "human_root": "tasks", "operational_root": ".planning/sdd-composy"}
+        config = {"schema_version": "1", "language": "en-US", "actor_id": "agent:codex-1", "human_root": "tasks", "operational_root": ".planning/sdd-composy"}
         state = {"schema_version": "1", "revision": 1, "stage": "EXECUTE", "active_prd": None, "active_task": None, "last_gate": None, "blockers": [], "loops": [], "fleet": [], "trace": {"healthy": True, "source_event_count": 0}, "updated_at": "2026-09-08T12:01:00Z", "next_action": "none"}
         task = {"id": "TASK-004", "title": "Valid", "state": "ready", "dependencies": [], "acceptance_criteria": ["CA-001"], "verification_commands": ["python3 -m unittest"], "allowed_paths": ["plugins/sdd-composy/schemas/"], "evidence_required": False}
         tasks = {"schema_version": "1", "prd_slug": "good-slug", "updated_at": "2026-09-08T12:01:00Z", "tasks": [task]}
@@ -737,9 +750,9 @@ class SddComposyOperationalSchemaTest(unittest.TestCase):
         self.assertEqual(member["definitions"]["runtime"]["enum"], ["claude-code", "codex", "hermes", "opencode"])
         self.assertEqual(member["definitions"]["ui"]["enum"], ["cmux", "tmux", "headless"])
         assert_schema_valid(self, member, {"schema_version": "2", "id": "member-001", "task_id": "TASK-005", "status": "running", "runtime": "hermes", "ui": "headless", "branch": "codex/schemas", "worktree_path": "/tmp/worktree", "repository_root": "/tmp/repository", "started_at": "2026-09-08T12:00:00Z", "updated_at": "2026-09-08T12:01:00Z", "owner": {"kind":"sdd-composy-fleet","fleet_id":"demo","member_id":"member-001"}, "resources": {"branch":"codex/schemas","worktree_path":"/tmp/worktree","port":43000,"compose_project":"sdd_fleet_demo","compose_file":".planning/sdd-composy/fleet/demo/docker-compose.yml","compose_allocated":False}, "x-host": "local"})
-        assert_schema_valid(self, result, {"schema_version": "1", "member_id": "member-001", "task_id": "TASK-005", "status": "completed", "commit": "0123456789abcdef0123456789abcdef01234567", "verification": [{"command": "python3 -m unittest", "result": "passed", "output_sha256": "a" * 64}], "completed_at": "2026-09-08T12:30:00Z", "x-review": True})
+        assert_schema_valid(self, result, {"schema_version": "1", "member_id": "member-001", "task_id": "TASK-005", "loop_id": "loop-demo-task-005", "loop_status": "completed", "status": "completed", "commit": "0123456789abcdef0123456789abcdef01234567", "message": "LOOP completed", "completed_at": "2026-09-08T12:30:00Z", "x-review": True})
         for terminal in ("completed", "failed", "blocked", "cancelled"):
-            self.assertIn(terminal, result["definitions"]["result_status"]["enum"])
+            self.assertIn(terminal, result["properties"]["status"]["enum"])
 
     def test_fleet_draft_validator_rejects_all_used_constraint_classes(self) -> None:
         schema = self.schema("fleet-member")
@@ -821,7 +834,7 @@ class SddComposyOkfTest(unittest.TestCase):
         spec = importlib.util.spec_from_file_location('sdd_okf', PLUGIN / 'scripts' / 'sdd_okf.py')
         okf = importlib.util.module_from_spec(spec); spec.loader.exec_module(okf)
         with tempfile.TemporaryDirectory() as td:
-            root = Path(td); (root/'doc.md').write_text('---\ntype: Concept\ncustom: keep\ngenerated:\n  by: human:me\n  at: 2026-01-01T00:00:00Z\nverified:\n  - by: human:me\n    at: 2026-01-01T00:00:00Z\nsources:\n  - resource: https://example.test\n---\n[missing](no.md)\n', encoding='utf-8')
+            root = Path(td); (root/'doc.md').write_text('---\ntype: Concept\ncustom: keep\ngenerated:\n  by: human:me\n  at: 2026-01-01T00:00:00Z\nverified:\n  - by: human:reviewer\n    at: 2026-01-01T00:00:00Z\nsources:\n  - resource: https://example.test\n---\n[missing](no.md)\n', encoding='utf-8')
             result = okf.lint(root, 'human:me'); self.assertTrue(result['ok']); self.assertEqual(len(result['warnings']), 1)
             index = okf.generate_index(root); self.assertIn('okf_version: "0.2"', index); self.assertIn('doc.md', index)
             (root/'index.md').write_text(index, encoding='utf-8'); self.assertTrue(okf.lint(root)['ok'])

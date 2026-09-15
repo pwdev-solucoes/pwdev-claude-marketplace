@@ -27,8 +27,9 @@ Language: when an operation emits human-facing summaries, run `scripts/sdd_langu
 2. Disclose, so the human approves a bounded run knowingly, that autonomous execution is limited
    to **3 iterations by default**, requires explicit human approval, and never changes approved
    requirements, stories, architecture, or scope.
-3. Start or resume with `start` or `status`; publish each stage only with fresh evidence from
-   `sdd-verify`.
+3. Start or resume with `start` or `status`; publish each stage with `publish` only after the
+   stage produced a successful result with fresh evidence (VERIFY must cite a real command
+   record, checked against the running LOOP).
 4. After each iteration, use the loop state and evidence to decide whether there is real
    progress. Use `continue` for progress or completion and `cancel` for operator cancellation.
 5. Safe-stop immediately on completion, the iteration cap, no progress, scope expansion,
@@ -43,11 +44,15 @@ Language: when an operation emits human-facing summaries, run `scripts/sdd_langu
 
 - `sdd_loop.py [--root REPO] start TASK-001 --task-state <tasks/<prd-slug>.json> --human-approved [--max-iterations 1|2|3] [--loop-id ID]`
 - `sdd_loop.py [--root REPO] status LOOP-ID`
-- `sdd_loop.py [--root REPO] continue LOOP-ID --task-state <tasks/<prd-slug>.json> --human-approved [--outcome progress|complete|...]`
+- `sdd_loop.py [--root REPO] publish LOOP-ID EXECUTE|QA|EVIDENCE|REVIEW|VERIFY --result <result.json> --task-state <tasks/<prd-slug>.json> --human-approved`
+  — the result file is the stage result contract (`stage`, `status`, `message`, `verdict`,
+  `evidence`); only a `completed` result with a passing verdict is published.
+- `sdd_loop.py [--root REPO] continue LOOP-ID --task-state <tasks/<prd-slug>.json> --human-approved [--outcome progress|complete|needs_human|blocked|...]`
 - `sdd_loop.py [--root REPO] cancel LOOP-ID`
 
-`--human-approved` is passed only after the human approved this exact run; `start` and `continue`
-refuse to run without it. All state remains under `.planning/sdd-composy/loops/`.
+`--human-approved` is passed only after the human approved this exact run; `start`, `publish`, and
+`continue` refuse to run without it. A result with status `needs_human` or `blocked` stops the loop
+with that terminal reason instead of spending a correction iteration. All state remains under `.planning/sdd-composy/loops/`.
 
 ## Read when
 

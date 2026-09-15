@@ -4,8 +4,8 @@ okf_version: "0.2"
 title: "{{PRODUCT_NAME}} verification verdict"
 sources:
   - resource: "tasks/prd-{{SLUG}}/tasks.md"
-  - resource: "tasks/prd-{{SLUG}}/qa.md"
-  - resource: "tasks/prd-{{SLUG}}/codereview.md"
+  - resource: "tasks/prd-{{SLUG}}/qa-{{TASK_ID}}.md"
+  - resource: "tasks/prd-{{SLUG}}/codereview-{{TASK_ID}}.md"
 generated:
   by: "{{GENERATION_ACTOR}}"
   at: "{{GENERATED_AT}}"
@@ -14,6 +14,7 @@ lifecycle:
   status: DRAFT
 human_approval: PENDING
 transition: verify_required
+verdict: PENDING
 ---
 
 # {{PRODUCT_NAME}} — Verification verdict

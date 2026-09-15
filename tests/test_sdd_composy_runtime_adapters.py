@@ -136,27 +136,6 @@ print(json.dumps({result()!r}))
                     verified, "VERIFY", root=root, stage_contract=contract("VERIFY"), now=103), verified)
 
 
-class FleetHermesAdapterTests(unittest.TestCase):
-    SCRIPT = PLUGIN / "scripts/fleet/engine-hermes.sh"
-
-    def command(self, env=None):
-        shell = (f'source "{self.SCRIPT}"\n'
-                 'sdd_engine_hermes_stage_command "/work tree" "/schema" "/result" "quote \' ; \\$HOME"\n'
-                 'printf "cwd=%s\\n" "$FLOW_ENGINE_CWD"\n'
-                 'printf "stdout=%s\\n" "$FLOW_ENGINE_RESULT_FROM_STDOUT"\n'
-                 'printf "%s\\n" "${FLOW_ENGINE_COMMAND[@]}"\n')
-        return subprocess.run(["/bin/bash", "-c", shell], env={**os.environ, **(env or {})},
-                              text=True, capture_output=True, check=False)
-
-    def test_fleet_vector_is_native_and_requires_explicit_authorization(self):
-        denied = self.command()
-        self.assertNotEqual(denied.returncode, 0)
-        allowed = self.command({"SDD_HERMES_AUTOMATION_CONSENT": "1"})
-        self.assertEqual(allowed.returncode, 0, allowed.stderr)
-        self.assertEqual(allowed.stdout.splitlines()[2:],
-                         ["hermes", "-z", "quote ' ; $HOME", "--in", "/work tree"])
-
-
 class FleetInteractiveAdapterTests(unittest.TestCase):
     FORBIDDEN = (
         "--yolo",
@@ -246,48 +225,6 @@ print(json.dumps({{"type": "text", "part": {{"type": "text", "text": {final!r}}}
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(OPENCODE.RuntimeError_, "isolation or automation consent"):
                 OPENCODE.run(contract(), Path(directory), executable="must-not-run")
-
-
-class OpenCodeFleetEngineTests(unittest.TestCase):
-    SCRIPT = PLUGIN / "scripts/fleet/engine-opencode.sh"
-
-    def stage_command(self, env=None):
-        shell = (f'source "{self.SCRIPT}"\n'
-                 'sdd_engine_opencode_stage_command "/work tree" "/schema" "/result" "quote \' ; \\$HOME"\n'
-                 'printf "cwd=%s\\n" "$FLOW_ENGINE_CWD"\n'
-                 'printf "stdout=%s\\n" "$FLOW_ENGINE_RESULT_FROM_STDOUT"\n'
-                 'printf "%s\\n" "${FLOW_ENGINE_COMMAND[@]}"\n')
-        return subprocess.run(["/bin/bash", "-c", shell], env={**os.environ, **(env or {})},
-                              text=True, capture_output=True, check=False)
-
-    def test_fleet_vector_is_native_and_requires_explicit_authorization(self):
-        denied = self.stage_command()
-        self.assertNotEqual(denied.returncode, 0)
-        allowed = self.stage_command({"SDD_OPENCODE_AUTOMATION_CONSENT": "1"})
-        self.assertEqual(allowed.returncode, 0, allowed.stderr)
-        self.assertEqual(allowed.stdout.splitlines()[2:],
-                         ["opencode", "run", "--dir", "/work tree", "--format", "json", "quote ' ; $HOME"])
-
-    def test_safe_mode_never_auto_approves_and_danger_mode_does(self):
-        allowed = self.stage_command({"SDD_OPENCODE_AUTOMATION_CONSENT": "1"})
-        self.assertNotIn("--auto", allowed.stdout.splitlines()[2:])
-        elevated = self.stage_command({"SDD_OPENCODE_AUTOMATION_CONSENT": "1",
-                                       "SDD_FLEET_PERMISSION_MODE": "danger-full-access"})
-        self.assertIn("--auto", elevated.stdout.splitlines()[2:])
-
-    def test_publish_result_decodes_the_last_text_part_and_fails_closed(self):
-        with tempfile.TemporaryDirectory() as directory:
-            raw = Path(directory) / "raw"
-            result_path = Path(directory) / "result.json"
-            good = json.dumps({"type": "text", "part": {"type": "text", "text": json.dumps(result())}}) + "\n"
-            raw.write_text('{"type":"other"}\n' + good, encoding="utf-8")
-            shell = (f'source "{self.SCRIPT}"\n'
-                     f'sdd_engine_opencode_publish_result "{raw}" "{result_path}"\n')
-            self.assertEqual(subprocess.run(["/bin/bash", "-c", shell]).returncode, 0)
-            self.assertEqual(json.loads(result_path.read_text()), result())
-            raw.write_text('{"type":"other"}\n')
-            shell += 'exit 0\n'
-            self.assertNotEqual(subprocess.run(["/bin/bash", "-c", shell]).returncode, 0)
 
 
 class HermesBootstrapTests(unittest.TestCase):

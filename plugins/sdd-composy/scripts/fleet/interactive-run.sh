@@ -97,7 +97,7 @@ PY
 
 PREFLIGHT=$(state_action preflight) || fail "$PREFLIGHT"
 RUNTIME=$(printf '%s' "$PREFLIGHT" | python3 -c 'import json,sys; print(json.load(sys.stdin)["runtime"])')
-case $RUNTIME in codex|hermes) ADAPTER_RUNTIME=$RUNTIME ;; claude-code) ADAPTER_RUNTIME=claude ;; *) fail "unsupported runtime: $RUNTIME" ;; esac
+case $RUNTIME in codex|hermes|opencode) ADAPTER_RUNTIME=$RUNTIME ;; claude-code) ADAPTER_RUNTIME=claude ;; *) fail "unsupported runtime: $RUNTIME" ;; esac
 ADAPTER=$SCRIPT_DIR/engine-$ADAPTER_RUNTIME.sh
 [[ -f $ADAPTER && ! -L $ADAPTER ]] || fail 'runtime adapter is unavailable'
 # shellcheck source=/dev/null

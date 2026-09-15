@@ -27,9 +27,11 @@ Language: before writing human-facing prose, run `scripts/sdd_language.py <repo-
   SHA-256 evidence, environment ownership, and cleanup.
 - Never modify approved contracts or user-owned processes.
 
-On success, request the guarded `running -> qa_required` transition. A concrete dependency,
-environment, QA, evidence, or cleanup blocker becomes `blocked`; a scope violation or rejected
-contract becomes `rejected`. Record the exact reason and next action, and stop on any QA or review
+On success, record the passing verification run with `scripts/sdd_tasks.py evidence <state>
+<TASK-ID> tests --status passed --ref <command-record>` and request the guarded
+`running -> qa_required` transition. A concrete dependency, environment, QA, evidence, or cleanup
+blocker becomes `blocked`; a scope violation or rejected contract becomes `rejected` (both through
+`transition ... --reason <text>`, from `ready` or `running`). Record the exact reason and next action, and stop on any QA or review
 blocker.
 
 ## Read when

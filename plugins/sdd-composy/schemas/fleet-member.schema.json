@@ -3,67 +3,293 @@
   "$id": "https://sdd-composy.local/schemas/fleet-member.schema.json",
   "title": "SDD Composy fleet member v2",
   "type": "object",
-  "required": ["schema_version", "id", "task_id", "status", "runtime", "ui", "branch", "worktree_path", "repository_root", "started_at", "updated_at", "owner", "resources"],
+  "required": [
+    "schema_version",
+    "id",
+    "task_id",
+    "status",
+    "runtime",
+    "ui",
+    "branch",
+    "worktree_path",
+    "repository_root",
+    "started_at",
+    "updated_at",
+    "owner",
+    "resources"
+  ],
   "properties": {
-    "schema_version": {"const": "2"},
-    "id": {"$ref": "#/definitions/member_id"},
-    "task_id": {"$ref": "#/definitions/task_id"},
-    "status": {"$ref": "#/definitions/member_status"},
-    "runtime": {"$ref": "#/definitions/runtime"},
-    "ui": {"$ref": "#/definitions/ui"},
-    "branch": {"type": "string", "minLength": 1},
-    "worktree_path": {"$ref": "#/definitions/absolute_path"},
-    "repository_root": {"$ref": "#/definitions/absolute_path"},
+    "schema_version": {
+      "const": "2"
+    },
+    "id": {
+      "$ref": "#/definitions/member_id"
+    },
+    "task_id": {
+      "$ref": "#/definitions/task_id"
+    },
+    "status": {
+      "$ref": "#/definitions/member_status"
+    },
+    "runtime": {
+      "$ref": "#/definitions/runtime"
+    },
+    "ui": {
+      "$ref": "#/definitions/ui"
+    },
+    "branch": {
+      "type": "string",
+      "minLength": 1
+    },
+    "worktree_path": {
+      "$ref": "#/definitions/absolute_path"
+    },
+    "repository_root": {
+      "$ref": "#/definitions/absolute_path"
+    },
     "owner": {
       "type": "object",
-      "required": ["kind", "fleet_id", "member_id"],
-      "properties": {"kind": {"const": "sdd-composy-fleet"}, "fleet_id": {"type": "string", "minLength": 1}, "member_id": {"$ref": "#/definitions/member_id"}},
+      "required": [
+        "kind",
+        "fleet_id",
+        "member_id"
+      ],
+      "properties": {
+        "kind": {
+          "const": "sdd-composy-fleet"
+        },
+        "fleet_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "member_id": {
+          "$ref": "#/definitions/member_id"
+        }
+      },
       "additionalProperties": false
     },
     "resources": {
       "type": "object",
-      "required": ["branch", "worktree_path", "port", "compose_project", "compose_file", "compose_allocated"],
-      "properties": {"branch": {"type": "string", "minLength": 1}, "worktree_path": {"$ref": "#/definitions/absolute_path"}, "port": {"type": "integer", "minimum": 1, "maximum": 65535}, "compose_project": {"type": "string", "minLength": 1}, "compose_file": {"$ref": "#/definitions/relative_path"}, "compose_allocated": {"type": "boolean"}, "compose_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}},
-      "if": {"properties": {"compose_allocated": {"const": true}}, "required": ["compose_allocated"]},
-      "then": {"required": ["compose_sha256"]},
+      "required": [
+        "branch",
+        "worktree_path",
+        "port",
+        "compose_project",
+        "compose_file",
+        "compose_allocated"
+      ],
+      "properties": {
+        "branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "worktree_path": {
+          "$ref": "#/definitions/absolute_path"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "compose_project": {
+          "type": "string",
+          "minLength": 1
+        },
+        "compose_file": {
+          "$ref": "#/definitions/relative_path"
+        },
+        "compose_allocated": {
+          "type": "boolean"
+        },
+        "compose_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "if": {
+        "properties": {
+          "compose_allocated": {
+            "const": true
+          }
+        },
+        "required": [
+          "compose_allocated"
+        ]
+      },
+      "then": {
+        "required": [
+          "compose_sha256"
+        ]
+      },
       "additionalProperties": true
     },
-    "started_at": {"type": "string", "format": "date-time"},
-    "updated_at": {"type": "string", "format": "date-time"},
-    "finished_at": {"type": "string", "format": "date-time"},
-    "result_path": {"$ref": "#/definitions/relative_path"},
-    "message": {"type": "string", "minLength": 1},
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "finished_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "result_path": {
+      "$ref": "#/definitions/relative_path"
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1
+    },
     "interaction": {
       "type": "object",
-      "required": ["state", "started_at", "updated_at"],
+      "required": [
+        "state",
+        "started_at",
+        "updated_at"
+      ],
       "properties": {
-        "state": {"$ref": "#/definitions/interaction_state"},
-        "started_at": {"type": "string", "format": "date-time"},
-        "updated_at": {"type": "string", "format": "date-time"},
+        "state": {
+          "$ref": "#/definitions/interaction_state"
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
         "loop": {
           "type": "object",
-          "required": ["id", "task_id"],
+          "required": [
+            "id",
+            "task_id"
+          ],
           "properties": {
-            "id": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._-]*$"},
-            "task_id": {"$ref": "#/definitions/task_id"}
+            "id": {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9._-]*$"
+            },
+            "task_id": {
+              "$ref": "#/definitions/task_id"
+            }
           },
           "additionalProperties": false
         }
       },
       "additionalProperties": true
+    },
+    "approval": {
+      "type": "object",
+      "required": [
+        "by",
+        "at"
+      ],
+      "properties": {
+        "by": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._-]*$"
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": true
+    },
+    "commit": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "allowed_paths": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     }
   },
-  "if": {"properties": {"status": {"enum": ["completed", "failed", "blocked", "cancelled"]}}, "required": ["status"]},
-  "then": {"required": ["finished_at", "result_path"]},
+  "if": {
+    "properties": {
+      "status": {
+        "enum": [
+          "completed",
+          "failed",
+          "blocked",
+          "cancelled"
+        ]
+      }
+    },
+    "required": [
+      "status"
+    ]
+  },
+  "then": {
+    "required": [
+      "finished_at",
+      "result_path"
+    ]
+  },
   "additionalProperties": true,
   "definitions": {
-    "member_id": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._-]*$"},
-    "task_id": {"type": "string", "pattern": "^TASK-[0-9]{3,}$"},
-    "member_status": {"enum": ["pending", "running", "completed", "failed", "blocked", "cancelled"]},
-    "runtime": {"enum": ["claude-code", "codex", "hermes", "opencode"]},
-    "ui": {"enum": ["cmux", "tmux", "headless"]},
-    "interaction_state": {"enum": ["starting", "running", "awaiting_human", "completed", "inconclusive", "blocked", "failed"]},
-    "relative_path": {"type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
-    "absolute_path": {"type": "string", "minLength": 2, "pattern": "^/"}
+    "member_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9._-]*$"
+    },
+    "task_id": {
+      "type": "string",
+      "pattern": "^TASK-[0-9]{3,}$"
+    },
+    "member_status": {
+      "enum": [
+        "pending",
+        "running",
+        "completed",
+        "failed",
+        "blocked",
+        "cancelled"
+      ]
+    },
+    "runtime": {
+      "enum": [
+        "claude-code",
+        "codex",
+        "hermes",
+        "opencode"
+      ]
+    },
+    "ui": {
+      "enum": [
+        "cmux",
+        "tmux",
+        "headless"
+      ]
+    },
+    "interaction_state": {
+      "enum": [
+        "starting",
+        "running",
+        "awaiting_human",
+        "completed",
+        "inconclusive",
+        "blocked",
+        "failed"
+      ]
+    },
+    "relative_path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "absolute_path": {
+      "type": "string",
+      "minLength": 2,
+      "pattern": "^/"
+    }
   }
 }

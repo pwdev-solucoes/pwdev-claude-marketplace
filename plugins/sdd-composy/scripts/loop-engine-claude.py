@@ -28,7 +28,9 @@ def parse_envelope(value: object) -> dict:
     if isinstance(result, str):
         try: result = json.loads(strip_fence(result))
         except (TypeError, ValueError) as exc: raise RuntimeError_("Claude result is not JSON") from exc
-    return validate_result(result)
+    if not isinstance(result, dict): raise RuntimeError_("Claude result is not a JSON object")
+    # Full validation needs the stage contract and LOOP root (VERIFY evidence); run() applies it.
+    return result
 
 def run(stage_contract: dict, root: Path, *, timeout: float = 300, executable: str | None = None,
         loop_root: Path | None = None) -> dict:

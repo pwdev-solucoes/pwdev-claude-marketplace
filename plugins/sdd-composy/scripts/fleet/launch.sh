@@ -2,13 +2,19 @@
 set -euo pipefail
 HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$HERE/common.sh"
-usage(){ echo "usage: launch.sh --runtime claude|codex|hermes|opencode --root ROOT --fleet-id ID --base-branch BRANCH --task TASK.json [--task TASK.json ...] [--compose] [--ui auto|cmux|tmux|headless]" >&2; exit 2; }
-root= fleet_id= base_branch= compose=0; ui=auto; tasks=(); prepare=0; runtime=
+usage(){ echo "usage: launch.sh --runtime claude|codex|hermes|opencode --root ROOT --fleet-id ID --base-branch BRANCH --task .planning/sdd-composy/tasks/<prd-slug>.json [--task ...] [--compose] [--ui auto|cmux|tmux|headless] [--human-approved --approved-by ACTOR] [--prepare-only]" >&2; exit 2; }
+root= fleet_id= base_branch= compose=0; ui=auto; tasks=(); prepare=0; runtime=; human_approved=0; approved_by=
 while (($#)); do case "$1" in
   --root) root=${2:-}; shift 2;; --fleet-id) fleet_id=${2:-}; shift 2;;
   --prepare-only) prepare=1; shift;; --runtime) runtime=${2:-}; shift 2;;
+  --human-approved) human_approved=1; shift;; --approved-by) approved_by=${2:-}; shift 2;;
   --base-branch) base_branch=${2:-}; shift 2;; --task) tasks+=("${2:-}"); shift 2;; --compose) compose=1; shift;; --ui) ui=${2:-}; shift 2;; *) usage;; esac; done
 [[ -n "$root" && -n "$fleet_id" && -n "$base_branch" && ${#tasks[@]} -gt 0 ]] || usage
+# Validate the identity before it names any directory: `.`/`..` would escape the fleet root.
+[[ "$fleet_id" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || fleet_die "invalid fleet id"
+if ((human_approved)) || [[ -n $approved_by ]]; then
+  ((human_approved)) && [[ $approved_by =~ ^[A-Za-z][A-Za-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || fleet_die 'approval requires --human-approved with --approved-by <kind:actor>'
+fi
 case "$runtime" in claude) record_runtime=claude-code; cli_runtime=claude;; codex|hermes|opencode) record_runtime=$runtime; cli_runtime=$runtime;; '') fleet_die 'launch runtime is required';; *) fleet_die 'unsupported fleet runtime';; esac
 root=$(fleet_abs "$root"); [[ -d "$root/.git" || -f "$root/.git" ]] || fleet_die "root is not a git repository"
 root=$(cd -- "$root" && pwd -P)
@@ -17,35 +23,76 @@ git_root=$(cd -- "$git_root" && pwd -P)
 [[ $git_root == "$root" ]] || fleet_die 'root must be the exact Git worktree root'
 [[ $prepare == 1 ]] || command -v "$cli_runtime" >/dev/null || fleet_die 'runtime unavailable'
 ui=$(fleet_select_ui "$ui") || exit $?
+if ((prepare == 0 && human_approved == 0)) && [[ $ui == headless ]]; then
+  fleet_die 'a headless fleet runs the LOOP unattended; relaunch with --human-approved --approved-by <actor> once the human approved this run'
+fi
+if ((prepare == 0)); then
+  # Contract gate: only the canonical task projection of a human-approved TechSpec may run.
+  python3 - "$HERE/.." "$root" "${tasks[@]}" <<'PY' || exit 1
+import sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+import sdd_tasks
+from sdd_okf import parse_frontmatter
+root = Path(sys.argv[2])
+def die(message): raise SystemExit(f"fleet: {message}")
+for raw in sys.argv[3:]:
+    if Path(raw).is_symlink(): die(f"task contract must not be a symlink: {raw}")
+    path = Path(raw).resolve()
+    try: relative = path.relative_to(root.resolve() / ".planning/sdd-composy/tasks")
+    except ValueError: die(f"task contract must be the canonical task projection .planning/sdd-composy/tasks/<prd-slug>.json: {raw}")
+    if len(relative.parts) != 1: die(f"task contract must be the canonical task projection: {raw}")
+    try: projection = sdd_tasks.load(path)
+    except (OSError, ValueError) as exc: die(f"invalid task projection {raw}: {exc}")
+    if path.name != projection["prd_slug"] + ".json": die(f"task projection filename does not match prd_slug: {raw}")
+    techspec = root / "tasks" / f"prd-{projection['prd_slug']}" / "techspec.md"
+    if techspec.is_symlink() or not techspec.is_file(): die(f"approved techspec is missing: {techspec}")
+    try: meta, _ = parse_frontmatter(techspec.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc: die(f"techspec frontmatter is invalid: {exc}")
+    lifecycle = (meta or {}).get("lifecycle") or {}
+    verified = (meta or {}).get("verified")
+    if lifecycle.get("status") != "APPROVED" or (meta or {}).get("human_approval") != "APPROVED" or not verified:
+        die(f"techspec is not human-approved: {techspec}")
+PY
+fi
 state=$(fleet_state_dir "$root" "$fleet_id")
 fleet_no_symlink_components "$state" || fleet_die 'fleet state path has a symlink component'
 mkdir -p "$state/members"
 export FLEET_ID="$fleet_id"
 fleet_preexisting=0; [[ -e "$state/fleet.json" || -L "$state/fleet.json" ]] && fleet_preexisting=1
 preexisting_members=(); while IFS= read -r -d '' f; do preexisting_members+=("$f"); done < <(find "$state/members" -maxdepth 1 -type f -name '*.json' -print0 2>/dev/null)
-lock="$state/.lock"; fleet_lock "$lock"; trap 'fleet_unlock "$lock"' EXIT
-[[ "$fleet_id" =~ ^[A-Za-z0-9._-]+$ ]] || fleet_die "invalid fleet id"
+lock="$state/.lock"; fleet_lock "$lock" || exit 1; trap 'fleet_unlock "$lock"' EXIT
 command -v git >/dev/null || fleet_die "git is required"
 git -C "$root" show-ref --verify --quiet "refs/heads/$base_branch" || fleet_die "unknown base branch"
 
-python3 - "$root" "$state" "$fleet_id" "$base_branch" "$ui" "$record_runtime" "${tasks[@]}" <<'PY'
+python3 - "$root" "$state" "$fleet_id" "$base_branch" "$ui" "$record_runtime" "$approved_by" "${tasks[@]}" <<'PY'
 import json,sys,hashlib,re,os,tempfile
 from datetime import datetime,timezone
 from pathlib import Path
-root,state=map(Path,sys.argv[1:3]); fleet_id=sys.argv[3]; base_branch=sys.argv[4]; ui=sys.argv[5]; runtime=sys.argv[6]; files=[Path(x) for x in sys.argv[7:]]
+root,state=map(Path,sys.argv[1:3]); fleet_id=sys.argv[3]; base_branch=sys.argv[4]; ui=sys.argv[5]; runtime=sys.argv[6]; approved_by=sys.argv[7]; files=[Path(x) for x in sys.argv[8:]]
 seen=[]; records=[]; now=datetime.now(timezone.utc).isoformat().replace('+00:00','Z')
 for f in files:
     if f.is_symlink(): raise SystemExit(f"fleet: task symlink rejected: {f}")
     try: data=json.loads(f.read_text())
     except Exception as e: raise SystemExit(f"fleet: invalid task: {e}")
-    if isinstance(data,dict) and isinstance(data.get('tasks'),list): entries=data['tasks']
-    else: entries=[data]
+    bundle=isinstance(data,dict) and isinstance(data.get('tasks'),list)
+    if bundle:
+        # A projection may mix lifecycle states: the fleet takes only its ready tasks, and
+        # dependency completion is read from the same projection.
+        states={t.get('id'):t.get('state') for t in data['tasks'] if isinstance(t,dict)}
+        entries=[t for t in data['tasks'] if isinstance(t,dict) and t.get('state')=='ready']
+        if not entries: raise SystemExit(f'fleet: no ready task in {f}')
+    else: entries=[data]; states={}
     for task in entries:
       if not isinstance(task,dict): raise SystemExit('fleet: task must be an object')
       tid=str(task.get('id','')); paths=task.get('allowed_paths',[])
-      if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]*',tid) or any(oid==tid for _,oid in seen): raise SystemExit('fleet: invalid or duplicate task identity')
-      if not tid or task.get('state') != 'ready': raise SystemExit(f'fleet: task {tid or "?"} is not ready')
-      if task.get('dependencies_complete') is False or task.get('dependencies') not in (None,[]) and task.get('dependencies_complete') is not True:
+      if not re.fullmatch(r'TASK-[0-9]{3,}',tid) or any(oid==tid for _,oid in seen): raise SystemExit('fleet: invalid or duplicate task identity')
+      if task.get('state') != 'ready': raise SystemExit(f'fleet: task {tid} is not ready')
+      dependencies=task.get('dependencies') or []
+      if not isinstance(dependencies,list): raise SystemExit(f'fleet: task {tid} has invalid dependencies')
+      if dependencies and not bundle:
+          raise SystemExit(f'fleet: task {tid} dependencies cannot be proven outside its task projection')
+      if any(states.get(dep) != 'complete' for dep in dependencies):
           raise SystemExit(f'fleet: task {tid} has incomplete dependencies')
       for key in ('acceptance_criteria','verification_commands'):
           if not isinstance(task.get(key),list) or not task[key] or any(not str(x).strip() for x in task[key]): raise SystemExit(f'fleet: task {tid} missing {key}')
@@ -68,7 +115,9 @@ for f in files:
       contract=Path(str(task.get('contract_path', f)))
       if contract.is_symlink() or not contract.exists(): raise SystemExit(f'fleet: dirty contract {tid}')
       blob=contract.read_bytes(); h=hashlib.sha256(blob).hexdigest()
-      records.append({'schema_version':'2','id':tid,'task_id':tid,'slug':tid.lower(),'contract_path':str(contract.absolute()),'contract_sha256':h,'allowed_paths':norm,'verification_commands':task['verification_commands'],'state':'locked','status':'pending','runtime':runtime,'ui':ui,'repository_root':str(root.resolve()),'owner':{'kind':'sdd-composy-fleet','fleet_id':fleet_id,'member_id':tid},'interaction':{'state':'starting','started_at':now,'updated_at':now}})
+      record={'schema_version':'2','id':tid,'task_id':tid,'slug':tid.lower(),'contract_path':str(contract.absolute()),'contract_sha256':h,'allowed_paths':norm,'verification_commands':task['verification_commands'],'state':'locked','status':'pending','runtime':runtime,'ui':ui,'repository_root':str(root.resolve()),'owner':{'kind':'sdd-composy-fleet','fleet_id':fleet_id,'member_id':tid},'interaction':{'state':'starting','started_at':now,'updated_at':now}}
+      if approved_by: record['approval']={'by':approved_by,'at':now}
+      records.append(record)
 out=state/'members'; out.mkdir(parents=True,exist_ok=True)
 if (state/'fleet.json').exists() or (state/'fleet.json').is_symlink(): raise SystemExit('fleet: fleet metadata already exists')
 destinations=[out/(r['id']+'.json') for r in records]
@@ -101,7 +150,7 @@ cleanup(){ local rc=$?; set +e; if ((rc!=0)); then
     else
       for f in "$state"/members/*.json; do
         [[ -f "$f" ]] || continue
-        keep=0; for old in "${preexisting_members[@]}"; do [[ "$f" == "$old" ]] && keep=1; done
+        keep=0; for old in ${preexisting_members[@]+"${preexisting_members[@]}"}; do [[ "$f" == "$old" ]] && keep=1; done
         if ((keep==0)); then rm -f "$f"; fi
       done
     fi
@@ -120,7 +169,7 @@ work=$(cd "$work" && pwd -P)
 created+=("$work")
 branches+=("$branch")
 [[ "${SDD_FLEET_FAIL_AFTER_WORKTREE:-}" == 1 ]] && fleet_die "injected post-worktree failure"
-port=$(fleet_allocate_port "$state" "${SDD_FLEET_PORT_START:-43000}" "${SDD_FLEET_PORT_END:-43100}")
+port=$(fleet_allocate_port "$state" "${SDD_FLEET_PORT_START:-43000}" "${SDD_FLEET_PORT_END:-43100}") || fleet_die "port allocation failed"
 ports+=("$port")
 if ((runtime_created == 0)); then fleet_write_runtime_env "$state" "$port"; runtime_created=1; fi
 python3 - "$member_file" "$work" "$branch" "$port" "$record_runtime" "$fleet_id" "$compose" <<'PY'
@@ -156,15 +205,6 @@ PY
 fi
 if ((prepare == 0)); then
   . "$HERE/ui-$ui.sh"
-  # Validate every approved phase before starting any runner. Never manufacture approvals.
-  for member_file in "$state"/members/*.json; do
-    work=$(fleet_json_string "$member_file" worktree); slug=$(fleet_json_string "$member_file" slug)
-    for contract in spec decisions; do
-      file="$work/.planning/sdd-composy/phases/$slug/$contract.md"
-      fleet_require_regular "$file" || fleet_die "missing approved phase contract: $file"
-      [[ $(awk '/^Status: APPROVED$/ {n++} END {print n+0}' "$file") == 1 ]] || fleet_die 'phase requires existing approval'
-    done
-  done
   # Establish exactly one canonical LOOP per member only after every fleet and
   # approval validation has succeeded, but before any presentation process exists.
   for member_file in "$state"/members/*.json; do

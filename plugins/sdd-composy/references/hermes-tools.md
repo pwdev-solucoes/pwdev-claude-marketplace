@@ -11,7 +11,7 @@ automation vector are in [runtime.md](runtime.md).
 | Search files | `search_files` |
 | Dispatch bounded work | `delegate_task` with explicit context |
 | Track tasks | Shared SDD Composy task contracts and status projection |
-| Invoke a skill | `skill_view("sdd-<name>")` — the bare registered name; the bootstrap banner still prints the `sdd-composy:` prefixed form (known mismatch, see the plugin report) |
+| Invoke a skill | `skill_view("sdd-composy:sdd-<name>")` — Hermes resolves plugin skills only by `<plugin>:<name>`; a bare `sdd-<name>` searches `~/.hermes/skills` and misses them |
 
 The local plugin bootstrap registers exactly the 17 directories under `skills/` whose
 `SKILL.md` is a regular file. Registration preserves each path as a `pathlib.Path`; a missing

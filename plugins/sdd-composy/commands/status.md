@@ -1,6 +1,6 @@
 ---
 description: Inspect the consolidated SDD Composy status
-argument-hint: "[--feature <id>] [--tasks] [--fleet] [--json]"
+argument-hint: "<repo-root> [--feature <id>] [--tasks] [--fleet] [--json]"
 ---
 
 # /sdd-composy:status

@@ -1,6 +1,6 @@
 ---
 description: Build, verify, or optionally export evidence for a SDD Composy task
-argument-hint: "<TASK-ID> [build|verify|export]"
+argument-hint: "<TASK-ID> [discover|build|verify|export]"
 ---
 
 # /sdd-composy:evidence

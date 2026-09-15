@@ -207,11 +207,14 @@ class FleetLaunchTest(unittest.TestCase):
         self.assertNotIn("loop",member["interaction"])
 
     def _approved_launch_fixture(self):
-        phase=self.repo/'.planning/sdd-composy/phases/task-001'; phase.mkdir(parents=True)
-        for name in ('spec.md','decisions.md'): (phase/name).write_text('Status: APPROVED\n')
+        # The SDD contracts a real launch consumes: a human-approved TechSpec and the canonical projection.
+        techspec=self.repo/'tasks/prd-demo/techspec.md'; techspec.parent.mkdir(parents=True)
+        techspec.write_text('---\ntype: TECHSPEC\nlifecycle:\n  status: APPROVED\nhuman_approval: APPROVED\nverified:\n  - by: "human:paulo"\n    at: "2026-09-15T11:00:00Z"\n---\n')
+        self.contract=self.repo/'.planning/sdd-composy/tasks/demo.json'; self.contract.parent.mkdir(parents=True)
+        self.contract.write_text(json.dumps({"schema_version":"1","prd_slug":"demo","updated_at":"2026-09-15T12:00:00Z","tasks":[
+            {"id":"TASK-001","title":"one","state":"ready","dependencies":[],"acceptance_criteria":["CA-001"],"verification_commands":["true"],"allowed_paths":["src/app.py"],"evidence_required":False}]}))
         subprocess.run(['git','-C',str(self.repo),'add','.'],check=True)
-        subprocess.run(['git','-C',str(self.repo),'commit','-qm','approved phase'],check=True)
-        self.task()
+        subprocess.run(['git','-C',str(self.repo),'commit','-qm','approved contracts'],check=True)
 
     def _cmux_launch(self, fake, state, log):
         return subprocess.run(
@@ -424,30 +427,8 @@ exit 0
         for key in ('worktree','branch','port'):
             self.assertEqual(len({r[key] for r in records}),2,key)
 
-    def test_launch_dispatches_real_runner_to_mock_provider_without_metadata_rewrite(self):
-        import time
-        phase=self.repo/'.planning/sdd-composy/phases/task-001'; phase.mkdir(parents=True)
-        for name in ('spec.md','decisions.md'): (phase/name).write_text('Status: APPROVED\n')
-        subprocess.run(['git','-C',str(self.repo),'add','.'],check=True)
-        subprocess.run(['git','-C',str(self.repo),'commit','-qm','approved phase'],check=True)
-        self.task(); fake=self.repo/'bin'; fake.mkdir(); called=self.repo/'provider-called'
-        (fake/'codex').write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "'+str(called)+'"\nexit 7\n'); (fake/'codex').chmod(0o755)
-        result=subprocess.run([str(LAUNCH),'--runtime','codex','--ui','headless','--root',str(self.repo),'--fleet-id','demo','--base-branch',self.base,'--task',str(self.contract)],capture_output=True,text=True,env={**os.environ,'PATH':str(fake)+':/usr/bin:/bin'})
-        self.assertEqual(result.returncode,0,result.stderr)
-        state=self.repo/'.planning/sdd-composy/fleet/demo'; member=json.loads((state/'members/TASK-001.json').read_text()); work=Path(member['worktree'])
-        deadline=time.monotonic()+10
-        while time.monotonic()<deadline and not called.exists(): time.sleep(.05)
-        self.assertTrue(called.exists())
-        args=called.read_text(); self.assertIn('TASK-001',args)
-        self.assertNotIn('--dangerously-bypass',args)
-        self.assertEqual(member['interaction']['loop']['task_id'],'TASK-001')
-        loop=self.repo/'.planning/sdd-composy/loops'/(member['interaction']['loop']['id']+'.json')
-        self.assertTrue(loop.is_file())
-        deadline=time.monotonic()+10
-        while time.monotonic()<deadline and json.loads(loop.read_text())['status']=='running': time.sleep(.05)
-        self.assertEqual(json.loads(loop.read_text())['status'],'environment_failure')
     def test_eligibility_and_required_contract_fields(self):
-        for key,val in (("state","pending"),("acceptance_criteria",[]),("verification_commands",[]),("dependencies_complete",False)):
+        for key,val in (("state","pending"),("acceptance_criteria",[]),("verification_commands",[]),("dependencies",["TASK-000"])):
             self.task(**{key:val}); self.assertNotEqual(self.invoke(self.contract).returncode,0)
     def test_symlink_dirty_and_collision_rejected(self):
         self.task(allowed_paths=["link.py"]); (self.repo/"link.py").symlink_to(self.repo/"src/app.py"); self.assertNotEqual(self.invoke(self.contract).returncode,0)

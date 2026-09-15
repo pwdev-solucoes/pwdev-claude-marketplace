@@ -14,6 +14,19 @@ CRITERION = re.compile(r"^CA-[0-9]{3,}$")
 RFC3339 = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$")
 STATES = {"pending", "ready", "running", "qa_required", "evidence_required",
           "review_required", "verify_required", "complete", "blocked", "rejected", "skipped"}
+ACTIVE = ("ready", "running", "qa_required", "evidence_required", "review_required", "verify_required")
+# Transitions are the contract in references/states.md: every active state may be blocked or
+# rejected with a reason, every non-terminal state may be skipped with reason and authority.
+FORWARD = {"pending": {"ready"}, "rejected": {"ready"}, "blocked": {"ready"}, "ready": {"running"},
+           "running": {"qa_required"}, "qa_required": {"evidence_required", "review_required"},
+           "evidence_required": {"review_required"}, "review_required": {"verify_required"},
+           "verify_required": {"complete"}, "complete": set(), "skipped": set()}
+ALLOWED = {source: targets | ({"blocked", "rejected"} if source in ACTIVE else set())
+           | ({"skipped"} if source not in {"complete", "skipped"} else set())
+           for source, targets in FORWARD.items()}
+EVIDENCE_STATUSES = {"tests": {"passed", "failed"}, "qa": {"passed", "failed", "blocked", "rejected"},
+                     "review": {"approved", "rejected"}, "verify": {"approved", "rejected"},
+                     "trace": {"consistent", "inconsistent"}}
 
 class TaskError(ValueError): pass
 
@@ -87,8 +100,12 @@ def _record(task: dict[str, Any], name: str, now: dt.datetime) -> dict[str, Any]
     if not isinstance(record, dict):
         raise TaskError(f"missing {name} evidence")
     stamp = _evidence_time(record.get("timestamp"))
-    baseline_value = task.get("_state_updated_at", task.get("updated_at"))
-    baseline = _evidence_time(baseline_value) if isinstance(baseline_value, str) else None
+    # Evidence belongs to the current implementation attempt: anything recorded before the task
+    # last entered `running` (or before a rejection invalidated it) is stale. The baseline is
+    # per task, so another task's transition or a re-import never stales this task's evidence.
+    baselines = [_evidence_time(task[key]) for key in ("attempt_started_at", "evidence_invalidated_at")
+                 if isinstance(task.get(key), str)]
+    baseline = max(baselines) if baselines else None
     if stamp > now or (baseline is not None and stamp < baseline):
         raise TaskError(f"stale {name} evidence")
     return record
@@ -114,25 +131,18 @@ def transition(data: dict[str, Any], task_id: str, target: str, *, reason: str |
                now: dt.datetime | None = None, authority: str | None = None) -> dict[str, Any]:
     validate(data); task = _task(data, task_id); source = task["state"]
     if target not in STATES: raise TaskError(f"invalid target state: {target}")
-    allowed = {"pending": {"ready", "skipped"}, "rejected": {"ready", "skipped"}, "ready": {"running", "skipped"},
-               "running": {"qa_required", "blocked", "rejected", "skipped"}, "qa_required": {"evidence_required", "review_required", "skipped"},
-               "evidence_required": {"review_required", "skipped"}, "review_required": {"verify_required", "rejected", "skipped"},
-               "verify_required": {"complete", "rejected", "skipped"}, "blocked": {"ready", "skipped"}, "complete": set(), "skipped": set()}
-    if target not in allowed.get(source, set()): raise TaskError(f"illegal transition: {source} -> {target}")
+    if target not in ALLOWED.get(source, set()): raise TaskError(f"illegal transition: {source} -> {target}")
     if target == "ready":
         by_id = {t["id"]: t for t in data["tasks"]}
         if any(by_id[d]["state"] != "complete" for d in task["dependencies"]): raise TaskError("dependencies are not complete")
     if target == "running":
         by_id = {t["id"]: t for t in data["tasks"]}
         if any(by_id[d]["state"] != "complete" for d in task["dependencies"]): raise TaskError("dependencies are not complete")
-    if target == "blocked" and not reason: raise TaskError("blocked transition requires reason")
+    if target == "blocked" and (not reason or not reason.strip()): raise TaskError("blocked transition requires reason")
     if target == "rejected" and (not reason or not reason.strip()):
         raise TaskError("rejected transition requires reason")
     stamp = now or dt.datetime.now(dt.timezone.utc)
     if stamp.tzinfo is None: raise TaskError("now must include timezone")
-    # The projection timestamp is the freshness baseline; keep it out of the
-    # task object so unknown task fields remain untouched.
-    task["_state_updated_at"] = data.get("updated_at")
     if target == "evidence_required":
         _record(task, "tests", stamp)
     elif target == "review_required":
@@ -156,8 +166,31 @@ def transition(data: dict[str, Any], task_id: str, target: str, *, reason: str |
         task["evidence_invalidated_at"] = stamp.replace(microsecond=0).isoformat().replace("+00:00", "Z")
     elif target == "ready":
         task.pop("rejection_reason", None); task.pop("blocked_reason", None)
-    task.pop("_state_updated_at", None)
-    data["updated_at"] = stamp.replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    elif target == "running":
+        task["attempt_started_at"] = _iso(stamp)
+    data["updated_at"] = _iso(stamp)
+    validate(data); return data
+
+def _iso(stamp: dt.datetime) -> str:
+    return stamp.astimezone(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+def record_evidence(data: dict[str, Any], task_id: str, kind: str, status: str, *,
+                    now: dt.datetime | None = None, ref: str | None = None) -> dict[str, Any]:
+    """Record one fresh gate evidence entry on an active task; states still move only via transition."""
+    validate(data); task = _task(data, task_id)
+    if kind not in EVIDENCE_STATUSES: raise TaskError(f"unknown evidence kind: {kind}")
+    if status not in EVIDENCE_STATUSES[kind]: raise TaskError(f"invalid {kind} evidence status: {status}")
+    if task["state"] not in ACTIVE[1:]: raise TaskError(f"evidence requires an active task, not {task['state']}")
+    if ref is not None and not _safe_rel(ref): raise TaskError("evidence reference must be repository-relative")
+    stamp = now or dt.datetime.now(dt.timezone.utc)
+    if stamp.tzinfo is None: raise TaskError("now must include timezone")
+    record = {"status": status, "timestamp": _iso(stamp)}
+    if ref is not None: record["ref"] = ref
+    evidence = task.get("evidence")
+    if evidence is None: evidence = task["evidence"] = {}
+    if not isinstance(evidence, dict): raise TaskError("task evidence must be an object")
+    evidence[kind] = record
+    data["updated_at"] = _iso(stamp)
     validate(data); return data
 
 def integrate_quality_artifacts(data: dict[str, Any], task_id: str,
@@ -306,6 +339,14 @@ def verify(data: dict[str, Any], *, now: dt.datetime | None = None) -> dict[str,
     permitted = all(item["completion_permitted"] for item in checks if item["state"] == "verify_required")
     return {"ok": permitted, "prd_slug": data["prd_slug"], "completion_permitted": permitted, "checks": checks}
 
+def _artifact(path: str) -> dict[str, Any]:
+    meta, _ = parse_frontmatter(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(meta, dict): raise TaskError(f"artifact has no frontmatter: {path}")
+    return meta
+
+def _mutate(path: str, change) -> dict[str, Any]:
+    data = load(path); change(data); _atomic_write(Path(path), data); return data
+
 def main() -> int:
     p=argparse.ArgumentParser(); sub=p.add_subparsers(dest="cmd", required=True)
     q=sub.add_parser("import"); q.add_argument("markdown_root"); q.add_argument("output"); q.add_argument("--prd-slug"); q.add_argument("--root")
@@ -313,11 +354,16 @@ def main() -> int:
     q=sub.add_parser("show"); q.add_argument("state"); q.add_argument("task_id")
     q=sub.add_parser("next"); q.add_argument("state")
     q=sub.add_parser("verify"); q.add_argument("state")
-    for name in ("start", "block", "transition"):
-        q=sub.add_parser(name); q.add_argument("state"); q.add_argument("task_id")
-        if name == "transition": q.add_argument("target")
-        if name == "block": q.add_argument("reason")
-    a=p.parse_args()
+    q=sub.add_parser("start"); q.add_argument("state"); q.add_argument("task_id")
+    q=sub.add_parser("block"); q.add_argument("state"); q.add_argument("task_id"); q.add_argument("reason")
+    q=sub.add_parser("transition"); q.add_argument("state"); q.add_argument("task_id"); q.add_argument("target")
+    q.add_argument("--reason"); q.add_argument("--authority")
+    q=sub.add_parser("evidence"); q.add_argument("state"); q.add_argument("task_id")
+    q.add_argument("kind", choices=sorted(EVIDENCE_STATUSES)); q.add_argument("--status", required=True); q.add_argument("--ref")
+    q=sub.add_parser("integrate"); q.add_argument("state"); q.add_argument("task_id")
+    for name in ("qa", "review", "verdict"): q.add_argument(f"--{name}", required=True)
+    try: a=p.parse_args()
+    except SystemExit as exc: return 2 if exc.code else 0
     try:
         if a.cmd == "import": out=import_tasks(a.markdown_root,a.output,a.prd_slug,root=a.root); print(json.dumps(out,ensure_ascii=False,sort_keys=True,indent=2))
         else:
@@ -328,12 +374,19 @@ def main() -> int:
                 value=verify(data)
                 print(json.dumps(value,ensure_ascii=False,sort_keys=True,indent=2))
                 return 0 if value["ok"] else 2
-            elif a.cmd in {"start", "block", "transition"}:
-                target = "running" if a.cmd == "start" else ("blocked" if a.cmd == "block" else a.target)
-                kwargs = {"reason": a.reason} if a.cmd == "block" else {}
-                value=update(a.state, a.task_id, target, **kwargs)
-            else: value=next(t for t in data["tasks"] if t["id"]==a.task_id)
+            elif a.cmd == "start": value=update(a.state, a.task_id, "running")
+            elif a.cmd == "block": value=update(a.state, a.task_id, "blocked", reason=a.reason)
+            elif a.cmd == "transition": value=update(a.state, a.task_id, a.target, reason=a.reason, authority=a.authority)
+            elif a.cmd == "evidence":
+                value=_mutate(a.state, lambda d: record_evidence(d, a.task_id, a.kind, a.status, ref=a.ref))
+            elif a.cmd == "integrate":
+                artifacts={name: _artifact(getattr(a, name)) for name in ("qa", "review", "verdict")}
+                value=_mutate(a.state, lambda d: integrate_quality_artifacts(d, a.task_id, artifacts))
+            else: value=_task(data, a.task_id)
+            if a.cmd in {"start", "block", "transition", "integrate"}:
+                import sdd_state
+                sdd_state.task_changed(sdd_state.repository_root(a.state), value["prd_slug"], _task(value, a.task_id))
             print(json.dumps(value,ensure_ascii=False,sort_keys=True,indent=2))
         return 0
-    except (OSError, ValueError, StopIteration) as exc: print(json.dumps({"ok":False,"error":str(exc)})); return 2
+    except (OSError, ValueError) as exc: print(json.dumps({"ok":False,"error":str(exc)})); return 2
 if __name__ == "__main__": raise SystemExit(main())

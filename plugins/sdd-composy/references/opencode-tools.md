@@ -17,11 +17,11 @@ Skills and commands for OpenCode are installed by `.opencode-plugin/install.py`:
 never copies (SKILL.md paths resolve through the symlink into the plugin checkout) and never
 touches `opencode.json`.
 
-Automated LOOP (no fleet) is executed only through the loop engine adapter
-`scripts/loop-engine-opencode.py`; the harness must validate the returned JSON structurally and
-must not treat narrative text as execution evidence. Fleet uses only
-`scripts/fleet/launch.sh --runtime opencode ...` and its OpenCode engine adapter
-(`scripts/fleet/engine-opencode.sh`).
+Automated LOOP stages, including a headless fleet member, run only through the loop engine
+adapter `scripts/loop-engine-opencode.py`; the harness validates the returned JSON structurally
+and never treats narrative text as execution evidence. Fleet uses
+`scripts/fleet/launch.sh --runtime opencode ...`; an interactive (cmux/tmux) member opens
+`opencode <worktree> --prompt <prompt>` through `scripts/fleet/engine-opencode.sh`.
 
 The headless vector is exactly:
 
@@ -34,8 +34,7 @@ opencode run --dir <worktree> --format json [--auto] "<stage prompt>"
   isolation or after specific automation consent.
 - `--auto` auto-approves permissions that are not explicitly denied. It may be used only when
   isolation is independently established or the user gives specific consent, and only for the
-  `danger-full-access` permission mode. The LOOP engine and the fleet engine both pass it only
-  when the contract carries `permission_mode: danger-full-access` together with
+  `danger-full-access` permission mode. The LOOP engine passes it only when the contract carries `permission_mode: danger-full-access` together with
   `automation_consent` or `isolation_confirmed`; safe mode never does. Do not add
   permission-bypass flags of other runtimes (`--dangerously-skip-permissions`,
   `--dangerously-bypass-approvals-and-sandbox`); they are Claude/Codex flags and are refused.

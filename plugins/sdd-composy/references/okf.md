@@ -15,7 +15,8 @@ Unused optional source entries are removed when rendering. The lifecycle vocabul
 
 Project Markdown documents use UTF-8 YAML frontmatter with a non-empty `type`.
 `generated.by`, `generated.at`, and `verified[].by`/`verified[].at` are checked
-when present (and compare consistently to the configured actor); `sources` entries require a
+when present: with a configured actor, `generated.by` must be that actor and no `verified[].by`
+may be it, because the generating agent never approves its own document; `sources` entries require a
 `resource` when supplied. Unknown extension fields are preserved. The root
 `index.md` is reserved for `type: Index` and `okf_version: "0.2"`; `log.md` is
 an opaque reserved operational log, exempt from frontmatter and Markdown-link

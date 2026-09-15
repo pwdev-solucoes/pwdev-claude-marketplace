@@ -1,6 +1,6 @@
 # SDD Composy rule index
 
-This rule set is subordinate to the canonical contract in [AGENTS.md](../AGENTS.md).
+This rule set is subordinate to the canonical contract in [AGENTS.md](../../AGENTS.md).
 Read that file first; it owns repository-wide governance, safety, artifacts, gates,
 and commands.
 
@@ -11,8 +11,6 @@ and commands.
 - When a rule conflicts with `AGENTS.md`, follow `AGENTS.md` and report the conflict.
 - Apply only the concern-specific rule relevant to the current change; do not copy its
   policy into another rule or create a runtime-specific variant.
-
-## Shared boundary
 
 ## Responsibility
 

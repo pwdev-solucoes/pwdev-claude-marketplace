@@ -9,7 +9,7 @@ import argparse, hashlib, json, re, os, tempfile
 from pathlib import Path
 from typing import Any
 
-CONFIRMATION_TOKEN = "CONFIRM-SDD-SYNC"
+CONFIRMATION_PREFIX = "CONFIRM-SDD-SYNC"
 CLASSIFICATIONS = ("no_change", "markdown_only", "json_only", "identity_changed",
                    "status_divergence", "malformed_markdown", "malformed_json")
 
@@ -48,7 +48,21 @@ def _json(path: Path) -> dict[str, dict[str, Any]]:
     return result
 
 def _identity(task: dict[str, Any]) -> tuple[Any, ...]:
-    return (task.get("id"), task.get("title"), tuple(task.get("dependencies", [])), tuple(task.get("acceptance_criteria", [])))
+    return (task.get("id"), tuple(task.get("dependencies", [])), tuple(task.get("acceptance_criteria", [])))
+
+def _identity_changed(markdown: dict[str, Any], projection: dict[str, Any]) -> bool:
+    # A title absent from older Markdown contracts is not an identity change.
+    titles_differ = "title" in markdown and "title" in projection and markdown["title"] != projection["title"]
+    return titles_differ or _identity(markdown) != _identity(projection)
+
+def _repository(md_root: Path, root: Path | str | None) -> Path:
+    # Conventional layout: <repository>/tasks/prd-<slug>.
+    return Path(root).resolve() if root else md_root.resolve().parents[1]
+
+def plan_token(fingerprints: dict[str, Any]) -> str:
+    """Bind the human confirmation to the exact inputs the plan was built from."""
+    digest = hashlib.sha256(json.dumps(fingerprints, sort_keys=True).encode()).hexdigest()[:12]
+    return f"{CONFIRMATION_PREFIX}-{digest}"
 
 def _digest(path: Path) -> str:
     digest = hashlib.sha256()
@@ -87,11 +101,9 @@ def inspect(markdown_root: Path | str, state_path: Path | str, *, root: Path | s
     md_root, state = Path(markdown_root), Path(state_path)
     if md_root.is_symlink() or state.is_symlink():
         raise ValueError("repository inputs must not be symlinks")
-    # Callers normally pass root explicitly; the fallback supports the
-    # conventional repository/tasks/prd-<slug> layout.
     if root is not None and Path(root).is_symlink():
         raise ValueError("repository root must not be a symlink")
-    repository = Path(root).resolve() if root else md_root.resolve().parents[2]
+    repository = _repository(md_root, root)
     _confined(md_root, repository); _confined(state, repository)
     try: md = _markdown(md_root); md_error = None
     except (OSError, UnicodeError, ValueError) as exc: md, md_error = {}, str(exc)
@@ -101,24 +113,27 @@ def inspect(markdown_root: Path | str, state_path: Path | str, *, root: Path | s
         errors = {"markdown": md_error, "json": js_error}
         items = ([{"id": "*", "classification": "malformed_markdown"}] if md_error else [])
         items += ([{"id": "*", "classification": "malformed_json"}] if js_error else [])
-        return {"schema": "sdd-composy.sync", "read_only": True, "items": items, "errors": errors, "confirmation_token": CONFIRMATION_TOKEN,
-                "fingerprints": {"markdown": _digest(md_root) if not md_error else None, "json": _digest(state) if not js_error else None}}
+        fingerprints = {"markdown": _digest(md_root) if not md_error else None, "json": _digest(state) if not js_error else None}
+        return {"schema": "sdd-composy.sync", "read_only": True, "items": items, "errors": errors,
+                "confirmation_token": plan_token(fingerprints), "fingerprints": fingerprints}
     items = []
     for tid in sorted(set(md) | set(js)):
         if tid not in js: classification = "markdown_only"
         elif tid not in md: classification = "json_only"
-        elif _identity(md[tid]["task"]) != _identity(js[tid]): classification = "identity_changed"
+        elif _identity_changed(md[tid]["task"], js[tid]): classification = "identity_changed"
         elif md[tid]["task"].get("state") != js[tid].get("state"): classification = "status_divergence"
         else: classification = "no_change"
         items.append({"id": tid, "classification": classification, "markdown": md.get(tid, {}).get("path")})
-    return {"schema": "sdd-composy.sync", "read_only": True, "items": items, "errors": {}, "confirmation_token": CONFIRMATION_TOKEN,
-            "fingerprints": {"markdown": {p: _digest(Path(v["path"])) for p,v in md.items()}, "json": _digest(state)}}
+    fingerprints = {"markdown": {p: _digest(Path(v["path"])) for p, v in md.items()}, "json": _digest(state)}
+    return {"schema": "sdd-composy.sync", "read_only": True, "items": items, "errors": {},
+            "confirmation_token": plan_token(fingerprints), "fingerprints": fingerprints}
 
 def plan(report: dict[str, Any]) -> dict[str, Any]:
     """Return a deterministic plan; no operation is executable by this API."""
     items = sorted(report.get("items", []), key=lambda x: (x.get("id", ""), x.get("classification", "")))
-    return {"schema": "sdd-composy.sync-plan", "read_only": True, "operations": [], "items": items, "errors": report.get("errors", {}), "confirmation_token": CONFIRMATION_TOKEN,
-            "fingerprints": report.get("fingerprints", {})}
+    fingerprints = report.get("fingerprints", {})
+    return {"schema": "sdd-composy.sync-plan", "read_only": True, "operations": [], "items": items, "errors": report.get("errors", {}),
+            "confirmation_token": plan_token(fingerprints), "fingerprints": fingerprints}
 
 def _atomic_write(path: Path, data: bytes) -> None:
     if path.is_symlink(): raise ValueError("destination must not be a symlink")
@@ -132,21 +147,27 @@ def _atomic_write(path: Path, data: bytes) -> None:
 def apply(markdown_root: Path | str, state_path: Path | str, sync_plan: dict[str, Any], *, authority: str,
           confirmation_token: str, root: Path | str | None = None) -> dict[str, Any]:
     """Apply one explicit authority after revalidating the read-only plan."""
-    if confirmation_token != CONFIRMATION_TOKEN: raise ValueError("invalid confirmation token")
     if authority not in ("markdown", "json"): raise ValueError("authority must be markdown or json")
     if sync_plan.get("schema") != "sdd-composy.sync-plan" or sync_plan.get("read_only") is not True: raise ValueError("invalid synchronization plan")
+    if confirmation_token != plan_token(sync_plan.get("fingerprints", {})): raise ValueError("invalid confirmation token")
     md_root, state = Path(markdown_root), Path(state_path)
-    repository = Path(root).resolve() if root else md_root.resolve().parents[2]
+    repository = _repository(md_root, root)
     _confined(md_root, repository); _confined(state, repository)
     current = inspect(md_root, state, root=repository)
     if current.get("fingerprints") != sync_plan.get("fingerprints"): raise ValueError("stale synchronization plan")
     if current.get("errors"): raise ValueError("cannot apply malformed synchronization inputs")
     md = _markdown(md_root); js = _json(state)
     if authority == "markdown":
+        import sdd_tasks
+        # Lifecycle state is operational truth: Markdown may carry intent, never a state move.
+        moved = sorted(tid for tid, record in md.items() if tid in js and record["task"].get("state") != js[tid].get("state"))
+        if moved:
+            raise ValueError("state divergence must be resolved with sdd_tasks transition or json authority: " + ", ".join(moved))
         merged = json.loads(state.read_text(encoding="utf-8"))
         by_id = {t["id"]: t for t in merged["tasks"]}
         for tid, record in md.items(): by_id[tid] = {**by_id.get(tid, {}), **record["task"]}
         merged["tasks"] = [by_id[k] for k in sorted(by_id)]
+        sdd_tasks.validate(merged)
         _atomic_write(state, (json.dumps(merged, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode())
     else:
         for tid, task in js.items():
@@ -160,8 +181,7 @@ def apply(markdown_root: Path | str, state_path: Path | str, sync_plan: dict[str
                 _atomic_write(destination, _new_markdown(task).encode())
     verified = inspect(md_root, state, root=repository)
     if any(i["classification"] != "no_change" for i in verified["items"]): raise ValueError("post-apply verification failed")
-    return {"schema": "sdd-composy.sync-apply", "applied": True, "authority": authority, "verified": True,
-            "confirmation_token": CONFIRMATION_TOKEN}
+    return {"schema": "sdd-composy.sync-apply", "applied": True, "authority": authority, "verified": True}
 
 def main() -> int:
     p = argparse.ArgumentParser(); sub = p.add_subparsers(dest="command", required=True)

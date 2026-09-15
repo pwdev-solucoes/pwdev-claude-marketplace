@@ -25,14 +25,18 @@ Language: when an operation emits human-facing summaries, run `scripts/sdd_langu
 - `plan <markdown-root> <state> [--root]` — read-only; produces the exact plan and input
   fingerprints that an apply must consume.
 - `apply <markdown-root> <state> <plan-json-path> --authority markdown|json
-  --confirmation-token CONFIRM-SDD-SYNC [--root]` — the only mutating operation. It requires
+  --confirmation-token <plan token> [--root]` — the only mutating operation. The token is the
+  plan's `confirmation_token` (`CONFIRM-SDD-SYNC-<digest>`), bound to the exact input
+  fingerprints; any change to either side invalidates it. It requires
   explicit human approval of the selected authority; never infer approval from a plan, a clean
   inspection, or model confidence. The CLI forwards the plan JSON to the guarded apply API; it
   implements no second algorithm.
 
 Present the inspect and plan results before asking for approval. A stale plan, changed input,
-invalid authority, missing exact `CONFIRM-SDD-SYNC` token, symlink, malformed artifact, or
-unresolved conflict stops the operation; conflicts are never overwritten silently. After apply,
+invalid authority, token that does not match the plan (`CONFIRM-SDD-SYNC-<digest>`), symlink, malformed artifact,
+invalid merged projection, or unresolved conflict stops the operation. Markdown authority never
+moves lifecycle state: a state divergence is resolved with `sdd_tasks.py transition` or JSON
+authority; conflicts are never overwritten silently. After apply,
 report the helper's post-apply verification and the exact paths changed. The helper owns
 repository confinement, temporary files, atomic replacement, unknown-field preservation, and
 deterministic output; do not duplicate those policies here.

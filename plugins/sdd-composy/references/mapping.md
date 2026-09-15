@@ -25,6 +25,6 @@ before opening files. Existing `codebase.json` is read only to compare its
 recorded commit and report staleness. A changed repository commit therefore
 marks the old map stale; it never causes source files to be changed.
 
-Use `python3 plugins/sdd-composy/scripts/sdd_map.py --repo-root . --write` to
+Use `python3 <plugin-root>/scripts/sdd_map.py --repo-root . --write` to
 publish the context bundle. Without `--write`, the same inventory is printed
 to stdout and the repository remains unchanged.

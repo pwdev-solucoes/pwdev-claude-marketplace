@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fail-closed append-only semantic trace for SDD Composy."""
 from __future__ import annotations
-import argparse, datetime as dt, hashlib, json, os, re, tempfile
+import argparse, datetime as dt, fcntl, hashlib, json, os, re, sys, tempfile
 from pathlib import Path
 from typing import Any
 
@@ -74,16 +74,24 @@ def record(root: Path | str, event: dict[str, Any], *, enabled: bool = True, now
     if not enabled: return None
     _validate_event(event)
     path = _target(root, create=True)
-    existing = _read(path)
-    if existing:
-        for n, item in enumerate(existing, 1):
-            if item.get("sequence") != n: raise ValueError("trace sequence is invalid")
-    entry = dict(event); entry.setdefault("task_id", None); entry.setdefault("data", {})
-    entry.update(sequence=len(existing) + 1, id=f"EVT-{len(existing)+1:06d}", at=_iso(now))
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(entry, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
-        handle.flush(); os.fsync(handle.fileno())
-    os.chmod(path, 0o600)
+    lock = path.parent / ".events.lock"
+    if lock.is_symlink(): raise ValueError("trace lock must be regular")
+    # Read, sequence, and append under one exclusive lock: concurrent writers would
+    # otherwise assign the same sequence and leave the audit trail invalid.
+    with open(lock, "a+") as guard:
+        fcntl.flock(guard, fcntl.LOCK_EX)
+        try:
+            existing = _read(path)
+            for n, item in enumerate(existing, 1):
+                if item.get("sequence") != n: raise ValueError("trace sequence is invalid")
+            entry = dict(event); entry.setdefault("task_id", None); entry.setdefault("data", {})
+            entry.update(sequence=len(existing) + 1, id=f"EVT-{len(existing)+1:06d}", at=_iso(now))
+            with path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(entry, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+                handle.flush(); os.fsync(handle.fileno())
+            os.chmod(path, 0o600)
+        finally:
+            fcntl.flock(guard, fcntl.LOCK_UN)
     return entry
 
 def events(root: Path | str) -> dict[str, Any]:
@@ -198,6 +206,28 @@ def verify_projection(root: Path | str) -> dict[str, Any]:
     except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
         return {"ok": False, "errors": [str(exc)]}
 
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("command", choices=("record", "events", "summary", "verify", "build", "query", "verify-projection"))
+    parser.add_argument("root"); parser.add_argument("node_id", nargs="?")
+    parser.add_argument("--event", help="JSON file with one event, or - for stdin (record only)")
+    args = parser.parse_args(argv)
+    try:
+        if args.command == "record":
+            if not args.event: raise ValueError("record requires --event")
+            raw = sys.stdin.read() if args.event == "-" else Path(args.event).read_text(encoding="utf-8")
+            result = record(args.root, json.loads(raw))
+            sys.path.insert(0, str(Path(__file__).resolve().parent))
+            import sdd_state
+            sdd_state.trace_changed(args.root, verify(args.root))
+        elif args.command == "build": result = build(args.root)
+        elif args.command == "verify-projection": result = verify_projection(args.root)
+        elif args.command == "query": result = query(args.root, args.node_id)
+        else: result = globals()[args.command](args.root)
+    except (OSError, UnicodeError, ValueError) as exc:
+        print(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True)); return 2
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+    return 2 if isinstance(result, dict) and result.get("ok") is False else 0
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(); parser.add_argument("command", choices=("events", "summary", "verify", "build", "query", "verify-projection")); parser.add_argument("root"); parser.add_argument("node_id", nargs="?")
-    args = parser.parse_args(); result = (build(args.root) if args.command == "build" else verify_projection(args.root) if args.command == "verify-projection" else query(args.root, args.node_id) if args.command == "query" else globals()[args.command](args.root)); print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+    raise SystemExit(main())

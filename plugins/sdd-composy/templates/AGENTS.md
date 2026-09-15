@@ -20,7 +20,7 @@ project artifacts.
 
 - Human contracts are under `tasks/prd-<slug>/`.
 - Operational state is under `.planning/sdd-composy/`.
-- Shared plugin contracts are under `plugins/sdd-composy/{skills,references,scripts,templates,schemas}/`.
+- Shared plugin contracts are under the installed SDD Composy plugin root (`skills/`, `references/`, `scripts/`, `templates/`, `schemas/`).
 - Keep changes within the approved task paths and preserve unrelated worktree changes.
 - Use existing repository conventions recorded by `sdd-map`; do not invent a parallel
   structure when an established module or test pattern exists.

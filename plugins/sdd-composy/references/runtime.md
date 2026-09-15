@@ -16,15 +16,16 @@ Every runtime consumes the same package roots:
 | `templates/` | Runtime-neutral generated content |
 | `schemas/` | Validation contracts for operational JSON and evidence |
 
-Paths written as `scripts/...`, `references/...`, or `templates/...` in a skill are relative to the
-plugin root: `${CLAUDE_PLUGIN_ROOT}` on Claude Code, the installed plugin on Codex and Hermes, and
-the parent of the linked skill folder on OpenCode.
+Paths written as `scripts/...`, `references/...`, `templates/...`, or `<plugin-root>/...` in a skill
+are relative to the plugin root: `${CLAUDE_PLUGIN_ROOT}` on Claude Code, the installed plugin on
+Codex and Hermes, and on OpenCode the directory that contains `skills/` once the linked skill folder
+is resolved (two levels above the resolved `SKILL.md`).
 
 | Runtime | Discovery | Entry points |
 |---|---|---|
 | Claude Code | `.claude-plugin/plugin.json` | `commands/<name>.md` as `/sdd-composy:<name>`; each command routes to the shared skill, passes the user's arguments and repository context, and returns the shared result unchanged |
 | Codex | `.codex-plugin/plugin.json`, `"skills": "./skills/"` | `$sdd-<name>` (the skill's `name`); native skill discovery is the adapter |
-| Hermes Agent | `.hermes-plugin/plugin.yaml`; the bootstrap registers the 17 skills and adds the tool mapping on the first turn | `skill_view("sdd-<name>")`; tool mapping in [hermes-tools.md](hermes-tools.md), read only when the runtime is Hermes |
+| Hermes Agent | `.hermes-plugin/plugin.yaml`; the bootstrap registers the 17 skills and adds the tool mapping on the first turn | `skill_view("sdd-composy:sdd-<name>")` (plugin skills are namespaced by the plugin name); tool mapping in [hermes-tools.md](hermes-tools.md), read only when the runtime is Hermes |
 | OpenCode | no plugin mechanism: `.opencode-plugin/install.py` links the 17 skill folders into `~/.config/opencode/skills/` (or `<project>/.opencode/skills/` with `--project`) and generates `command/sdd-<name>.md` beside them; OpenCode also reads `.agents/skills/` and `.claude/skills/` | the native `skill` tool and `/sdd-<name>` commands. Link only, never copy: the skills reach `scripts/` and `references/` through the link |
 
 ## Adapter boundary
@@ -41,12 +42,16 @@ truth. No adapter falls back to another provider.
 
 ## Automation vectors (LOOP and FLEET)
 
-| Runtime | Vector | Engine adapters |
+The LOOP engine (`scripts/loop-engine-<runtime>.py`) runs every unattended stage, both for
+`sdd-loop` and for a headless fleet member. The fleet adapter (`scripts/fleet/engine-<runtime>.sh`)
+only opens an interactive cmux/tmux member session for a human.
+
+| Runtime | Unattended vector | Engine adapters (LOOP engine, interactive fleet adapter) |
 |---|---|---|
 | Claude Code | `claude -p <contract> --output-format json --no-session-persistence --permission-mode acceptEdits --add-dir <worktree>`; `--dangerously-skip-permissions` replaces the permission mode only for `danger-full-access` with isolation or consent | `scripts/loop-engine-claude.py`, `scripts/fleet/engine-claude.sh` |
-| Codex | `codex exec --sandbox workspace-write` with a result file (the fleet adapter also passes the output schema) | `scripts/loop-engine-codex.py`, `scripts/fleet/engine-codex.sh` |
+| Codex | `codex exec --json --sandbox workspace-write --cd <worktree> --output-last-message <file>` | `scripts/loop-engine-codex.py`, `scripts/fleet/engine-codex.sh` |
 | Hermes Agent | `hermes -z <prompt> --in <worktree>`, only after independently established isolation or the user's specific consent | `scripts/loop-engine-hermes.py`, `scripts/fleet/engine-hermes.sh` |
-| OpenCode | `opencode run --dir <worktree> --format json [--auto]`; `--auto` obeys the same isolation and consent rules as every other runtime (safe fleet mode never passes it; `danger-full-access` does) | `scripts/loop-engine-opencode.py`, `scripts/fleet/engine-opencode.sh`; see [opencode-tools.md](opencode-tools.md) |
+| OpenCode | `opencode run --dir <worktree> --format json [--auto]`; `--auto` only for `danger-full-access` with isolation or consent; safe mode never passes it | `scripts/loop-engine-opencode.py`, `scripts/fleet/engine-opencode.sh`; see [opencode-tools.md](opencode-tools.md) |
 
 The four LOOP engines share `scripts/loop_engine_common.py`: one result validator (the five
 result keys plus the orchestrator guard signals such as `destructive` and `scope_changed`), one

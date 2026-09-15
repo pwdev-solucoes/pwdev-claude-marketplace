@@ -310,7 +310,9 @@ def _atomic_create(path: Path, text: str) -> None:
 
 def _without_timestamps(text: str) -> str:
     """Compare generated files without making a rerun differ by its clock."""
-    return re.sub(r"20\d{2}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})", "<timestamp>", text)
+    text = re.sub(r"20\d{2}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})", "<timestamp>", text)
+    # The observed source commit changes with every commit; it is not an edit to the file.
+    return re.sub(r"`(?:[0-9a-fA-F]{7,64}|uncommitted)`", "`<commit>`", text)
 
 
 def apply(root: Path, plan: dict[str, Any], template_root: Path) -> dict[str, Any]:
@@ -341,6 +343,9 @@ def apply(root: Path, plan: dict[str, Any], template_root: Path) -> dict[str, An
     contents = _template_contents(template_root, variables, plan.get("language", "en-US"))
     contents["tasks/index.md"] = _index_text(plan["actor"], generated_at, plan.get("language", "en-US"))
     blocked = {item["path"] for item in plan["conflicts"]}
+    # A user-owned regular file is preserved and does not block INIT; unsafe paths do.
+    preserved = sorted(item["path"] for item in plan["conflicts"] if item.get("reason") == "file")
+    blocking = [item for item in plan["conflicts"] if item.get("reason") != "file"]
     created: list[str] = []
     candidates = [relative for relative in contents
                   if relative not in blocked and not any(relative.startswith(item + "/") for item in blocked if item != ".agents")
@@ -360,7 +365,7 @@ def apply(root: Path, plan: dict[str, Any], template_root: Path) -> dict[str, An
         planned.append(compatibility_target)
     if "language" in plan and not config_existed:
         planned.append(".planning/sdd-composy/config.json")
-    if not state_existed and not plan["conflicts"]:
+    if not state_existed and not blocking:
         planned.append(".planning/sdd-composy/state.json")
     try:
         for relative in candidates:
@@ -371,7 +376,7 @@ def apply(root: Path, plan: dict[str, Any], template_root: Path) -> dict[str, An
         if not agents.exists() and ".agents" not in blocked:
             agents.mkdir()
         rules = agents / "rules"
-        if not rules.exists():
+        if not agents.is_symlink() and ".agents" not in blocked and not rules.exists():
             rules.mkdir(parents=True)
         if compatibility_target == ".claude":
             os.symlink(".agents", claude)
@@ -385,14 +390,15 @@ def apply(root: Path, plan: dict[str, Any], template_root: Path) -> dict[str, An
             if not config_existed:
                 created.append(".planning/sdd-composy/config.json")
         # INIT is authoritative only after every required artifact was generated.
-        if not state_existed and not plan["conflicts"]:
+        if not state_existed and not blocking:
             _atomic_json(state_path, new_state)
             created.append(".planning/sdd-composy/state.json")
     except (OSError, ValueError) as exc:
         return {"ok": False, "created": created,
                 "pending": [relative for relative in planned if relative not in created],
                 "conflicts": plan["conflicts"], "actor": plan["actor"], "error": str(exc)}
-    return {"ok": not bool(plan["conflicts"]), "created": created, "conflicts": plan["conflicts"], "actor": plan["actor"]}
+    return {"ok": not blocking, "created": created, "conflicts": plan["conflicts"], "preserved": preserved,
+            "actor": plan["actor"]}
 
 
 def verify(root: Path, actor: str) -> dict[str, Any]:
@@ -471,7 +477,7 @@ def main(argv: list[str] | None = None) -> int:
                 return 0 if plan.get("status") != "invalid_language" else 2
             if args.command == "apply":
                 if plan["conflicts"] and args.plan_token != plan["plan_token"]:
-                    raise ValueError(f"exact plan token required: {plan['plan_token']}")
+                    raise ValueError("exact plan_token from the reviewed plan is required to apply a plan with conflicts")
                 result = apply(root, plan, template_root)
             else:
                 result = plan

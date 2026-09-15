@@ -28,7 +28,10 @@ Language: when an operation emits human-facing summaries, run `scripts/sdd_langu
 3. `sdd_evidence.py verify <manifest> <root>` — required before routing a task from
    `evidence_required` to `review_required`. The task engine remains the authority and rejects
    missing, stale, or unapproved evidence.
-4. `sdd_evidence.py export <manifest> <root> <output>` — HTML report. PDF is optional: only when
+4. `sdd_evidence.py export <manifest> <root> <output> [--workspace-root <repo>]` — HTML report.
+   With the evidence root at `tasks/prd-<slug>/evidences/`, the output may be anywhere in that
+   PRD bundle (normally `tasks/prd-<slug>/evidence-report.html`) and the workspace language is
+   read from the repository root without `--workspace-root`. PDF is optional: only when
    explicitly requested, it must fail if expected screenshot images cannot load, and it may
    report that no PDF backend is available.
 

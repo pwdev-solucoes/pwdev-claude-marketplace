@@ -14,6 +14,7 @@ human_approval: PENDING
 verified: []
 task:
   id: TASK-001
+  title: "{{TASK_TITLE}}"
   state: pending
   dependencies: []
   allowed_paths: ["path/to/file"]

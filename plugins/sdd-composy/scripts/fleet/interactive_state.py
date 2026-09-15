@@ -27,7 +27,9 @@ LOOP_ID = re.compile(r"^[A-Za-z][A-Za-z0-9._-]*$")
 MEMBER_ID = LOOP_ID
 SHA256 = re.compile(r"^[a-f0-9]{64}$")
 MEMBER_STATUS = {"pending", "running", "completed", "failed", "blocked", "cancelled"}
-RUNTIMES = {"claude-code", "codex", "hermes"}
+RUNTIMES = {"claude-code", "codex", "hermes", "opencode"}
+ACTOR = re.compile(r"^[A-Za-z][A-Za-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._-]*$")
+TERMINAL_STATUS = {"completed", "failed", "blocked", "cancelled"}
 UIS = {"cmux", "tmux", "headless"}
 
 
@@ -102,6 +104,15 @@ def _validate(member: Any) -> dict[str, Any]:
         raise InteractiveStateError("invalid result_path")
     if "message" in member and (not isinstance(member["message"], str) or not member["message"]):
         raise InteractiveStateError("invalid message")
+    approval = member.get("approval")
+    if approval is not None:
+        if (not isinstance(approval, dict) or not isinstance(approval.get("by"), str)
+                or not ACTOR.fullmatch(approval["by"])):
+            raise InteractiveStateError("invalid approval")
+        _timestamp(approval.get("at"))
+    if "commit" in member and member["commit"] is not None and (
+            not isinstance(member["commit"], str) or not re.fullmatch(r"[0-9a-f]{40}", member["commit"])):
+        raise InteractiveStateError("invalid commit")
     interaction = member.get("interaction")
     if not isinstance(interaction, dict):
         raise InteractiveStateError("interaction is required")
@@ -206,4 +217,19 @@ def bind_loop(path: str | os.PathLike[str], loop_id: str, task_id: str, now: str
         updated = copy.deepcopy(member)
         updated["interaction"]["loop"] = {"id": loop_id, "task_id": task_id}
         updated["interaction"]["updated_at"] = now
+        return _publish(path, updated)
+
+
+def finish(path: str | os.PathLike[str], status: str, *, result_path: str, message: str,
+           commit: str | None, now: str) -> dict[str, Any]:
+    """Publish a runner's terminal member status with its result evidence, exactly once."""
+    with _locked_member(Path(path)) as (path, member):
+        if status not in TERMINAL_STATUS:
+            raise InteractiveStateError("finish requires a terminal status")
+        if member["status"] not in {"pending", "running"}:
+            raise InteractiveStateError("member is already terminal")
+        _timestamp(now)
+        updated = copy.deepcopy(member)
+        updated.update(status=status, result_path=result_path, finished_at=now, updated_at=now,
+                       message=message, commit=commit)
         return _publish(path, updated)

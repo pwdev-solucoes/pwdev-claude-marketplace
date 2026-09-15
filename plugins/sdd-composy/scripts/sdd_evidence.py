@@ -38,7 +38,8 @@ ID_RULES = {"prd_slug": r"^[a-z0-9]+(?:-[a-z0-9]+)*$", "task_id": r"^TASK-[0-9]{
             "requirement_id": r"^RF-[0-9]{3,}$", "story_id": r"^US-[0-9]{3,}$",
             "scenario_id": r"^SC-[0-9]{3,}$", "criterion_id": r"^CA-[0-9]{3,}$",
             "test_id": r"^TEST-[0-9]{3,}$"}
-RFC3339 = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$")
+RFC3339 = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$")
+SHA256 = re.compile(r"^[a-f0-9]{64}$")
 
 def _evidence_root(root):
     """Return a confined root without following caller-controlled symlinks."""
@@ -82,12 +83,13 @@ def _safe(root, rel):
 
 def _validate(meta):
     if not isinstance(meta, dict): raise ValueError("manifest must be an object")
+    if meta.get("schema_version", "1") != "1": raise ValueError("unsupported schema_version")
     for key in ("prd_slug", "task_id"):
         pattern = ID_RULES[key]
         if not isinstance(meta.get(key), str) or not re.match(pattern, meta[key]):
             raise ValueError(f"invalid {key}")
     if not isinstance(meta.get("generated_at"), str) or not RFC3339.fullmatch(meta["generated_at"]):
-        raise ValueError("generated_at must be RFC3339 UTC date-time")
+        raise ValueError("generated_at must be an RFC3339 date-time with offset")
     if not isinstance(meta.get("entries"), list) or not meta["entries"]:
         raise ValueError("entries must be non-empty")
     for i, e in enumerate(meta["entries"]):
@@ -96,7 +98,9 @@ def _validate(meta):
             if not isinstance(e.get(key), str) or not re.match(ID_RULES[key], e[key]): raise ValueError(f"invalid {key}")
         if e.get("result") not in RESULTS: raise ValueError("unknown result")
         if e.get("evidence_type") not in TYPES: raise ValueError("unknown evidence type")
-        if not isinstance(e.get("path"), str) or not re.match(r"^[^/]+(?:/[^/]+)*$", e["path"]): raise ValueError("invalid evidence path")
+        if not isinstance(e.get("path"), str) or not re.match(r"^[^/]+(?:/[^/]+)*$", e["path"]) or any(part in ("", ".", "..") for part in e["path"].split("/")) or "\\" in e["path"]:
+            raise ValueError("invalid evidence path")
+        if "sha256" in e and (not isinstance(e["sha256"], str) or not SHA256.fullmatch(e["sha256"])): raise ValueError("invalid sha256")
     return meta
 
 def build(data, evidence_root, manifest_path=None, generated_by="sdd-composy", generated_at=None):
@@ -126,6 +130,7 @@ def verify(manifest, evidence_root):
     except (ValueError, TypeError) as exc: return {"ok": False, "errors": [str(exc)]}
     errors = []
     for e in meta["entries"]:
+        if "sha256" not in e: errors.append(f"missing sha256: {e['path']}"); continue
         try: path = _safe(evidence_root, e["path"])
         except ValueError as exc: errors.append(str(exc)); continue
         if not path.exists(): errors.append(f"missing: {e['path']}"); continue
@@ -154,12 +159,20 @@ def render_html(manifest, evidence_root=None, *, language='en-US'):
         rows.append("<tr>" + "".join(f"<td>{html.escape(str(e.get(k, '')))}</td>" for k in ("criterion_id", "test_id", "result", "evidence_type", "path", "sha256")) + "</tr>")
     return f"<!doctype html><html lang='{language}'><meta charset='utf-8'><title>{title}</title><h1>{title}</h1><table><thead><tr>" + ''.join(f'<th>{label}</th>' for label in labels) + '</tr></thead><tbody>' + ''.join(rows) + '</tbody></table></html>'
 
+def _bundle_layout(evidence_root):
+    """For `<workspace>/tasks/prd-<slug>/evidences`, return (bundle, workspace); otherwise (root, root)."""
+    root = Path(evidence_root).absolute()
+    if root.name == "evidences" and root.parent.name.startswith("prd-") and root.parent.parent.name == "tasks":
+        return root.parent, root.parent.parent.parent
+    return root, root
+
 def export(manifest, output, evidence_root=None, pdf=False, *, workspace_root=None):
-    """Write escaped HTML; PDF is optional and fails if expected images cannot load."""
+    """Write escaped HTML into the PRD bundle; PDF is optional and fails if expected images cannot load."""
     out = Path(output)
     if evidence_root is None:
         raise ValueError('evidence_root is required')
-    preference = resolve_language(workspace_root or evidence_root)
+    bundle, inferred_workspace = _bundle_layout(evidence_root)
+    preference = resolve_language(workspace_root or inferred_workspace)
     if 'language' not in preference:
         raise ValueError('not_initialized: run_init')
     if pdf:
@@ -167,14 +180,14 @@ def export(manifest, output, evidence_root=None, pdf=False, *, workspace_root=No
             if e["evidence_type"] == "screenshot":
                 if evidence_root is None or not _safe(evidence_root, e["path"]).exists(): raise ValueError("expected image did not load")
         raise RuntimeError("PDF export unavailable without a verified PDF backend")
-    return _atomic_output(evidence_root, out, render_html(manifest, evidence_root, language=preference['language']))
+    return _atomic_output(bundle, out, render_html(manifest, evidence_root, language=preference['language']))
 
 def main():
     p=argparse.ArgumentParser(); sub=p.add_subparsers(dest="cmd", required=True)
     b=sub.add_parser("build"); b.add_argument("input"); b.add_argument("root"); b.add_argument("manifest"); b.add_argument("--generated-at")
     v=sub.add_parser("verify"); v.add_argument("manifest"); v.add_argument("root")
     e=sub.add_parser("export"); e.add_argument("manifest"); e.add_argument("root"); e.add_argument("output"); e.add_argument("--pdf", action="store_true")
-    e.add_argument('--workspace-root', help='workspace initialized by sdd-init; defaults to evidence root')
+    e.add_argument('--workspace-root', help='workspace initialized by sdd-init; inferred from tasks/prd-<slug>/evidences, otherwise the evidence root')
     d=sub.add_parser("discover"); d.add_argument("root")
     a=p.parse_args()
     try:

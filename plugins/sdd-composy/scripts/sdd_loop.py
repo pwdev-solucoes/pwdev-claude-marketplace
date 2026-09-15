@@ -10,7 +10,9 @@ TERMINAL = {"completed", "iteration_cap", "missing_progress", "scope_expansion",
             "architectural_ambiguity", "destructive_action", "external_authorization",
             "environment_failure", "cancelled", "destructive_request", "scope_drift",
             "new_architecture", "repeated_environment_failure", "third_rejection",
-            "identical_diff", "identical_failure"}
+            "identical_diff", "identical_failure", "needs_human", "blocked"}
+# Outcomes a caller may request through continue_loop; completion and cancellation have their own paths.
+OUTCOMES = {"progress", "complete"} | (TERMINAL - {"completed", "cancelled", "iteration_cap"})
 STAGES = {"pending", "running", *TERMINAL}
 LOOP_STAGES = ("EXECUTE", "QA", "EVIDENCE", "REVIEW", "VERIFY")
 SUCCESS_EVIDENCE = {"passed", "approved", "complete", "ok"}
@@ -189,10 +191,10 @@ def status(root, loop_id):
     except (OSError, ValueError) as exc: raise LoopError(f"cannot read loop: {exc}") from exc
     return validate(data)
 
-def continue_loop(root, loop_id, outcome="progress", now=None):
+def continue_loop(root, loop_id, outcome="progress", now=None, detail=None):
     data = status(root, loop_id)
     if data["status"] != "running": raise LoopError("only running loops can continue")
-    if outcome not in {"progress", "complete", "missing_progress", "scope_expansion", "architectural_ambiguity", "destructive_action", "external_authorization", "environment_failure", "destructive_request", "scope_drift", "new_architecture", "repeated_environment_failure", "third_rejection", "identical_diff", "identical_failure"}: raise LoopError("invalid loop outcome")
+    if outcome not in OUTCOMES: raise LoopError("invalid loop outcome")
     stamp = now or _now(); data["updated_at"] = stamp
     if outcome == "complete":
         if resume(root, loop_id)["next_stage"] is not None:
@@ -203,6 +205,7 @@ def continue_loop(root, loop_id, outcome="progress", now=None):
         action = "inspect the recorded stop reason and obtain human direction"
         if outcome == "environment_failure": action = "inspect runtime environment and retry"
         data.update(status=outcome, stop_reason=outcome, next_action=action, finished_at=stamp)
+        if detail: data["stop_detail"] = str(detail)[:500]
     else:
         data["iteration"] += 1
         if data["iteration"] >= data["max_iterations"]: data.update(status="iteration_cap", stop_reason="Iteration cap reached", finished_at=stamp)
@@ -261,7 +264,7 @@ def orchestrate(root, task_id, engine, *, loop_id=None, max_iterations=3,
     if not human_approved:
         raise LoopError("human approval is required")
     extra = dict(contract_extra or {})
-    if not set(extra).isdisjoint({"stage", "task_id", "iteration"}):
+    if not set(extra).isdisjoint({"stage", "task_id", "iteration", "loop_id", "previous_failure"}):
         raise LoopError("contract extras cannot override stage identity")
     if loop_id:
         try:
@@ -275,7 +278,9 @@ def orchestrate(root, task_id, engine, *, loop_id=None, max_iterations=3,
     else:
         data = start(root, task_id, max_iterations=max_iterations, now=now)
     loop_id = data["id"]
+    cap = data["max_iterations"]
     previous = None
+    failure_note = None
     rejections = 0
     while True:
         if cancel_check and cancel_check():
@@ -284,16 +289,21 @@ def orchestrate(root, task_id, engine, *, loop_id=None, max_iterations=3,
         stage = resume_state["next_stage"]
         if stage is None:
             return continue_loop(root, loop_id, outcome="complete", now=now)
-        contract = {**extra, "stage": stage, "task_id": task_id, "iteration": data["iteration"] + 1}
+        # The runtime needs the LOOP identity to bind its VERIFY command record.
+        contract = {**extra, "stage": stage, "task_id": task_id, "loop_id": loop_id, "iteration": data["iteration"] + 1}
+        if failure_note: contract["previous_failure"] = failure_note
         try:
             result = engine(contract)
         except Exception as exc:
-            return continue_loop(root, loop_id, outcome="environment_failure", now=now)
+            return continue_loop(root, loop_id, outcome="environment_failure", now=now, detail=f"{stage}: {exc}")
         allowed = {"stage", "status", "message", "verdict", "evidence", "destructive", "destructive_request", "scope_changed", "scope_drift", "architecture_changed", "new_architecture", "environment_failure", "environment", "diff", "failure"}
         if not isinstance(result, dict) or not {"stage", "status", "message", "verdict", "evidence"}.issubset(result) or not set(result).issubset(allowed):
             raise LoopError("runtime engine returned invalid result contract")
         if result["stage"] != stage:
             raise LoopError("runtime result stage does not match requested stage")
+        if result["status"] in {"needs_human", "blocked"}:
+            # A runtime asking for a human is a stop, never a correction attempt.
+            return continue_loop(root, loop_id, outcome=result["status"], now=now)
         successful = result["status"] == "completed" and result["verdict"] in {"passed", "approved", "complete", "ok"}
         if successful:
             evidence = dict(result["evidence"])
@@ -313,27 +323,44 @@ def orchestrate(root, task_id, engine, *, loop_id=None, max_iterations=3,
         decision = correction_decision(previous or {}, result, rejection_count=rejections - 1)
         if decision["status"] == "needs_human":
             return continue_loop(root, loop_id, outcome=decision["reason"], now=now)
-        if data["iteration"] + 1 >= max_iterations:
-            return continue_loop(root, loop_id, outcome="progress", now=now)
         data = continue_loop(root, loop_id, outcome="progress", now=now)
+        if data["status"] != "running" or data["iteration"] >= cap:
+            return data
         # A correction begins a fresh stage sequence; prior successful work is
         # retained in publications only within the iteration result, not reused.
         data["stages"] = [{"name": name, "status": "pending"} for name in LOOP_STAGES]
         _publish(_path(root, loop_id), data)
         previous = result
+        failure_note = result["message"]
+
+def publish_result(root, loop_id, stage, result, *, now=None):
+    """CLI bridge: publish one successful stage result after validating it like an engine does."""
+    import loop_engine_common as engines
+    data = status(root, loop_id)
+    try:
+        engines.validate_result(result, stage, loop_root=Path(root),
+                                stage_contract={"stage": stage, "task_id": data["task_id"]})
+    except engines.RuntimeError_ as exc: raise LoopError(str(exc)) from exc
+    if result["status"] != "completed" or result["verdict"] not in SUCCESS_EVIDENCE:
+        raise LoopError("only a successful stage result can be published; use continue --outcome for a stop")
+    evidence = dict(result["evidence"]); evidence.setdefault("status", "passed")
+    return publish_stage(root, loop_id, stage, artifact=result, evidence=evidence, now=now)
 
 def main():
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import sdd_state, sdd_tasks
     p=argparse.ArgumentParser(); p.add_argument("--root", type=Path, default=Path.cwd()); sub=p.add_subparsers(dest="op", required=True)
     s=sub.add_parser("start"); s.add_argument("task_id"); s.add_argument("--max-iterations", type=int, default=3); s.add_argument("--loop-id")
     for name in ("status", "cancel"): sub.add_parser(name).add_argument("loop_id")
     c=sub.add_parser("continue"); c.add_argument("loop_id"); c.add_argument("--outcome", default="progress")
-    for parser in (s, c):
+    u=sub.add_parser("publish"); u.add_argument("loop_id"); u.add_argument("stage", choices=LOOP_STAGES); u.add_argument("--result", type=Path, required=True)
+    for parser in (s, c, u):
         parser.add_argument("--task-state", type=Path, required=True)
         parser.add_argument("--human-approved", action="store_true")
     args=p.parse_args()
     try:
-        if args.op in {"start", "continue"}:
-            import sdd_tasks
+        if args.op in {"start", "continue", "publish"}:
             if not args.human_approved: raise LoopError("human approval is required")
             try:
                 task_data = sdd_tasks.load(args.task_state)
@@ -345,10 +372,18 @@ def main():
                 if args.op == "continue" and args.outcome == "complete":
                     if task["state"] not in {"verify_required", "complete"}: raise LoopError("task is not at completion gate")
                     sdd_tasks._evidence_ok(task, dt.datetime.now(dt.timezone.utc))
-                elif args.op == "continue" and task["state"] in {"blocked", "skipped", "complete", "pending"}:
+                elif args.op in {"continue", "publish"} and task["state"] in {"blocked", "skipped", "complete", "pending"}:
                     raise LoopError("task cannot continue in current state")
             except (sdd_tasks.TaskError, OSError, ValueError) as exc: raise LoopError(str(exc)) from exc
-        result = start(args.root,args.task_id,args.max_iterations,args.loop_id) if args.op=="start" else status(args.root,args.loop_id) if args.op=="status" else continue_loop(args.root,args.loop_id,args.outcome) if args.op=="continue" else cancel(args.root,args.loop_id)
+        if args.op == "start": result = start(args.root, args.task_id, args.max_iterations, args.loop_id)
+        elif args.op == "status": result = status(args.root, args.loop_id)
+        elif args.op == "continue": result = continue_loop(args.root, args.loop_id, args.outcome)
+        elif args.op == "publish":
+            try: stage_result = json.loads(args.result.read_text(encoding="utf-8"))
+            except (OSError, ValueError) as exc: raise LoopError(f"cannot read stage result: {exc}") from exc
+            result = publish_result(args.root, args.loop_id, args.stage, stage_result)
+        else: result = cancel(args.root, args.loop_id)
+        if args.op != "status": sdd_state.loop_changed(args.root, result)
         print(json.dumps(result, sort_keys=True)); return 0
-    except LoopError as exc: print(json.dumps({"error":str(exc)}, sort_keys=True)); return 2
+    except (LoopError, sdd_state.StateError) as exc: print(json.dumps({"error":str(exc)}, sort_keys=True)); return 2
 if __name__ == "__main__": raise SystemExit(main())

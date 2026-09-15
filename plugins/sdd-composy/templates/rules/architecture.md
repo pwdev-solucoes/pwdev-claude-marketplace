@@ -1,6 +1,6 @@
 # Architecture rule
 
-This focused rule is subordinate to the canonical contract in [AGENTS.md](../AGENTS.md)
+This focused rule is subordinate to the canonical contract in [AGENTS.md](../../AGENTS.md)
 and is concerned only with architecture decisions and boundaries.
 
 ## Responsibility

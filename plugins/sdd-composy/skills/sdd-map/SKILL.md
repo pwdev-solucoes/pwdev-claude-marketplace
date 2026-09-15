@@ -38,7 +38,7 @@ files, task artifacts, or architectural plans.
    only; never run them.
 
    ```sh
-   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/sdd_map.py" --repo-root <repository-root> [--output-dir <context-dir>]
+   python3 "<plugin-root>/scripts/sdd_map.py" --repo-root <repository-root> [--output-dir <context-dir>]
    ```
 
 3. Only when the user explicitly requests publication, repeat with `--write` (and the exact

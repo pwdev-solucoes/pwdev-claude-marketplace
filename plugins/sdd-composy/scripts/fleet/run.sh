@@ -4,115 +4,6 @@ set -Eeuo pipefail
 
 usage() { printf 'Usage: %s <lowercase-slug> <worktree-path> [danger-full-access]\n' "${0##*/}" >&2; exit 2; }
 fail() { printf 'sdd-fleet-run: %s\n' "$*" >&2; exit 2; }
-if [[ ${1:-} == --migrate-member ]]; then
-  [[ $# -eq 4 && $3 == --root ]] || fail 'migration usage: run.sh --migrate-member MEMBER.json --root ROOT'
-  python3 - "$2" "$4" <<'PY'
-import hashlib, json, os, re, subprocess, sys, tempfile
-from pathlib import Path
-
-member_arg, root_arg = map(Path, sys.argv[1:3])
-try:
-    root = root_arg.resolve(strict=True)
-    git_root = Path(subprocess.check_output(
-        ['git', '-C', str(root), 'rev-parse', '--show-toplevel'], text=True,
-        stderr=subprocess.DEVNULL).strip()).resolve(strict=True)
-except Exception:
-    raise SystemExit('sdd-fleet-run: migration root is not an exact Git root')
-if root != git_root:
-    raise SystemExit('sdd-fleet-run: migration root is not an exact Git root')
-if member_arg.is_symlink():
-    raise SystemExit('sdd-fleet-run: unsafe migration member path')
-try:
-    member = member_arg.resolve(strict=True)
-except OSError:
-    raise SystemExit('sdd-fleet-run: unsafe migration member path')
-try:
-    relative = member.relative_to(root)
-except ValueError:
-    raise SystemExit('sdd-fleet-run: migration member is outside the repository')
-parts = relative.parts
-if len(parts) != 6 or parts[:3] != ('.planning', 'sdd-composy', 'fleet') or parts[4] != 'members' or member.suffix != '.json':
-    raise SystemExit('sdd-fleet-run: migration member is outside controlled fleet state')
-fleet_id = parts[3]
-try:
-    data = json.loads(member.read_text())
-except Exception as exc:
-    raise SystemExit(f'sdd-fleet-run: malformed legacy member: {exc}')
-required = ('id','task_id','status','runtime','ui','branch','worktree_path','started_at','updated_at','port','compose_project','compose_file','compose_allocated')
-if not isinstance(data, dict) or data.get('schema_version') != '1' or any(key not in data for key in required):
-    raise SystemExit('sdd-fleet-run: v1 migration requires a complete legacy member')
-if data['runtime'] not in ('claude-code','codex') or data['ui'] not in ('cmux','tmux','headless'):
-    raise SystemExit('sdd-fleet-run: unsupported legacy member runtime or UI')
-if data['status'] not in ('pending','running','completed','failed','blocked','cancelled'):
-    raise SystemExit('sdd-fleet-run: unsupported legacy member status')
-if data['status'] in ('completed','failed','blocked','cancelled') and not all(data.get(k) for k in ('finished_at','result_path')):
-    raise SystemExit('sdd-fleet-run: terminal legacy member lacks result evidence')
-for key in ('started_at','updated_at'):
-    if not isinstance(data[key], str) or not data[key]:
-        raise SystemExit(f'sdd-fleet-run: invalid legacy member field: {key}')
-def safe_relative(value):
-    return isinstance(value, str) and bool(value) and not Path(value).is_absolute() and '..' not in Path(value).parts
-if not safe_relative(data['compose_file']) or ('result_path' in data and not safe_relative(data['result_path'])):
-    raise SystemExit('sdd-fleet-run: legacy evidence or Compose path is unsafe')
-expected_compose = Path('.planning') / 'sdd-composy' / 'fleet' / fleet_id / 'docker-compose.yml'
-if Path(data['compose_file']) != expected_compose:
-    raise SystemExit('sdd-fleet-run: legacy Compose file is not owned by this fleet')
-if not isinstance(data['port'], int) or isinstance(data['port'], bool) or not 1 <= data['port'] <= 65535:
-    raise SystemExit('sdd-fleet-run: invalid legacy member port')
-if not isinstance(data['compose_allocated'], bool):
-    raise SystemExit('sdd-fleet-run: invalid legacy Compose allocation')
-if data['compose_allocated']:
-    digest = data.get('compose_sha256')
-    if not isinstance(digest, str) or not re.fullmatch(r'[a-f0-9]{64}', digest):
-        raise SystemExit('sdd-fleet-run: allocated legacy Compose resource has invalid digest')
-    compose = root / expected_compose
-    cursor = root
-    unsafe_component = False
-    for component in expected_compose.parts:
-        cursor /= component
-        unsafe_component = unsafe_component or cursor.is_symlink()
-    if unsafe_component or compose.is_symlink() or not compose.is_file():
-        raise SystemExit('sdd-fleet-run: allocated legacy Compose file is unavailable or unsafe')
-    if hashlib.sha256(compose.read_bytes()).hexdigest() != digest:
-        raise SystemExit('sdd-fleet-run: allocated legacy Compose digest does not match the owned file')
-legacy_path = Path(data['worktree_path'])
-if legacy_path.is_absolute() or '..' in legacy_path.parts:
-    raise SystemExit('sdd-fleet-run: legacy worktree path is not safely relative')
-worktree = (root / legacy_path).resolve(strict=True)
-if worktree == root:
-    raise SystemExit('sdd-fleet-run: legacy member must use an independent Git worktree')
-registration = subprocess.check_output(['git','-C',str(root),'worktree','list','--porcelain'], text=True)
-registered = False; active = False
-for line in registration.splitlines():
-    if line.startswith('worktree '): active = Path(line[9:]).resolve() == worktree
-    elif active and line == 'branch refs/heads/' + data['branch']:
-        registered = True; break
-if not registered:
-    raise SystemExit('sdd-fleet-run: legacy worktree/branch is not registered in this repository')
-for key in ('id','task_id','branch','compose_project','compose_file'):
-    if not isinstance(data[key], str) or not data[key]:
-        raise SystemExit(f'sdd-fleet-run: invalid legacy member field: {key}')
-if not re.fullmatch(r'[A-Za-z][A-Za-z0-9._-]*', data['id']) or not re.fullmatch(r'TASK-[0-9]{3,}', data['task_id']):
-    raise SystemExit('sdd-fleet-run: invalid legacy member identity')
-data.update({
-    'schema_version':'2', 'worktree_path':str(worktree), 'repository_root':str(root),
-    'owner':{'kind':'sdd-composy-fleet','fleet_id':fleet_id,'member_id':data['id']},
-    'resources':{'branch':data['branch'],'worktree_path':str(worktree),'port':data['port'],
-                 'compose_project':data['compose_project'],'compose_file':data['compose_file'],
-                 'compose_allocated':data['compose_allocated'], **({'compose_sha256':data['compose_sha256']} if data['compose_allocated'] else {})},
-})
-fd, temporary = tempfile.mkstemp(prefix='.' + member.name + '.', dir=member.parent)
-try:
-    with os.fdopen(fd, 'w') as stream:
-        json.dump(data, stream, sort_keys=True, indent=2); stream.write('\n')
-        stream.flush(); os.fsync(stream.fileno())
-    os.replace(temporary, member)
-finally:
-    if os.path.exists(temporary): os.unlink(temporary)
-print(json.dumps(data, sort_keys=True))
-PY
-  exit $?
-fi
 [[ $# -eq 2 || $# -eq 3 ]] || usage
 SLUG=$1; WORKTREE_INPUT=$2
 EXPECTED_RUNTIME=${SDD_FLEET_RUNTIME:-}
@@ -215,380 +106,111 @@ if ! jq -e --arg slug "$SLUG" --arg branch "$EXPECTED_BRANCH" --arg worktree "$W
 ' "$MEMBER_FILE" >/dev/null 2>&1; then fail "registered fleet member does not bind $SLUG to the supplied worktree"; fi
 CENTRAL_STATUS=$(jq -r '.status // ""' "$MEMBER_FILE")
 [[ $CENTRAL_STATUS == pending || $CENTRAL_STATUS == running ]] || fail "central member status $CENTRAL_STATUS cannot start a runner"
-# Task 05 supplies the binding for new headless members. Keep legacy v2 members
-# startable while consuming that immutable identity whenever it is present.
 BOUND_LOOP_ID=$(jq -r '.interaction.loop.id // ""' "$MEMBER_FILE")
-BOUND_SPEC_SHA256=$(jq -r '.spec_sha256 // ""' "$MEMBER_FILE"); BOUND_DECISIONS_SHA256=$(jq -r '.decisions_sha256 // ""' "$MEMBER_FILE")
 worktree_identity_matches || fail 'registered fleet member does not match canonical Git worktree registration'
-
 SCRIPT_DIR=$(cd -- "${BASH_SOURCE[0]%/*}" && pwd -P)
-SCHEMA=$(cd -- "$SCRIPT_DIR/../../schemas" && pwd -P)/fleet-result.schema.json
-require_regular_nosymlink "$SCHEMA" || fail "missing result schema: $SCHEMA"
-# The privileged vector lives in exactly one adapter, selected here from the
-# runtime already bound into the central member. Nothing below builds a
-# provider command or a permission flag of its own.
-ENGINE_ADAPTER=$SCRIPT_DIR/engine-$CLI_RUNTIME.sh
-require_regular_nosymlink "$ENGINE_ADAPTER" || fail "missing runtime adapter: $ENGINE_ADAPTER"
-# shellcheck source=/dev/null
-source "$ENGINE_ADAPTER"
-if [[ -n $BOUND_LOOP_ID ]]; then
-  BOUND_TASK_ID=$(jq -er '.task_id' "$MEMBER_FILE") || fail 'bound headless member has no task identity'
-  BOUND_LOOP_TASK=$(jq -er '.interaction.loop.task_id' "$MEMBER_FILE") || fail 'bound headless member has no LOOP task identity'
-  [[ $BOUND_LOOP_TASK == "$BOUND_TASK_ID" ]] || fail 'bound headless LOOP task identity diverges'
-  # A bound member uses the canonical LOOP orchestrator. The legacy fleet
-  # stage machine below remains only for pre-interactive v2 records.
-  python3 - "$SCRIPT_DIR/../sdd_loop.py" "$SCRIPT_DIR/../loop-engine-$CLI_RUNTIME.py" "$MAIN_ROOT" "$WORKTREE" "$BOUND_TASK_ID" "$BOUND_LOOP_ID" "$CLI_RUNTIME" <<'PY'
-import importlib.util,json,sys
-def load(name,path):
-    spec=importlib.util.spec_from_file_location(name,path); module=importlib.util.module_from_spec(spec)
-    assert spec.loader; spec.loader.exec_module(module); return module
-loops=load("sdd_fleet_headless_loop",sys.argv[1]); engine_module=load("sdd_fleet_headless_engine",sys.argv[2])
-record=loops.status(sys.argv[3],sys.argv[6])
-if record["id"] != sys.argv[6] or record["task_id"] != sys.argv[5]: raise SystemExit(2)
-import os
-from pathlib import Path
-# Authorization mirrors the fleet engine adapters: SDD_<RUNTIME>_ISOLATED or
-# SDD_<RUNTIME>_AUTOMATION_CONSENT, plus SDD_FLEET_PERMISSION_MODE.
-prefix="SDD_"+sys.argv[7].upper()+"_"
-extra={"permission_mode":os.environ.get("SDD_FLEET_PERMISSION_MODE","safe")}
-if os.environ.get(prefix+"ISOLATED")=="1": extra["isolation_confirmed"]=True
-if os.environ.get(prefix+"AUTOMATION_CONSENT")=="1": extra["automation_consent"]=True
-engine=lambda contract: engine_module.run(contract,Path(sys.argv[4]),loop_root=Path(sys.argv[3]))
-result=loops.orchestrate(sys.argv[3],sys.argv[5],engine,loop_id=sys.argv[6],max_iterations=record["max_iterations"],human_approved=True,contract_extra=extra)
-print(json.dumps(result,sort_keys=True))
-raise SystemExit(0 if result["status"] == "completed" else 1)
-PY
-  exit $?
-fi
-PHASE_SLUG=$SLUG
-if [[ ! -d "$WORKTREE/.planning/sdd-composy/phases/$PHASE_SLUG" ]]; then
-  PHASE_SLUG=$(jq -r '.id // .slug // empty' "$MEMBER_FILE" 2>/dev/null || true)
-fi
-PHASE_DIR=$WORKTREE/.planning/sdd-composy/phases/$PHASE_SLUG
-safe_worktree_dir ".planning/sdd-composy/phases/$PHASE_SLUG" false || fail "unsafe phase contract path for $SLUG"
-require_regular_nosymlink "$PHASE_DIR/spec.md" && require_regular_nosymlink "$PHASE_DIR/decisions.md" || fail "missing approved phase contracts for $SLUG"
-FLOW_DIR=$WORKTREE/.planning/sdd-composy; STATUS_FILE=$FLOW_DIR/fleet-status.json
-LOG_DIR=$FLOW_DIR/fleet-logs; RESULT_DIR=$FLOW_DIR/fleet-results
-safe_worktree_dir .planning/sdd-composy/fleet-logs true || fail 'unsafe fleet log path'
-safe_worktree_dir .planning/sdd-composy/fleet-results true || fail 'unsafe fleet result path'
+[[ -n $BOUND_LOOP_ID ]] || fail 'fleet member has no bound LOOP; relaunch it with launch.sh'
+BOUND_TASK_ID=$(jq -er '.task_id' "$MEMBER_FILE") || fail 'bound headless member has no task identity'
+BOUND_LOOP_TASK=$(jq -er '.interaction.loop.task_id' "$MEMBER_FILE") || fail 'bound headless member has no LOOP task identity'
+[[ $BOUND_LOOP_TASK == "$BOUND_TASK_ID" ]] || fail 'bound headless LOOP task identity diverges'
+# The LOOP runs unattended here, so the human approval must already be on record; the runner
+# never infers or supplies it.
+jq -e '.approval.by | type == "string" and length > 0' "$MEMBER_FILE" >/dev/null 2>&1 \
+  || fail 'headless member has no recorded human approval; relaunch with --human-approved --approved-by <actor>'
 
 RUNNER_LOCK=$FLEET_DIR/.${SLUG}.runner.lock
 safe_main_dir .planning/sdd-composy/fleet false || fail 'unsafe central fleet state path'
 mkdir "$RUNNER_LOCK" 2>/dev/null || fail "fleet member is already running: $SLUG"
-LOCK_HELD=true; CURRENT_RESULT_TEMP=; CURRENT_STATUS_TEMP=; CURRENT_LOG_TEMP=; CURRENT_RAW_TEMP=
-PROVIDER_PID=; PROVIDER_PGID=; ACTIVE_STAGE=
-# argv: <cwd-or-empty> <provider> [provider-args...]. The provider always leads its
-# own process group so the runner can prove the whole descendant group is gone.
-PROVIDER_LAUNCHER='import os,sys
-directory = sys.argv[1]
-if directory:
-    os.chdir(directory)
-os.setsid()
-os.execvp(sys.argv[2], sys.argv[2:])'
-STATUS_FINAL=false; RECOVERING=false; OWNERSHIP_UNRESOLVED=false; CORRECTION_CYCLES=0; INVOCATION=0
-RESULT_MESSAGE=; RESULT_VERDICT=NONE
-AUDIT_ENABLED=false
-MAIN_CONFIG=$MAIN_ROOT/.planning/sdd-composy/config.json
-if require_regular_nosymlink "$MAIN_CONFIG"; then
-  [[ $(jq -r '.audit == true' "$MAIN_CONFIG" 2>/dev/null) == true ]] && AUDIT_ENABLED=true
-fi
-
-best_effort_stage_audit() {
-  local stage=$1 status=$2 detail
-  [[ $AUDIT_ENABLED == true ]] || return 0
-  detail=$(jq -nc --arg slug "$SLUG" --arg stage "$stage" --arg status "$status" '{slug:$slug,stage:$stage,status:$status}') || {
-    printf 'warning: fleet_stage audit record failed\n' >&2; return 0;
-  }
-  if ! python3 "$SCRIPT_DIR/flow_audit.py" --root "$MAIN_ROOT" record \
-    --action fleet_stage --skill sdd-composy --phase "$stage" --status "$status" \
-    --target .planning/sdd-composy/fleet-status.json --detail "$detail" >/dev/null 2>&1; then
-    printf 'warning: fleet_stage audit record failed\n' >&2
+ORCHESTRATOR_PID=
+release() {
+  if [[ -n $ORCHESTRATOR_PID ]]; then
+    # The orchestrator leads its own process group; take the provider down with it.
+    kill -TERM -- "-$ORCHESTRATOR_PID" 2>/dev/null || kill -TERM "$ORCHESTRATOR_PID" 2>/dev/null || true
+    wait "$ORCHESTRATOR_PID" 2>/dev/null || true
   fi
+  rmdir "$RUNNER_LOCK" 2>/dev/null || true
 }
+trap release EXIT
+trap 'exit 143' TERM
+trap 'exit 130' INT
+trap 'exit 129' HUP
 
-provider_group_alive() {
-  [[ -n $PROVIDER_PGID ]] && kill -0 -- "-$PROVIDER_PGID" 2>/dev/null
-}
+"$PYTHON3_BIN" -c 'import os,sys; os.setsid(); os.execvp(sys.argv[1], sys.argv[1:])' \
+  "$PYTHON3_BIN" - "$SCRIPT_DIR" "$MAIN_ROOT" "$WORKTREE" "$MEMBER_FILE" "$BOUND_TASK_ID" "$BOUND_LOOP_ID" "$CLI_RUNTIME" <<'PY' &
+import importlib.util, json, os, subprocess, sys, tempfile
+from datetime import datetime, timezone
+from pathlib import Path
 
-terminate_owned_provider() {
-  local attempt
-  [[ -n $PROVIDER_PGID ]] || return 0
-  kill -TERM -- "-$PROVIDER_PGID" 2>/dev/null || true
-  attempt=0
-  while provider_group_alive && (( attempt < 20 )); do sleep 0.1; attempt=$((attempt + 1)); done
-  if provider_group_alive; then
-    kill -KILL -- "-$PROVIDER_PGID" 2>/dev/null || true
-  fi
-  [[ -z $PROVIDER_PID ]] || wait "$PROVIDER_PID" 2>/dev/null || true
-  attempt=0
-  while provider_group_alive && (( attempt < 20 )); do sleep 0.05; attempt=$((attempt + 1)); done
-  if provider_group_alive; then
-    printf 'sdd-fleet-run: owned provider process group did not terminate\n' >&2
-    return 1
-  fi
-  PROVIDER_PID=; PROVIDER_PGID=
-}
+script_dir, main_root, worktree, member_file, task_id, loop_id, runtime = sys.argv[1:]
+sys.path.insert(0, str(Path(script_dir).parent)); sys.path.insert(0, script_dir)
+import interactive_state, sdd_loop, sdd_state
 
-ensure_provider_absent() {
-  if terminate_owned_provider; then return 0; fi
-  OWNERSHIP_UNRESOLVED=true
-  printf 'sdd-fleet-run: provider ownership is unresolved; retaining runner lock for explicit recovery\n' >&2
-  return 1
-}
+def load(name, path):
+    spec = importlib.util.spec_from_file_location(name, path); module = importlib.util.module_from_spec(spec)
+    assert spec.loader; spec.loader.exec_module(module); return module
 
-cleanup_owned() {
-  set +e
-  [[ $OWNERSHIP_UNRESOLVED == false ]] || return 1
-  if ! ensure_provider_absent; then return 1; fi
-  if [[ -n $CURRENT_RESULT_TEMP ]]; then rm -f "$CURRENT_RESULT_TEMP"; CURRENT_RESULT_TEMP=; fi
-  if [[ -n $CURRENT_STATUS_TEMP ]]; then rm -f "$CURRENT_STATUS_TEMP"; CURRENT_STATUS_TEMP=; fi
-  if [[ -n $CURRENT_LOG_TEMP ]]; then rm -f "$CURRENT_LOG_TEMP"; CURRENT_LOG_TEMP=; fi
-  if [[ -n $CURRENT_RAW_TEMP ]]; then rm -f "$CURRENT_RAW_TEMP"; CURRENT_RAW_TEMP=; fi
-  if [[ $LOCK_HELD == true ]]; then
-    if rmdir "$RUNNER_LOCK" 2>/dev/null; then LOCK_HELD=false
-    else printf 'sdd-fleet-run: failed to release runner lock\n' >&2; return 1; fi
-  fi
-}
+def now():
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
-write_status() {
-  local stage=$1 status=$2 message=$3 verdict=$4 now
-  now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  safe_worktree_dir .planning/sdd-composy false || return 1
-  CURRENT_STATUS_TEMP=$(mktemp "$FLOW_DIR/.fleet-status.json.XXXXXX") || return 1
-  if ! jq -n --arg slug "$SLUG" --arg stage "$stage" --arg status "$status" \
-    --arg message "$message" --arg verdict "$verdict" --arg updated_at "$now" \
-    --argjson correction_cycles "$CORRECTION_CYCLES" \
-    '{slug:$slug,stage:$stage,status:$status,message:$message,verdict:$verdict,updated_at:$updated_at,correction_cycles:$correction_cycles}' \
-    >"$CURRENT_STATUS_TEMP"; then rm -f "$CURRENT_STATUS_TEMP"; CURRENT_STATUS_TEMP=; return 1; fi
-  if ! mv "$CURRENT_STATUS_TEMP" "$STATUS_FILE"; then return 1; fi
-  CURRENT_STATUS_TEMP=
-}
+def git(*args):
+    return subprocess.run(["git", "-C", worktree, *args], capture_output=True, text=True, check=True).stdout
 
-status_is_done() { [[ -f $STATUS_FILE ]] && [[ $(jq -r '.status // ""' "$STATUS_FILE" 2>/dev/null) == DONE ]]; }
-recover_unexpected() {
-  local code=$?; [[ $RECOVERING == false ]] || exit "$code"; RECOVERING=true
-  trap - ERR HUP INT TERM; set +e
-  if ! ensure_provider_absent; then
-    printf 'sdd-fleet-run: unexpected runner failure during %s; terminal state not published while provider ownership is unresolved\n' "${ACTIVE_STAGE:-startup}" >&2
-    exit "$code"
-  fi
-  if [[ -n $ACTIVE_STAGE && $STATUS_FINAL == false ]] && ! status_is_done; then
-    if [[ -n $CURRENT_STATUS_TEMP ]] || ! write_status "$ACTIVE_STAGE" NEEDS_HUMAN "unexpected runner failure during $ACTIVE_STAGE" NONE; then
-      printf 'sdd-fleet-run: failed to publish ERR recovery status for %s\n' "$ACTIVE_STAGE" >&2
-    else
-      best_effort_stage_audit "$ACTIVE_STAGE" NEEDS_HUMAN
-    fi
-  fi
-  printf 'sdd-fleet-run: unexpected runner failure during %s\n' "${ACTIVE_STAGE:-startup}" >&2
-  cleanup_owned; exit "$code"
-}
-recover_signal() {
-  local name=$1 code=$2; [[ $RECOVERING == false ]] || exit "$code"; RECOVERING=true
-  trap - ERR HUP INT TERM; set +e
-  if ! ensure_provider_absent; then
-    printf 'sdd-fleet-run: runner received %s during %s; terminal state not published while provider ownership is unresolved\n' "$name" "${ACTIVE_STAGE:-startup}" >&2
-    exit "$code"
-  fi
-  if [[ -n $ACTIVE_STAGE && $STATUS_FINAL == false ]] && ! status_is_done; then
-    if [[ -n $CURRENT_STATUS_TEMP ]] || ! write_status "$ACTIVE_STAGE" NEEDS_HUMAN "runner terminated by $name during $ACTIVE_STAGE" NONE; then
-      printf 'sdd-fleet-run: failed to publish %s recovery status for %s\n' "$name" "$ACTIVE_STAGE" >&2
-    else
-      best_effort_stage_audit "$ACTIVE_STAGE" NEEDS_HUMAN
-    fi
-  fi
-  printf 'sdd-fleet-run: runner terminated by %s during %s\n' "$name" "${ACTIVE_STAGE:-startup}" >&2
-  cleanup_owned; exit "$code"
-}
-trap recover_unexpected ERR
-trap 'recover_signal HUP 129' HUP
-trap 'recover_signal INT 130' INT
-trap 'recover_signal TERM 143' TERM
-trap cleanup_owned EXIT
+member = interactive_state.load_member(member_file)
+record = sdd_loop.status(main_root, loop_id)
+if record["id"] != loop_id or record["task_id"] != task_id: raise SystemExit(2)
+engine_module = load("sdd_fleet_headless_engine", Path(script_dir).parent / f"loop-engine-{runtime}.py")
+# Authorization mirrors the engine adapters: SDD_<RUNTIME>_ISOLATED or _AUTOMATION_CONSENT, plus the
+# permission mode. The LOOP root tells the runtime where the VERIFY command record belongs.
+prefix = "SDD_" + runtime.upper() + "_"
+extra = {"permission_mode": os.environ.get("SDD_FLEET_PERMISSION_MODE", "safe"), "loop_root": main_root}
+if os.environ.get(prefix + "ISOLATED") == "1": extra["isolation_confirmed"] = True
+if os.environ.get(prefix + "AUTOMATION_CONSENT") == "1": extra["automation_consent"] = True
+if member["interaction"]["state"] == "starting":
+    interactive_state.transition(member_file, "starting", "running", {"next_action": "observe-headless-loop"}, now())
+engine = lambda contract: engine_module.run(contract, Path(worktree), loop_root=Path(main_root))
+loop = sdd_loop.orchestrate(main_root, task_id, engine, loop_id=loop_id, max_iterations=record["max_iterations"],
+                            human_approved=bool((member.get("approval") or {}).get("by")), contract_extra=extra)
 
-if [[ -e $STATUS_FILE || -L $STATUS_FILE ]]; then
-  require_regular_nosymlink "$STATUS_FILE" || fail 'local fleet status is unsafe; explicit recovery is required'
-  if ! LOCAL_STATUS=$(jq -er --arg slug "$SLUG" '
-    if type == "object" and .slug == $slug and
-      (.stage == "plan" or .stage == "execute" or .stage == "review" or .stage == "verify" or .stage == "execute-fix" or .stage == "review-fix") and
-      (.status == "RUNNING" or .status == "ACTIVE" or .status == "DONE" or .status == "NEEDS_HUMAN") and
-      (.message | type == "string" and length > 0) and
-      (.verdict == "NONE" or .verdict == "APPROVED" or .verdict == "CAVEATS" or .verdict == "REJECTED") and
-      (.updated_at | type == "string" and length > 0) and
-      (.correction_cycles | type == "number" and floor == . and . >= 0)
-    then .status else error("malformed local status") end
-  ' "$STATUS_FILE" 2>/dev/null); then
-    fail 'local fleet status is malformed; explicit recovery is required'
-  fi
-  fail "local fleet status $LOCAL_STATUS is not startable; explicit recovery is required"
-fi
+commit, status, message = None, "failed", f"LOOP stopped: {loop.get('stop_reason', loop['status'])}"
+if loop["status"] == "completed":
+    allowed = member.get("allowed_paths") or []
+    changed = [line[3:].split(" -> ")[-1] for line in git("status", "--porcelain", "--untracked-files=all").splitlines()]
+    outside = [path for path in changed if not any(path == a.rstrip("/") or path.startswith(a.rstrip("/") + "/") for a in allowed)]
+    if outside:
+        status, message = "blocked", "changes outside allowed paths: " + ", ".join(sorted(outside))
+    else:
+        if changed:
+            git("add", "-A", "--", *changed)
+            git("commit", "-q", "-m", f"sdd-fleet: {task_id} ({loop_id})")
+        commit = git("rev-parse", "HEAD").strip()
+        status, message = "completed", f"LOOP {loop_id} completed"
+elif loop["status"] in {"needs_human", "blocked", "external_authorization", "destructive_action", "destructive_request",
+                        "scope_expansion", "scope_drift", "architectural_ambiguity", "new_architecture", "third_rejection"}:
+    status = "blocked"
 
-needs_human() {
-  local stage=$1 message=$2 verdict=${3:-NONE}
-  if ! ensure_provider_absent; then
-    printf 'sdd-fleet-run: cannot publish NEEDS_HUMAN for %s while provider ownership is unresolved\n' "$stage" >&2
-    exit 1
-  fi
-  if ! write_status "$stage" NEEDS_HUMAN "$message" "$verdict"; then
-    printf 'sdd-fleet-run: failed to publish NEEDS_HUMAN status for %s\n' "$stage" >&2
-    STATUS_FINAL=true
-    exit 1
-  fi
-  best_effort_stage_audit "$stage" NEEDS_HUMAN
-  STATUS_FINAL=true; printf 'sdd-fleet-run: %s\n' "$message" >&2; exit 1
-}
-
-contract_is_approved() {
-  awk '/^[[:space:]]*(-[[:space:]]+)?Status:[[:space:]]*/ { fields++; normalized=$0; sub(/^[[:space:]]*(-[[:space:]]+)?/, "", normalized); if (normalized == "Status: APPROVED") approved++ } END { exit !(fields == 1 && approved == 1) }' "$1"
-}
-file_sha256() { shasum -a 256 "$1" | awk '{print $1}'; }
-contracts_match_bound_member() {
-  safe_worktree_dir ".planning/sdd-composy/phases/$SLUG" false || return 1
-  require_regular_nosymlink "$PHASE_DIR/spec.md" || return 1
-  require_regular_nosymlink "$PHASE_DIR/decisions.md" || return 1
-  contract_is_approved "$PHASE_DIR/spec.md" || return 1
-  contract_is_approved "$PHASE_DIR/decisions.md" || return 1
-  if [[ -n "$BOUND_SPEC_SHA256" ]]; then [[ $(file_sha256 "$PHASE_DIR/spec.md") == "$BOUND_SPEC_SHA256" ]] || return 1; fi
-  if [[ -n "$BOUND_DECISIONS_SHA256" ]]; then [[ $(file_sha256 "$PHASE_DIR/decisions.md") == "$BOUND_DECISIONS_SHA256" ]] || return 1; fi
-}
-
-contracts_match_bound_member || needs_human plan 'approved fleet contracts do not match the bound member state'
-
-validate_result() {
-  local stage=$1 result_file=$2
-  jq -e --arg expected "$stage" '
-    type == "object" and (keys == ["message", "stage", "status", "verdict"]) and
-    (.stage == $expected) and
-    (.stage == "plan" or .stage == "execute" or .stage == "review" or .stage == "verify" or .stage == "execute-fix" or .stage == "review-fix") and
-    (.status == "OK" or .status == "FAILED" or .status == "NEEDS_HUMAN") and
-    ((.message | type) == "string") and ((.message | length) > 0) and
-    (.verdict == "NONE" or .verdict == "APPROVED" or .verdict == "CAVEATS" or .verdict == "REJECTED") and
-    (if .stage == "verify" then .verdict != "NONE" else .verdict == "NONE" end)
-  ' "$result_file" >/dev/null 2>&1
-}
-
-artifact_directory() {
-  case $1 in
-    plan) printf '%s/plans' "$PHASE_DIR" ;;
-    execute|execute-fix) printf '%s/execution' "$PHASE_DIR" ;;
-    review|review-fix) printf '%s/review' "$PHASE_DIR" ;;
-    verify) printf '%s/verify' "$PHASE_DIR" ;;
-    *) return 1 ;;
-  esac
-}
-artifact_snapshot() {
-  local directory artifact hash; directory=$(artifact_directory "$1") || return 1
-  for artifact in "$directory"/*.md; do
-    [[ -f $artifact ]] || continue
-    hash=$(git -C "$WORKTREE" hash-object --no-filters -- "$artifact") || return 1
-    printf '%s\t%s\n' "$hash" "$artifact"
-  done
-}
-artifact_path_is_safe() {
-  local directory relative
-  directory=$(artifact_directory "$1") || return 1
-  relative=${directory#"$WORKTREE"/}
-  if [[ -e $directory || -L $directory ]]; then safe_worktree_dir "$relative" false
-  else safe_worktree_dir ".planning/sdd-composy/phases/$SLUG" false
-  fi
-}
-artifact_has_fresh_entry() {
-  local before=$1 after=$2 after_entry before_entry found; [[ -n $after ]] || return 1
-  while IFS= read -r after_entry; do
-    [[ -n $after_entry ]] || continue; found=false
-    while IFS= read -r before_entry; do if [[ $after_entry == "$before_entry" ]]; then found=true; break; fi; done <<<"$before"
-    [[ $found == false ]] && return 0
-  done <<<"$after"
-  return 1
-}
-
-build_prompt() {
-  local stage=$1 capability arguments instruction skill suffix
-  case $stage in
-    plan) capability=plan; arguments=; instruction='create the approved atomic plan artifact' ;;
-    execute) capability=execute; arguments=; instruction='execute the approved plan and write its execution summary' ;;
-    review) capability=review; arguments=; instruction='perform scoped review and write the review artifact' ;;
-    verify) capability=verify; arguments=; instruction='independently verify the phase and write the verification artifact' ;;
-    execute-fix) capability=execute; arguments=' --fix'; instruction='execute only the bounded correction tasks from the rejected verification' ;;
-    review-fix) capability=review; arguments=; instruction='review only the current correction cycle and write its fix review artifact' ;;
-    *) return 1 ;;
-  esac
-  # The invocation syntax and the result contract are runtime-specific.
-  skill=$("sdd_engine_${CLI_RUNTIME}_skill_ref" "$capability")$arguments
-  suffix=$("sdd_engine_${CLI_RUNTIME}_prompt_suffix" "$stage")
-  printf -v STAGE_PROMPT '%s ' "FLOW_FLEET_SLUG=$SLUG" "FLOW_FLEET_STAGE=$stage" \
-    "Invoke $skill for phase $SLUG and $instruction." \
-    'This is an already-authorized autonomous fleet stage in an isolated worktree.' \
-    "Task contract: $(jq -r '.contract_path' "$MEMBER_FILE"); task identity: $(jq -r '.id' "$MEMBER_FILE")." \
-    'Use best judgment at ordinary interactive approval gates, but obey destructive-action prohibitions, prerequisites, secret restrictions, and explicit stop conditions.' \
-    "${suffix%% }"
-  STAGE_PROMPT=${STAGE_PROMPT% }
-}
-
-run_stage() {
-  local stage=$1 timestamp result_file invalid_file log_file provider_status message verdict before_snapshot after_snapshot
-  ACTIVE_STAGE=$stage; INVOCATION=$((INVOCATION + 1))
-  timestamp=$(date -u +%Y%m%dT%H%M%SZ)-$(printf '%02d' "$INVOCATION")
-  result_file=$RESULT_DIR/$stage-$timestamp.json; invalid_file=$RESULT_DIR/$stage-$timestamp.invalid.json
-  log_file=$LOG_DIR/$stage-$timestamp.log
-  safe_worktree_dir .planning/sdd-composy/fleet-logs false || needs_human "$stage" 'unsafe fleet log path'
-  safe_worktree_dir .planning/sdd-composy/fleet-results false || needs_human "$stage" 'unsafe fleet result path'
-  artifact_path_is_safe "$stage" || needs_human "$stage" 'unsafe stage artifact path'
-  contracts_match_bound_member || needs_human "$stage" 'approved fleet contracts do not match the bound member state'
-  before_snapshot=$(artifact_snapshot "$stage"); build_prompt "$stage"
-  write_status "$stage" RUNNING "running $stage" NONE
-  CURRENT_RESULT_TEMP=$(mktemp "$RESULT_DIR/.${stage}-${timestamp}.json.XXXXXX")
-  CURRENT_LOG_TEMP=$(mktemp "$LOG_DIR/.${stage}-${timestamp}.log.XXXXXX")
-  # Only the adapter builds the privileged vector; the runner never names a provider.
-  FLOW_ENGINE_COMMAND=(); FLOW_ENGINE_CWD=; FLOW_ENGINE_RESULT_FROM_STDOUT=false; SDD_ENGINE_COMMAND=(); SDD_ENGINE_CWD=; SDD_ENGINE_RESULT_FROM_STDOUT=false
-  "sdd_engine_${CLI_RUNTIME}_stage_command" \
-    "$WORKTREE" "$SCHEMA" "$CURRENT_RESULT_TEMP" "$STAGE_PROMPT"
-  SDD_ENGINE_COMMAND=("${FLOW_ENGINE_COMMAND[@]}"); SDD_ENGINE_CWD=$FLOW_ENGINE_CWD; SDD_ENGINE_RESULT_FROM_STDOUT=$FLOW_ENGINE_RESULT_FROM_STDOUT
-  if [[ $FLOW_ENGINE_RESULT_FROM_STDOUT == true ]]; then
-    # The provider reports its final message on stdout, so stdout is captured
-    # apart from the log and converted by the adapter after ownership is proved.
-    CURRENT_RAW_TEMP=$(mktemp "$RESULT_DIR/.${stage}-${timestamp}.raw.XXXXXX")
-    "$PYTHON3_BIN" -c "$PROVIDER_LAUNCHER" "$FLOW_ENGINE_CWD" "${FLOW_ENGINE_COMMAND[@]}" \
-      >"$CURRENT_RAW_TEMP" 2>"$CURRENT_LOG_TEMP" & PROVIDER_PID=$!; PROVIDER_PGID=$PROVIDER_PID
-  else
-    "$PYTHON3_BIN" -c "$PROVIDER_LAUNCHER" "$FLOW_ENGINE_CWD" "${FLOW_ENGINE_COMMAND[@]}" \
-      >"$CURRENT_LOG_TEMP" 2>&1 & PROVIDER_PID=$!; PROVIDER_PGID=$PROVIDER_PID
-  fi
-  if wait "$PROVIDER_PID"; then provider_status=0; else provider_status=$?; fi
-  if ! ensure_provider_absent; then
-    RECOVERING=true; trap - ERR HUP INT TERM
-    printf 'sdd-fleet-run: refusing to continue %s while provider ownership is unresolved\n' "$stage" >&2
-    exit 1
-  fi
-  safe_worktree_dir .planning/sdd-composy/fleet-logs false || needs_human "$stage" 'fleet log path changed after the provider'
-  [[ ! -e $log_file && ! -L $log_file ]] || needs_human "$stage" 'fleet log publication collision'
-  mv "$CURRENT_LOG_TEMP" "$log_file"; CURRENT_LOG_TEMP=
-  if ! worktree_identity_matches; then needs_human "$stage" 'fleet worktree changed after the provider; refusing stage commit'; fi
-  contracts_match_bound_member || needs_human "$stage" 'approved fleet contracts changed during provider execution'
-  if [[ $provider_status -ne 0 ]]; then needs_human "$stage" "provider exited non-zero for $stage: $provider_status"; fi
-  if [[ -n $CURRENT_RAW_TEMP ]]; then
-    "sdd_engine_${CLI_RUNTIME}_publish_result" "$CURRENT_RAW_TEMP" "$CURRENT_RESULT_TEMP" || true
-    rm -f "$CURRENT_RAW_TEMP"; CURRENT_RAW_TEMP=
-  fi
-  if [[ ! -s $CURRENT_RESULT_TEMP ]] || ! validate_result "$stage" "$CURRENT_RESULT_TEMP"; then
-    mv "$CURRENT_RESULT_TEMP" "$invalid_file"; CURRENT_RESULT_TEMP=; needs_human "$stage" "invalid structured result for $stage"
-  fi
-  mv "$CURRENT_RESULT_TEMP" "$result_file"; CURRENT_RESULT_TEMP=
-  message=$(jq -r '.message' "$result_file"); verdict=$(jq -r '.verdict' "$result_file")
-  if [[ $(jq -r '.status' "$result_file") != OK ]]; then needs_human "$stage" "$message" "$verdict"; fi
-  artifact_path_is_safe "$stage" || needs_human "$stage" 'unsafe stage artifact path after the provider'
-  after_snapshot=$(artifact_snapshot "$stage")
-  if ! artifact_has_fresh_entry "$before_snapshot" "$after_snapshot"; then needs_human "$stage" "missing fresh $stage artifact"; fi
-  worktree_identity_matches || needs_human "$stage" 'fleet worktree changed before commit; refusing stage commit'
-  if ! git -C "$WORKTREE" add -A || ! git -C "$WORKTREE" commit -m "chore(sdd-composy): $SLUG $stage"; then needs_human "$stage" "failed to commit $stage changes"; fi
-  RESULT_MESSAGE=$message; RESULT_VERDICT=$verdict; write_status "$stage" ACTIVE "$message" "$verdict"
-  best_effort_stage_audit "$stage" ACTIVE
-}
-
-run_stage plan; run_stage execute; run_stage review; run_stage verify
-while [[ $RESULT_VERDICT == REJECTED ]]; do
-  if (( CORRECTION_CYCLES >= 2 )); then needs_human verify "verification rejected after two correction cycles: $RESULT_MESSAGE" REJECTED; fi
-  CORRECTION_CYCLES=$((CORRECTION_CYCLES + 1))
-  run_stage execute-fix; run_stage review-fix; run_stage verify
-done
-write_status verify DONE "$RESULT_MESSAGE" "$RESULT_VERDICT"; best_effort_stage_audit verify DONE; STATUS_FINAL=true
-printf 'sdd-fleet-run: %s completed with %s\n' "$SLUG" "$RESULT_VERDICT"
+owner = member["owner"]
+relative = f".planning/sdd-composy/fleet/{owner['fleet_id']}/results/{member['id']}.json"
+target = Path(main_root) / relative
+target.parent.mkdir(parents=True, exist_ok=True)
+stamp = now()
+result = {"schema_version": "1", "member_id": member["id"], "task_id": task_id, "loop_id": loop_id,
+          "loop_status": loop["status"], "status": status, "commit": commit, "message": message, "completed_at": stamp}
+fd, temporary = tempfile.mkstemp(prefix="." + target.name + ".", dir=target.parent)
+with os.fdopen(fd, "w") as stream:
+    json.dump(result, stream, indent=2, sort_keys=True); stream.write("\n")
+os.replace(temporary, target)
+interactive_state.finish(member_file, status, result_path=relative, message=message, commit=commit, now=stamp)
+interaction = interactive_state.load_member(member_file)["interaction"]["state"]
+if interaction in {"running", "awaiting_human"}:
+    interactive_state.transition(member_file, interaction, status if status != "cancelled" else "failed",
+                                 {"next_action": "inspect-result"}, stamp)
+sdd_state.fleet_changed(main_root, member["id"], status, task_id=task_id)
+print(json.dumps(result, sort_keys=True))
+raise SystemExit(0 if status == "completed" else 1)
+PY
+ORCHESTRATOR_PID=$!
+set +e
+wait "$ORCHESTRATOR_PID"; STATUS=$?
+set -e
+ORCHESTRATOR_PID=
+exit "$STATUS"

@@ -17,8 +17,8 @@ Initialize or resume the repository contract shared by every supported runtime: 
 files, the `.claude -> .agents` compatibility link, and the `tasks/index.md` OKF v0.2 bundle root.
 The bundled `scripts/sdd_init.py` helper owns safe-path checks, atomic no-overwrite publication,
 template rendering, conflict tokens, and verification; this skill owns intent, approval,
-routing, and reporting. Script paths are relative to the plugin root (`${CLAUDE_PLUGIN_ROOT}` on
-Claude Code; the installed plugin or linked skill folder elsewhere).
+routing, and reporting. `<plugin-root>` is the plugin root: `${CLAUDE_PLUGIN_ROOT}` on Claude Code, and on the other
+runtimes the root resolved as described in `references/runtime.md`.
 
 ## Inputs
 
@@ -39,15 +39,17 @@ Initialization reads only the packaged templates and the helper's allow-listed r
    and `plan_token`:
 
    ```sh
-   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/sdd_init.py" plan <repo> --actor <actor> [--lang pt-BR|en-US]
+   python3 "<plugin-root>/scripts/sdd_init.py" plan <repo> --actor <actor> [--lang pt-BR|en-US]
    ```
 
-3. If conflicts are present, stop and explain them. Applying a brownfield repository requires the
-   exact `plan_token` returned by the preview; never invent or shorten it. Only after the user
+3. If conflicts are present, stop and explain them. A conflict on an existing regular file (for
+   example the team's own `AGENTS.md`) is preserved, reported under `preserved`, and does not
+   block INIT; symlinks, directories, and other unsafe destinations do. Applying a brownfield
+   repository requires the exact `plan_token` returned by the preview; never invent or shorten it. Only after the user
    approves that exact plan, run:
 
    ```sh
-   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/sdd_init.py" apply <repo> --actor <actor> --plan-token <plan_token> --lang <selected-language>
+   python3 "<plugin-root>/scripts/sdd_init.py" apply <repo> --actor <actor> --plan-token <plan_token> --lang <selected-language>
    ```
 
    With no conflicts, apply may use the plan output directly. The helper is idempotent and creates
@@ -55,11 +57,12 @@ Initialization reads only the packaged templates and the helper's allow-listed r
 4. Verify with the same actor and report its JSON result:
 
    ```sh
-   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/sdd_init.py" verify <repo> --actor <actor>
+   python3 "<plugin-root>/scripts/sdd_init.py" verify <repo> --actor <actor>
    ```
 
-   A failed verification is a failed initialization: report `missing`, `index_ok`, and
-   `claude_link_ok` without repairing or overwriting files.
+   A failed verification is a failed initialization: report `missing`, `index_ok`,
+   `claude_link_ok`, and `state_ok` without repairing or overwriting files. When a governance file
+   was preserved, tell the user to point it at the SDD rules in `.agents/rules/`.
 
 ## Read when
 

@@ -19,7 +19,7 @@ Este arquivo é o contrato canônico de governança deste repositório. Ele é g
 ## Base de código
 
 - Contratos humanos ficam em `tasks/prd-<slug>/`; estado operacional em `.planning/sdd-composy/`.
-- Contratos compartilhados ficam em `plugins/sdd-composy/{skills,references,scripts,templates,schemas}/`.
+- Contratos compartilhados ficam na raiz do plugin SDD Composy instalado (`skills/`, `references/`, `scripts/`, `templates/`, `schemas/`).
 - Restrinja mudanças aos caminhos aprovados, preserve trabalho alheio e reutilize convenções registradas por `sdd-map`.
 
 ## Regras
@@ -83,7 +83,7 @@ O contrato gerado foi produzido para `{{PROJECT_NAME}}` em `{{GENERATED_AT}}`.
 """,
 ".agents/rules/00-sdd-composy.md": """# Índice de regras SDD Composy
 
-Este conjunto é subordinado ao contrato em [AGENTS.md](../AGENTS.md). Leia-o primeiro.
+Este conjunto é subordinado ao contrato em [AGENTS.md](../../AGENTS.md). Leia-o primeiro.
 
 ## Descoberta e precedência
 
@@ -92,15 +92,13 @@ Este conjunto é subordinado ao contrato em [AGENTS.md](../AGENTS.md). Leia-o pr
 - Em conflito, siga `AGENTS.md` e relate a divergência.
 - Aplique apenas a regra pertinente; não copie sua política nem crie variante por runtime.
 
-## Limite compartilhado
-
 ## Responsabilidade
 
 Esta regra trata de descoberta e precedência. Não autoriza expansão, substitui aprovações nem converte observação em arquitetura.
 """,
 ".agents/rules/architecture.md": """# Regra de arquitetura
 
-Esta regra é subordinada a [AGENTS.md](../AGENTS.md) e trata apenas de decisões e limites arquiteturais.
+Esta regra é subordinada a [AGENTS.md](../../AGENTS.md) e trata apenas de decisões e limites arquiteturais.
 
 ## Responsabilidade
 
@@ -113,7 +111,7 @@ Esta regra não define gates nem comandos; eles permanecem em `workflow.md`, `AG
 """,
 ".agents/rules/testing.md": """# Regra de testes
 
-Esta regra é subordinada a [AGENTS.md](../AGENTS.md) e trata apenas de verificação e evidência.
+Esta regra é subordinada a [AGENTS.md](../../AGENTS.md) e trata apenas de verificação e evidência.
 
 ## Responsabilidade
 
@@ -127,7 +125,7 @@ Arquitetura e gates permanecem em `architecture.md`, `workflow.md` e `AGENTS.md`
 """,
 ".agents/rules/workflow.md": """# Regra de fluxo de trabalho
 
-Esta regra é subordinada a [AGENTS.md](../AGENTS.md) e trata apenas de sequência e aprovações.
+Esta regra é subordinada a [AGENTS.md](../../AGENTS.md) e trata apenas de sequência e aprovações.
 
 ## Responsabilidade
 

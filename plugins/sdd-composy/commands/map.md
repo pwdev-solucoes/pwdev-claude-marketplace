@@ -1,6 +1,6 @@
 ---
 description: Inspect or publish the SDD Composy evidence map
-argument-hint: "[repository-root] [--output-dir path] [--write]"
+argument-hint: "[--repo-root path] [--output-dir path] [--write]"
 ---
 
 # /sdd-composy:map

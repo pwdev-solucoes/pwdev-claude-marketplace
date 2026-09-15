@@ -36,7 +36,12 @@ if [[ $merge == true ]]; then
   fleet_require_regular "$result_path" || fail 'refusing merge: result is missing or unsafe'
   result_commit=$(jq -er '.commit | select(type == "string" and test("^[0-9a-f]{40}$"))' "$result_path" 2>/dev/null) || fail 'refusing merge: result identity or commit is invalid'
   jq -e --arg id "$member" '(.member_id == $id) and (.status == "completed")' "$result_path" >/dev/null 2>&1 || fail 'refusing merge: result identity or commit is invalid'
-  [[ -n $(git -C "$root" symbolic-ref --quiet --short HEAD 2>/dev/null || true) ]] || fail 'refusing merge: repository is detached'
+  current_branch=$(git -C "$root" symbolic-ref --quiet --short HEAD 2>/dev/null || true)
+  [[ -n $current_branch ]] || fail 'refusing merge: repository is detached'
+  if fleet_require_regular "$state/fleet.json"; then
+    base_branch=$(jq -er '.base_branch | select(type == "string" and length > 0)' "$state/fleet.json" 2>/dev/null) || fail 'refusing merge: fleet base branch is unrecorded'
+    [[ $current_branch == "$base_branch" ]] || fail "refusing merge: repository is on $current_branch, not the fleet base branch $base_branch"
+  fi
   git -C "$root" diff --quiet && git -C "$root" diff --cached --quiet || fail 'refusing merge: repository is dirty'
 fi
 [[ -d "$worktree" && ! -L "$worktree" ]] || fail 'member worktree is missing or unsafe'
@@ -53,7 +58,24 @@ compose_allocated=$(jq -r '.resources.compose_allocated' "$member_file")
 jq -e --arg root "$root" --arg fleet "$fleet" --arg member "$member" --arg branch "$branch" --arg worktree "$worktree" \
   '(.repository_root == $root) and (.owner.kind == "sdd-composy-fleet") and (.owner.fleet_id == $fleet) and (.owner.member_id == $member) and (.resources.branch == $branch) and (.resources.worktree_path == $worktree)' \
   "$member_file" >/dev/null || fail 'resource ownership does not match member identity; recovery state preserved'
-if [[ "$compose_allocated" == true ]]; then
+# Stop the member's presentation and runner before anything else is released: a live runner
+# must not keep writing into a worktree whose record is about to disappear.
+slug=$(fleet_json_string "$member_file" slug 2>/dev/null || printf '%s' "$member" | tr '[:upper:]' '[:lower:]')
+ui=$(fleet_json_string "$member_file" ui 2>/dev/null || true)
+handle="$state/$slug.ui.json"
+if [[ -e $handle || -L $handle ]]; then
+  [[ $ui == cmux || $ui == tmux || $ui == headless ]] || fail 'member UI adapter is unknown; recovery state preserved'
+  fleet_require_regular "$handle" || fail 'UI handle is unsafe; recovery state preserved'
+  # shellcheck source=/dev/null
+  . "$HERE/ui-$ui.sh"
+  fleet_ui_teardown "$handle" || fail 'member UI or runner could not be stopped; recovery state preserved'
+fi
+others=0
+for other in "$state"/members/*.json; do [[ -f $other && $other != "$member_file" ]] && others=$((others + 1)); done
+if [[ "$compose_allocated" == true && $others -gt 0 ]]; then
+  printf 'fleet-teardown: Compose project kept for %s remaining member(s)\n' "$others" >&2
+fi
+if [[ "$compose_allocated" == true && $others -eq 0 ]]; then
   compose_file=$(jq -er '.resources.compose_file | select(type == "string" and length > 0)' "$member_file" 2>/dev/null) || fail 'owned Compose file is unspecified; recovery state preserved'
   project=$(jq -er '.resources.compose_project | select(type == "string" and length > 0)' "$member_file" 2>/dev/null) || fail 'owned Compose project is unspecified; recovery state preserved'
   expected_project="sdd_fleet_$fleet"
@@ -66,11 +88,16 @@ if [[ "$compose_allocated" == true ]]; then
   fleet_no_symlink_components "$compose_path" || fail 'recorded Compose path or parent is a symlink'
   [[ $(fleet_hash "$compose_path") == "$expected_compose" ]] || fail 'Compose file ownership hash changed; recovery state preserved'
   command -v docker >/dev/null 2>&1 || fail 'docker is required to stop the recorded Compose project'
-  docker compose --project-name "$project" -f "$compose_path" down >/dev/null || fail 'Compose shutdown failed; recovery state preserved'
+  env_args=(); fleet_require_regular "$state/runtime.env" && env_args=(--env-file "$state/runtime.env")
+  docker compose --project-name "$project" ${env_args[@]+"${env_args[@]}"} -f "$compose_path" down >/dev/null || fail 'Compose shutdown failed; recovery state preserved'
 fi
+release_port() {
+  local port; port=$(jq -er '.resources.port | select(type == "number")' "$member_file" 2>/dev/null) || return 0
+  rm -f -- "$state/port-$port"
+}
 lock="$state/.$member.runner.lock"
 if [[ -e "$lock" || -L "$lock" ]]; then [[ -d "$lock" && ! -L "$lock" ]] || fail 'runner lock is unsafe'; rmdir "$lock" 2>/dev/null || fail 'runner lock could not be released; recovery state preserved'; fi
-if [[ $merge == false ]]; then rm -f -- "$member_file"; printf 'fleet-teardown: stopped %s; preserved branch and worktree\n' "$member"; exit 0; fi
+if [[ $merge == false ]]; then release_port; rm -f -- "$member_file"; printf 'fleet-teardown: stopped %s; preserved branch and worktree\n' "$member"; exit 0; fi
 if ! git -C "$root" merge --no-ff "$branch"; then git -C "$root" merge --abort >/dev/null 2>&1 || true; fail "merge failed; recovery state preserved for $member"; fi
 git -C "$root" merge-base --is-ancestor "$branch" HEAD || fail 'post-merge verification failed; recovery state preserved'
 python3 - "$root" "$member_file" <<'PY' || fail 'post-merge tests failed; merged code, worktree and metadata preserved for recovery'
@@ -83,5 +110,6 @@ if not task or task.get('verification_commands')!=data['verification_commands']:
 for command in task['verification_commands']:
     if subprocess.run(command,shell=True,cwd=root,executable='/bin/bash').returncode: raise SystemExit(1)
 PY
-git -C "$root" worktree remove "$worktree" >/dev/null 2>&1 || fail 'worktree removal failed; merged branch and metadata preserved'
-rm -f -- "$member_file"; printf 'fleet-teardown: merged and removed worktree for %s\n' "$member"
+removal=$(git -C "$root" worktree remove "$worktree" 2>&1) || fail "worktree removal failed ($removal); merged branch and metadata preserved"
+git -C "$root" branch -d "$branch" >/dev/null 2>&1 || printf 'fleet-teardown: merged branch %s was kept\n' "$branch" >&2
+release_port; rm -f -- "$member_file"; printf 'fleet-teardown: merged and removed worktree for %s\n' "$member"

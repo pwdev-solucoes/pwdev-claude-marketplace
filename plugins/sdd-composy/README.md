@@ -39,7 +39,7 @@ configuration. See the [language contract](./references/language.md).
 | --- | --- | --- |
 | Claude Code | `.claude-plugin/plugin.json` | `/sdd-composy:<name>` thin commands |
 | Codex | `.codex-plugin/plugin.json` (`skills` root) | `$sdd-<name>` — the skill's `name` |
-| Hermes Agent | `.hermes-plugin/plugin.yaml`; the bootstrap registers the 17 skills | `skill_view("sdd-<name>")` |
+| Hermes Agent | `.hermes-plugin/plugin.yaml`; the bootstrap registers the 17 skills | `skill_view("sdd-composy:sdd-<name>")` |
 | OpenCode | linked skill folders (see below) | `/sdd-<name>` commands or the native `skill` tool |
 
 **OpenCode** has no plugin mechanism for skills: it discovers `SKILL.md` folders
@@ -55,9 +55,10 @@ python3 plugins/sdd-composy/.opencode-plugin/install.py --uninstall  # remove wh
 
 It links, never copies: `scripts/`, `references/`, and `templates/` are reached through the
 link. A Claude Code *plugin* install lives in Claude's plugin cache and does not make the skills
-visible to OpenCode; the installer does. `LOOP` and `FLEET` run on OpenCode through the dedicated
-adapters (`scripts/loop-engine-opencode.py`, `scripts/fleet/engine-opencode.sh`) with the vector
-`opencode run --dir <worktree> --format json [--auto]`; see [opencode-tools.md](./references/opencode-tools.md).
+visible to OpenCode; the installer does. `LOOP` and headless `FLEET` members run on OpenCode through
+`scripts/loop-engine-opencode.py` with the vector `opencode run --dir <worktree> --format json
+[--auto]`; an interactive fleet member opens `opencode <worktree> --prompt`. See
+[opencode-tools.md](./references/opencode-tools.md).
 Offline adapter tests establish support, not real-provider acceptance.
 
 Automated Hermes LOOP/fleet execution uses `hermes -z <prompt> --in <worktree>` only after
@@ -99,8 +100,10 @@ INIT -> MAP -> PRD -> STORIES -> TECHSPEC -> TASKS
 Product and execution gates require explicit human approval; editing operational JSON is not a
 way to simulate approval. Verification reproduces fresh evidence. The reduced `QUICK`, bounded
 `LOOP`, and isolated `FLEET` paths keep the same durable contracts and safety rules. A fleet
-runs only ready tasks, each in its own branch and Git worktree, and never merges automatically;
-Compose allocation, teardown, and migration rules are in the [fleet contract](./references/fleet.md).
+runs only ready tasks from the task projection of a human-approved TechSpec, each in its own
+branch and Git worktree; a headless fleet also needs the recorded approval of the run
+(`--human-approved --approved-by`), and nothing is merged automatically. The launch gate, the
+headless result, Compose, and teardown rules are in the [fleet contract](./references/fleet.md).
 
 ## State, compatibility, and recovery
 

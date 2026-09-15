@@ -1,6 +1,6 @@
 ---
 description: Import, inspect, and safely advance SDD Composy tasks
-argument-hint: "<import|list|next|show|start|block|transition|verify> ..."
+argument-hint: "<operation> <state-or-markdown-root> ..."
 ---
 
 # /sdd-composy:tasks

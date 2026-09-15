@@ -1,37 +1,88 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sdd-composy.local/schemas/fleet-result.schema.json",
-  "title": "SDD Composy fleet result v1",
+  "title": "SDD Composy fleet member result v1",
+  "description": "Written by scripts/fleet/run.sh when a bound LOOP stops; teardown --merge consumes it.",
   "type": "object",
-  "required": ["schema_version", "member_id", "task_id", "status", "commit", "verification", "completed_at"],
+  "required": [
+    "schema_version",
+    "member_id",
+    "task_id",
+    "loop_id",
+    "loop_status",
+    "status",
+    "commit",
+    "message",
+    "completed_at"
+  ],
   "properties": {
-    "schema_version": {"const": "1"},
-    "member_id": {"$ref": "#/definitions/member_id"},
-    "task_id": {"$ref": "#/definitions/task_id"},
-    "status": {"$ref": "#/definitions/result_status"},
-    "commit": {"type": ["string", "null"], "pattern": "^[0-9a-f]{40}$"},
-    "verification": {"type": "array", "items": {"$ref": "#/definitions/verification"}},
-    "completed_at": {"type": "string", "format": "date-time"},
-    "summary": {"type": "string", "minLength": 1}
+    "schema_version": {
+      "const": "1"
+    },
+    "member_id": {
+      "$ref": "#/definitions/member_id"
+    },
+    "task_id": {
+      "$ref": "#/definitions/task_id"
+    },
+    "loop_id": {
+      "$ref": "#/definitions/member_id"
+    },
+    "loop_status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "completed",
+        "failed",
+        "blocked",
+        "cancelled"
+      ]
+    },
+    "commit": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
   },
-  "if": {"properties": {"status": {"const": "completed"}}, "required": ["status"]},
-  "then": {"properties": {"commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}}},
+  "if": {
+    "properties": {
+      "status": {
+        "const": "completed"
+      }
+    },
+    "required": [
+      "status"
+    ]
+  },
+  "then": {
+    "properties": {
+      "commit": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{40}$"
+      }
+    }
+  },
   "additionalProperties": true,
   "definitions": {
-    "member_id": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._-]*$"},
-    "task_id": {"type": "string", "pattern": "^TASK-[0-9]{3,}$"},
-    "result_status": {"enum": ["completed", "failed", "blocked", "cancelled"]},
-    "verification_result": {"enum": ["passed", "failed", "not_run"]},
-    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "verification": {
-      "type": "object",
-      "required": ["command", "result", "output_sha256"],
-      "properties": {
-        "command": {"type": "string", "minLength": 1},
-        "result": {"$ref": "#/definitions/verification_result"},
-        "output_sha256": {"$ref": "#/definitions/sha256"}
-      },
-      "additionalProperties": true
+    "member_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9._-]*$"
+    },
+    "task_id": {
+      "type": "string",
+      "pattern": "^TASK-[0-9]{3,}$"
     }
   }
 }
