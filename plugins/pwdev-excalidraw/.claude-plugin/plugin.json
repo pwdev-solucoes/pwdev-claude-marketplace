@@ -1,8 +1,8 @@
 {
   "name": "pwdev-excalidraw",
   "displayName": "PWDEV Excalidraw — Planejamento Visual",
-  "version": "0.1.0",
-  "description": "Planejamento visual com diagramas Excalidraw via servidor MCP oficial — arquitetura, fluxos, dependências, decisões e roadmaps editáveis.",
+  "version": "0.2.0",
+  "description": "Use para visualizar planos aprovados como diagramas Excalidraw de arquitetura, fluxos, dependências, decisões ou roadmaps. Não use para implementar código.",
   "author": { "name": "Paulo Soares", "url": "https://github.com/soarescbm" },
   "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
   "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
