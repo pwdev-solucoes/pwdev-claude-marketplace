@@ -1,7 +1,7 @@
 {
   "name": "pwdev-excalidraw",
-  "version": "0.1.0",
-  "description": "Visual planning with Excalidraw diagrams through an MCP server, portable across Claude Code and Codex.",
+  "version": "0.2.0",
+  "description": "Visualize approved plans with Excalidraw diagrams through MCP.",
   "author": {
     "name": "Paulo Soares",
     "url": "https://github.com/soarescbm"
@@ -20,8 +20,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "PWDEV Excalidraw",
-    "shortDescription": "Visual planning with Excalidraw",
-    "longDescription": "Create and review editable Excalidraw diagrams for architecture, user flows, dependencies, roadmaps, decisions, and risks. The skill is runtime-neutral and uses the configured Excalidraw MCP server when available.",
+    "shortDescription": "Visualize approved plans with Excalidraw",
+    "longDescription": "Visualize approved architecture, flows, dependencies, decisions, risks, and roadmaps. Use the configured MCP server when available; do not implement code or claim remote success without evidence.",
     "developerName": "PWDEV Solucoes",
     "category": "Planning",
     "capabilities": [

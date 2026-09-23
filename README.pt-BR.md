@@ -68,7 +68,7 @@ Comandos: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 | [**pwdev-postgres**](./plugins/pwdev-postgres/) | PostgreSQL — servidor MCP próprio via npx (@soarescbm/postgres-mcp): SELECT somente-leitura validado por AST, inspeção de schema, DML/DDL com dry-run obrigatório | 1.0.0 | Apache-2.0 |
 | [**pwdev-obsidian**](./plugins/pwdev-obsidian/) | Vault do Obsidian — servidor MCP embutido no plugin comunitário Local REST API: leitura, escrita e edição estrutural de notas (heading/bloco/frontmatter), busca JsonLogic e texto livre, tags, arquivo ativo, paleta de comandos | 1.0.0 | Apache-2.0 |
 | [**pwdev-brain**](./plugins/pwdev-brain/) | Segundo cérebro em LLM Wiki (padrão Karpathy) no Open Knowledge Format v0.2 — ingest discutido com citação por afirmação, query citada, lint de conformidade; 2 subagentes, MCP embutido somente-leitura (6 tools) | 1.1.0 | Apache-2.0 |
-| [**pwdev-excalidraw**](./plugins/pwdev-excalidraw/) | Planejamento visual com diagramas Excalidraw via servidor MCP oficial — arquitetura, fluxos, dependências, decisões e roadmaps editáveis | 0.1.0 | Apache-2.0 |
+| [**pwdev-excalidraw**](./plugins/pwdev-excalidraw/) | Planejamento visual com diagramas Excalidraw via servidor MCP oficial — arquitetura, fluxos, dependências, decisões e roadmaps editáveis | 0.2.0 | Apache-2.0 |
 | [**pwdev-statusline**](./plugins/pwdev-statusline/) | Barra de status rica — cores dinâmicas, tokens formatados, totalmente configurável | 1.1.0 | Apache-2.0 |
 
 ### pwdev-power
