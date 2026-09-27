@@ -3,7 +3,8 @@
 
 Checks: running inside an Orca terminal, Orca runtime ready, current directory is an Orca
 worktree, GitHub CLI authenticated for this repository, and pwdev-feat >= 3.2.0 (feat-loop)
-installed for each routed agent. Never mutates anything.
+installed for each routed agent, and a login Orca can launch each routed agent with. Never
+mutates anything.
 
     python3 preflight.py [--json] [--agents claude,codex]
 
@@ -75,6 +76,14 @@ def feat_version(agent: str, home: Path, project: Path) -> tuple[int, ...] | Non
     return None
 
 
+def agent_login(agent: str, accounts: dict) -> bool | None:
+    """True/False when `orca account list` answers for the agent; None when it cannot tell."""
+    if agent not in ("claude", "codex") or agent not in accounts:
+        return None
+    entry = accounts[agent] or {}
+    return bool(entry.get("accounts")) or bool((entry.get("systemDefault") or {}).get("hasAuth"))
+
+
 def check(agents: list[str], home: Path, project: Path) -> dict:
     blockers, warnings, facts = [], [], {}
 
@@ -135,6 +144,23 @@ def check(agents: list[str], home: Path, project: Path) -> dict:
             blockers.append(f"{agent}: pwdev-feat não encontrado (precisa ≥ {fmt(MIN_FEAT)} com feat-loop)")
         elif found < MIN_FEAT:
             blockers.append(f"{agent}: pwdev-feat {fmt(found)} instalado; atualize para ≥ {fmt(MIN_FEAT)} (feat-loop)")
+    accounts = {}
+    if agents:
+        code, out = run("orca", "account", "list", "--json")
+        try:
+            accounts = json.loads(out).get("result", {}) if code == 0 else {}
+        except ValueError:
+            accounts = {}
+    facts["agent_login"] = {}
+    for agent in agents:
+        login = agent_login(agent, accounts)
+        facts["agent_login"][agent] = login
+        if login is False:
+            blockers.append(
+                f"{agent}: sem login que o Orca use para lançar o worker; rode `orca account add --agent {agent}`"
+            )
+        elif login is None and agent in ("claude", "codex"):
+            warnings.append(f"{agent}: não deu para confirmar o login pelo `orca account list`")
     if not agents:
         warnings.append("nenhum agente informado em --agents: disponibilidade do pwdev-feat não verificada")
 

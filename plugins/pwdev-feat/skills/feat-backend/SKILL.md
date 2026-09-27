@@ -7,7 +7,7 @@ description: >
   UI work (feat-frontend), full features spanning backend and UI (feat-feature), writing code
   (feat-exec) or quick 1–3 file fixes (feat-quick).
 metadata:
-  version: 3.2.0
+  version: 3.2.1
 ---
 
 # Backend plan

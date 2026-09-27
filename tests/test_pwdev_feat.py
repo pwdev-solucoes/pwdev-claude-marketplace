@@ -42,7 +42,7 @@ class ManifestTest(unittest.TestCase):
         )
 
     def test_versions_and_identity_agree_across_runtimes(self):
-        self.assertEqual(self.claude["version"], "3.2.0")
+        self.assertEqual(self.claude["version"], "3.2.1")
         self.assertRegex(self.codex["version"], r"^\d+\.\d+\.\d+(\+codex\.\d{14})?$")
         self.assertEqual(self.codex["version"].split("+")[0], self.claude["version"])
         self.assertEqual(self.hermes["version"].strip(), self.claude["version"])
@@ -201,6 +201,8 @@ class LoopTest(unittest.TestCase):
         for needle in ("[feat-loop #<N>][gate:<kind>]", "ask --resume", "exactly **one** `worker_done`",
                        "--outcome succeeded", "--outcome failed", "consumer_fenced", "preamble is authoritative"):
             self.assertIn(needle, self.mode, needle)
+        self.assertIn("**only** when the Task spec says PRs need approval", self.mode)
+        self.assertIn("No gate of its own", self.skill)
         runtime = (PLUGIN / "references/runtime.md").read_text(encoding="utf-8")
         self.assertIn("`loop → feat-loop`", runtime)
         self.assertIn("orchestrated-mode.md", runtime)

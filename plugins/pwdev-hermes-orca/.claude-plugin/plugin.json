@@ -1,7 +1,7 @@
 {
   "name": "pwdev-hermes-orca",
   "displayName": "PWDEV Hermes Orca — Hermes coordena workers do Orca",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Hermes Agent como coordenador do Orca: lê issues do GitHub, monta um DAG aprovado pelo usuário e despacha cada issue para um worker supervisionado do Orca (claude, codex ou opencode) numa worktree ligada à issue, rodando o feat-loop do pwdev-feat (plan → exec → review → PR). Responde aos gates dos workers via orca ask, escala ao usuário o que muda escopo e fecha o ciclo com relatório por issue. Nunca faz merge.",
   "author": { "name": "Paulo Soares", "url": "https://github.com/soarescbm" },
   "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",

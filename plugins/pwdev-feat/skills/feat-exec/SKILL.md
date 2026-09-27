@@ -8,7 +8,7 @@ description: >
   (feat-feature, feat-backend, feat-frontend, feat-test, feat-review) or for tasks without a
   plan (feat-quick).
 metadata:
-  version: 3.2.0
+  version: 3.2.1
 ---
 
 # Execute plan

@@ -6,7 +6,7 @@ description: >
   optional audit trail, and creating the .planning/feat/ workspace. Do NOT use to analyze the
   codebase (feat-map), to write the project instructions file (feat-setup) or to create plans.
 metadata:
-  version: 3.2.0
+  version: 3.2.1
 ---
 
 # Initialize pwdev-feat

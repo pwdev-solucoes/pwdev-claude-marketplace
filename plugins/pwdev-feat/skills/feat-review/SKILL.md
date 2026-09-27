@@ -7,7 +7,7 @@ description: >
   base..HEAD'. Plans a REPORT-mode review (no code changes, no commit). Do NOT use to fix code
   (feat-feature / feat-quick), to write tests (feat-test) or for UI/UX design critique.
 metadata:
-  version: 3.2.0
+  version: 3.2.1
 ---
 
 # Review plan

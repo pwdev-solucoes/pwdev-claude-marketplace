@@ -1,4 +1,4 @@
-# PWDEV-FEAT v3.2.0
+# PWDEV-FEAT v3.2.1
 
 *Read this in [Português Brasileiro](./README.pt-BR.md)*
 

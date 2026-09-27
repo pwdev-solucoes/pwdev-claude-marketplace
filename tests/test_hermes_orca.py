@@ -146,6 +146,21 @@ class SkillContractTest(unittest.TestCase):
         self.assertIn("Nunca fazer merge", self.text)
         self.assertIn("nunca troque um worker do\nOrca por `delegate_task`", self.text)
 
+    def test_plugin_root_and_runtime_config_rules(self):
+        self.assertIn("dois níveis acima deste SKILL.md", self.text)
+        self.assertIn("na raiz do repositório", self.text)
+        self.assertIn("Nunca alterar configuração de runtime dos agentes", self.text)
+
+    def test_retry_cancel_and_leftovers_are_specified(self):
+        completion = (PLUGIN / "references/completion.md").read_text(encoding="utf-8")
+        for needle in ("Falha de lançamento", "Falha do trabalho", "sem `--name`/`--base-branch`",
+                       "stop_unknown", "worker-abandon", "Task substituta", "Worktrees que sobram",
+                       "Nunca as remova sozinho", "Mudanças de configuração feitas a pedido"):
+            self.assertIn(needle, completion, needle)
+        prompt = (PLUGIN / "references/worker-prompt.md").read_text(encoding="utf-8")
+        self.assertIn("PR sem gate", prompt)
+        self.assertIn("PR com gate", prompt)
+
     def test_every_cited_reference_exists(self):
         cited = set(re.findall(r"`((?:references|templates|scripts)/[A-Za-z0-9_./-]+\.(?:md|json|py))`", self.text))
         self.assertTrue(cited)
@@ -202,11 +217,22 @@ class PreflightTest(unittest.TestCase):
         for needle in ("ORCA_TERMINAL_HANDLE", "runtime do Orca", "gh auth login", "codex: pwdev-feat"):
             self.assertIn(needle, joined)
 
+    def test_login_detection_per_agent(self):
+        accounts = {
+            "claude": {"accounts": [], "systemDefault": None},
+            "codex": {"accounts": [], "systemDefault": {"hasAuth": True}},
+        }
+        self.assertIs(self.pre.agent_login("claude", accounts), False)
+        self.assertIs(self.pre.agent_login("codex", accounts), True)
+        self.assertIsNone(self.pre.agent_login("opencode", accounts))
+        self.assertIsNone(self.pre.agent_login("claude", {}))
+
     def test_ready_environment_has_no_blocker(self):
         answers = {
             ("orca", "status", "--json"): {"result": {"runtime": {"state": "ready", "reachable": True, "appVersion": "1.4.215"}}},
             ("orca", "worktree", "current", "--json"): {"result": {"worktree": {"id": "r::/p", "projectId": "github:o/r"}}},
             ("gh", "repo", "view", "--json", "nameWithOwner,defaultBranchRef"): {"nameWithOwner": "o/r", "defaultBranchRef": {"name": "main"}},
+            ("orca", "account", "list", "--json"): {"result": {"claude": {"accounts": [{"id": "a"}]}}},
         }
 
         def fake_run(*cmd, timeout=20):
@@ -221,6 +247,7 @@ class PreflightTest(unittest.TestCase):
         self.assertEqual(report["blockers"], [])
         self.assertTrue(report["ok"])
         self.assertEqual(report["facts"]["default_branch"], "main")
+        self.assertIs(report["facts"]["agent_login"]["claude"], True)
 
 
 if __name__ == "__main__":

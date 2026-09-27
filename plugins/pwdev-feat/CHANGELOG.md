@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.2.1 — 2026-09-27
+
+From the first Hermes + Orca end-to-end run (2 issues, Claude and Codex workers, both PRs
+APPROVED):
+
+- `feat-loop` opens the PR without a gate of its own; in orchestrated mode `gate:pr` is raised
+  only when the Task spec says PRs need approval (a Codex worker asked anyway).
+
 ## 3.2.0 — 2026-09-27
 
 - **`feat-loop` (`/pwdev-feat:loop`, `$feat-loop`, `/feat-loop`).** Delivers one GitHub issue end

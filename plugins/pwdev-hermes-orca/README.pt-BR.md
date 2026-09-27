@@ -1,4 +1,4 @@
-# PWDEV Hermes Orca v0.1.0
+# PWDEV Hermes Orca v0.1.1
 
 > **O Hermes Agent coordena workers supervisionados do Orca a partir de issues do GitHub**
 
@@ -43,6 +43,7 @@ review reais, comenta na issue e libera o terminal. **Nada é mergeado.**
 | **Orca** ≥ 1.4 (app aberto), com o Hermes aberto num **terminal do Orca** | Runs, workers supervisionados, worktrees |
 | **Hermes Agent** ≥ 0.21 | O coordenador |
 | **GitHub CLI** (`gh`) autenticado | Issues, conferência de PR, comentários |
+| **Login gerenciado pelo Orca** por agente: `orca account add --agent claude` para workers Claude (o Codex pode usar o login do sistema) | Sem ele o worker Claude para na tela de primeiro uso e o Orca acusa timeout em `agent_readiness` |
 | **pwdev-feat ≥ 3.2.0** em cada agente roteado (Claude Code, Codex e/ou OpenCode) | `feat-loop` nos workers |
 
 ## Instalação

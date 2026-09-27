@@ -8,7 +8,7 @@ description: >
   the issue. Never merges. Do NOT use without an issue (feat-feature / feat-quick), to only plan
   (feat-feature), to only review (feat-review) or to execute an existing plan (feat-exec).
 metadata:
-  version: 3.2.0
+  version: 3.2.1
 ---
 
 # Issue loop
@@ -55,7 +55,9 @@ through `ask`, never a local question. In interactive mode gates go to the human
    it (`feat-exec`, or the quick task itself), then review again on `<base commit>..HEAD`,
    writing the report under the original slug. Still `CHANGES_REQUESTED` after cycle 2 → stop with
    `STOPPED:review_not_approved`, leaving the branch and reports in place.
-8. **Pull request** — only with `APPROVED`. `git status --porcelain` must be clean outside
+8. **Pull request** — only with `APPROVED`. No gate of its own: interactive mode already has
+   the human's request (this invocation); orchestrated mode raises `gate:pr` only when the Task
+   spec says PRs need approval. `git status --porcelain` must be clean outside
    `.planning/`. `git push -u origin <branch>` (never `--force`), then
    `gh pr create --base <base> --title "<conventional title>" --body-file <tmp>`: summary, the plan
    and review paths, the AC evidence summary, and a last line `Closes #<N>`. Invoking this skill is

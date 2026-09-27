@@ -8,7 +8,7 @@ description: >
   1–3 file changes (feat-quick), backend-only or UI-only scope (feat-backend / feat-frontend),
   tests for existing code (feat-test) or code review (feat-review).
 metadata:
-  version: 3.2.0
+  version: 3.2.1
 ---
 
 # Feature plan

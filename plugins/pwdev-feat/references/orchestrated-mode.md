@@ -34,7 +34,7 @@ Pass the choices with `--options` (for example `approve,revise,abort`).
 | `branch` | creating or reusing a branch | `approve,abort` |
 | `advice` | a second `NEEDS_ADVICE`, or the advisor budget is spent | free text, or `abort` |
 | `stopped` | any `STOPPED:<condition>` a stage raises | `continue,abort` |
-| `pr` | only if the coordinator's Task spec asked to approve PRs | `open,abort` |
+| `pr` | **only** when the Task spec says PRs need approval; otherwise open the PR without asking | `open,abort` |
 
 Answer handling:
 - `approve` / `proceed` / `open` / `continue`: carry on.

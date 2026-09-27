@@ -8,7 +8,7 @@ description: >
   .planning/feat/. Do NOT use for code review (feat-review), architecture decisions, or writing
   the project instructions file (feat-setup).
 metadata:
-  version: 3.2.0
+  version: 3.2.1
 ---
 
 # Map the codebase
