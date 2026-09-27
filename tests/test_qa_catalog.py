@@ -79,8 +79,8 @@ CLAUDE_EXISTING_DIGESTS = (
     "29682dd6eed0918853e4854a0defcc687e2fe36f8f40c5aa55c4370f1e7330ed",
     "c1ef5068d662c6692af9ae4b0935955acc7dad6692990a1fa85c597f6ba935a5",
     "f9d53f05aaf7e7556925200c930fa8c433fe472f93927fc0f77aad643a9c9f9f",
-    # pwdev-feat 3.0: description and tags name all four supported runtimes.
-    "9fe40fdfc35dc9f4b9e31e05f21bbace1806e2dd628c71da8ac394d6a6efd790",
+    # pwdev-feat 3.2: four runtimes plus the GitHub issue loop that runs as an Orca worker.
+    "c1cadf33e0ee203023119687da47d1e9e107e87ae5d9c2f1cbe32363ffd4f273",
     "e8f09de7012e4f104180a44066e67b891b2838710a601f7d543d556cdf617e7f",
     "fcf382868e4706cb53f020566e82cc2b80372a0070e6a3d64b837fee8b722f82",
     "5bf2b3edf26a2bb99e3fb4ea9f7bb027c662e365cc1ede3cefcc8ac49332d4c3",

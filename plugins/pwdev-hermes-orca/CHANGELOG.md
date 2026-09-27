@@ -1,0 +1,20 @@
+# Changelog
+
+## 0.1.0 — 2026-09-27
+
+Primeira versão.
+
+- Skill `hermes-orca`, que faz o Hermes coordenar workers supervisionados do Orca. Carrega o
+  contrato atual do Orca com `orca skills get orchestration`, sem copiá-lo.
+- Intake de issues do GitHub com DAG em ondas, um gate de aprovação do usuário e roteamento de
+  agente por label (`agent:<nome>`, regras, padrão).
+- Cada worker roda o `feat-loop` do pwdev-feat (≥ 3.2.0) em modo orquestrado. Os gates dele
+  chegam como `ask`: o Hermes responde o que está dentro do escopo aprovado e escala o resto ao
+  usuário.
+- Fechamento por issue: valida o `worker_done` contra o Dispatch, o PR com `Closes #N` e o review
+  `APPROVED`; comenta na issue, move a worktree para `in-review` e libera ou retém o worker.
+  Nunca faz merge.
+- `scripts/preflight.py`, só leitura: terminal do Orca, runtime, worktree, skill de orquestração,
+  `gh` e versão do pwdev-feat por agente.
+- Adaptador Hermes: registra a skill com `Path` e injeta o bootstrap no primeiro turno somente
+  dentro de um terminal do Orca.

@@ -1,0 +1,6 @@
+name: pwdev-hermes-orca
+version: 0.1.0
+description: Hermes Agent coordinating supervised Orca workers over GitHub issues (pwdev-feat feat-loop per issue)
+author: Paulo Soares
+provides_hooks:
+  - pre_llm_call
