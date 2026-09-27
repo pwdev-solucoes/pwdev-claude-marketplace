@@ -1,6 +1,6 @@
 ---
 name: power-skill-refactor
-description: Refatore skills com métricas, invariantes e três revisões.
+description: Use when an existing skill must be refactored to cut context and ambiguity without losing behavior, safety or fallbacks — 'refatorar a skill', 'reduzir esta SKILL.md', 'revisar skill com métricas' — with before/after metrics, preserved invariants and three review rounds.
 version: 0.1.0
 author: Paulo Soares, Hermes Agent
 license: Apache-2.0

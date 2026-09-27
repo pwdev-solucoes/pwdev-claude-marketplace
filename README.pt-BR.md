@@ -116,7 +116,7 @@ coisa que pode reiniciar um membro parado em `NEEDS_HUMAN`.
 
 **Subagentes:** mapper, roadmap, implementer, task-reviewer, verifier
 
-**Inclui:** 7 comandos · 5 subagentes · 15 skills · hooks
+**Inclui:** 7 comandos · 5 subagentes · 16 skills · hooks
 
 Veja a [documentação completa do plugin](./plugins/pwdev-power/README.pt-BR.md).
 

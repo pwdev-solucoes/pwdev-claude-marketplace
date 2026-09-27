@@ -45,6 +45,7 @@ Process skills set the approach; implementation skills carry it out. Process com
 | Starting isolated feature work | `power-worktree` |
 | Implementation complete and green | `power-finish` |
 | Running approved phases in parallel | `power-fleet` |
+| Refactoring an existing skill with metrics | `power-skill-refactor` |
 
 ## Red flags
 

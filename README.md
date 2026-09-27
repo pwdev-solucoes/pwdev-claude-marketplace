@@ -114,7 +114,7 @@ member parked at `NEEDS_HUMAN`.
 
 **Subagents:** mapper, roadmap, implementer, task-reviewer, verifier
 
-**Ships:** 7 commands · 5 subagents · 15 skills · hooks
+**Ships:** 7 commands · 5 subagents · 16 skills · hooks
 
 See the [full plugin documentation](./plugins/pwdev-power/README.md).
 

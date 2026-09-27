@@ -3,6 +3,13 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/). Versão do plugin nos
 três manifestos (`.claude-plugin`, `.codex-plugin`, `.hermes-plugin`).
 
+## [Não lançado]
+
+### Corrigido
+- `power-skill-refactor` passa a seguir o contrato das demais skills: descrição em forma de
+  gatilho ("Use when…"), `agents/openai.yaml` para o Codex, link em `.agents/skills` para o
+  Hermes, linha na tabela de roteamento da skill `power` e contagem de 16 skills nos READMEs.
+
 ## [0.2.0] — 2026-09-15
 
 ### Alterado

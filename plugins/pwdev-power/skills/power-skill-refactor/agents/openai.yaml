@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Power Skill Refactor"
+  short_description: "Refactor a skill with metrics and reviews"
+  default_prompt: "Use $power-skill-refactor to refactor this SKILL.md with before/after metrics and three review rounds."

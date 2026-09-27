@@ -58,6 +58,7 @@ SKILL_NAMES = {
     "power-review",
     "power-worktree",
     "power-finish",
+    "power-skill-refactor",
 }
 
 AGENT_NAMES = {"implementer", "task-reviewer", "verifier", "roadmap", "mapper"}
