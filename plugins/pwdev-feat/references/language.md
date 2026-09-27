@@ -1,11 +1,11 @@
 # Language Protocol (STEP 0)
 
-Every pwdev-feat command runs this as **STEP 0**, before any other step.
+Every pwdev-feat skill runs this as **STEP 0**, before any other step.
 
-## Resolution Order (silent — all commands except `init`)
+## Resolution Order (silent — all skills except `feat-init`)
 
-1. Read `.planning/config.json` → `lang` field. If valid (`pt-BR` or `en`) → use it silently and continue the command flow.
-2. If unset, detect the language of `$ARGUMENTS` (when the command receives arguments): Portuguese → suggest `pt-BR`; English → suggest `en`; ambiguous, empty, or no arguments → ask (step 3).
+1. Read `.planning/config.json` → `lang` field. If valid (`pt-BR` or `en`) → use it silently and continue the skill flow.
+2. If unset, detect the language of the request arguments (when the skill receives arguments): Portuguese → suggest `pt-BR`; English → suggest `en`; ambiguous, empty, or no arguments → ask (step 3).
 3. Ask the user:
 
    ```
@@ -21,9 +21,9 @@ Every pwdev-feat command runs this as **STEP 0**, before any other step.
    - `pt-BR`: "Idioma definido: **Portugues (PT-BR)**. Prosseguindo..."
    - `en`: "Language set: **English (EN)**. Proceeding..."
 
-## Special behavior: `/pwdev-feat:init`
+## Special behavior: `feat-init`
 
-`init` **always** asks the user to choose or confirm the language, even when
+`feat-init` **always** asks the user to choose or confirm the language, even when
 `config.json` already has one (shows the current value, asks confirm/change).
 
 ## Application Rules
@@ -34,9 +34,10 @@ Once `{{LANG}}` is resolved:
 - **Generated documents** (plans, reports) follow `{{LANG}}`.
 - **Technical terms** stay in English: API, CRUD, REST, endpoint, middleware, deploy, commit, merge, pipeline, etc.
 - **File names** stay in English: `plan.md`, `codebase.md`, `config.json`, etc.
-- **Code comments** follow the project's existing convention (check CLAUDE.md or existing code).
+- **Template headings and keys** stay exactly as in `templates/` (only prose is translated) — scripts parse them.
+- **Code comments** follow the project's existing convention (see the project instructions file or existing code).
 - **Structured data keys** stay in English.
-- **Subagent spawns**: always pass the resolved language in the spawn prompt (`LANGUAGE: {{LANG}}`).
+- **Subagent dispatch**: always pass the resolved language in the dispatch prompt (`LANGUAGE: {{LANG}}`).
 
 ## Mid-conversation override
 

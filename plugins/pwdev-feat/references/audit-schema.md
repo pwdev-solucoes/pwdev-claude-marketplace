@@ -2,12 +2,17 @@
 
 Database: `.planning/pwdev-audit.db` — opt-in (`"audit": true` in `.planning/config.json`), never versioned (gitignored).
 
-**How data gets here (v2.0):** mechanical events are recorded automatically by
-the plugin's hooks (`hooks/hooks.json` → `scripts/audit-hook.sh`): session
-start/stop, executor started/completed with real `duration_ms`, and
-`.planning/` artifact writes. `scripts/audit-log.sh` records semantic entries
-(`event` at command milestones, `config` for configuration changes). Agents do
-NOT run inline INSERTs.
+**How data gets here (v3.0):**
+
+- **Claude Code** — mechanical events are recorded automatically by the plugin's hooks
+  (`hooks/hooks.json` → `scripts/audit-hook.sh`): session start/stop, executor/advisor
+  started/completed with real `duration_ms`, and `.planning/` artifact writes.
+- **All runtimes** — the skills call `scripts/audit-log.sh` at milestones (`event`), after each
+  dispatch (`spawn`, with the model or `inherited`/`inline`) and for configuration changes
+  (`config`). On Codex, Hermes and OpenCode these semantic rows are the whole trail — there are
+  no hooks, so no `duration_ms` and no automatic artifact rows.
+- `scripts/audit.py init` creates the schema (idempotent); every other `audit.py` command opens
+  the database read-only. Agents never run inline INSERTs.
 
 **Shared database.** `.planning/pwdev-audit.db` is shared by all PWDEV plugins
 in the project. Rows are distinguished by the `plugin` column (`pwdev-feat` vs
@@ -53,8 +58,8 @@ CREATE INDEX IF NOT EXISTS idx_events_command ON events(command);
 
 Note on `model_resolved`: the hook payload does NOT expose the subagent's
 model, so the `model` column is populated semantically — `/pwdev-feat:exec`
-calls `audit-log.sh spawn exec "" <agent> <model>` right after each Task
-spawn (rule 3 of `references/spawn-contracts.md`). Mechanical
+calls `audit-log.sh spawn exec "" <agent> <model>` right after each dispatch
+(rule 3 of `references/spawn-contracts.md`). Mechanical
 `started`/`completed` rows from the hooks keep `model` NULL.
 
 ## Rules
