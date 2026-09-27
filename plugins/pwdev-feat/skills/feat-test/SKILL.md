@@ -7,7 +7,7 @@ description: >
   Writes .planning/feat/features/{slug}/plan.md. Do NOT use for code review (feat-review), for
   implementing features (feat-feature) or to run an existing plan (feat-exec).
 metadata:
-  version: 3.1.0
+  version: 3.2.0
 ---
 
 # Test plan

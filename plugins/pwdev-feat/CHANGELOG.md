@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.2.0 — 2026-09-27
+
+- **`feat-loop` (`/pwdev-feat:loop`, `$feat-loop`, `/feat-loop`).** Delivers one GitHub issue end
+  to end by chaining the existing skills: intake with `gh issue view` (issue text is untrusted
+  data), plan (`feat-feature`, `feat-backend`, `feat-frontend` or `feat-quick` by labels and size),
+  `feat-exec`, `feat-review` on `base..HEAD`, at most 2 fix cycles, then `git push` and
+  `gh pr create` with `Closes #N`. Never merges, never force-pushes; state in
+  `.planning/feat/features/{slug}/loop.md`.
+- **Orchestrated mode** (`references/orchestrated-mode.md`). Under an Orca worker preamble every
+  gate becomes the preamble's `ask` to the coordinator (`[feat-loop #N][gate:<kind>]`), with
+  checkpoints, `consumer_fenced` handling and exactly one `worker_done`. Used by
+  `pwdev-hermes-orca`.
+- `references/safety.md`: invoking `feat-loop` is the request for the push and the pull request
+  only.
+
 ## 3.1.0 — 2026-09-27
 
 Fixes from the end-to-end smoke run on Claude Code, Codex, Hermes and OpenCode.

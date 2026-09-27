@@ -1,6 +1,6 @@
 {
   "name": "pwdev-feat",
-  "version": "3.1.0+codex.20260927150000",
+  "version": "3.2.0+codex.20260927180000",
   "description": "Fast feature plans and execution: PWDEVIA 7-question action plans with traceable acceptance criteria, an executor with IMPLEMENT/REPORT modes and resume, an advisor for hard decisions, evidence-based codebase mapping, reviews with stable findings, and E2E scenarios exportable to Playwright.",
   "author": {
     "name": "Paulo Soares",

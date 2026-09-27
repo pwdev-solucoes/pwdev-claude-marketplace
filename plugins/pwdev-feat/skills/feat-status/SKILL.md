@@ -6,7 +6,7 @@ description: >
   resumable plans plus codebase-context health. Read-only. Do NOT use to execute (feat-exec) or
   query the audit trail (feat-audit).
 metadata:
-  version: 3.1.0
+  version: 3.2.0
 ---
 
 # Feature status (read-only)

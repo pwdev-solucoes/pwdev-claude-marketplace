@@ -7,7 +7,7 @@ description: >
   Claude Code, Codex, Hermes and OpenCode. Do NOT use to analyze the codebase in depth
   (feat-map) or to initialize the workspace (feat-init).
 metadata:
-  version: 3.1.0
+  version: 3.2.0
 ---
 
 # Generate the project instructions file

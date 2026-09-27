@@ -1,4 +1,4 @@
-"""pwdev-feat on Hermes: twelve skills registered as Path objects and a short first-turn bootstrap."""
+"""pwdev-feat on Hermes: thirteen skills registered as Path objects and a short first-turn bootstrap."""
 from __future__ import annotations
 
 import importlib.util
@@ -43,11 +43,11 @@ class HermesPluginTest(unittest.TestCase):
         load_plugin().register(ctx)
         self.assertEqual(set(ctx.hooks), {"pre_llm_call"})
 
-    def test_registers_twelve_skills_with_native_paths(self):
+    def test_registers_thirteen_skills_with_native_paths(self):
         ctx = FakeContext()
         load_plugin().register(ctx)
         expected = sorted(p.name for p in (PLUGIN / "skills").iterdir() if (p / "SKILL.md").is_file())
-        self.assertEqual(len(expected), 12)
+        self.assertEqual(len(expected), 13)
         self.assertEqual([name for name, _ in ctx.skills], expected)
         for name, path in ctx.skills:
             self.assertEqual(path.resolve(), (PLUGIN / "skills" / name / "SKILL.md").resolve())
@@ -69,7 +69,7 @@ class HermesPluginTest(unittest.TestCase):
             shutil.copy(PLUGIN / ".hermes-plugin/__init__.py", flat / "__init__.py")
             ctx = FakeContext()
             load_plugin(flat / "__init__.py").register(ctx)
-            self.assertEqual(len(ctx.skills), 12)
+            self.assertEqual(len(ctx.skills), 13)
 
     def test_missing_skills_raise_before_registration(self):
         with tempfile.TemporaryDirectory() as tmp:

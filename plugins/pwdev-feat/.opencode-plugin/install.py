@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Expose pwdev-feat to OpenCode: link the 12 feat-* skills and generate one command per skill.
+"""Expose pwdev-feat to OpenCode: link the 13 feat-* skills and generate one command per skill.
 
 OpenCode has no plugin mechanism for Agent Skills. It discovers ``<name>/SKILL.md`` folders in
 ``.opencode/skills/`` (project) and ``~/.config/opencode/skills/`` (global), and custom commands in

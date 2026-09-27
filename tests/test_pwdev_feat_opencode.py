@@ -1,4 +1,4 @@
-"""pwdev-feat on OpenCode: the installer links the twelve feat-* skills and writes one command each."""
+"""pwdev-feat on OpenCode: the installer links the thirteen feat-* skills and writes one command each."""
 from __future__ import annotations
 
 import importlib.util
@@ -44,7 +44,7 @@ class OpenCodeInstallerTest(unittest.TestCase):
         self.assertEqual(self.install(), 0)
         dest = self.project / ".opencode"
         skills = sorted(p.name for p in (dest / "skills").iterdir())
-        self.assertEqual(len(skills), 12)
+        self.assertEqual(len(skills), 13)
         for name in skills:
             self.assertTrue((dest / "skills" / name).is_symlink())
             self.assertEqual((dest / "skills" / name).resolve(), (PLUGIN / "skills" / name).resolve())

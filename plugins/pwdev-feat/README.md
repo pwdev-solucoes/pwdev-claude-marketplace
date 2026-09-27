@@ -1,4 +1,4 @@
-# PWDEV-FEAT v3.1.0
+# PWDEV-FEAT v3.2.0
 
 *Read this in [Português Brasileiro](./README.pt-BR.md)*
 
@@ -17,7 +17,7 @@ describe, plan, execute.
 
 ## What's new in 3.0
 
-- **Four runtimes, one set of skills.** The workflow lives in 12 portable skills
+- **Four runtimes, one set of skills.** The workflow lives in 13 portable skills
   (`skills/feat-*`). Claude Code keeps every `/pwdev-feat:*` command as a thin wrapper; Codex,
   Hermes and OpenCode load the same skills natively. Subagents run on each runtime's own
   mechanism, and **inline** when a runtime has none.
@@ -71,6 +71,7 @@ executor runs inline. Details per runtime: [`references/runtime.md`](./reference
 /pwdev-feat:exec user-crud            # or: latest, --resume
 /pwdev-feat:review user-crud          # base_commit..HEAD of that feature
 /pwdev-feat:quick "fix the date format in the invoice list"
+/pwdev-feat:loop "#42"                # issue → plan → exec → review → PR
 ```
 
 On Codex use `$feat-init`, `$feat-map`, `$feat-setup`, `$feat-feature`, `$feat-exec`… — same
@@ -92,6 +93,7 @@ names as the skills.
 | `/pwdev-feat:review` | `feat-review` | Review plan for an explicit range (REPORT) |
 | `/pwdev-feat:exec` | `feat-exec` | Execute a plan: executor, advisor, retry, resume |
 | `/pwdev-feat:quick` | `feat-quick` | ≤5 files, mini-plan, no plan file |
+| `/pwdev-feat:loop` | `feat-loop` | GitHub issue → plan → exec → review → ≤2 fix cycles → PR (never merges) |
 | `/pwdev-feat:status` | `feat-status` | Pending / done / caveats / failed / resumable, map freshness |
 | `/pwdev-feat:audit` | `feat-audit` | Audit summary, events, stats, export, read-only query |
 

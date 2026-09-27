@@ -16,7 +16,7 @@ Claude commands map 1:1 to skills (`<skill>` below is the name used by Codex, He
 OpenCode, e.g. `$feat-exec`, `/feat-exec`): `init → feat-init`, `map-codebase → feat-map`, `setup → feat-setup`,
 `feat → feat-feature`, `backend → feat-backend`, `frontend → feat-frontend`, `test → feat-test`,
 `review → feat-review`, `exec → feat-exec`, `quick → feat-quick`, `status → feat-status`,
-`audit → feat-audit`.
+`audit → feat-audit`, `loop → feat-loop`.
 
 ## Identify yourself once
 
@@ -60,6 +60,10 @@ A gate is a point where you stop, present, and wait for the human's answer. Ask 
 (or with the runtime's question tool, if it has one). Never infer approval from silence, from an
 artifact existing, or from a previous run. Subagents never talk to the human — only the main
 session does.
+
+**Orchestrated mode.** When an Orca worker preamble is present (`feat-loop` dispatched by a
+coordinator), every gate goes to the coordinator through the preamble's `ask` command instead —
+[orchestrated-mode.md](orchestrated-mode.md).
 
 ## Hermes constraint on skill bodies
 

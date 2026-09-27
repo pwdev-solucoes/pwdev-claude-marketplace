@@ -22,6 +22,8 @@ scenarios are environment-variable placeholders.
 - Commit only in `feat-exec` IMPLEMENT mode or `feat-quick`, only the files the plan (or approved
   mini-plan) lists. Never commit in REPORT mode.
 - Never `git push`, open a pull request, or merge unless the human asked in this session.
+  Invoking `feat-loop` is that request for the push and the pull request only (after an
+  `APPROVED` review, never `--force`, never to the default branch); it never authorizes a merge.
 
 ## Destructive operations
 

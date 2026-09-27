@@ -1,4 +1,4 @@
-# PWDEV-FEAT v3.1.0
+# PWDEV-FEAT v3.2.0
 
 *Leia em [English](./README.md)*
 
@@ -18,7 +18,7 @@ cerimônia pesada: descrever, planejar, executar.
 ## Novidades da 3.0
 
 - **Quatro runtimes, um único conjunto de skills.**
-  - O workflow vive em 12 skills portáveis (`skills/feat-*`).
+  - O workflow vive em 13 skills portáveis (`skills/feat-*`).
   - O Claude Code mantém todos os comandos `/pwdev-feat:*` como wrappers finos; Codex, Hermes e OpenCode carregam as mesmas skills nativamente.
   - Os subagentes usam o mecanismo de cada runtime e rodam **inline** quando o runtime não tem subagente.
 - **Mapa do código com evidência.** O `feat-map` faz uma varredura determinística e somente leitura com `scripts/feat_map.py`:
@@ -71,6 +71,7 @@ o executor roda inline. Detalhes por runtime em [`references/runtime.md`](./refe
 /pwdev-feat:exec crud-de-usuarios     # ou: latest, --resume
 /pwdev-feat:review crud-de-usuarios   # base_commit..HEAD da feature
 /pwdev-feat:quick "corrigir o formato de data na lista de faturas"
+/pwdev-feat:loop "#42"                # issue → plano → exec → review → PR
 ```
 
 No Codex, use `$feat-init`, `$feat-map`, `$feat-setup`, `$feat-feature`, `$feat-exec`, com os
@@ -92,6 +93,7 @@ mesmos nomes das skills.
 | `/pwdev-feat:review` | `feat-review` | Plano de review de um intervalo explícito (REPORT) |
 | `/pwdev-feat:exec` | `feat-exec` | Executa um plano: executor, advisor, nova tentativa, retomada |
 | `/pwdev-feat:quick` | `feat-quick` | ≤5 arquivos, mini-plano, sem arquivo de plano |
+| `/pwdev-feat:loop` | `feat-loop` | Issue do GitHub → plano → exec → review → ≤2 ciclos de correção → PR (nunca faz merge) |
 | `/pwdev-feat:status` | `feat-status` | Pendentes, concluídos, com ressalvas, falhos, retomáveis; frescor do mapa |
 | `/pwdev-feat:audit` | `feat-audit` | Resumo, eventos, estatísticas, exportação e consulta somente leitura |
 

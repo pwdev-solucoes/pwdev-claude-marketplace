@@ -1,4 +1,4 @@
-"""Hermes adapter for pwdev-feat: registers the twelve feat-* skills and a first-turn bootstrap."""
+"""Hermes adapter for pwdev-feat: registers the thirteen feat-* skills and a first-turn bootstrap."""
 from pathlib import Path
 
 
@@ -25,7 +25,7 @@ def _bootstrap(root: Path) -> str:
         "pwdev-feat is available: fast feature plans and execution. Route by intent with "
         "skill_view(\"pwdev-feat:feat-<name>\"): feat-init (setup), feat-map (codebase context), "
         "feat-setup (project instructions file), feat-feature / feat-backend / feat-frontend / "
-        "feat-test / feat-review (plans), feat-exec (execute a plan), feat-quick (small change "
+        "feat-test / feat-review (plans), feat-exec (execute a plan), feat-loop (GitHub issue → plan, exec, review, PR), feat-quick (small change "
         "without a plan), feat-status, feat-audit. Load a skill only when the request needs it; "
         "do not create plans, dispatch work or change files merely because this bootstrap loaded. "
         "Tools: read_file, write_file, patch, terminal, search_files, delegate_task (run inline "
