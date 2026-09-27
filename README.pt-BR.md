@@ -56,7 +56,7 @@ Comandos: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 | [**pwdev-power**](./plugins/pwdev-power/) | Desenvolvimento orientado a especificação com disciplina, para Claude Code, Codex **e** Hermes Agent — portão de brainstorm, planos com restrições literais, execução dirigida por subagentes com registro e ciclo de correção limitado, verificação adversarial, mapa do codebase, frotas isoladas no cmux como painel visual ou sozinhas | 0.2.0 | Apache-2.0 |
 | [**pwdev-code**](./plugins/pwdev-code/) | Desenvolvimento orientado a especificação — 8 subagentes reais (incl. advisor), roteamento por task, grafo de memória, waves paralelas opt-in, delegação a CLIs externas (Codex/OpenCode/Kimi/Gemini/Kiro), 23 comandos | 2.4.0 | Apache-2.0 |
 | [**pwdev-uiux**](./plugins/pwdev-uiux/) | Engenharia UI/UX — 6 subagentes reais, fluxo de 5 fases com gates, Figma, WCAG 2.1 AA | 2.0.1 | Apache-2.0 |
-| [**pwdev-feat**](./plugins/pwdev-feat/) | Desenvolvimento simplificado de features — planos PWDEVIA inline + subagentes executor e advisor | 2.1.1 | Apache-2.0 |
+| [**pwdev-feat**](./plugins/pwdev-feat/) | Desenvolvimento rápido de features para Claude Code, Codex, Hermes e OpenCode — mapa do código com evidência, planos PWDEVIA com critérios rastreáveis, executor com retomada, reviews com regra citada, cenários E2E para Playwright | 3.0.0 | Apache-2.0 |
 | [**pwdev-prd**](./plugins/pwdev-prd/) | Criação de PRD guiada por entrevista — 12 etapas inline, Markdown + JSON canônico | 2.0.1 | Apache-2.0 |
 | [**pwdev-qa**](./plugins/pwdev-qa/) | Garantia de qualidade portátil para Claude Code, Codex e Hermes Agent — 10 fluxos, 17 guias especialistas, recomendação de ferramentas, evidência auditável, relatórios offline em HTML e PDF | 0.1.0 | Apache-2.0 |
 | [**pwdev-skills**](./plugins/pwdev-skills/) | Engenharia de skills para Claude Code, Codex e Hermes Agent — revisão e refatoração de skills, perfis lean/guided por medição, descoberta de runtimes e modelos, benchmark A/B headless objetivo em Claude Code, Codex, Hermes e OpenCode | 0.1.0 | Apache-2.0 |
@@ -198,17 +198,17 @@ Veja a [documentação completa do plugin](./plugins/pwdev-uiux/README.md).
 
 ### pwdev-feat
 
-Desenvolvimento de features assistido por IA simplificado, utilizando a **metodologia PWDEVIA com 7 perguntas**. Descreva o que você quer, obtenha um plano estruturado e execute.
+Desenvolvimento de features assistido por IA com a **metodologia PWDEVIA de 7 perguntas**, portável para **Claude Code, Codex, Hermes Agent e OpenCode**. Mapeie o código com evidência, obtenha um plano estruturado com critérios de aceite rastreáveis, execute e revise.
 
 ```
-Describe ─▶ Plan (PWDEVIA, inline) ─▶ Execute (subagente real, IMPLEMENT/REPORT)
+Mapear (evidência) ─▶ Planejar (PWDEVIA, inline, com lint) ─▶ Executar (subagente ou inline, IMPLEMENT/REPORT, retomada) ─▶ Revisar
 ```
 
-**Agentes:** PWDEVIA (planner inline) + executor e advisor (subagentes reais); lê a memória curada do pwdev-code quando presente
+**Agentes:** PWDEVIA (planner inline) + executor e advisor (subagentes em todo runtime que os oferece, inline nos demais); lê a memória curada do pwdev-code quando presente
 
-**Tipos de plano:** Feature, Backend, Frontend, Test, Review, Quick
+**Tipos de plano:** Feature, Backend, Frontend, Test, Review, Quick — UI verificada com `playwright-cli` e cenários E2E declarativos exportáveis para o Playwright Test
 
-**Inclui:** 12 comandos · 2 subagentes · hooks
+**Inclui:** 12 comandos · 2 subagentes · 12 skills · hooks
 
 Veja a [documentação completa do plugin](./plugins/pwdev-feat/README.md).
 

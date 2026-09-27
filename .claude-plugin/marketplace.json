@@ -54,9 +54,9 @@
       "name": "pwdev-feat",
       "displayName": "PWDEV Feat — Fast Feature Plans & Execution",
       "source": "./plugins/pwdev-feat",
-      "description": "Simplified feature development v2.1 — PWDEVIA 7-question plans inline + executor and advisor subagents, shared project memory (read-only), audit hooks, 12 commands",
+      "description": "Fast feature development v3.0 for Claude Code, Codex, Hermes and OpenCode — evidence-based codebase map, PWDEVIA 7-question plans with traceable acceptance criteria and a plan linter, executor (subagent or inline) with resume, advisor, rule-cited reviews, playwright-cli checks and E2E scenarios exportable to Playwright, 12 skills",
       "category": "workflow",
-      "tags": ["feature-planning", "agents", "hooks", "workflow"],
+      "tags": ["feature-planning", "agents", "workflow", "codex", "claude", "hermes", "opencode", "e2e", "playwright"],
       "strict": true
     },
     {

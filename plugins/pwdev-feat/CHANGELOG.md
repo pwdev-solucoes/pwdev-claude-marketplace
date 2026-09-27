@@ -1,0 +1,45 @@
+# Changelog
+
+## 3.0.0 — 2026-09-27
+
+### Portability
+- The workflow moved to 12 portable skills (`skills/feat-*`); the 12 Claude commands are now
+  thin wrappers with the same names.
+- New adapters: Codex (`.codex-plugin/plugin.json`, `skills/*/agents/openai.yaml`), Hermes
+  (`.hermes-plugin/`, first-turn bootstrap) and OpenCode (`.opencode-plugin/install.py`).
+- Executor and advisor contracts are runtime-neutral (`references/executor-contract.md`,
+  `references/advisor-contract.md`); dispatch per runtime in `references/runtime.md`, with an
+  inline fallback when no subagent mechanism exists.
+- Model profiles use tiers (`top`/`mid`); Codex, Hermes and OpenCode inherit the host model.
+
+### Codebase analysis
+- `scripts/feat_map.py`: deterministic, read-only evidence scan with secret-path exclusion,
+  declared commands (never executed) and staleness against the last published map.
+- `feat-map` writes `context/{architecture,conventions,testing,concerns}.md` with evidence and
+  confidence per claim; `codebase.md` stays as the index.
+
+### Plans and execution
+- Plan template v3: frontmatter, `AC-nnn` criteria with verification, steps with `files:` and
+  `covers:`, Risks and Verification sections. `scripts/plan_lint.py` validates it.
+- `scripts/feat_state.py` replaces the bash in `exec`/`status`: stable status marker, mode rule,
+  precheck (base commit, dirty planned files) and `--resume` from `progress.md`.
+- `plan.done.md` records AC evidence (command, exit code), planned vs. changed files.
+
+### Test and review
+- `feat-review`: explicit `BASE..TARGET` scope with `scripts/review_package.sh`, `CR-nnn`
+  findings with severity, rule citation and evidence, verdict and fix scope.
+- `feat-test` / UI plans: coverage matrix, `playwright-cli` interactive checks, declarative E2E
+  scenarios (`schemas/e2e-scenario.schema.json`) in the project's tests directory, exported to
+  Playwright Test by `scripts/e2e_scenarios.py`.
+
+### Other
+- `feat-setup` writes `AGENTS.md` (template renamed to `templates/AGENTS.template.md`) and a
+  `CLAUDE.md` importing it.
+- `scripts/audit.py` replaces the SQL embedded in the audit command; the single-SELECT rule is
+  enforced in code and the database is opened read-only. `audit.py init` creates the schema.
+
+### Migration from 2.x
+- Nothing to migrate in `.planning/feat/`: 2.x plans are linted with warnings only, their
+  status strings are still recognized, and `codebase.md` is still read.
+- Claude Code users: update the plugin and restart the session. Existing `CLAUDE.md` files are
+  never overwritten by `feat-setup` without confirmation.
