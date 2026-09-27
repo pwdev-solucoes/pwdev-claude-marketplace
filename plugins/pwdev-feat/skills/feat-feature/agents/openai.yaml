@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Feat Feature Plan"
+  short_description: "Plan a full feature with the 7 questions"
+  default_prompt: "Use $feat-feature to plan a full feature."

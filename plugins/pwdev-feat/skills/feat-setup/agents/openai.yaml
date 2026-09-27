@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Feat Setup"
+  short_description: "Generate the project instructions file"
+  default_prompt: "Use $feat-setup to generate the project instructions file."

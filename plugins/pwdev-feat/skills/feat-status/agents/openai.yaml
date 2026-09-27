@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Feat Status"
+  short_description: "Show plans and context health"
+  default_prompt: "Use $feat-status to show the status of pwdev-feat plans."

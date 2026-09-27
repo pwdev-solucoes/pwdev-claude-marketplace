@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Feat Backend Plan"
+  short_description: "Plan backend work: API, services, data"
+  default_prompt: "Use $feat-backend to plan backend work."

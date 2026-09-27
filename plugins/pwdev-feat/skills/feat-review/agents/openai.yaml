@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Feat Review"
+  short_description: "Review a commit range with rule-cited findings"
+  default_prompt: "Use $feat-review to review the latest commits."
