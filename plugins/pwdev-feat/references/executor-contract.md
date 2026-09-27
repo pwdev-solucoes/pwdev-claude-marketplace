@@ -27,9 +27,16 @@ Scripts are run as `python3 "<PLUGIN ROOT>/scripts/<name>.py"`.
 
 - **MODE: IMPLEMENT** — code, verify, commit, report.
 - **MODE: REPORT** — review plans and report-only plans: you may NOT modify or commit ANY project
-  file. Write findings to `.planning/feat/features/{slug}/report.md` rendered from the plan's
-  report template (`templates/review-report.md` for review plans, `templates/test-report.md`
-  for test audits) plus a short `plan.done.md`. `COMMIT: none`.
+  file. Write findings to the file §4 names — `.planning/feat/features/{slug}/review.md`
+  (review plans, from `templates/review-report.md`) or `.planning/feat/features/{slug}/test-audit.md`
+  (test audits, from `templates/test-report.md`) — plus a short `plan.done.md`. `COMMIT: none`.
+
+**When the runtime blocks a write.** Some runtimes refuse subagent writes to report-like file
+names (Claude Code blocks names such as `report.md`, `findings.md`, `analysis.md`). If a write
+of an artifact this contract requires is refused, do not rename it on your own and do not drop
+it: after the status block, append the full content between `--- BEGIN FILE <path> ---` and
+`--- END FILE ---` (one pair per refused file) and set `NOTE: write blocked — content returned
+inline`. The orchestrator persists it verbatim.
 
 ## Flow
 
@@ -65,17 +72,28 @@ Every `AC-*` needs evidence: the command, its exit code, and a one-line excerpt 
 output. Never infer a pass from a command existing.
 
 **UI criteria** use two complementary tracks (see [testing.md](testing.md)):
-- Interactive: `playwright-cli` in a task-owned session `feat-{slug}` against the running app —
-  fresh snapshot before acting on refs, screenshot of the final state saved under
-  `.planning/feat/features/{slug}/evidence/`, close only your own session. Probe with
-  `command -v playwright-cli`; if absent, the criterion is `NOT_RUN` with the reason — never
-  install, never invent a result.
-- Declarative: E2E scenarios in the plan's Output Format are validated with
-  `python3 "<PLUGIN ROOT>/scripts/e2e_scenarios.py" validate <dir> --plan <plan.md>` and exported
-  with `... export --to playwright <dir> --out <generated-dir>`. Run the exported specs only if
-  the plan's Verification lists that command.
+- Interactive: `playwright-cli` in a task-owned session `feat-{slug}` against the running app.
+  Run **every** `playwright-cli` command from the evidence directory
+  `.planning/feat/features/{slug}/evidence/` (for example `(cd <evidence-dir> && playwright-cli
+  -s=feat-{slug} ...)`), so its working files (`.playwright-cli/`, snapshots, console logs) land
+  there and never in the project. Fresh snapshot before acting on refs. **Each UI `AC-*` needs a
+  screenshot** — `screenshot --filename=<AC-id>-<variant>.png` — and its evidence cell names that
+  file. Close only your own session. Probe with `command -v playwright-cli`; if absent, the
+  criterion is `NOT_RUN` with the reason — never install, never invent a result.
+- Declarative: run the plan's Verification commands
+  `python3 "<PLUGIN ROOT>/scripts/e2e_scenarios.py" validate ...` and `... export --to playwright
+  ...`; the exported `*.spec.ts` files are listed in §4 and are committed with the scenarios. Run
+  the exported specs only if the plan's Verification lists that command.
+
+Stop any server you started for verification before committing.
 
 ### 5. Commit (IMPLEMENT only)
+Before committing, run `git status --porcelain --untracked-files=all`. Every change must be a §4
+file or live under `.planning/`. Anything else you created as a side effect (tool working
+directories such as `.playwright-cli/`, caches, server logs) → delete it; anything else you
+modified (for example `.gitignore`) → restore it with `git checkout -- <file>` unless §4 lists it.
+A change you did not make and cannot explain → STOP and report it; never commit or discard it.
+
 Only when lint and tests pass:
 ```bash
 git add <only the files listed in §4 Output Format>
@@ -85,6 +103,10 @@ If a file you had to touch is not in §4 → STOP (scope). If the runtime sandbo
 commit, leave the files staged and report it.
 
 ### 6. Execution report — `plan.done.md`
+(On runtimes without hooks — Codex, Hermes, OpenCode — also record the artifacts:
+`sh "<PLUGIN ROOT>/scripts/audit-log.sh" artifact <path> execution-report exec` for `plan.done.md`,
+and `... artifact <path> report exec` for the REPORT-mode findings file.)
+
 Render `templates/plan.done.md`. The first line is the machine marker
 `<!-- feat-status: COMPLETE|CAVEATS|FAILED -->` and the Status line keeps the literal strings
 `✅ COMPLETE`, `⚠️ WITH CAVEATS` or `❌ FAILED`. Fill the AC evidence table, the planned vs.
@@ -128,6 +150,7 @@ follow the advice or reply `STOPPED:<blocker>`.
 6. Fix pre-existing bugs (document them only).
 7. Continue after 2 consecutive verification failures (STOPPED, or NEEDS_ADVICE with a question).
 8. Read secrets — see [safety.md](safety.md).
+9. Leave side-effect files in the project or modify files outside §4 (including `.gitignore`).
 
 ## Stop conditions
 

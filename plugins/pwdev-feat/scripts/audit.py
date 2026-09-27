@@ -2,7 +2,7 @@
 """pwdev-feat audit trail reader (read-only) and report exporter.
 
 Usage (run from the project root):
-  audit.py init                     create the shared schema (idempotent) and .gitignore entries
+  audit.py init                     create the shared schema (idempotent) and .planning/.gitignore
   audit.py summary | events [--plugin P] [--limit N] | decisions | artifacts | stats
   audit.py export [--pdf]           write .planning/audit-report.md (and .pdf via pandoc)
   audit.py query "<single SELECT>"  custom read-only query
@@ -81,10 +81,25 @@ CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp);
 CREATE INDEX IF NOT EXISTS idx_events_plugin ON events(plugin);
 CREATE INDEX IF NOT EXISTS idx_events_command ON events(command);
 """
+# Kept inside .planning/ so enabling the audit never leaves an uncommitted change in the
+# project's own .gitignore.
+PLANNING_GITIGNORE = Path(".planning/.gitignore")
 GITIGNORE_LINES = [
-    ".planning/pwdev-audit.db", ".planning/pwdev-audit.db-journal", ".planning/pwdev-audit.db-wal",
-    ".planning/.audit-tmp/", ".planning/audit-report.md", ".planning/audit-report.pdf",
+    "pwdev-audit.db", "pwdev-audit.db-journal", "pwdev-audit.db-wal",
+    ".audit-tmp/", "audit-report.md", "audit-report.pdf",
 ]
+
+
+def ensure_gitignore() -> int:
+    PLANNING_GITIGNORE.parent.mkdir(parents=True, exist_ok=True)
+    current = PLANNING_GITIGNORE.read_text(encoding="utf-8").splitlines() if PLANNING_GITIGNORE.exists() else []
+    missing = [line for line in GITIGNORE_LINES if line not in current]
+    if missing:
+        with PLANNING_GITIGNORE.open("a", encoding="utf-8") as handle:
+            if not current:
+                handle.write("# PWDEV audit trail (not versioned)\n")
+            handle.write("\n".join(missing) + "\n")
+    return len(missing)
 
 
 def init_db() -> str:
@@ -92,13 +107,8 @@ def init_db() -> str:
     with sqlite3.connect(DB) as conn:
         conn.executescript(SCHEMA_SQL)
         conn.execute("INSERT INTO events (plugin, command, action, target) VALUES ('pwdev-feat', 'init', 'completed', '.planning/feat/')")
-    gitignore = Path(".gitignore")
-    current = gitignore.read_text(encoding="utf-8").splitlines() if gitignore.exists() else []
-    missing = [line for line in GITIGNORE_LINES if line not in current]
-    if missing:
-        with gitignore.open("a", encoding="utf-8") as handle:
-            handle.write("\n# PWDEV audit trail (not versioned)\n" + "\n".join(missing) + "\n")
-    return f"AUDIT_READY: {DB} (gitignore +{len(missing)} lines)\n"
+    added = ensure_gitignore()
+    return f"AUDIT_READY: {DB} ({PLANNING_GITIGNORE} +{added} lines)\n"
 
 
 def audit_enabled() -> bool:
@@ -188,11 +198,7 @@ def export(conn, pdf: bool) -> str:
                          else f"PDF failed (pandoc exit {proc.returncode}): {proc.stderr.strip()[:200]}")
         else:
             lines.append("PDF skipped: pandoc not found (the Markdown report is complete)")
-    gitignore = Path(".gitignore")
-    current = gitignore.read_text(encoding="utf-8") if gitignore.exists() else ""
-    if "audit-report" not in current:
-        with gitignore.open("a", encoding="utf-8") as handle:
-            handle.write("\n# PWDEV audit reports (not versioned)\n.planning/audit-report.md\n.planning/audit-report.pdf\n")
+    ensure_gitignore()
     return "\n".join(lines) + "\n"
 
 

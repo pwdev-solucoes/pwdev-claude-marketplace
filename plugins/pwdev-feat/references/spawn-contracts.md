@@ -47,6 +47,8 @@ STATUS: COMPLETE | CAVEATS | FAILED | NEEDS_ADVICE | STOPPED:<condition>
 REPORT: <path to plan.done.md>
 COMMIT: <hash or none>
 NOTE: <1 line>
+If the runtime refused a required write, append its full content after the status block
+between `--- BEGIN FILE <path> ---` and `--- END FILE ---`.
 ```
 
 Context documents by plan type: `feature` → all; `backend` → architecture, conventions,

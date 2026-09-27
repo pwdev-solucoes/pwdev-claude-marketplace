@@ -8,6 +8,7 @@
 #   audit-log.sh spawn <command> <phase> <agent> <model> [detail]
 #   audit-log.sh decision <phase> <decision> [rationale] [alternatives]
 #   audit-log.sh config <field> <old_value> <new_value> [changed_by]
+#   audit-log.sh artifact <path> <type> [phase]   (runtimes without hooks: Codex, Hermes, OpenCode)
 #
 # Examples:
 #   audit-log.sh event init "" completed .planning/feat/ ""
@@ -42,6 +43,11 @@ case "$MODE" in
     RATIONALE=$(esc "${4:-}"); ALTERNATIVES=$(esc "${5:-}")
     sqlite3 "$DB" "INSERT INTO decisions (phase, decision, rationale, alternatives) \
       VALUES ('$PHASE', '$DECISION', '$RATIONALE', '$ALTERNATIVES');" 2>/dev/null
+    ;;
+  artifact)
+    APATH=$(esc "$2"); ATYPE=$(esc "${3:-planning}"); APHASE=$(esc "${4:-}")
+    sqlite3 "$DB" "INSERT INTO artifacts (path, type, phase, status) \
+      VALUES ('$APATH', '$ATYPE', '$APHASE', 'active');" 2>/dev/null
     ;;
   config)
     FIELD=$(esc "$2"); OLD=$(esc "${3:-}"); NEW=$(esc "$4"); BY=$(esc "${5:-init}")

@@ -8,7 +8,7 @@ description: >
   (feat-feature, feat-backend, feat-frontend, feat-test, feat-review) or for tasks without a
   plan (feat-quick).
 metadata:
-  version: 3.0.0
+  version: 3.1.0
 ---
 
 # Execute plan
@@ -43,13 +43,18 @@ Arguments: `<slug>` or `latest` (default), optional `--resume`.
    Base commit: {sha}
    Proceed? (y/n)
    ```
-7. **Dispatch the executor** with the executor prompt (full plan, MODE, SLUG, BASE COMMIT,
+7. **Record** (audit on): `sh "<plugin-root>/scripts/audit-log.sh" event exec "" started <plan> "<MODE>"`.
+   **Dispatch the executor** with the executor prompt (full plan, MODE, SLUG, BASE COMMIT,
    PLUGIN ROOT, LANGUAGE, context documents for the plan type, RELEVANT MEMORY, and
    `RESUME FROM STEP n` when resuming). Model per `references/model-profiles.md` (key
    `feat-executor`). Record: `sh "<plugin-root>/scripts/audit-log.sh" spawn exec ""
    pwdev-feat:executor <model|inherited|inline>`. No subagent mechanism → follow
    `references/executor-contract.md` inline yourself.
 8. **React to the ≤10-line status** (never open the reports unless the status requires it):
+   - Blocked-write fallback: if the reply carries `--- BEGIN FILE <path> ---` blocks, write each
+     content verbatim to its path (only paths under `.planning/feat/features/{slug}/`), and make
+     sure `plan.done.md` exists, rendered from `templates/plan.done.md` with its
+     `<!-- feat-status: ... -->` marker; note in the Deviations that the orchestrator persisted it.
    - `COMPLETE` / `CAVEATS` → step 9.
    - `STOPPED:<condition>` → present it and wait for the human.
    - `NEEDS_ADVICE` → at most ONE consultation per plan: dispatch the advisor with the advisor
@@ -58,10 +63,14 @@ Arguments: `<slug>` or `latest` (default), optional `--resume`.
      executor with the ADVICE block. `NEEDS_ADVICE` again → present to the human and stop.
    - `FAILED` → re-dispatch ONCE with the retry block; fails again → stop and report both notes.
    Advice and retry counters are independent: at most 1 advice + 1 retry per plan.
-9. **Present**:
+9. **Record** the outcome: `sh "<plugin-root>/scripts/audit-log.sh" event exec "" <completed|failed>
+   <plan> "<STATUS>"` (`completed` for COMPLETE/CAVEATS, `failed` otherwise). **Check the tree**:
+   `git status --porcelain --untracked-files=all` — report any change outside `.planning/` left by
+   the run instead of hiding it.
+   **Present**:
    ```
    ✅ Plan {slug} executed — {COMPLETE | CAVEATS | FAILED} ({IMPLEMENT | REPORT})
-   Commit: {hash | none — report at .planning/feat/features/{slug}/report.md}
+   Commit: {hash | none — findings at .planning/feat/features/{slug}/{review.md | test-audit.md}}
    Report: .planning/feat/features/{slug}/plan.done.md
    👉 Next: feat-review {base_commit}..HEAD   (IMPLEMENT only)
    ```
@@ -71,6 +80,7 @@ Arguments: `<slug>` or `latest` (default), optional `--resume`.
 - Never implement code yourself while a subagent mechanism is available — dispatch the executor.
 - Never execute without the human's confirmation at step 6.
 - Never commit in REPORT mode.
-- Never paste `plan.done.md`/`report.md` into your context — status lines only.
+- Never paste `plan.done.md` or the findings file into your context — status lines only (the
+  blocked-write fallback is written straight to disk, not summarized).
 
 Language: resolve `lang` per `references/language.md` before any human-facing output. Safety: never read or expose `.env*` (except `.env.example`/`.template`/`.sample`), keys, certificates or credentials — `references/safety.md`. Paths `references/`, `scripts/`, `templates/`, `schemas/` are relative to the plugin root (`references/runtime.md`).

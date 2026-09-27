@@ -39,6 +39,8 @@ run in REPORT mode: findings only, no commit.)
 | File | Action | Description |
 |------|--------|-------------|
 | `{path}` | create | {what} |
+| `{tests-dir}/e2e/scenarios/E2E-001-{name}.scenario.json` | create | E2E scenario (UI plans) |
+| `{tests-dir}/e2e/generated/E2E-001-{name}.spec.ts` | create | Playwright spec exported from the scenario (UI plans) |
 
 ## 5. Quality Criteria
 | ID | Criterion | Verification |
@@ -66,6 +68,8 @@ run in REPORT mode: findings only, no commit.)
 | Command | Purpose |
 |---------|---------|
 | `{command}` | {lint / unit / integration / e2e / build} |
+| `python3 "<plugin-root>/scripts/e2e_scenarios.py" validate {tests-dir}/e2e/scenarios --plan .planning/feat/features/{slug}/plan.md` | E2E scenarios valid (UI plans) |
+| `python3 "<plugin-root>/scripts/e2e_scenarios.py" export --to playwright {tests-dir}/e2e/scenarios --out {tests-dir}/e2e/generated` | Playwright specs exported (UI plans) |
 
 ## Done
 {single sentence defining "finished"}

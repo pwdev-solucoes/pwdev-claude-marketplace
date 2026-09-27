@@ -15,6 +15,11 @@
 | ID | Result | Command / check | Exit code | Evidence |
 |----|--------|-----------------|-----------|----------|
 | AC-001 | PASS | `{command}` | 0 | {one-line real output or evidence path} |
+| AC-004 | PASS | playwright-cli: {check} | 0 | evidence/AC-004-happy_path.png — {observed state} |
+
+## E2E
+| Scenario | Validate (exit) | Exported spec | Committed |
+|----------|-----------------|---------------|-----------|
 
 ## Planned vs. Changed Files
 | File | Planned | Changed |

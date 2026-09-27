@@ -158,6 +158,16 @@ def lint(text: str) -> dict:
         warnings.append(f"unfilled template placeholders: {leftovers[:8]}")
 
     e2e = [p for p, _ in outputs if p.endswith(".scenario.json")]
+    if e2e:
+        specs = {Path(p).name for p, _ in outputs if p.endswith(".spec.ts")}
+        for scenario in e2e:
+            spec = Path(scenario).name[: -len(".scenario.json")] + ".spec.ts"
+            if spec not in specs:
+                trace.append(f"E2E: '{scenario}' has no generated spec '{spec}' in Output Format")
+        verification_text = verification or ""
+        for sub in ("validate", "export"):
+            if not re.search(rf"e2e_scenarios\.py[\"'`]?\s+{sub}\b", verification_text):
+                trace.append(f"Verification: E2E scenarios need the 'e2e_scenarios.py {sub}' command")
     ui = re.search(r"^\*\*UI:\*\*\s*yes", text, re.M | re.I)
     if ui and plan_type in ("feature", "frontend", "test") and not e2e:
         warnings.append("UI: yes but no E2E scenario (*.scenario.json) in Output Format")

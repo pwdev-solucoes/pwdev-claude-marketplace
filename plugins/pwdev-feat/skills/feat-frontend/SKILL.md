@@ -7,7 +7,7 @@ description: >
   Do NOT use for API/database work (feat-backend), full features (feat-feature), writing code
   (feat-exec) or UI review (feat-review).
 metadata:
-  version: 3.0.0
+  version: 3.1.0
 ---
 
 # Frontend plan
@@ -23,7 +23,8 @@ Plan type **frontend** (`**UI:** yes`). You run in the MAIN session and intervie
    - Persona: frontend engineer on the project's real UI stack and component library.
    - §3: screens, states (loading, empty, error, success), API contracts consumed, validation
      rules, permissions.
-   - §4 includes the E2E scenario files (`<tests-dir>/e2e/scenarios/E2E-nnn-*.scenario.json`)
+   - §4 includes the E2E scenario files (`<tests-dir>/e2e/scenarios/E2E-nnn-*.scenario.json`) and their exported specs
+     (`<tests-dir>/e2e/generated/E2E-nnn-*.spec.ts`)
      covering happy path, validation error, forbidden access and empty state — or a
      justification in `not_applicable` (`references/testing.md`).
    - §5: component tests for logic, `playwright-cli` checks for each variant, accessibility

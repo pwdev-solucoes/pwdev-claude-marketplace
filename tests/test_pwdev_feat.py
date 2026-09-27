@@ -41,7 +41,7 @@ class ManifestTest(unittest.TestCase):
         )
 
     def test_versions_and_identity_agree_across_runtimes(self):
-        self.assertEqual(self.claude["version"], "3.0.0")
+        self.assertEqual(self.claude["version"], "3.1.0")
         self.assertRegex(self.codex["version"], r"^\d+\.\d+\.\d+(\+codex\.\d{14})?$")
         self.assertEqual(self.codex["version"].split("+")[0], self.claude["version"])
         self.assertEqual(self.hermes["version"].strip(), self.claude["version"])
@@ -130,6 +130,15 @@ class ContractsTest(unittest.TestCase):
             text = (PLUGIN / "agents" / f"{agent}.md").read_text(encoding="utf-8")
             self.assertIn(f"references/{contract}", text)
             self.assertTrue((PLUGIN / "references" / contract).is_file())
+
+    def test_report_mode_findings_avoid_names_subagents_cannot_write(self):
+        review = (PLUGIN / "skills/feat-review/SKILL.md").read_text(encoding="utf-8")
+        test = (PLUGIN / "skills/feat-test/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn(".planning/feat/features/{slug}/review.md", review)
+        self.assertIn(".planning/feat/features/{slug}/test-audit.md", test)
+        contract = (PLUGIN / "references/executor-contract.md").read_text(encoding="utf-8")
+        self.assertIn("--- BEGIN FILE <path> ---", contract)
+        self.assertIn("BEGIN FILE", (PLUGIN / "skills/feat-exec/SKILL.md").read_text(encoding="utf-8"))
 
     def test_runtime_reference_covers_four_runtimes_and_inline_fallback(self):
         text = (PLUGIN / "references/runtime.md").read_text(encoding="utf-8")

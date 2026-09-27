@@ -31,13 +31,17 @@ Used by the executor to verify UI criteria against the running app, and by `feat
 
 - Probe first: `command -v playwright-cli`. Missing → `NOT_RUN`, record the alternative (the
   project's Playwright Test suite, or manual check by the human).
+- Run every command from the evidence directory `.planning/feat/features/{slug}/evidence/`
+  (`(cd <evidence-dir> && playwright-cli -s=feat-{slug} ...)`): `playwright-cli` writes its
+  working files (`.playwright-cli/`, snapshots, console logs) to the current directory, and they
+  must never end up in the project tree.
 - Use a task-owned session: `playwright-cli -s=feat-{slug} open <baseURL>`; every later command
   carries the same `-s=feat-{slug}`. Never reuse a personal profile, never export cookies or
   storage.
 - Take a fresh `snapshot` before acting on element refs; refs from an older snapshot are stale.
 - Walk the variants the plan lists (happy path, validation error, forbidden access, empty
-  state). For each, save `screenshot --filename=.planning/feat/features/{slug}/evidence/<E2E-id>-<variant>.png`
-  and note the observed state in the report.
+  state). **Every UI AC gets a screenshot**: `screenshot --filename=<AC-id>-<variant>.png`
+  (relative to the evidence directory), cited in the AC's evidence cell with the observed state.
 - Close only your own session: `playwright-cli -s=feat-{slug} close`.
 - A snapshot is text evidence of structure, not proof of pixels; the screenshot is the visual
   evidence.
@@ -45,9 +49,11 @@ Used by the executor to verify UI criteria against the running app, and by `feat
 ### 2. Declarative E2E scenarios (for any QA to run later)
 
 Scenarios are data, validated by `schemas/e2e-scenario.schema.json`, and live in the project's
-test directory — `<tests-dir>/e2e/scenarios/<E2E-id>-<kebab-title>.scenario.json`. `<tests-dir>`
-comes from `.planning/feat/context/testing.md` (default `tests`). They are listed in the plan's
-Output Format and committed with the feature.
+test directory — `<tests-dir>/e2e/scenarios/<E2E-id>-<kebab-title>.scenario.json` — next to their
+exported spec `<tests-dir>/e2e/generated/<same base name>.spec.ts`. `<tests-dir>`
+comes from `.planning/feat/context/testing.md` (default `tests`). Both the scenario and its exported spec are listed in the plan's Output Format and committed
+with the feature; the plan's Verification carries the `validate` and `export` commands
+(`plan_lint.py` enforces all three).
 
 Required content per scenario: `schema_version`, `id` (`E2E-nnn`), `title`, `feature_slug`,
 `ac_refs`, `priority` (`P0`–`P3`), `preconditions` (with `base_url_env`; users as

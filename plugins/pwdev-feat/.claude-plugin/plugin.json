@@ -1,7 +1,7 @@
 {
   "name": "pwdev-feat",
   "displayName": "PWDEV Feat — Fast Feature Plans & Execution",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Fast AI-assisted feature development, portable to Claude Code, Codex, Hermes Agent and OpenCode — evidence-based codebase mapping (architecture, conventions, testing, concerns), PWDEVIA 7-question action plans with traceable acceptance criteria and a plan linter, an executor (subagent or inline) with IMPLEMENT/REPORT modes, checkpoints and resume, an advisor for hard decisions, reviews with stable rule-cited findings, playwright-cli UI checks and declarative E2E scenarios exportable to Playwright Test, and an optional SQLite audit trail.",
   "author": {
     "name": "Paulo Soares",

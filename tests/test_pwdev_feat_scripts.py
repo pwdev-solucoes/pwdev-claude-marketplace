@@ -52,6 +52,7 @@ BR-001 email unique
 | `app/Http/Controllers/UserController.php` | create | controller |
 | `tests/Feature/UserTest.php` | create | tests |
 | `tests/e2e/scenarios/E2E-001-create-user.scenario.json` | create | e2e |
+| `tests/e2e/generated/E2E-001-create-user.spec.ts` | create | exported spec |
 
 ## 5. Quality Criteria
 | ID | Criterion | Verification |
@@ -74,12 +75,14 @@ BR-001 email unique
 ## Execution Steps
 1. Create the controller — files: `app/Http/Controllers/UserController.php` — covers: AC-001, AC-002
 2. Write feature tests — files: `tests/Feature/UserTest.php` — covers: AC-001, AC-002
-3. Write the E2E scenario — files: `tests/e2e/scenarios/E2E-001-create-user.scenario.json` — covers: AC-001
+3. Write the E2E scenario and export it — files: `tests/e2e/scenarios/E2E-001-create-user.scenario.json`, `tests/e2e/generated/E2E-001-create-user.spec.ts` — covers: AC-001
 
 ## Verification
 | Command | Purpose |
 |---------|---------|
 | `php artisan test` | unit + feature |
+| `python3 "<plugin-root>/scripts/e2e_scenarios.py" validate tests/e2e/scenarios --plan .planning/feat/features/user-crud/plan.md` | scenarios valid |
+| `python3 "<plugin-root>/scripts/e2e_scenarios.py" export --to playwright tests/e2e/scenarios --out tests/e2e/generated` | specs exported |
 
 ## Done
 Users can be created through the API and UI.
@@ -163,7 +166,7 @@ class PlanLintTest(unittest.TestCase):
         result = self.lint(PLAN_V3)
         self.assertTrue(result["ok"], result)
         self.assertEqual(result["schema_version"], 3)
-        self.assertEqual(result["stats"], {"outputs": 3, "criteria": 2, "steps": 3, "e2e_scenarios": 1})
+        self.assertEqual(result["stats"], {"outputs": 4, "criteria": 2, "steps": 3, "e2e_scenarios": 1})
 
     def test_v3_traceability_errors(self):
         broken = PLAN_V3.replace(" — covers: AC-001, AC-002\n2.", " — covers: AC-001\n2.") \
@@ -182,7 +185,10 @@ class PlanLintTest(unittest.TestCase):
             "bad action": PLAN_V3.replace("| create | controller |", "| build | controller |"),
             "unknown AC in steps": PLAN_V3.replace("covers: AC-001\n\n", "covers: AC-001, AC-009\n\n"),
             "review with code": PLAN_V3.replace("plan_type: feature", "plan_type: review"),
-            "no verification commands": PLAN_V3.replace("| `php artisan test` | unit + feature |\n", ""),
+            "no verification commands": PLAN_V3.split("## Verification")[0] + "## Verification\n| Command | Purpose |\n|---|---|\n\n## Done\nx\n\n## Commit\n`feat(users): add user CRUD`\n",
+            "scenario without exported spec": PLAN_V3.replace("| `tests/e2e/generated/E2E-001-create-user.spec.ts` | create | exported spec |\n", ""),
+            "no e2e export command": PLAN_V3.replace("export --to playwright", "exportar"),
+            "no e2e validate command": PLAN_V3.replace("e2e_scenarios.py\" validate", "e2e_scenarios.py\" check"),
         }
         for label, text in cases.items():
             with self.subTest(label):
@@ -273,8 +279,10 @@ class AuditTest(unittest.TestCase):
         (self.repo / ".planning/config.json").write_text('{"audit": true}', encoding="utf-8")
         run("audit.py", "init", cwd=self.repo, expect=0)
         run("audit.py", "init", cwd=self.repo, expect=0)  # idempotent
-        self.assertIn(".planning/pwdev-audit.db", (self.repo / ".gitignore").read_text(encoding="utf-8"))
-        self.assertEqual((self.repo / ".gitignore").read_text(encoding="utf-8").count("pwdev-audit.db\n"), 1)
+        ignore = (self.repo / ".planning/.gitignore").read_text(encoding="utf-8")
+        self.assertEqual(ignore.count("pwdev-audit.db\n"), 1)
+        self.assertIn("audit-report.pdf", ignore)
+        self.assertFalse((self.repo / ".gitignore").exists(), "the project's own .gitignore must not be touched")
         summary = run("audit.py", "summary", cwd=self.repo, expect=0).stdout
         self.assertIn("Events by action", summary)
         ok = run("audit.py", "query", "SELECT command, action FROM events;", cwd=self.repo, expect=0).stdout
@@ -289,6 +297,20 @@ class AuditTest(unittest.TestCase):
         self.assertIn("| 2 |", count)
         run("audit.py", "export", cwd=self.repo, expect=0)
         self.assertTrue((self.repo / ".planning/audit-report.md").is_file())
+        self.assertFalse((self.repo / ".gitignore").exists())
+
+    def test_audit_log_records_artifacts_without_hooks(self):
+        import shutil
+        if not shutil.which("sqlite3"):
+            self.skipTest("sqlite3 CLI not installed")
+        (self.repo / ".planning/config.json").write_text('{"audit": true}', encoding="utf-8")
+        run("audit.py", "init", cwd=self.repo, expect=0)
+        run("audit-log.sh", "artifact", ".planning/feat/features/x/plan.md", "plan", "plan", cwd=self.repo, expect=0)
+        run("audit-log.sh", "event", "exec", "", "started", ".planning/feat/features/x/plan.md", "IMPLEMENT", cwd=self.repo, expect=0)
+        rows = run("audit.py", "query", "SELECT path, type FROM artifacts", cwd=self.repo, expect=0).stdout
+        self.assertIn("| .planning/feat/features/x/plan.md | plan |", rows)
+        events = run("audit.py", "query", "SELECT command, action FROM events WHERE command='exec'", cwd=self.repo, expect=0).stdout
+        self.assertIn("| exec | started |", events)
 
 
 class ShellScriptsTest(unittest.TestCase):

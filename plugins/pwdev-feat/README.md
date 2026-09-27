@@ -1,4 +1,4 @@
-# PWDEV-FEAT v3.0.0
+# PWDEV-FEAT v3.1.0
 
 *Read this in [Português Brasileiro](./README.pt-BR.md)*
 
@@ -106,7 +106,7 @@ Reference: [`references/pwdevia-method.md`](./references/pwdevia-method.md), tem
 [`templates/plan.md`](./templates/plan.md).
 
 **Execution modes.** Review plans and report-only plans run in **REPORT** mode (findings in
-`report.md`, no code change, no commit); everything else runs in **IMPLEMENT** mode. The
+`review.md` or `test-audit.md`, no code change, no commit); everything else runs in **IMPLEMENT** mode. The
 executor contract is [`references/executor-contract.md`](./references/executor-contract.md);
 when it hits a genuine decision it returns `NEEDS_ADVICE` and the **advisor** (strongest tier,
 read-only) picks one direction — [`references/advisor-contract.md`](./references/advisor-contract.md).
@@ -121,7 +121,7 @@ read-only) picks one direction — [`references/advisor-contract.md`](./referenc
     ├── plan.md                 # the action plan
     ├── progress.md             # per-step checkpoints (resume)
     ├── plan.done.md            # execution report with AC evidence
-    ├── report.md               # REPORT-mode findings (review / test audit)
+    ├── review.md / test-audit.md  # REPORT-mode findings
     ├── review/                 # review package (range, diff, changed files)
     ├── evidence/               # playwright-cli screenshots
     └── advice-request.md / advice.md

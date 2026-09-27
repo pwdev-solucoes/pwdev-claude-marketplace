@@ -7,7 +7,7 @@ description: >
   Writes .planning/feat/features/{slug}/plan.md. Do NOT use for code review (feat-review), for
   implementing features (feat-feature) or to run an existing plan (feat-exec).
 metadata:
-  version: 3.0.0
+  version: 3.1.0
 ---
 
 # Test plan
@@ -23,10 +23,11 @@ scenarios — is `references/testing.md`; read it before planning.
    `tests_dir`, E2E dirs) and `context/conventions.md`. No testing context → suggest
    `feat-map`.
 3. **Choose the plan kind** with the human:
-   - **Create tests** (IMPLEMENT — tests are code and are committed): §4 lists the test files
-     and E2E scenario files; §5 maps each behavior/AC to `UNIT-`/`INT-`/`E2E-` IDs.
+   - **Create tests** (IMPLEMENT — tests are code and are committed): §4 lists the test files,
+     the E2E scenario files and the specs exported from them; §5 maps each behavior/AC to `UNIT-`/`INT-`/`E2E-` IDs.
    - **Audit coverage** (REPORT): §4 lists only
-     `.planning/feat/features/{slug}/report.md`, rendered from `templates/test-report.md`.
+     `.planning/feat/features/{slug}/test-audit.md`, rendered from `templates/test-report.md`
+     (not `report.md`: some runtimes refuse subagent writes to report-like names).
 4. **Method** — follow `references/pwdevia-method.md` with `plan_type: test`.
 5. **Focus**
    - Persona: QA engineer / test specialist on the project's frameworks.
@@ -38,7 +39,8 @@ scenarios — is `references/testing.md`; read it before planning.
      forbidden, empty state; Verification includes
      `python3 "<plugin-root>/scripts/e2e_scenarios.py" validate <scenarios-dir> --plan <plan.md>`
      and the `export --to playwright` command into `<tests-dir>/e2e/generated`.
-   - Interactive UI checks use `playwright-cli` in the session `feat-{slug}`.
+   - Interactive UI checks use `playwright-cli` in the session `feat-{slug}`, run from the
+     feature's `evidence/` directory, with one screenshot per UI criterion.
 
 ## Prohibitions
 

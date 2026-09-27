@@ -6,7 +6,7 @@ description: >
   artifacts, statistics, a Markdown/PDF export or a custom read-only SELECT. Do NOT use to
   enable the audit (feat-init) or for plan status (feat-status).
 metadata:
-  version: 3.0.0
+  version: 3.1.0
 ---
 
 # Audit trail

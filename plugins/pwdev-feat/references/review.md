@@ -13,7 +13,8 @@ citations, recorded commands, and no silent fixes.
 
 ## Findings
 
-Each finding is a row in `review-report.md`:
+Each finding is a row in the review file (`.planning/feat/features/{slug}/review.md`, rendered
+from `templates/review-report.md`):
 
 | Field | Rule |
 |---|---|

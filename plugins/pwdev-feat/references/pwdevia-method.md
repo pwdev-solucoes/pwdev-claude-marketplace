@@ -70,8 +70,11 @@ Concise, grouped questions. "You decide" → make reasonable choices and record 
    and has a verification.
 4. Verification section: the real commands from `context/testing.md` or the project
    instructions file — never invented ones.
-5. UI present → §4 includes the E2E scenario files (`<tests-dir>/e2e/scenarios/*.scenario.json`)
-   and §5 has the `playwright-cli` checks — see [testing.md](testing.md).
+5. UI present → §4 includes each E2E scenario file (`<tests-dir>/e2e/scenarios/E2E-nnn-*.scenario.json`)
+   **and** the spec exported from it (`<tests-dir>/e2e/generated/E2E-nnn-*.spec.ts`, same base name);
+   Verification lists the `e2e_scenarios.py validate` and `export` commands; each UI AC is verified
+   with `playwright-cli` and names the screenshot it will produce — see [testing.md](testing.md).
+   `plan_lint.py` rejects a v3 plan with scenarios but no spec or no validate/export command.
 6. ≤10 Execution Steps; bigger work is split into several plans.
 
 ### Step 5 — Lint
@@ -79,7 +82,13 @@ Concise, grouped questions. "You decide" → make reasonable choices and record 
 `python3 <plugin-root>/scripts/plan_lint.py .planning/feat/features/{slug}/plan.md`. Fix every
 `error` before presenting; mention remaining `warning`s in the summary.
 
-### Step 6 — Present the summary
+### Step 6 — Record (audit on)
+
+`sh "<plugin-root>/scripts/audit-log.sh" event plan "" created .planning/feat/features/{slug}/plan.md "{type}"`
+(a no-op when the audit is off). On runtimes without hooks (Codex, Hermes, OpenCode) also:
+`sh "<plugin-root>/scripts/audit-log.sh" artifact .planning/feat/features/{slug}/plan.md plan plan`.
+
+### Step 7 — Present the summary
 
 ```
 📋 Plan created: .planning/feat/features/{slug}/plan.md

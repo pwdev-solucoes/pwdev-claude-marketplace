@@ -6,7 +6,7 @@ description: >
   optional audit trail, and creating the .planning/feat/ workspace. Do NOT use to analyze the
   codebase (feat-map), to write the project instructions file (feat-setup) or to create plans.
 metadata:
-  version: 3.0.0
+  version: 3.1.0
 ---
 
 # Initialize pwdev-feat
@@ -27,8 +27,8 @@ metadata:
 4. **Audit trail (opt-in, default off)** — show the current `audit` value or ask:
    "Enable the local SQLite audit trail? (records commands, dispatches, decisions and planning
    artifacts; the .db is never versioned)". Merge `"audit": true|false`. When enabled, run
-   `python3 "<plugin-root>/scripts/audit.py" init` (creates the shared schema and the
-   `.gitignore` entries) and log each changed field:
+   `python3 "<plugin-root>/scripts/audit.py" init` (creates the shared schema and
+   `.planning/.gitignore`; the project's own `.gitignore` is never touched) and log each changed field:
    `sh "<plugin-root>/scripts/audit-log.sh" config <field> "<old>" "<new>" init`.
    Mechanical recording (session, subagent duration, artifact writes) happens through hooks on
    Claude Code only; on Codex, Hermes and OpenCode the skills log their milestones explicitly.
@@ -38,7 +38,7 @@ metadata:
 6. **Summary**:
    ```
    ✅ pwdev-feat initialized — lang {lang} · profile {profile} · audit {on|off} · runtime {runtime}
-   📁 .planning/feat/features/{slug}/ plan.md · progress.md · plan.done.md · report.md
+   📁 .planning/feat/features/{slug}/ plan.md · progress.md · plan.done.md · review.md / test-audit.md
    📦 Detected: {stack}
    🚀 Next: feat-map (recommended for existing projects) → feat-setup → feat-feature "description"
       Quick task without a plan: feat-quick "description"

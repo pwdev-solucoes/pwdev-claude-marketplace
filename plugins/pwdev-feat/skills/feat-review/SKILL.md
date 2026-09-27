@@ -7,7 +7,7 @@ description: >
   base..HEAD'. Plans a REPORT-mode review (no code changes, no commit). Do NOT use to fix code
   (feat-feature / feat-quick), to write tests (feat-test) or for UI/UX design critique.
 metadata:
-  version: 3.0.0
+  version: 3.1.0
 ---
 
 # Review plan
@@ -23,6 +23,7 @@ commit. The review contract (scope, finding fields, severities, dimensions, verd
    - a feature slug → `base_commit` from its `progress.md`/`plan.done.md` to `HEAD`;
    - "last N commits" → `HEAD~N..HEAD`; a branch → `$(git merge-base main <branch>)..<branch>`;
    - paths only → the range that last touched them, confirmed with the human.
+   Record (audit on): `sh "<plugin-root>/scripts/audit-log.sh" event review "" scope <base>..<target>`.
    Build the package: `sh "<plugin-root>/scripts/review_package.sh" <base> <target>
    .planning/feat/features/{slug}/review [-- <paths>]`. Exit 2/3 (bad or empty range) → stop
    and ask; never widen the scope silently.
@@ -30,8 +31,9 @@ commit. The review contract (scope, finding fields, severities, dimensions, verd
    - Persona: senior code reviewer for the stack in `context/architecture.md`.
    - §3 lists the package files, the project instructions file, `context/conventions.md`,
      `context/concerns.md` and, when reviewing a feature, its `plan.md`.
-   - §4 lists ONLY `.planning/feat/features/{slug}/report.md` (rendered from
-     `templates/review-report.md`) — this is what puts the executor in REPORT mode.
+   - §4 lists ONLY `.planning/feat/features/{slug}/review.md` (rendered from
+     `templates/review-report.md`) — this is what puts the executor in REPORT mode. Do not name it
+     `report.md`: some runtimes refuse subagent writes to report-like names.
    - §5: every finding has id, severity, `path:line`, rule citation, evidence and suggestion;
      the five dimensions are covered; lint/test commands run on the target and recorded.
 4. After execution, when the verdict is `CHANGES_REQUESTED`, offer to turn the report's fix

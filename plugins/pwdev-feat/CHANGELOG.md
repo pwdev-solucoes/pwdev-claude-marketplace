@@ -1,5 +1,28 @@
 # Changelog
 
+## 3.1.0 — 2026-09-27
+
+Fixes from the end-to-end smoke run on Claude Code, Codex, Hermes and OpenCode.
+
+- **No side effects in the project tree.** `audit.py init`/`export` write their ignore rules to
+  `.planning/.gitignore` instead of the project's `.gitignore`. The executor runs `playwright-cli`
+  from the feature's `evidence/` directory (its `.playwright-cli/` working files land there), stops
+  servers it started, and checks `git status` before committing: tool side effects are deleted,
+  stray modifications restored, unexplained changes reported.
+- **Exported specs are part of the plan.** A plan with E2E scenarios must list each exported
+  `*.spec.ts` in its Output Format and carry the `e2e_scenarios.py validate` and `export` commands in
+  Verification; `plan_lint.py` enforces both for v3 plans.
+- **Screenshot per UI criterion.** Each UI acceptance criterion verified with `playwright-cli`
+  needs a screenshot in `evidence/`, cited in `plan.done.md`, which also gains an E2E table.
+- **Findings files a subagent may write.** Claude Code refuses subagent writes to report-like
+  names (`report.md`, `findings.md`, `analysis.md`), which forced the orchestrator to rewrite the
+  review without the status marker. REPORT-mode findings are now `review.md` (review plans) and
+  `test-audit.md` (test audits); if a runtime still refuses a required write, the executor returns
+  the content between `--- BEGIN FILE <path> ---` / `--- END FILE ---` and `feat-exec` persists it
+  verbatim, with `plan.done.md` rendered from the template (status marker included).
+- **Audit on every runtime.** Planning skills, `feat-exec`, `feat-review` and `feat-quick` record
+  their milestones; `audit-log.sh artifact` records planning artifacts on runtimes without hooks.
+
 ## 3.0.0 — 2026-09-27
 
 ### Portability

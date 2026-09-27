@@ -7,7 +7,7 @@ description: >
   verifies and commits. Do NOT use for more than 5 files, architectural decisions, migrations
   or new UI flows (use feat-feature / feat-backend / feat-frontend).
 metadata:
-  version: 3.0.0
+  version: 3.1.0
 ---
 
 # Quick task (no plan file)
@@ -32,11 +32,14 @@ metadata:
    dependency, a design decision) → stop and escalate to the right planning skill.
 5. **Verify** — the commands declared in the project instructions file (Commands/Quality);
    otherwise detect the toolchain and run its lint + tests. Never chain unrelated toolchains
-   with `||`. UI change → verify it with `playwright-cli` in the session `feat-quick` when
-   available (`references/testing.md`); record `NOT_RUN` otherwise.
+   with `||`. UI change → verify it with `playwright-cli` in the session `feat-quick`, run from a scratch
+   evidence directory outside the project, when available (`references/testing.md`); record
+   `NOT_RUN` otherwise. Before committing, `git status --porcelain` must show only the approved
+   files — delete tool side effects, never commit them.
 6. **Commit** only the files of the approved mini-plan, with a Conventional Commit, after lint
    and tests pass. On the default branch, ask first.
-7. **Result**:
+7. **Record** (audit on): `sh "<plugin-root>/scripts/audit-log.sh" event quick "" completed <commit> "<files>"`.
+8. **Result**:
    ```
    ✅ Quick task complete
    Done: {what changed}

@@ -65,15 +65,16 @@ calls `audit-log.sh spawn exec "" <agent> <model>` right after each dispatch
 ## Rules
 
 - All writes are best-effort: `2>/dev/null`, never block the main task, exit 0 on any failure.
-- `.gitignore` must contain:
+- `scripts/audit.py init` writes the ignore rules to `.planning/.gitignore` (never to the
+  project's root `.gitignore`, so enabling the audit leaves no uncommitted change there):
 
 ```gitignore
-.planning/pwdev-audit.db
-.planning/pwdev-audit.db-journal
-.planning/pwdev-audit.db-wal
-.planning/.audit-tmp/
-.planning/audit-report.md
-.planning/audit-report.pdf
+pwdev-audit.db
+pwdev-audit.db-journal
+pwdev-audit.db-wal
+.audit-tmp/
+audit-report.md
+audit-report.pdf
 ```
 
 ## Useful queries

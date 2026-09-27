@@ -1,4 +1,4 @@
-# PWDEV-FEAT v3.0.0
+# PWDEV-FEAT v3.1.0
 
 *Leia em [English](./README.md)*
 
@@ -113,7 +113,7 @@ Referência: [`references/pwdevia-method.md`](./references/pwdevia-method.md); t
 [`templates/plan.md`](./templates/plan.md).
 
 **Modos de execução.**
-- Planos de review e planos só de relatório rodam em **REPORT**: achados em `report.md`, sem mudar código e sem commit. Todo o resto roda em **IMPLEMENT**.
+- Planos de review e planos só de relatório rodam em **REPORT**: achados em `review.md` ou `test-audit.md`, sem mudar código e sem commit. Todo o resto roda em **IMPLEMENT**.
 - O contrato do executor está em [`references/executor-contract.md`](./references/executor-contract.md).
 - Diante de uma decisão real, o executor retorna `NEEDS_ADVICE` e o **advisor** (nível mais forte, somente leitura) escolhe uma direção: [`references/advisor-contract.md`](./references/advisor-contract.md).
 

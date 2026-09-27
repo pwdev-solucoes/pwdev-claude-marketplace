@@ -8,7 +8,7 @@ description: >
   1–3 file changes (feat-quick), backend-only or UI-only scope (feat-backend / feat-frontend),
   tests for existing code (feat-test) or code review (feat-review).
 metadata:
-  version: 3.0.0
+  version: 3.1.0
 ---
 
 # Feature plan
@@ -29,7 +29,8 @@ human, so never delegate this skill to a subagent.
    - Order the steps: data/migrations → domain/services → API → UI → tests → docs.
    - Every business rule becomes at least one `AC-*`; every AC has a verification.
    - With UI (`**UI:** yes`): include the E2E scenario files
-     (`<tests-dir>/e2e/scenarios/E2E-nnn-*.scenario.json`) in §4 and `playwright-cli` checks
+     (`<tests-dir>/e2e/scenarios/E2E-nnn-*.scenario.json`) and their exported specs
+     (`<tests-dir>/e2e/generated/E2E-nnn-*.spec.ts`) in §4 and `playwright-cli` checks
      in §5 — `references/testing.md`.
    - Consider validation, error handling, authorization and migrations explicitly.
 
