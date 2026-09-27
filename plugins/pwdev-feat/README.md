@@ -1,339 +1,200 @@
-# PWDEV-FEAT v2.1.1
+# PWDEV-FEAT v3.2.1
 
 *Read this in [Português Brasileiro](./README.pt-BR.md)*
 
-> **Simplified AI-Assisted Feature Development for Claude Code**
+> **Fast AI-assisted feature development for Claude Code, Codex, Hermes Agent and OpenCode**
 
 ```
-Describe what you want → get a structured plan → execute it.
+Map (evidence) → Plan (PWDEVIA, linted) → Execute (IMPLEMENT/REPORT, resume) → Review
 ```
 
-PWDEV-FEAT uses the **PWDEVIA 7-question methodology** to generate structured
-action plans — created inline while interviewing you (max 2 rounds) — that a
-**real executor subagent** implements with fresh context. No complex
-ceremonies — just describe, plan, execute.
+PWDEV-FEAT uses the **PWDEVIA 7-question methodology** to write executable action plans —
+created inline while interviewing you (max 2 rounds) — that an **executor** implements with a
+fresh context, verifying every acceptance criterion with real evidence. No heavy ceremony:
+describe, plan, execute.
 
 ---
 
-## What's New in v2.1.0
+## What's new in 3.0
 
-> **Upgrading from 2.0.x?** Installed plugins are cached copies — merging or
-> pulling this repo does NOT update them. Run
-> `claude plugin marketplace update pwdev-claude-marketplace` followed by
-> `claude plugin update pwdev-feat@pwdev-claude-marketplace`, then **restart
-> Claude Code** so the new `advisor` subagent registers in the session.
+- **Four runtimes, one set of skills.** The workflow lives in 13 portable skills
+  (`skills/feat-*`). Claude Code keeps every `/pwdev-feat:*` command as a thin wrapper; Codex,
+  Hermes and OpenCode load the same skills natively. Subagents run on each runtime's own
+  mechanism, and **inline** when a runtime has none.
+- **Evidence-based codebase map.** `feat-map` runs a deterministic, read-only scan
+  (`scripts/feat_map.py`: stack, frameworks, declared commands — never executed — tests, CI,
+  migrations, modules, sensitive areas, secret paths skipped) and writes four context documents
+  (`architecture`, `conventions`, `testing`, `concerns`) where every claim cites its evidence
+  and confidence. Planners warn when the map is stale.
+- **Traceable plans.** Plans carry `AC-nnn` acceptance criteria with their verification; steps
+  name the files and ACs they cover; `scripts/plan_lint.py` checks structure and traceability
+  before a plan is shown or executed.
+- **Better execution.** Base commit recorded, dirty planned files flagged, per-step checkpoints
+  in `progress.md` and `feat-exec <slug> --resume`; `plan.done.md` records every AC with its
+  command, exit code and evidence, and planned vs. changed files.
+- **Reviews with stable findings.** `feat-review` fixes an explicit `BASE..TARGET` scope
+  (`scripts/review_package.sh`), reports `CR-nnn` findings with severity
+  (`BLOCKER`…`INFO`), `path:line`, rule citation and evidence, and never fixes code silently.
+- **UI testing in two tracks.** Interactive checks with **`playwright-cli`** in a task-owned
+  session, and **declarative E2E scenarios** (JSON validated by
+  `schemas/e2e-scenario.schema.json`) stored in the project's tests directory and exported to
+  Playwright Test specs (`scripts/e2e_scenarios.py`) for any QA to run later.
+- **Project instructions for every runtime.** `feat-setup` writes `AGENTS.md` and a
+  `CLAUDE.md` that imports it.
 
-- **Advisor subagent** (`pwdev-feat:advisor` + `NEEDS_ADVICE` status): when
-  the executor hits a hard decision mid-plan (plan ambiguity, architectural
-  fork, repeated verification failure with a concrete question), it stops and
-  asks. `/pwdev-feat:exec` consults the advisor — the strong model (Opus even
-  in `balanced`), read-only, `effort: high` — and re-spawns the executor with
-  the decision attached. Max 1 consultation per plan; override key
-  `feat-advisor` in the shared config.
-- **Shared project memory (read-only)**: when the project keeps a curated
-  memory (`.planning/memory/`, managed by pwdev-code), the PWDEVIA planner
-  folds ≤3 relevant memories into the plan's Assumptions/Quality Criteria and
-  `/pwdev-feat:exec` injects a RELEVANT MEMORY block into the executor spawn.
-  pwdev-feat never writes to the memory — curation stays with pwdev-code.
-- External reviewer CLI second opinion is a `/pwdev-code:review` feature —
-  not available here (feat review plans run inside a subagent, with no
-  channel to confirm an external command with the human).
-
-## What's New in v2.0.0
-
-Rebuilt on the modern Claude Code plugin system. No slash command was renamed
-or removed; internals were restructured.
-
-- **Real executor subagent** (`pwdev-feat:executor`): `/pwdev-feat:exec` now
-  spawns an actual subagent via the Task tool with a self-contained prompt —
-  fresh context per plan, official frontmatter, restricted tools.
-- **PWDEVIA planner is inline by design** (`references/pwdevia-method.md`):
-  it interviews you, and subagents cannot talk to the user. The old
-  prose-persona agent files are gone.
-- **IMPLEMENT / REPORT modes**: review plans (and report-only plans) run in
-  REPORT mode — findings go to `report.md`, no code changes, no commit.
-  Fixes the old conflict where executing a review plan tried to commit.
-- **Deterministic audit via hooks**: session start/stop, executor runs with
-  real `duration_ms`/`session_id`, and `.planning/` writes are recorded by
-  plugin hooks — no more inline INSERTs. `config_changes` is now actually
-  populated (via `audit-log.sh config`). Secret-guard PreToolUse hook blocks
-  `.env`/`*.pem`/`*.key`/`id_rsa*` reads.
-- **Packaged references** (`${CLAUDE_PLUGIN_ROOT}/references/`): PWDEVIA
-  method, language protocol, model profiles (single source of truth),
-  spawn contract, audit schema — replaces 11 duplicated Language blocks and
-  6 divergent Model Resolution blocks.
-- **Fixes**: `/pwdev-feat:status` now detects ❌ FAILED and ⚠️ WITH CAVEATS;
-  audit custom-query guard hardened (single-statement SELECT only);
-  verification reads CLAUDE.md commands first (no more `npm || composer`
-  chains); `echo -e` and dead `$SUB_COMMAND` removed.
-- **Shared config, namespaced**: `.planning/config.json` and the audit DB are
-  shared with pwdev-code on purpose; pwdev-feat's model override key is
-  `"feat-executor"`.
+Existing `.planning/feat/` workspaces keep working: 2.x plans are read, linted with warnings
+only, executed and reported by status. See the [CHANGELOG](./CHANGELOG.md).
 
 ---
 
-## Methodology
+## Installation
 
-### The PWDEVIA 7 Questions
+| Runtime | Install | Invoke |
+|---|---|---|
+| Claude Code | `claude plugin install pwdev-feat@pwdev-claude-marketplace` | `/pwdev-feat:feat "…"` |
+| Codex | add this repository as a marketplace and enable **pwdev-feat** (`.agents/plugins/marketplace.json`) | `$feat-feature …` |
+| Hermes Agent | install the plugin from this repository (`.hermes-plugin/`) | `skill_view("pwdev-feat:feat-feature")` or just ask |
+| OpenCode | `python3 plugins/pwdev-feat/.opencode-plugin/install.py [--project <dir>]` | `/feat-feature …` or the `skill` tool |
 
-Every plan is built by answering 7 fundamental questions:
-
-| # | Question | Purpose |
-|---|----------|---------|
-| 1 | **Persona & Scope** | Who should the executor be? What are the exact boundaries? |
-| 2 | **Direct Objective** | What must exist when done? (1 clear sentence) |
-| 3 | **Minimum Inputs** | What data, rules, files does the executor need? |
-| 4 | **Output Format** | What files to create/modify? Expected structure? |
-| 5 | **Quality Criteria** | What standards must be met? What tests? |
-| 6 | **Ambiguity Handling** | What to do when something is unclear? |
-| 7 | **Prohibitions** | What must NEVER be done? |
-
-### How It Works
-
-```
-You describe                    PWDEVIA creates                Executor implements
-─────────────                   ───────────────                ────────────────────
-"User CRUD with          →      user-crud/plan.md        →     Code + Tests + Commit
- paginated listing"             (7 sections + steps)           user-crud/plan.done.md
-```
-
-### Plan Types
-
-| Type | Command | Scope |
-|------|---------|-------|
-| **Feature** | `/pwdev-feat:feat` | Full feature — backend + frontend + tests |
-| **Backend** | `/pwdev-feat:backend` | API, services, models, migrations, backend tests |
-| **Frontend** | `/pwdev-feat:frontend` | Components, pages, composables, E2E with Playwright |
-| **Test** | `/pwdev-feat:test` | Unit, integration, E2E tests for existing code |
-| **Review** | `/pwdev-feat:review` | Code review — security, performance, conventions |
-| **Quick** | `/pwdev-feat:quick` | Direct execution, no plan file (1-3 files max) |
+Codex subagents need `[features] multi_agent = true` in `~/.codex/config.toml`; without it the
+executor runs inline. Details per runtime: [`references/runtime.md`](./references/runtime.md).
 
 ---
 
-## What's New in v1.1.2
-
-- **Per-feature folders** — Plans now live in `.planning/feat/features/{slug}/plan.md` instead of flat `plans/` directory. Each feature gets its own isolated folder.
-- **Language Selection** — All commands support PT-BR and EN. Configured during `/pwdev-feat:init`.
-- **Model Profiles** — Agent models configurable via `performance`, `balanced`, or `economy` profiles.
-- **Audit Trail (opt-in)** — Optional SQLite logging of commands, decisions, and artifacts. Disabled by default.
-
----
-
-## Quick Start
+## Quick start
 
 ```bash
-# 1. Initialize
-/pwdev-feat:init
-
-# 2. (Optional) Analyze existing codebase
-/pwdev-feat:map-codebase
-
-# 3. (Optional) Generate CLAUDE.md
-/pwdev-feat:setup
-
-# 4. Create a plan
-/pwdev-feat:feat "User CRUD with paginated listing and search"
-
-# 5. Execute the plan
-/pwdev-feat:exec user-crud
-
-# Or skip planning for simple tasks
-/pwdev-feat:quick "Fix email validation in UserController"
+/pwdev-feat:init                      # language, model profile, optional audit, workspace
+/pwdev-feat:map-codebase              # evidence scan + context documents (existing projects)
+/pwdev-feat:setup                     # AGENTS.md (+ CLAUDE.md import)
+/pwdev-feat:feat "User CRUD with validation and E2E"
+/pwdev-feat:exec user-crud            # or: latest, --resume
+/pwdev-feat:review user-crud          # base_commit..HEAD of that feature
+/pwdev-feat:quick "fix the date format in the invoice list"
+/pwdev-feat:loop "#42"                # issue → plan → exec → review → PR
 ```
 
----
-
-## Agents
-
-| Agent | Where it runs | What it does |
-|-------|---------------|-------------|
-| **PWDEVIA** (planner) | Inline, main context (`references/pwdevia-method.md`) | Applies the 7 questions, interviewing you (max 2 rounds). Never writes code. |
-| **executor** (subagent) | Real subagent via Task tool, fresh context | Follows the plan step by step. IMPLEMENT: code + tests + commit + report. REPORT: findings only, no commit. |
-
-### Agent Boundaries
-
-- **PWDEVIA** creates plans — never writes production code
-- **Executor** follows plans — never deviates without asking (STOPPED status)
-- Both read CLAUDE.md and codebase.md for project context
+On Codex use `$feat-init`, `$feat-map`, `$feat-setup`, `$feat-feature`, `$feat-exec`… — same
+names as the skills.
 
 ---
 
-## Commands
+## Commands and skills
 
-### Setup
-
-| Command | What it does |
-|---------|-------------|
-| `/pwdev-feat:init` | Create `.planning/feat/` workspace, configure language and model profile |
-| `/pwdev-feat:map-codebase` | Analyze codebase → generate `codebase.md` context |
-| `/pwdev-feat:setup` | Generate `CLAUDE.md` with project conventions |
-
-### Planning (PWDEVIA generates)
-
-| Command | What it does |
-|---------|-------------|
-| `/pwdev-feat:feat "desc"` | Create full feature plan (backend + frontend + tests) |
-| `/pwdev-feat:backend "desc"` | Create backend-focused plan (API, services, models) |
-| `/pwdev-feat:frontend "desc"` | Create frontend-focused plan (components, E2E) |
-| `/pwdev-feat:test "desc"` | Create test plan for existing code |
-| `/pwdev-feat:review "scope"` | Create code review plan |
-
-### Execution
-
-| Command | What it does |
-|---------|-------------|
-| `/pwdev-feat:exec {slug}` | Execute a specific feature plan (or `latest`) |
-| `/pwdev-feat:quick "desc"` | Direct execution — no plan file, for simple tasks |
-| `/pwdev-feat:status` | Show pending, executed, and failed plans |
-| `/pwdev-feat:audit` | Query the audit trail — summary, events, decisions, artifacts, stats, export PDF |
+| Claude command | Skill | What it does |
+|---|---|---|
+| `/pwdev-feat:init` | `feat-init` | Language, model profile, audit trail, `.planning/feat/` |
+| `/pwdev-feat:map-codebase` | `feat-map` | Evidence scan + `codebase.md` + 4 context documents |
+| `/pwdev-feat:setup` | `feat-setup` | Project instructions file for all runtimes |
+| `/pwdev-feat:feat` | `feat-feature` | Full feature plan (backend + UI + tests) |
+| `/pwdev-feat:backend` | `feat-backend` | Backend plan: API, services, models, migrations |
+| `/pwdev-feat:frontend` | `feat-frontend` | UI plan with E2E scenarios and `playwright-cli` checks |
+| `/pwdev-feat:test` | `feat-test` | Test plan (IMPLEMENT) or test audit (REPORT) |
+| `/pwdev-feat:review` | `feat-review` | Review plan for an explicit range (REPORT) |
+| `/pwdev-feat:exec` | `feat-exec` | Execute a plan: executor, advisor, retry, resume |
+| `/pwdev-feat:quick` | `feat-quick` | ≤5 files, mini-plan, no plan file |
+| `/pwdev-feat:loop` | `feat-loop` | GitHub issue → plan → exec → review → ≤2 fix cycles → PR (never merges) |
+| `/pwdev-feat:status` | `feat-status` | Pending / done / caveats / failed / resumable, map freshness |
+| `/pwdev-feat:audit` | `feat-audit` | Audit summary, events, stats, export, read-only query |
 
 ---
 
-## Language & Model Configuration
+## The method
 
-### Language
+**PWDEVIA 7 questions:** Persona & Scope · Direct Objective · Minimum Inputs · Output Format ·
+Quality Criteria (`AC-nnn` + verification) · Ambiguity Handling · Prohibitions. The planner
+runs in the main session because it interviews you; subagents cannot talk to the user.
+Reference: [`references/pwdevia-method.md`](./references/pwdevia-method.md), template
+[`templates/plan.md`](./templates/plan.md).
 
-All commands support **Portuguese (PT-BR)** and **English (EN)**. Configured during `/pwdev-feat:init` and stored in `.planning/config.json`.
+**Execution modes.** Review plans and report-only plans run in **REPORT** mode (findings in
+`review.md` or `test-audit.md`, no code change, no commit); everything else runs in **IMPLEMENT** mode. The
+executor contract is [`references/executor-contract.md`](./references/executor-contract.md);
+when it hits a genuine decision it returns `NEEDS_ADVICE` and the **advisor** (strongest tier,
+read-only) picks one direction — [`references/advisor-contract.md`](./references/advisor-contract.md).
 
-- `/pwdev-feat:init` — always asks for language preference
-- Other commands — use saved preference silently
-- Override — switch language mid-conversation and confirm when prompted
+**Workspace:**
 
-### Model Profile
+```
+.planning/feat/
+├── codebase.md                 # index (feat-map)
+├── context/                    # codebase.json + architecture, conventions, testing, concerns
+└── features/{slug}/
+    ├── plan.md                 # the action plan
+    ├── progress.md             # per-step checkpoints (resume)
+    ├── plan.done.md            # execution report with AC evidence
+    ├── review.md / test-audit.md  # REPORT-mode findings
+    ├── review/                 # review package (range, diff, changed files)
+    ├── evidence/               # playwright-cli screenshots
+    └── advice-request.md / advice.md
+```
 
-Only the **executor** subagent resolves a model (the PWDEVIA planner runs
-inline on the session model). Single source of truth:
-`references/model-profiles.md`.
+E2E scenarios live in the project's tests directory: `<tests-dir>/e2e/scenarios/*.scenario.json`
+and generated specs in `<tests-dir>/e2e/generated/` — see
+[`references/testing.md`](./references/testing.md).
 
-| Profile | executor |
-|---------|:--------:|
-| **performance** | Opus |
-| **balanced** (default) | Sonnet |
-| **economy** | Sonnet |
+---
 
-Override with the **namespaced key `"feat-executor"`** in
-`.planning/config.json` (the file is shared with pwdev-code — the plain
-`"executor"` key belongs to it):
+## E2E scenarios for Playwright
+
+```bash
+python3 <plugin>/scripts/e2e_scenarios.py validate tests/e2e/scenarios --plan .planning/feat/features/<slug>/plan.md
+python3 <plugin>/scripts/e2e_scenarios.py export --to playwright tests/e2e/scenarios --out tests/e2e/generated
+python3 <plugin>/scripts/e2e_scenarios.py coverage .planning/feat/features/<slug>/plan.md tests/e2e/scenarios
+APP_BASE_URL=http://localhost:8000 npx playwright test tests/e2e/generated   # or open in UI mode
+```
+
+Each scenario is traceable to plan ACs, has variants (happy path, validation error, forbidden,
+empty state), prefers role/label locators, and never holds a literal secret — credentials are
+`${env:NAME}` placeholders resolved at run time.
+
+---
+
+## Configuration
+
+`.planning/config.json` is shared with pwdev-code (merge, never overwrite):
 
 ```json
 {
   "lang": "pt-BR",
   "model_profile": "balanced",
-  "model_overrides": { "feat-executor": "opus" }
+  "model_overrides": { "feat-executor": "opus", "feat-advisor": "opus" },
+  "audit": false
 }
 ```
 
+| Role | performance | balanced | economy |
+|---|---|---|---|
+| executor | top | mid | mid |
+| advisor | top | top | mid |
+
+On Claude Code `top` = Opus and `mid` = Sonnet; Codex, Hermes and OpenCode inherit the host
+model unless an explicit override names a model the host exposes —
+[`references/model-profiles.md`](./references/model-profiles.md).
+
 ---
 
-## Audit Trail
+## Audit trail and safety
 
-All plugins share an optional SQLite audit database at `.planning/pwdev-audit.db`. It is **disabled by default** and configured during `/init`. The database file is never versioned (automatically added to `.gitignore`).
+The optional SQLite audit (`.planning/pwdev-audit.db`, shared with other PWDEV plugins, never
+versioned) is created by `feat-init` (`scripts/audit.py init`) and read by `feat-audit`
+(read-only; single `SELECT` only). On Claude Code, hooks record sessions, subagent durations
+and `.planning/` writes; on every runtime the skills log milestones, dispatches and config
+changes — [`references/audit-schema.md`](./references/audit-schema.md).
 
-**How data gets here (v2.0 — deterministic, via hooks):**
-- `scripts/audit-hook.sh` (SessionStart, SubagentStart/Stop, PostToolUse,
-  Stop) → session events, executor runs with real `session_id` and
-  `duration_ms`, `.planning/` artifact writes
-- `scripts/audit-log.sh` → command milestones (`event`) and configuration
-  changes (`config` → the `config_changes` table, populated by `/init`)
-- `scripts/guard-secrets.sh` (PreToolUse) → blocks reads of `.env`, `*.pem`,
-  `*.key`, `id_rsa*` (`.env.example` allowed)
+Secrets (`.env*`, keys, certificates) are never read: enforced by the `guard-secrets.sh` hook on
+Claude Code and by the skills' own rule everywhere else —
+[`references/safety.md`](./references/safety.md).
 
-The database is **shared with pwdev-code** — rows are distinguished by the
-`plugin` column (`WHERE plugin='pwdev-feat'`).
+---
 
-### Querying the Audit Trail
-
-Use `/pwdev-feat:audit` to query the database interactively:
-
-| Sub-command | What it does |
-|-------------|-------------|
-| `summary` (default) | Dashboard with key metrics and recent activity |
-| `events` | Full event log (last 50 entries) |
-| `decisions` | All architectural/product decisions with rationale |
-| `artifacts` | Files tracked by the framework |
-| `stats` | Command frequency, durations, phase distribution, success rate |
-| `export` | Generate a full audit report as PDF + Markdown |
-| `query <SQL>` | Run a custom read-only SQL query |
+## Tests
 
 ```bash
-/pwdev-feat:audit              # summary dashboard
-/pwdev-feat:audit stats        # detailed statistics
-/pwdev-feat:audit export       # generate PDF report at .planning/audit-report.pdf
-/pwdev-feat:audit query "SELECT * FROM events WHERE action='failed'"
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tests.test_pwdev_feat tests.test_pwdev_feat_hermes \
+  tests.test_pwdev_feat_opencode tests.test_pwdev_feat_map tests.test_pwdev_feat_e2e tests.test_pwdev_feat_scripts
 ```
-
-Add `.planning/pwdev-audit.db` to `.gitignore` (recommended).
-
----
-
-## Plan Structure
-
-Every plan generated by PWDEVIA follows this structure:
-
-```markdown
-# Action Plan — {title}
-
-## 1. Persona & Scope        ← who and what
-## 2. Direct Objective        ← what must exist when done
-## 3. Minimum Inputs          ← data, rules, files to read
-## 4. Output Format           ← files to create/modify
-## 5. Quality Criteria        ← tests, lint, standards
-## 6. Ambiguity Handling      ← what to do when unsure
-## 7. Prohibitions            ← what to NEVER do
-
-## Execution Steps            ← concrete numbered steps
-## Done                       ← single sentence = finished
-## Commit                     ← conventional commit message
-```
-
-Plans are stored in `.planning/feat/features/{slug}/plan.md` and executed with `/pwdev-feat:exec {slug}`.
-
----
-
-## Workspace
-
-```
-.planning/feat/
-├── features/
-│   ├── user-crud/
-│   │   ├── plan.md                # Action plan
-│   │   └── plan.done.md           # Execution report
-│   ├── api-review/
-│   │   ├── plan.md                # Review plan (Type: review)
-│   │   ├── report.md              # Findings (REPORT mode — no commit)
-│   │   └── plan.done.md
-│   └── ...
-└── codebase.md                    # Generated by /pwdev-feat:map-codebase
-```
-
-Each feature gets its own folder under `features/`. All artifacts related to a feature (plan, execution report, review findings) live inside that folder.
-
-Optional context files:
-- `.planning/feat/codebase.md` — generated by `/pwdev-feat:map-codebase`
-- `CLAUDE.md` — generated by `/pwdev-feat:setup`
-
----
-
-## pwdev-feat vs pwdev-code
-
-| Aspect | pwdev-feat | pwdev-code |
-|--------|-----------|------------|
-| **Philosophy** | Fast and practical | Rigorous and traceable |
-| **Phases** | Plan → Execute | DISCOVER → DESIGN → PLAN → EXECUTE → REVIEW → VERIFY |
-| **Agents** | PWDEVIA inline + executor and advisor subagents | 8 real subagents + inline personas |
-| **Commands** | 12 | 16 |
-| **Best for** | Individual features, quick iterations, small teams | Complex projects, compliance, large teams |
-| **Ceremony** | Minimal | Structured with gates |
-| **Plan style** | 7-question action plan | SPEC.md (8 sections) + atomic tasks |
-
-**Use pwdev-feat when** you want to ship fast with AI assistance.
-**Use pwdev-code when** you need full traceability and verification.
-
----
 
 ## License
 
-Apache-2.0 — See [LICENSE](./LICENSE)
-
-*PWDEV-FEAT v2.1.1 — Describe, plan, execute. Ship.*
-*Maintained by [Paulo Soares](https://github.com/soarescbm)*
+Apache-2.0 — see [LICENSE](./LICENSE).

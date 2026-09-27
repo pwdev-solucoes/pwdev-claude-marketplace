@@ -11,7 +11,18 @@
       "source": "./plugins/sdd-composy",
       "description": "Portable spec-driven development for Claude Code, Codex, Hermes and OpenCode with human-readable contracts, durable operational state, traceability, bounded autonomous correction, and isolated fleets.",
       "category": "workflow",
-      "tags": ["sdd", "workflow", "codex", "claude", "hermes", "opencode", "traceability", "verification", "fleet", "portable"],
+      "tags": [
+        "sdd",
+        "workflow",
+        "codex",
+        "claude",
+        "hermes",
+        "opencode",
+        "traceability",
+        "verification",
+        "fleet",
+        "portable"
+      ],
       "strict": true
     },
     {
@@ -20,7 +31,13 @@
       "source": "./plugins/pwdev-flow",
       "description": "Approval-gated PWDEV Flow compatible with Claude Code and Codex, including native isolated fleet runtimes.",
       "category": "workflow",
-      "tags": ["workflow", "codex", "claude", "spec-driven-development", "fleet"],
+      "tags": [
+        "workflow",
+        "codex",
+        "claude",
+        "spec-driven-development",
+        "fleet"
+      ],
       "strict": true
     },
     {
@@ -29,7 +46,16 @@
       "source": "./plugins/pwdev-power",
       "description": "Disciplined spec-driven development v0.1 — PRD and executable roadmap, brainstorm-gated plans with global constraints and per-task interfaces, subagent-driven execution with a durable ledger and bounded fix loop, adversarial verification, and isolated autonomous fleets on cmux; runs on Claude Code, Codex and Hermes Agent",
       "category": "workflow",
-      "tags": ["workflow", "spec-driven-development", "tdd", "claude", "codex", "hermes", "cmux", "fleet"],
+      "tags": [
+        "workflow",
+        "spec-driven-development",
+        "tdd",
+        "claude",
+        "codex",
+        "hermes",
+        "cmux",
+        "fleet"
+      ],
       "strict": true
     },
     {
@@ -38,7 +64,12 @@
       "source": "./plugins/pwdev-code",
       "description": "Spec-driven development framework v2.4 — 8 real subagents (incl. advisor), per-task model routing, curated memory graph, opt-in parallel waves, external CLI delegation (Codex/OpenCode/Kimi/Gemini/Kiro), simplification pass, strict verify, audit hooks, 23 commands",
       "category": "workflow",
-      "tags": ["sdd", "agents", "hooks", "workflow"],
+      "tags": [
+        "sdd",
+        "agents",
+        "hooks",
+        "workflow"
+      ],
       "strict": true
     },
     {
@@ -47,16 +78,32 @@
       "source": "./plugins/pwdev-uiux",
       "description": "Stack-agnostic UI/UX engineering v2.0 — 6 real subagents, 5-phase workflow with gates, Figma integration, WCAG 2.1 AA, audit hooks",
       "category": "workflow",
-      "tags": ["ui-ux", "agents", "hooks", "figma", "accessibility"],
+      "tags": [
+        "ui-ux",
+        "agents",
+        "hooks",
+        "figma",
+        "accessibility"
+      ],
       "strict": true
     },
     {
       "name": "pwdev-feat",
       "displayName": "PWDEV Feat — Fast Feature Plans & Execution",
       "source": "./plugins/pwdev-feat",
-      "description": "Simplified feature development v2.1 — PWDEVIA 7-question plans inline + executor and advisor subagents, shared project memory (read-only), audit hooks, 12 commands",
+      "description": "Fast feature development v3.2 for Claude Code, Codex, Hermes and OpenCode — evidence-based codebase map, PWDEVIA 7-question plans with traceable acceptance criteria and a plan linter, executor (subagent or inline) with resume, advisor, rule-cited reviews, playwright-cli checks and E2E scenarios exportable to Playwright, a GitHub issue loop (plan → exec → review → PR) that runs as an Orca worker, 13 skills",
       "category": "workflow",
-      "tags": ["feature-planning", "agents", "hooks", "workflow"],
+      "tags": [
+        "feature-planning",
+        "agents",
+        "workflow",
+        "codex",
+        "claude",
+        "hermes",
+        "opencode",
+        "e2e",
+        "playwright"
+      ],
       "strict": true
     },
     {
@@ -65,7 +112,15 @@
       "source": "./plugins/pwdev-prd",
       "description": "Interview-driven PRDs for Claude Code, Codex, Hermes and OpenCode — 12-step inline interview, approval gate, roadmap with explicit dependency chain (waves, critical path), GitHub publishing via pwdev-github, canonical JSON, audit hooks",
       "category": "workflow",
-      "tags": ["prd", "requirements", "roadmap", "hooks", "codex", "hermes", "opencode"],
+      "tags": [
+        "prd",
+        "requirements",
+        "roadmap",
+        "hooks",
+        "codex",
+        "hermes",
+        "opencode"
+      ],
       "strict": true
     },
     {
@@ -74,7 +129,10 @@
       "source": "./plugins/pwdev-statusline",
       "description": "Rich terminal status line v1.1 — model, git branch, context bar with dynamic colors, rate limits, formatted tokens; fully configurable",
       "category": "developer-experience",
-      "tags": ["statusline", "terminal-ui"],
+      "tags": [
+        "statusline",
+        "terminal-ui"
+      ],
       "strict": true
     },
     {
@@ -83,7 +141,15 @@
       "source": "./plugins/pwdev-copy",
       "description": "Framework de copy genérico e treinável v1.1 — um arquivo de contexto define marca, ICP e voz, e 20 skills cobrem o ciclo completo: pesquisa VOC, brand voice, criação (landing, social, ganchos, reaproveitamento), revisão em 7 sweeps com anti-slop, e camada de análise que fecha o loop; 5 subagentes reais",
       "category": "marketing",
-      "tags": ["copywriting", "marketing", "brand-voice", "seo", "analytics", "agents", "pt-br"],
+      "tags": [
+        "copywriting",
+        "marketing",
+        "brand-voice",
+        "seo",
+        "analytics",
+        "agents",
+        "pt-br"
+      ],
       "strict": true
     },
     {
@@ -92,7 +158,16 @@
       "source": "./plugins/pwdev-social-media",
       "description": "Geração de criativos para redes sociais v2.0 — orquestração de APIs (Ideogram, Leonardo, Flux, Runway, Freepik) com trava de gasto, triagem de custo, engenharia de prompt, consistência visual e curadoria; Figma como camada opcional de composição; 19 skills, 4 subagentes",
       "category": "marketing",
-      "tags": ["social-media", "image-generation", "ideogram", "flux", "runway", "figma", "accessibility", "pt-br"],
+      "tags": [
+        "social-media",
+        "image-generation",
+        "ideogram",
+        "flux",
+        "runway",
+        "figma",
+        "accessibility",
+        "pt-br"
+      ],
       "strict": true
     },
     {
@@ -101,7 +176,17 @@
       "source": "./plugins/pwdev-devops",
       "description": "DevOps com execução segura v1.0 — leitura livre, mutação sob confirmação por comando, destrutivo bloqueado por guard script; 19 skills (AWS, Kubernetes, Docker, Linux, Nginx, PostgreSQL, observabilidade, incidente, segurança, Proxmox, automação, performance, backup, Laravel, confiabilidade, FinOps, IA, documentação) e 4 subagentes",
       "category": "workflow",
-      "tags": ["devops", "sre", "aws", "kubernetes", "postgresql", "observability", "finops", "agents", "pt-br"],
+      "tags": [
+        "devops",
+        "sre",
+        "aws",
+        "kubernetes",
+        "postgresql",
+        "observability",
+        "finops",
+        "agents",
+        "pt-br"
+      ],
       "strict": true
     },
     {
@@ -110,7 +195,14 @@
       "source": "./plugins/pwdev-youtrack",
       "description": "Integração com YouTrack Cloud v1.0 — MCP oficial embutido (2025.3+) para issues, busca com query language, comentários, artigos e log de trabalho; fallback REST para agile boards, sprints, relatórios de tempo e anexos; 2 skills, 4 comandos, setup guiado com token no Keychain",
       "category": "workflow",
-      "tags": ["youtrack", "issues", "agile", "time-tracking", "mcp", "pt-br"],
+      "tags": [
+        "youtrack",
+        "issues",
+        "agile",
+        "time-tracking",
+        "mcp",
+        "pt-br"
+      ],
       "strict": true
     },
     {
@@ -119,7 +211,14 @@
       "source": "./plugins/pwdev-glpi",
       "description": "Integração com GLPI 10.x v1.0 — servidor MCP próprio via npx (@soarescbm/mcp-glpi): tickets CRUD, followups, solução, usuários, grupos, ativos, projetos e KB; triagem assistida por prompt MCP e relatório de fila; 1 skill, 4 comandos, setup guiado com PAT no Keychain",
       "category": "workflow",
-      "tags": ["glpi", "itsm", "helpdesk", "tickets", "mcp", "pt-br"],
+      "tags": [
+        "glpi",
+        "itsm",
+        "helpdesk",
+        "tickets",
+        "mcp",
+        "pt-br"
+      ],
       "strict": true
     },
     {
@@ -128,7 +227,14 @@
       "source": "./plugins/pwdev-postgres",
       "description": "Integração com PostgreSQL v1.0 — servidor MCP próprio via npx (@soarescbm/postgres-mcp): SELECT somente-leitura validado por AST, inspeção de schema (tabelas, índices, constraints) e mutações DML/DDL com dry-run obrigatório (preview + confirm); 1 skill, 3 comandos, setup guiado com connection string no Keychain",
       "category": "workflow",
-      "tags": ["postgres", "postgresql", "database", "sql", "mcp", "pt-br"],
+      "tags": [
+        "postgres",
+        "postgresql",
+        "database",
+        "sql",
+        "mcp",
+        "pt-br"
+      ],
       "strict": true
     },
     {
@@ -137,7 +243,15 @@
       "source": "./plugins/pwdev-obsidian",
       "description": "Integração com Obsidian via MCP embutido no plugin comunitário Local REST API — leitura/escrita/edição estruturada de notas (heading/block/frontmatter), busca por JsonLogic e por texto, tags, comandos da paleta; 1 skill, 3 comandos, setup guiado com API Key no Keychain",
       "category": "workflow",
-      "tags": ["obsidian", "notes", "knowledge-base", "vault", "markdown", "mcp", "pt-br"],
+      "tags": [
+        "obsidian",
+        "notes",
+        "knowledge-base",
+        "vault",
+        "markdown",
+        "mcp",
+        "pt-br"
+      ],
       "strict": true
     },
     {
@@ -146,7 +260,16 @@
       "source": "./plugins/pwdev-brain",
       "description": "Segundo cérebro persistente em Markdown v1.1 — LLM Wiki (padrão Karpathy) mantida como bundle Open Knowledge Format v0.2: ingest com discussão e citação por afirmação, query com síntese citada e incorporação de respostas duráveis, lint de conformidade com fixes aprovados; 2 subagentes, 1 skill, 5 comandos, MCP embutido somente-leitura (6 tools, Node puro, zero dependências)",
       "category": "workflow",
-      "tags": ["second-brain", "knowledge-base", "okf", "llm-wiki", "markdown", "agents", "mcp", "pt-br"],
+      "tags": [
+        "second-brain",
+        "knowledge-base",
+        "okf",
+        "llm-wiki",
+        "markdown",
+        "agents",
+        "mcp",
+        "pt-br"
+      ],
       "strict": true
     },
     {
@@ -155,7 +278,16 @@
       "source": "./plugins/pwdev-qa",
       "description": "Portable QA workflows for Claude Code, Codex, and Hermes Agent with contextual tool recommendations, bounded execution, verifiable evidence, acceptance validation, and equivalent offline HTML/PDF reports; 29 skills and 10 Claude commands",
       "category": "workflow",
-      "tags": ["quality-assurance", "testing", "evidence", "reporting", "claude", "codex", "hermes", "portable"],
+      "tags": [
+        "quality-assurance",
+        "testing",
+        "evidence",
+        "reporting",
+        "claude",
+        "codex",
+        "hermes",
+        "portable"
+      ],
       "strict": true
     },
     {
@@ -164,7 +296,17 @@
       "source": "./plugins/pwdev-skills",
       "description": "Review, refactor and benchmark Agent Skills across Claude Code, Codex, Hermes Agent and OpenCode: a smaller always-loaded core, lean/guided profiles chosen by measurement, runtime and model discovery, generic token sizing, and objective headless A/B benchmarks under a budget; 1 skill",
       "category": "workflow",
-      "tags": ["agent-skills", "skill-refactoring", "benchmark", "evaluation", "claude", "codex", "hermes", "opencode", "portable"],
+      "tags": [
+        "agent-skills",
+        "skill-refactoring",
+        "benchmark",
+        "evaluation",
+        "claude",
+        "codex",
+        "hermes",
+        "opencode",
+        "portable"
+      ],
       "strict": true
     },
     {
@@ -173,7 +315,30 @@
       "source": "./plugins/pwdev-excalidraw",
       "description": "Planejamento visual com diagramas Excalidraw via servidor MCP oficial — arquitetura, fluxos, dependências, decisões e roadmaps editáveis.",
       "category": "planning",
-      "tags": ["excalidraw", "planning", "architecture", "diagram", "mcp", "pt-br"],
+      "tags": [
+        "excalidraw",
+        "planning",
+        "architecture",
+        "diagram",
+        "mcp",
+        "pt-br"
+      ],
+      "strict": true
+    },
+    {
+      "name": "pwdev-hermes-orca",
+      "displayName": "PWDEV Hermes Orca — Hermes coordena workers do Orca",
+      "source": "./plugins/pwdev-hermes-orca",
+      "description": "Hermes Agent como coordenador do Orca v0.1 — issues do GitHub viram um DAG aprovado pelo usuário, um worker supervisionado do Orca por issue (claude, codex ou opencode) rodando o feat-loop do pwdev-feat (plan → exec → review → PR), gates respondidos via orca ask, relatório por issue; nunca faz merge",
+      "category": "workflow",
+      "tags": [
+        "hermes",
+        "orca",
+        "orchestration",
+        "github-issues",
+        "pwdev-feat",
+        "multi-agent"
+      ],
       "strict": true
     },
     {
@@ -182,7 +347,17 @@
       "source": "./plugins/pwdev-github",
       "description": "GitHub Projects a partir de templates personalizáveis, publicação idempotente de roadmaps (issues, sub-issues, milestones, blocked-by nativo) e skill para criar, atualizar e fechar issues e tarefas de Project via gh CLI — Claude Code, Codex, Hermes e OpenCode.",
       "category": "integration",
-      "tags": ["github", "projects", "issues", "roadmap", "gh-cli", "codex", "hermes", "opencode", "pt-br"],
+      "tags": [
+        "github",
+        "projects",
+        "issues",
+        "roadmap",
+        "gh-cli",
+        "codex",
+        "hermes",
+        "opencode",
+        "pt-br"
+      ],
       "strict": true
     }
   ]

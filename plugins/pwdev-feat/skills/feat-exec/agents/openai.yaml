@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Feat Execute"
+  short_description: "Execute an action plan with evidence"
+  default_prompt: "Use $feat-exec to execute the latest pending plan."

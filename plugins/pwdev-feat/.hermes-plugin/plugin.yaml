@@ -1,0 +1,6 @@
+name: pwdev-feat
+version: 3.2.1
+description: PWDEV Feat fast feature plans and execution (Claude Code, Codex, Hermes Agent, OpenCode); this manifest is the Hermes entry point
+author: Paulo Soares
+provides_hooks:
+  - pre_llm_call

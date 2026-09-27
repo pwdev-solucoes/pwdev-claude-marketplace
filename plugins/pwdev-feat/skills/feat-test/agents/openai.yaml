@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Feat Test Plan"
+  short_description: "Plan tests, E2E scenarios or a test audit"
+  default_prompt: "Use $feat-test to plan tests for existing code."

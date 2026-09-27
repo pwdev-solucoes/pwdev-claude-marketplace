@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Feat Audit"
+  short_description: "Query the local audit trail"
+  default_prompt: "Use $feat-audit to summarize the audit trail."

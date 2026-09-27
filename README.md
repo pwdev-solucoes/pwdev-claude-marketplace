@@ -18,7 +18,7 @@ Restart the runtime after installation. Read each plugin README for its setup an
 | Goal | Plugins |
 |---|---|
 | Spec-driven development | [pwdev-power](./plugins/pwdev-power/), [pwdev-flow](./plugins/pwdev-flow/), [sdd-composy](./plugins/sdd-composy/) |
-| Coding and delegation | [pwdev-code](./plugins/pwdev-code/), [pwdev-feat](./plugins/pwdev-feat/) |
+| Coding and delegation | [pwdev-code](./plugins/pwdev-code/), [pwdev-feat](./plugins/pwdev-feat/), [pwdev-hermes-orca](./plugins/pwdev-hermes-orca/) |
 | Requirements and UI/UX | [pwdev-prd](./plugins/pwdev-prd/), [pwdev-uiux](./plugins/pwdev-uiux/) |
 | Quality assurance | [pwdev-qa](./plugins/pwdev-qa/) |
 | Skill engineering | [pwdev-skills](./plugins/pwdev-skills/) |
@@ -56,7 +56,8 @@ Commands: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 | [**pwdev-power**](./plugins/pwdev-power/) | Disciplined spec-driven development for Claude Code, Codex **and** Hermes Agent — brainstorm gate, plans with verbatim constraints, subagent-driven execution with a ledger and bounded fix loop, adversarial verification, codebase map, isolated cmux fleets as a visual panel or unattended | 0.2.0 | Apache-2.0 |
 | [**pwdev-code**](./plugins/pwdev-code/) | Spec-driven development — 8 real subagents (incl. advisor), per-task model routing, memory graph, opt-in parallel waves, external CLI delegation (Codex/OpenCode/Kimi/Gemini/Kiro), 23 commands | 2.4.0 | Apache-2.0 |
 | [**pwdev-uiux**](./plugins/pwdev-uiux/) | UI/UX engineering — 6 real subagents, 5-phase workflow with gates, Figma, WCAG 2.1 AA | 2.0.1 | Apache-2.0 |
-| [**pwdev-feat**](./plugins/pwdev-feat/) | Simplified feature development — PWDEVIA 7-question plans inline + executor and advisor subagents | 2.1.1 | Apache-2.0 |
+| [**pwdev-feat**](./plugins/pwdev-feat/) | Fast feature development for Claude Code, Codex, Hermes and OpenCode — evidence-based codebase map, PWDEVIA plans with traceable criteria, executor with resume, rule-cited reviews, E2E scenarios for Playwright, GitHub issue loop to PR | 3.2.1 | Apache-2.0 |
+| [**pwdev-hermes-orca**](./plugins/pwdev-hermes-orca/) | Hermes Agent as Orca coordinator — GitHub issues into a user-approved DAG, one supervised Orca worker per issue running pwdev-feat `feat-loop` (plan → exec → review → PR), worker gates answered through `orca ask`, per-issue report; never merges | 0.1.1 | Apache-2.0 |
 | [**pwdev-prd**](./plugins/pwdev-prd/) | Interview-driven PRDs for Claude Code, Codex, Hermes Agent and OpenCode — 12-step inline interview, approval gate, roadmap with dependency chain (waves, critical path), publish to GitHub | 3.0.0 | Apache-2.0 |
 | [**pwdev-qa**](./plugins/pwdev-qa/) | Portable quality assurance for Claude Code, Codex and Hermes Agent — 10 workflows, 17 specialist guides, tool recommendation, auditable evidence, offline HTML and PDF reports | 0.1.0 | Apache-2.0 |
 | [**pwdev-skills**](./plugins/pwdev-skills/) | Skill engineering for Claude Code, Codex, Hermes Agent and OpenCode — review and refactor skills, lean/guided profiles by measurement, runtime and model discovery, objective headless A/B benchmarks across the same four runtimes | 0.1.0 | Apache-2.0 |
@@ -193,19 +194,33 @@ See the [full plugin documentation](./plugins/pwdev-uiux/README.md).
 
 ### pwdev-feat
 
-Simplified AI-assisted feature development using the **PWDEVIA 7-question methodology**. Describe what you want, get a structured plan, execute it.
+Fast AI-assisted feature development using the **PWDEVIA 7-question methodology**, portable to **Claude Code, Codex, Hermes Agent and OpenCode**. Map the codebase with evidence, get a structured plan with traceable acceptance criteria, execute it, review it.
 
 ```
-Describe ─▶ Plan (PWDEVIA, inline) ─▶ Execute (real subagent, IMPLEMENT/REPORT)
+Map (evidence) ─▶ Plan (PWDEVIA, inline, linted) ─▶ Execute (subagent or inline, IMPLEMENT/REPORT, resume) ─▶ Review
 ```
 
-**Agents:** PWDEVIA (inline planner) + executor and advisor (real subagents); reads pwdev-code's curated project memory when present
+**Agents:** PWDEVIA (inline planner) + executor and advisor (subagents on every runtime that has them, inline otherwise); reads pwdev-code's curated project memory when present
 
-**Plan types:** Feature, Backend, Frontend, Test, Review, Quick
+**Plan types:** Feature, Backend, Frontend, Test, Review, Quick — UI verified with `playwright-cli` and declarative E2E scenarios exportable to Playwright Test
 
-**Ships:** 12 commands · 2 subagents · hooks
+**Ships:** 13 commands · 2 subagents · 13 skills · hooks
 
 See the [full plugin documentation](./plugins/pwdev-feat/README.md).
+
+### pwdev-hermes-orca
+
+Hermes Agent coordinates supervised **Orca** workers over **GitHub issues**. You approve the DAG once; Hermes dispatches one worker per issue into its own Orca worktree, each running pwdev-feat `feat-loop` in orchestrated mode, answers the workers' gates through `orca ask`, escalates scope changes to you and closes each issue with a validated PR and a comment.
+
+```
+Issues ─▶ Hermes (DAG gate) ─▶ Orca Run ─▶ worker per issue: plan → exec → review → PR ─▶ report
+```
+
+**Requires:** Orca (Hermes opened in an Orca terminal), `gh`, pwdev-feat ≥ 3.2.0 on each routed agent
+
+**Ships:** 1 skill (Hermes) · read-only preflight · Hermes adapter (first-turn bootstrap only inside Orca) — never merges
+
+See the [full plugin documentation](./plugins/pwdev-hermes-orca/README.md).
 
 ### pwdev-prd
 
@@ -493,6 +508,9 @@ claude plugin install pwdev-uiux@pwdev-claude-marketplace
 
 # Simplified feature development (7-question plans)
 claude plugin install pwdev-feat@pwdev-claude-marketplace
+
+# Hermes coordinating Orca workers over GitHub issues (install on Hermes; see plugin README)
+claude plugin install pwdev-hermes-orca@pwdev-claude-marketplace
 
 # Interview-driven PRD creation (12-step process) — also Codex, Hermes and OpenCode
 claude plugin install pwdev-prd@pwdev-claude-marketplace

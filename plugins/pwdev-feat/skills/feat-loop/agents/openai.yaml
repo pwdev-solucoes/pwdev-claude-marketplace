@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Feat Issue Loop"
+  short_description: "Deliver a GitHub issue: plan, exec, review, PR"
+  default_prompt: "Use $feat-loop to deliver GitHub issue #1 end to end."

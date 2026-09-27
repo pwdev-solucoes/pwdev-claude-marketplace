@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Feat Quick"
+  short_description: "Small change without a plan file"
+  default_prompt: "Use $feat-quick to make a small bounded change."

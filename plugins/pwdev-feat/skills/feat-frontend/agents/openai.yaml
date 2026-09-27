@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Feat Frontend Plan"
+  short_description: "Plan UI work with E2E scenarios"
+  default_prompt: "Use $feat-frontend to plan UI work with E2E scenarios."

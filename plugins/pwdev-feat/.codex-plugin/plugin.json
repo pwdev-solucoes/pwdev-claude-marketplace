@@ -1,0 +1,40 @@
+{
+  "name": "pwdev-feat",
+  "version": "3.2.1+codex.20260927200000",
+  "description": "Fast feature plans and execution: PWDEVIA 7-question action plans with traceable acceptance criteria, an executor with IMPLEMENT/REPORT modes and resume, an advisor for hard decisions, evidence-based codebase mapping, reviews with stable findings, and E2E scenarios exportable to Playwright.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "codex",
+    "feature-planning",
+    "action-plans",
+    "code-review",
+    "e2e",
+    "playwright",
+    "workflow",
+    "hermes",
+    "opencode"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "PWDEV Feat",
+    "shortDescription": "Fast feature plans and execution",
+    "longDescription": "Map the codebase with evidence, plan a feature with the PWDEVIA 7-question method and traceable acceptance criteria, execute it with a fresh executor that verifies, commits and can resume, review a commit range with stable findings, and generate E2E scenarios that export to Playwright Test.",
+    "developerName": "PWDEV Solucoes",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Map this codebase and write the planning context documents.",
+      "Plan this feature with the PWDEVIA method, then execute the plan.",
+      "Review the commits since main with stable, rule-cited findings."
+    ]
+  }
+}

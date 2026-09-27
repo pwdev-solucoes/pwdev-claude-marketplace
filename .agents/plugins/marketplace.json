@@ -65,6 +65,18 @@
       "category": "Developer Tools"
     },
     {
+      "name": "pwdev-feat",
+      "source": {
+        "source": "local",
+        "path": "./plugins/pwdev-feat"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
       "name": "pwdev-prd",
       "source": {
         "source": "local",

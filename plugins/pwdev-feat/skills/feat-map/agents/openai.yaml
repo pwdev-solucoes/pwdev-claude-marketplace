@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Feat Map"
+  short_description: "Map the codebase with evidence"
+  default_prompt: "Use $feat-map to map this codebase for planning."
