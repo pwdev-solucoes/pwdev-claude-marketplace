@@ -1,0 +1,27 @@
+{
+  "name": "pwdev-github",
+  "displayName": "PWDEV GitHub — Projects, Issues e Dependências",
+  "version": "0.1.0",
+  "description": "GitHub Projects a partir de templates personalizáveis, publicação idempotente de roadmaps pwdev-roadmap/1 (issues, sub-issues, milestones e blocked-by nativo) e uma skill para criar, atualizar e fechar issues e tarefas de projeto — via gh CLI, com preview e confirmação antes de toda escrita; skills portáveis para Claude Code, Codex, Hermes Agent e OpenCode.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "claude-code",
+    "claude-plugin",
+    "github",
+    "github-projects",
+    "issues",
+    "roadmap",
+    "dependencies",
+    "gh-cli",
+    "pt-br",
+    "hermes",
+    "opencode",
+    "portable"
+  ]
+}

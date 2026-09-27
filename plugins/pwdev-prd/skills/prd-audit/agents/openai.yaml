@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV PRD Audit"
+  short_description: "Query the PRD audit trail"
+  default_prompt: "Use $prd-audit to query the audit trail."

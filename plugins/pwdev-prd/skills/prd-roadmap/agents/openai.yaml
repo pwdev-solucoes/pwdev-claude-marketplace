@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV PRD Roadmap"
+  short_description: "Roadmap with dependency chain"
+  default_prompt: "Use $prd-roadmap to turn an approved PRD into a roadmap with dependencies."

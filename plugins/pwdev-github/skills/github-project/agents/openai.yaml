@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV GitHub Project"
+  short_description: "GitHub Project from a template"
+  default_prompt: "Use $github-project to create a GitHub Project from a template."

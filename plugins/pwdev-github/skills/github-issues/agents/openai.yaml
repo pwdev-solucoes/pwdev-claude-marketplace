@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV GitHub Issues"
+  short_description: "Create, update and close issues"
+  default_prompt: "Use $github-issues to create, update or close issues and Project tasks."

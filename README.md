@@ -25,7 +25,7 @@ Restart the runtime after installation. Read each plugin README for its setup an
 | Copy and social content | [pwdev-copy](./plugins/pwdev-copy/), [pwdev-social-media](./plugins/pwdev-social-media/) |
 | Visual planning | [pwdev-excalidraw](./plugins/pwdev-excalidraw/) |
 | DevOps and operations | [pwdev-devops](./plugins/pwdev-devops/) |
-| Knowledge and integrations | [pwdev-brain](./plugins/pwdev-brain/), [pwdev-glpi](./plugins/pwdev-glpi/), [pwdev-obsidian](./plugins/pwdev-obsidian/), [pwdev-postgres](./plugins/pwdev-postgres/), [pwdev-youtrack](./plugins/pwdev-youtrack/) |
+| Knowledge and integrations | [pwdev-brain](./plugins/pwdev-brain/), [pwdev-github](./plugins/pwdev-github/), [pwdev-glpi](./plugins/pwdev-glpi/), [pwdev-obsidian](./plugins/pwdev-obsidian/), [pwdev-postgres](./plugins/pwdev-postgres/), [pwdev-youtrack](./plugins/pwdev-youtrack/) |
 | Terminal support | [pwdev-statusline](./plugins/pwdev-statusline/) |
 
 ### PWDEV Flow — dual runtime
@@ -57,13 +57,14 @@ Commands: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 | [**pwdev-code**](./plugins/pwdev-code/) | Spec-driven development — 8 real subagents (incl. advisor), per-task model routing, memory graph, opt-in parallel waves, external CLI delegation (Codex/OpenCode/Kimi/Gemini/Kiro), 23 commands | 2.4.0 | Apache-2.0 |
 | [**pwdev-uiux**](./plugins/pwdev-uiux/) | UI/UX engineering — 6 real subagents, 5-phase workflow with gates, Figma, WCAG 2.1 AA | 2.0.1 | Apache-2.0 |
 | [**pwdev-feat**](./plugins/pwdev-feat/) | Simplified feature development — PWDEVIA 7-question plans inline + executor and advisor subagents | 2.1.1 | Apache-2.0 |
-| [**pwdev-prd**](./plugins/pwdev-prd/) | Interview-driven PRD creation — 12-step inline interview, Markdown + canonical JSON | 2.0.1 | Apache-2.0 |
+| [**pwdev-prd**](./plugins/pwdev-prd/) | Interview-driven PRDs for Claude Code, Codex, Hermes Agent and OpenCode — 12-step inline interview, approval gate, roadmap with dependency chain (waves, critical path), publish to GitHub | 3.0.0 | Apache-2.0 |
 | [**pwdev-qa**](./plugins/pwdev-qa/) | Portable quality assurance for Claude Code, Codex and Hermes Agent — 10 workflows, 17 specialist guides, tool recommendation, auditable evidence, offline HTML and PDF reports | 0.1.0 | Apache-2.0 |
 | [**pwdev-skills**](./plugins/pwdev-skills/) | Skill engineering for Claude Code, Codex, Hermes Agent and OpenCode — review and refactor skills, lean/guided profiles by measurement, runtime and model discovery, objective headless A/B benchmarks across the same four runtimes | 0.1.0 | Apache-2.0 |
 | [**pwdev-copy**](./plugins/pwdev-copy/) | Trainable copywriting framework — 20 skills across the full cycle (VOC research → copy → review → analysis), 5 real subagents | 1.1.0 | Apache-2.0 |
 | [**pwdev-social-media**](./plugins/pwdev-social-media/) | AI creative generation for social — API orchestration (Ideogram, Leonardo, Flux, Runway, Freepik) with spend guard, 19 skills, 4 subagents | 2.0.1 | Apache-2.0 |
 | [**pwdev-devops**](./plugins/pwdev-devops/) | Platform, operations & incident response — safe-execution posture with guard script, 24 skills, 4 subagents | 1.0.0 | Apache-2.0 |
 | [**pwdev-youtrack**](./plugins/pwdev-youtrack/) | YouTrack management — official built-in MCP server (2025.3+) for issues, articles & work log; REST fallback for boards, sprints, time reports | 1.0.0 | Apache-2.0 |
+| [**pwdev-github**](./plugins/pwdev-github/) | GitHub Projects for Claude Code, Codex, Hermes Agent and OpenCode — customizable templates, idempotent roadmap publishing (issues, sub-issues, milestones, native blocked-by) and a skill to create, update and close issues and Project tasks, via gh CLI | 0.1.0 | Apache-2.0 |
 | [**pwdev-glpi**](./plugins/pwdev-glpi/) | Multi-runtime GLPI 10/11 ITSM for Claude Code, Codex and Hermes — own MCP server via npx (@soarescbm/mcp-glpi): tickets CRUD, triage with MCP prompts, queue reports, assets & KB | 1.2.0 | Apache-2.0 |
 | [**pwdev-postgres**](./plugins/pwdev-postgres/) | PostgreSQL — own MCP server via npx (@soarescbm/postgres-mcp): AST-validated read-only SELECT, schema inspection, DML/DDL with mandatory dry-run | 1.0.0 | Apache-2.0 |
 | [**pwdev-obsidian**](./plugins/pwdev-obsidian/) | Obsidian vault — MCP server built into the Local REST API community plugin: read, write and structurally edit notes (heading/block/frontmatter), JsonLogic and free-text search, tags, active file, command palette | 1.0.0 | Apache-2.0 |
@@ -209,18 +210,39 @@ See the [full plugin documentation](./plugins/pwdev-feat/README.md).
 ### pwdev-prd
 
 Interview-driven **PRD creation** with a 12-step structured process — run
-inline (the interviewer talks to you; zero subagents by design).
-Technology-agnostic, outputs Markdown + canonical JSON.
+inline (the interviewer talks to you). Technology-agnostic, outputs Markdown +
+canonical JSON; an approved PRD becomes a roadmap with an explicit dependency
+chain, published to GitHub through pwdev-github.
 
 ```
-Interview (12 steps) ─▶ PRD.md ─▶ Export (JSON / GitHub Issue)
+Interview (12 steps) ─▶ PRD.md (APPROVED, RN) ─▶ roadmap + DEPENDENCIES.md ─▶ stories (US, CA, RN) per feature ─▶ GitHub Project (pwdev-github)
 ```
 
 **Outputs:** Structured PRD with objectives, metrics, functional/non-functional requirements, architecture, risks, acceptance criteria
 
-**Ships:** 6 commands · no subagents, by design · hooks
+Portable: nine `prd-*` skills run on Claude Code, Codex, Hermes Agent and OpenCode
+(`python3 plugins/pwdev-prd/.opencode-plugin/install.py` for OpenCode).
+
+**Ships:** 9 commands · 9 skills · 1 subagent (roadmap) · hooks
 
 See the [full plugin documentation](./plugins/pwdev-prd/README.md).
+
+### pwdev-github
+
+**GitHub Projects and issues** through the `gh` CLI: Projects from customizable
+presets (or copied from a template Project), roadmaps published with sub-issues,
+milestones and native blocked-by, and a skill for day-to-day issue work.
+
+```
+roadmap.json ─▶ Project from template ─▶ issues + sub-issues + blocked-by ─▶ github-issues skill
+```
+
+Portable: five `github-*` skills run on Claude Code, Codex, Hermes Agent and OpenCode
+(`python3 plugins/pwdev-github/.opencode-plugin/install.py` for OpenCode).
+
+**Ships:** 4 commands · 5 skills · no subagents
+
+See the [full plugin documentation](./plugins/pwdev-github/README.md).
 
 ### pwdev-qa
 
@@ -472,8 +494,13 @@ claude plugin install pwdev-uiux@pwdev-claude-marketplace
 # Simplified feature development (7-question plans)
 claude plugin install pwdev-feat@pwdev-claude-marketplace
 
-# Interview-driven PRD creation (12-step process)
+# Interview-driven PRD creation (12-step process) — also Codex, Hermes and OpenCode
 claude plugin install pwdev-prd@pwdev-claude-marketplace
+#   OpenCode: python3 plugins/pwdev-prd/.opencode-plugin/install.py     (--project . / --uninstall)
+
+# GitHub Projects from templates, roadmap publishing, issue skill — also Codex, Hermes and OpenCode
+claude plugin install pwdev-github@pwdev-claude-marketplace
+#   OpenCode: python3 plugins/pwdev-github/.opencode-plugin/install.py  (--project . / --uninstall)
 
 # Portable quality assurance (10 workflows, evidence, HTML/PDF reports)
 claude plugin install pwdev-qa@pwdev-claude-marketplace
@@ -550,7 +577,7 @@ are per-subagent, with namespaced keys where needed:
   (the executor also routes per task via the plan's `Complexity:` header)
 - pwdev-feat: `"feat-executor"`, `"feat-advisor"`
 - pwdev-uiux: `"uiux-ui-builder"`, `"uiux-ux-critic"`, ...
-- pwdev-prd: no subagents — nothing to configure
+- pwdev-prd: one subagent (`roadmap`, `model: inherit`) — nothing to configure
 
 ```json
 {
@@ -628,6 +655,7 @@ claude plugin install pwdev-code@pwdev-claude-marketplace
 claude plugin install pwdev-uiux@pwdev-claude-marketplace
 claude plugin install pwdev-feat@pwdev-claude-marketplace
 claude plugin install pwdev-prd@pwdev-claude-marketplace
+claude plugin install pwdev-github@pwdev-claude-marketplace
 claude plugin install pwdev-qa@pwdev-claude-marketplace
 claude plugin install pwdev-skills@pwdev-claude-marketplace
 claude plugin install pwdev-copy@pwdev-claude-marketplace

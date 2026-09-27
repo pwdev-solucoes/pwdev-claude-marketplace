@@ -1,0 +1,6 @@
+name: pwdev-prd
+version: 3.0.0
+description: PWDEV PRD interview-driven requirements, roadmap with dependency chain and GitHub publishing (Claude Code, Codex, Hermes Agent, OpenCode); this manifest is the Hermes entry point
+author: Paulo Soares
+provides_hooks:
+  - pre_llm_call

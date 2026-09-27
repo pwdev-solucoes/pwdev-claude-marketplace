@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV PRD Export"
+  short_description: "Export a PRD as JSON or an issue"
+  default_prompt: "Use $prd-export to export a PRD."

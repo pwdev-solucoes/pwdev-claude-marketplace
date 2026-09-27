@@ -1,0 +1,23 @@
+{
+  "name": "kanban",
+  "label": "Kanban simples",
+  "summary": "Fluxo contínuo: Status e Prioridade, sem fases nem sprints.",
+  "description": "Quadro kanban.",
+  "readme": "Quadro kanban gerenciado com pwdev-github.",
+  "fields": [
+    {"name": "Status", "role": "status", "type": "SINGLE_SELECT", "builtin": true, "options": [
+      {"name": "A fazer", "color": "GRAY", "description": "Na fila", "value": "backlog"},
+      {"name": "Fazendo", "color": "YELLOW", "description": "Em andamento", "value": "in_progress"},
+      {"name": "Feito", "color": "GREEN", "description": "Concluído", "value": "done"}
+    ]},
+    {"name": "Prioridade", "role": "priority", "type": "SINGLE_SELECT", "options": [
+      {"name": "Must", "color": "RED", "description": "Obrigatório", "value": "must"},
+      {"name": "Should", "color": "ORANGE", "description": "Importante", "value": "should"},
+      {"name": "Could", "color": "YELLOW", "description": "Desejável", "value": "could"},
+      {"name": "Won't", "color": "GRAY", "description": "Fora desta entrega", "value": "wont"}
+    ]}
+  ],
+  "views": [
+    {"name": "Quadro", "layout": "Board", "setup": "Agrupar colunas por Status"}
+  ]
+}

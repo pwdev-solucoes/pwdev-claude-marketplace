@@ -77,7 +77,7 @@ def inventory_claims(text):
 
         claims[match["plugin"]] = {
             "commands": count("commands", "comandos"),
-            "subagents": count("subagents", "subagentes"),
+            "subagents": count("subagents", "subagent", "subagentes", "subagente"),
             "skills": count("skill", "skills"),
             "MCP": present("MCP"),
             "hooks": present("hooks"),

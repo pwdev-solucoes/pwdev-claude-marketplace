@@ -1,11 +1,11 @@
-# PWDEV-PRD v2.0.0
+# PWDEV-PRD v3.0.0
 
 *Read this in [Português Brasileiro](./README.pt-BR.md)*
 
-> **Interview-Driven PRD Creation for Claude Code**
+> **Interview-Driven PRD Creation for Claude Code, Codex, Hermes Agent and OpenCode**
 
 ```
-Structured interview → Consistent PRD → Markdown + JSON export
+Structured interview → Approved PRD → Roadmap with dependencies → GitHub Project
 ```
 
 PWDEV-PRD guides you through a **12-step structured interview** to create complete, consistent, technology-agnostic Product Requirements Documents for features or entire systems.
@@ -38,6 +38,62 @@ This makes PRDs compatible with any downstream workflow:
 - Manual handoff to engineering teams
 
 ---
+
+## Installation
+
+| Runtime | Install | Invoke |
+|---|---|---|
+| Claude Code | `claude plugin install pwdev-prd@pwdev-claude-marketplace` | `/pwdev-prd:create "…"` |
+| Codex | add this repository as a marketplace and enable **pwdev-prd** (`.agents/plugins/marketplace.json`) | `$prd-create …` |
+| Hermes Agent | `hermes plugins install pwdev-solucoes/pwdev-claude-marketplace --enable` (entry point `.hermes-plugin/`) | `skill_view("pwdev-prd:prd-create")` or just ask |
+| OpenCode | `python3 plugins/pwdev-prd/.opencode-plugin/install.py [--project <dir>]` | `/prd-create …` or the `skill` tool |
+
+The workflow lives in nine portable skills (`skills/prd-*`); each Claude command is a thin
+wrapper over one of them (`create → prd-create`, `roadmap → prd-roadmap`, ...). The roadmap
+writer is a subagent on every runtime that has one (Claude `Agent`, Codex `spawn_agent`, Hermes
+`delegate_task`, OpenCode `task`) and runs inline otherwise; Codex subagents need
+`[features] multi_agent = true` in `~/.codex/config.toml`. Hooks (audit, secret guard) are
+Claude-only; elsewhere the audit trail has the milestone events only. Details:
+[`references/runtime.md`](./references/runtime.md).
+
+---
+
+## What's New in v3.0.0
+
+- **Portable to Codex, Hermes Agent and OpenCode** — nine `prd-*` skills are the single source
+  of truth; Claude commands are wrappers; Codex manifest and `openai.yaml` per skill; Hermes
+  adapter with a first-turn bootstrap; OpenCode installer that links the skills and writes one
+  `/prd-<name>` command each.
+- The roadmap writer's contract moved to `references/roadmap-agent.md`, shared by every runtime
+  and by the inline fallback.
+- **User stories, CA and RN per feature** — the PRD gains a `### Business Rules` section
+  (`RN-xx`, captured in interview step 5); the roadmap writer drafts 1–3 user stories per feature
+  ("Como…, quero…, para…", Gherkin CA with happy and error paths, the RN they apply); the new
+  **`/pwdev-prd:stories {slug} [feature|next]`** evolves one feature at a time with you up to the
+  Definition of Ready (INVEST, 3–8 CA, every RN verified by a CA). The checker enforces the
+  standard (adapted from pwdev-code `skill-user-stories`, see `references/user-stories.md`) and
+  generates `STORIES.md` and `stories/US-NN-*.md`. Publishing puts the stories in the feature
+  issue or makes them sub-issues.
+
+## What's New in v2.1.0
+
+- **Roadmap with a dependency chain** — `/pwdev-prd:roadmap {slug}` decomposes an
+  approved PRD into Phase → Epic → Feature → Task (same IDs as pwdev-power and
+  pwdev-code) with explicit `depends_on` edges. The deterministic checker
+  `scripts/roadmap-check.py` rejects cycles, dangling edges and orphan requirements, then
+  generates `DEPENDENCIES.md`: Mermaid graph, **waves** (what can run in parallel) and the
+  **critical path**. The roadmap is written by the plugin's first subagent,
+  `pwdev-prd:roadmap`; the interview itself stays inline.
+- **Publish to GitHub** — `/pwdev-prd:publish {slug}` hands the approved
+  `roadmap.json` (`pwdev-roadmap/1`) to the **pwdev-github** plugin: GitHub Project from a
+  customizable template, issues, sub-issues, milestones and native "blocked by" links.
+- **Approval gate** — PRDs carry `Status: DRAFT | APPROVED`; only approved PRDs become
+  roadmaps. `refine` bumps `Version`, keeps a `Change Log` and re-opens approval.
+- **Traceable IDs** — `FR-xx`, `NFR-xx`, `AC-xx`; priority is MoSCoW everywhere
+  (template and JSON used to disagree).
+- **Safer `export --github`** — preflight for auth, repo, missing labels and the 65,536-char
+  body limit, plus a preview before creating the issue.
+- **`list`** shows status, version, roadmap state and the GitHub Project URL.
 
 ## What's New in v2.0.0
 
@@ -78,7 +134,7 @@ removed.
 | 2 | **Problem & Opportunity** | Current pain, real examples with numbers, failed attempts |
 | 3 | **Objectives & Metrics** | Measurable goals with metric and target |
 | 4 | **Scope** | What's in, what's explicitly out |
-| 5 | **Functional Requirements** | Name, description, main flow, alternatives, errors, priority |
+| 5 | **Functional Requirements and Business Rules** | Name, description, main flow, alternatives, errors, priority; business rules `RN-xx` with a testable statement and an example |
 | 6 | **Non-Functional Requirements** | Performance, availability, security, observability, compliance |
 | 7 | **Architecture & Approach** | Components, integrations, communication patterns |
 | 8 | **Decisions & Trade-offs** | What's decided, why, what's the cost |
@@ -92,6 +148,7 @@ removed.
 Before generating the final PRD, the agent validates:
 - Every objective has a metric and target
 - Every functional requirement has name, flow, and priority
+- Every business rule has an `RN-xx` ID, a testable statement and an example
 - NFRs include at least performance and availability
 - Out of scope doesn't contradict in scope
 - Architecture supports declared NFRs
@@ -105,7 +162,8 @@ Before generating the final PRD, the agent validates:
 
 | Persona | Where it runs | What it does |
 |---------|---------------|-------------|
-| **PRD interviewer** | Inline, main context (`references/interview-method.md`) — zero subagents by design | Conducts the 12-step interview, validates consistency, generates PRD.md + prd.json |
+| **PRD interviewer** | Inline, main context (`references/interview-method.md`) — it talks to you, so it is never a subagent | Conducts the 12-step interview, validates consistency, generates PRD.md + prd.json |
+| **Roadmap** (`agents/roadmap.md`) | Subagent `pwdev-prd:roadmap`, dispatched by `/pwdev-prd:roadmap` — never talks to you | Writes the roadmap files and `roadmap.json` with the dependency chain; the command runs the checker and holds the approval gate |
 
 ### Agent Boundaries
 - Never chooses specific technologies
@@ -128,7 +186,15 @@ Before generating the final PRD, the agent validates:
 | Command | What it does |
 |---------|-------------|
 | `/pwdev-prd:create "desc"` | Start structured interview → generate PRD.md + optional prd.json |
-| `/pwdev-prd:refine {slug}` | Update specific sections of an existing PRD |
+| `/pwdev-prd:refine {slug}` | Update specific sections of an existing PRD (bumps version, re-opens approval) |
+
+### Roadmap and GitHub
+
+| Command | What it does |
+|---------|-------------|
+| `/pwdev-prd:roadmap {slug}` | Approved PRD → roadmap with dependency chain, waves, critical path, traceability and draft user stories |
+| `/pwdev-prd:stories {slug} [feature\|next]` | Evolve one feature at a time: user stories, acceptance criteria (CA) and business rules (RN) up to the Definition of Ready |
+| `/pwdev-prd:publish {slug}` | Approved roadmap → GitHub Project, issues, sub-issues and blocked-by (needs pwdev-github) |
 
 ### Management
 
@@ -137,7 +203,7 @@ Before generating the final PRD, the agent validates:
 | `/pwdev-prd:list` | List all PRDs with status |
 | `/pwdev-prd:export {slug}` | Export as JSON or GitHub issue |
 | `/pwdev-prd:export {slug} --json` | Regenerate prd.json |
-| `/pwdev-prd:export {slug} --github` | Create GitHub issue from PRD |
+| `/pwdev-prd:export {slug} --github` | Create one GitHub issue from the PRD (preflight + preview) |
 | `/pwdev-prd:audit` | Query the audit trail — summary, events, decisions, artifacts, stats, export PDF |
 
 ---
@@ -154,8 +220,9 @@ All commands support **Portuguese (PT-BR)** and **English (EN)**. Configured dur
 
 ### Model
 
-This plugin has **zero subagents** — the interview runs inline on the
-session model, so there is nothing to configure. `model_profile` in the
+The interview runs inline on the session model. The single subagent,
+`pwdev-prd:roadmap`, declares `model: inherit`, so it also follows the session
+model — there is nothing to configure. `model_profile` in the
 shared `.planning/config.json` belongs to the plugins with subagents
 (pwdev-code, pwdev-feat) and is left untouched by `/pwdev-prd:init`.
 
@@ -262,8 +329,15 @@ Structured data with English keys, content in original language:
 ```
 .planning/prds/
 ├── user-authentication/
-│   ├── PRD.md              # Structured PRD document
-│   └── prd.json            # Optional JSON export
+│   ├── PRD.md              # Structured PRD document (Status: DRAFT | APPROVED)
+│   ├── prd.json            # Optional JSON export
+│   └── roadmap/            # /pwdev-prd:roadmap — see references/roadmap-format.md
+│       ├── roadmap.json    # pwdev-roadmap/1 machine contract
+│       ├── ROADMAP.md  TRACEABILITY.md  RISKS.md
+│       ├── DEPENDENCIES.md # generated: Mermaid graph, waves, critical path
+│       ├── STORIES.md      # generated: stories per feature, status, CA and RN
+│       ├── stories/        # generated: US-NN-<slug>.md (edit through /pwdev-prd:stories)
+│       └── F01-<slug>/…    # PHASE.md, EPIC.md, one file per feature
 ├── inventory-management/
 │   ├── PRD.md
 │   └── prd.json
@@ -291,5 +365,5 @@ When the user doesn't know, the agent offers these as **hypotheses** (explicitly
 
 Apache-2.0 — See [LICENSE](./LICENSE)
 
-*PWDEV-PRD v2.0.0 — Clear requirements, consistent documents, better features.*
+*PWDEV-PRD v3.0.0 — Clear requirements, consistent documents, better features.*
 *Maintained by [Paulo Soares](https://github.com/soarescbm)*

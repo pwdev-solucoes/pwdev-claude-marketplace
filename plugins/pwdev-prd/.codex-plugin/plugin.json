@@ -1,0 +1,39 @@
+{
+  "name": "pwdev-prd",
+  "version": "3.0.0",
+  "description": "Interview-driven PRDs with an approval gate, a roadmap with an explicit dependency chain (waves and critical path, validated by a deterministic checker), canonical JSON export, and publishing to GitHub Projects through pwdev-github.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "codex",
+    "prd",
+    "product-requirements",
+    "roadmap",
+    "dependencies",
+    "github",
+    "hermes",
+    "opencode"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "PWDEV PRD",
+    "shortDescription": "Interview-driven PRDs and dependency-aware roadmaps",
+    "longDescription": "Write a technology-agnostic PRD through a 12-step interview with one question at a time and an approval gate, decompose the approved PRD into phases, epics, features and tasks with explicit dependencies, waves and a critical path checked by a deterministic validator, and publish the roadmap to a GitHub Project with issues and blocked-by links.",
+    "developerName": "PWDEV Solucoes",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Interview me to write a PRD for this feature.",
+      "Turn the approved PRD into a roadmap with its dependency chain.",
+      "Publish the approved roadmap to a GitHub Project."
+    ]
+  }
+}

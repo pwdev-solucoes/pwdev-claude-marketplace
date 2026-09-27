@@ -5,7 +5,7 @@ Every pwdev-prd command runs this as **STEP 0**, before any other step.
 ## Resolution Order (silent — all commands except `init`)
 
 1. Read `.planning/config.json` → `lang` field. If valid (`pt-BR` or `en`) → use it silently and continue the command flow.
-2. If unset, detect the language of `$ARGUMENTS` (when the command receives arguments): Portuguese → suggest `pt-BR`; English → suggest `en`; ambiguous, empty, or no arguments → ask (step 3).
+2. If unset, detect the language of the arguments (when the skill receives any): Portuguese → suggest `pt-BR`; English → suggest `en`; ambiguous, empty, or no arguments → ask (step 3).
 3. Ask the user:
 
    ```

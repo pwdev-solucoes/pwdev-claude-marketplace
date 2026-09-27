@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV PRD Create"
+  short_description: "Write a PRD by interview"
+  default_prompt: "Use $prd-create to interview me and write a PRD."

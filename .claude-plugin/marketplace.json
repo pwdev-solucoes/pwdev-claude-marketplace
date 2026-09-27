@@ -63,9 +63,9 @@
       "name": "pwdev-prd",
       "displayName": "PWDEV PRD — Interview-Driven Requirements",
       "source": "./plugins/pwdev-prd",
-      "description": "Interview-driven PRD creation v2.0 — 12-step inline interview, canonical JSON export, audit hooks, 6 commands",
+      "description": "Interview-driven PRDs for Claude Code, Codex, Hermes and OpenCode — 12-step inline interview, approval gate, roadmap with explicit dependency chain (waves, critical path), GitHub publishing via pwdev-github, canonical JSON, audit hooks",
       "category": "workflow",
-      "tags": ["prd", "requirements", "hooks"],
+      "tags": ["prd", "requirements", "roadmap", "hooks", "codex", "hermes", "opencode"],
       "strict": true
     },
     {
@@ -174,6 +174,15 @@
       "description": "Planejamento visual com diagramas Excalidraw via servidor MCP oficial — arquitetura, fluxos, dependências, decisões e roadmaps editáveis.",
       "category": "planning",
       "tags": ["excalidraw", "planning", "architecture", "diagram", "mcp", "pt-br"],
+      "strict": true
+    },
+    {
+      "name": "pwdev-github",
+      "displayName": "PWDEV GitHub — Projects, Issues e Dependências",
+      "source": "./plugins/pwdev-github",
+      "description": "GitHub Projects a partir de templates personalizáveis, publicação idempotente de roadmaps (issues, sub-issues, milestones, blocked-by nativo) e skill para criar, atualizar e fechar issues e tarefas de Project via gh CLI — Claude Code, Codex, Hermes e OpenCode.",
+      "category": "integration",
+      "tags": ["github", "projects", "issues", "roadmap", "gh-cli", "codex", "hermes", "opencode", "pt-br"],
       "strict": true
     }
   ]

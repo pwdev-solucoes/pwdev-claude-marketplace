@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV PRD Refine"
+  short_description: "Change an existing PRD"
+  default_prompt: "Use $prd-refine to update an existing PRD."

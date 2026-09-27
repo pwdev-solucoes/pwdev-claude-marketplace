@@ -1,8 +1,8 @@
 {
   "name": "pwdev-prd",
   "displayName": "PWDEV PRD — Interview-Driven Requirements",
-  "version": "2.0.1",
-  "description": "PRD creation framework for Claude Code — 12-step interview-driven Product Requirements Documents, run inline (the interviewer talks to you; zero subagents by design), technology-agnostic, Markdown + canonical JSON export, deterministic SQLite audit via hooks.",
+  "version": "3.0.0",
+  "description": "Interview-driven PRDs for Claude Code, Codex, Hermes Agent and OpenCode — 12-step inline interview, approval gate, roadmap with explicit dependency chain (waves + critical path, validated by a deterministic checker), publish to GitHub Projects via pwdev-github, technology-agnostic, Markdown + canonical JSON, SQLite audit.",
   "author": {
     "name": "Paulo Soares",
     "url": "https://github.com/soarescbm"
@@ -19,6 +19,13 @@
     "interview",
     "hooks",
     "documentation",
-    "agnostic"
+    "agnostic",
+    "roadmap",
+    "dependencies",
+    "github",
+    "codex",
+    "hermes",
+    "opencode",
+    "portable"
   ]
 }

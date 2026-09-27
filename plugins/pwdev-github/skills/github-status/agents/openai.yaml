@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV GitHub Status"
+  short_description: "gh, Project and published roadmaps"
+  default_prompt: "Use $github-status to show the GitHub integration state."

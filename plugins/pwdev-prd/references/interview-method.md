@@ -1,8 +1,8 @@
 # PRD Interview Method — inline persona
 
 > Runs in the MAIN context (not a subagent): the interviewer talks to the
-> human, one question at a time — subagents cannot do that. This plugin has
-> ZERO subagents by design.
+> human, one question at a time — subagents cannot do that. The interview is
+> never delegated (the only subagent, `roadmap`, runs after the PRD is approved).
 
 ## Persona
 
@@ -50,13 +50,13 @@ strategy; where the feature will be deployed.
 2. **Problem and Opportunity** — the practical pain; real examples with approximate numbers.
 3. **Objectives and Success Metrics** — objective → metric → target.
 4. **Scope** — what must exist; what is explicitly out of scope.
-5. **Functional Requirements** — per requirement: name, description, main flow, variations/exceptions, expected errors, priority.
-6. **Non-Functional Requirements** — performance, availability, security, observability, reliability, compliance, accessibility — with numbers.
+5. **Functional Requirements and Business Rules** — per requirement: ID (`FR-01`, `FR-02`…), name, description, main flow, variations/exceptions, expected errors, priority (MoSCoW: `must`, `should`, `could`, `wont`). Then the **business rules** the requirements depend on: per rule, ID (`RN-01`…), name, the rule in one testable sentence, a concrete example (with numbers when possible) and exceptions. Ask "Is there any rule of the business that decides what is allowed here?" for each requirement; link each FR to its RN. Quality bar: `references/user-stories.md` §4.
+6. **Non-Functional Requirements** — performance, availability, security, observability, reliability, compliance, accessibility — with numbers; each item gets an ID (`NFR-01`…).
 7. **Architecture and Approach** — existing vision or 2-3 suggested options with pros/cons; components, integrations, communication patterns.
 8. **Decisions and Trade-offs** — decisions already made, justification, trade-off.
 9. **Dependencies** — technical, organizational, external.
 10. **Risks and Mitigation** — probability, impact, mitigation (multiple sub-items allowed), contingency.
-11. **Acceptance Criteria** — objective checklist; no vague phrases like "works well".
+11. **Acceptance Criteria** — objective checklist, one ID per criterion (`AC-01`…); no vague phrases like "works well".
 12. **Testing and Validation** — mandatory test types and validation approach.
 
 At each step: ask specific questions → summarize → confirm before moving on.
@@ -72,7 +72,9 @@ At each step: ask specific questions → summarize → confirm before moving on.
 ## Consistency Checks (before finalizing)
 
 - [ ] Each objective has metric and target
-- [ ] Every functional requirement has name, description, main flow, priority
+- [ ] Every functional requirement has an `FR-xx` ID, name, description, main flow, MoSCoW priority
+- [ ] Every NFR has an `NFR-xx` ID and every acceptance criterion an `AC-xx` ID; IDs are unique and never reused
+- [ ] Every business rule has an `RN-xx` ID, a testable statement and a concrete example, and is referenced by at least one FR; rules are domain policies, not requirements or design decisions
 - [ ] NFRs include at least performance and availability (even as hypothesis)
 - [ ] Out of scope doesn't contradict what's included
 - [ ] Architecture supports the declared NFRs
@@ -110,6 +112,9 @@ Shall we start with a quick summary of the feature and why it's needed now?
 
 - `PRD.md` follows exactly `${CLAUDE_PLUGIN_ROOT}/templates/PRD.template.md`.
 - `prd.json` (optional) follows the **JSON structure** below.
+- The header `Status:` starts as `DRAFT`; it becomes `APPROVED` only on the user's explicit
+  yes at the end of `create` (or later at the roadmap gate). `refine` bumps `Version` and
+  appends a row to `### Change Log`.
 
 ## prd.json Structure (canonical — referenced by create/export)
 
@@ -117,20 +122,21 @@ Keys in English; values in the PRD's language.
 
 ```json
 {
-  "meta": { "product": "", "feature": "", "slug": "", "created": "", "status": "draft|final" },
+  "meta": { "product": "", "feature": "", "slug": "", "version": "1.0.0", "created": "", "status": "draft|approved" },
   "context": { "overview": "", "audience": "", "deployment": "existing|new" },
   "problem": { "description": "", "examples": [] },
   "goals": [ { "objective": "", "metric": "", "target": "" } ],
   "scope": { "in": [], "out": [] },
   "functional_requirements": [
-    { "id": "FR-01", "name": "", "description": "", "main_flow": [], "exceptions": [], "errors": [], "priority": "must|should|could" }
+    { "id": "FR-01", "name": "", "description": "", "main_flow": [], "exceptions": [], "errors": [], "business_rules": ["RN-01"], "priority": "must|should|could|wont" }
   ],
-  "non_functional_requirements": [ { "category": "", "requirement": "", "target": "", "hypothesis": false } ],
+  "business_rules": [ { "id": "RN-01", "name": "", "rule": "", "example": "", "exceptions": "" } ],
+  "non_functional_requirements": [ { "id": "NFR-01", "category": "", "requirement": "", "target": "", "hypothesis": false } ],
   "architecture": { "approach": "", "components": [], "integrations": [], "patterns": [] },
   "decisions": [ { "decision": "", "rationale": "", "tradeoff": "" } ],
   "dependencies": [],
   "risks": [ { "risk": "", "probability": "", "impact": "", "mitigation": [], "contingency": "" } ],
-  "acceptance_criteria": [],
+  "acceptance_criteria": [ { "id": "AC-01", "criterion": "" } ],
   "testing": { "mandatory_types": [], "validation": "" }
 }
 ```

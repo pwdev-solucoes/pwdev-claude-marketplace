@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV PRD Init"
+  short_description: "Set up the PRD workspace"
+  default_prompt: "Use $prd-init to set up pwdev-prd in this project."

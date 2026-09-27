@@ -1,0 +1,39 @@
+{
+  "name": "pwdev-github",
+  "version": "0.1.0",
+  "description": "GitHub Projects from customizable templates, idempotent publishing of pwdev-roadmap/1 roadmaps (issues, sub-issues, milestones, native blocked-by, Project fields), and a skill to create, update and close issues and Project tasks — all through the gh CLI, with a preview before every write.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "codex",
+    "github",
+    "github-projects",
+    "issues",
+    "roadmap",
+    "gh-cli",
+    "hermes",
+    "opencode"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "PWDEV GitHub",
+    "shortDescription": "GitHub Projects, roadmap publishing and issues",
+    "longDescription": "Create a GitHub Project from a customizable preset or a template Project, publish a roadmap with its dependency chain as issues, sub-issues, milestones and blocked-by links (dry-run first, idempotent and resumable), and create, update, close and move issues and Project tasks one by one or in batches.",
+    "developerName": "PWDEV Solucoes",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Create a GitHub Project for this roadmap from the roadmap-produto template.",
+      "Publish .planning/prds/<slug>/roadmap/roadmap.json to GitHub.",
+      "Close issue #12 as completed and tell me what it unblocks."
+    ]
+  }
+}

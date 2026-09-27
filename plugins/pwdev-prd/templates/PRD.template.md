@@ -1,5 +1,6 @@
 ### PRD: [product] [feature]
 
+Status: [DRAFT|APPROVED]
 Version: [version]
 Date: [date]
 Owner: [prd_owner]
@@ -54,7 +55,7 @@ Out of Scope
 
 ### Functional Requirements
 
-#### [id] [requirement name]
+#### [FR-01] [requirement name]
 [requirement description]
 
 **Main Flow**
@@ -69,17 +70,30 @@ Out of Scope
 - [expected error 1]
 - [expected error 2]
 
-**Priority:** [high|medium|low]
+**Business rules:** [RN-01, RN-02 | none]
+
+**Priority:** [must|should|could|wont]
+
+---
+
+### Business Rules
+
+Domain policies that hold regardless of screens or technology. IDs are stable and never reused.
+
+#### [RN-01] [rule name]
+- **Rule:** [one testable sentence]
+- **Example:** [a concrete case, with numbers when possible]
+- **Exceptions:** [when it does not apply | none]
 
 ---
 
 ### Non-Functional Requirements
 
 Performance
-- [e.g., p95 less than 150ms]
+- [NFR-01] [e.g., p95 less than 150ms]
 
 Availability
-- [e.g., 99.9% monthly uptime in production]
+- [NFR-02] [e.g., 99.9% monthly uptime in production]
 
 Security and Authorization
 - [e.g., mandatory authentication and audit of sensitive changes]
@@ -144,9 +158,9 @@ Integrations
 ### Acceptance Criteria
 Objective checklist defining if the feature is done.
 
-- [criterion 1]
-- [criterion 2]
-- [criterion 3]
+- [AC-01] [criterion 1]
+- [AC-02] [criterion 2]
+- [AC-03] [criterion 3]
 
 ---
 
@@ -158,3 +172,11 @@ Mandatory Test Types
 
 Validation Strategy
 - [e.g., TDD for critical logic, manual QA guided by script, exploratory validation with real data]
+
+---
+
+### Change Log
+
+| Version | Date | Change |
+|---------|------|--------|
+| [version] | [date] | [initial version / what changed] |

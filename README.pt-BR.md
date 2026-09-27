@@ -25,7 +25,7 @@ Reinicie o runtime após a instalação. Consulte o README de cada plugin para s
 | Copy e conteúdo social | [pwdev-copy](./plugins/pwdev-copy/), [pwdev-social-media](./plugins/pwdev-social-media/) |
 | Planejamento visual | [pwdev-excalidraw](./plugins/pwdev-excalidraw/) |
 | DevOps e operações | [pwdev-devops](./plugins/pwdev-devops/) |
-| Conhecimento e integrações | [pwdev-brain](./plugins/pwdev-brain/), [pwdev-glpi](./plugins/pwdev-glpi/), [pwdev-obsidian](./plugins/pwdev-obsidian/), [pwdev-postgres](./plugins/pwdev-postgres/), [pwdev-youtrack](./plugins/pwdev-youtrack/) |
+| Conhecimento e integrações | [pwdev-brain](./plugins/pwdev-brain/), [pwdev-github](./plugins/pwdev-github/), [pwdev-glpi](./plugins/pwdev-glpi/), [pwdev-obsidian](./plugins/pwdev-obsidian/), [pwdev-postgres](./plugins/pwdev-postgres/), [pwdev-youtrack](./plugins/pwdev-youtrack/) |
 | Suporte ao terminal | [pwdev-statusline](./plugins/pwdev-statusline/) |
 
 ### PWDEV Flow — runtime duplo
@@ -57,13 +57,14 @@ Comandos: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 | [**pwdev-code**](./plugins/pwdev-code/) | Desenvolvimento orientado a especificação — 8 subagentes reais (incl. advisor), roteamento por task, grafo de memória, waves paralelas opt-in, delegação a CLIs externas (Codex/OpenCode/Kimi/Gemini/Kiro), 23 comandos | 2.4.0 | Apache-2.0 |
 | [**pwdev-uiux**](./plugins/pwdev-uiux/) | Engenharia UI/UX — 6 subagentes reais, fluxo de 5 fases com gates, Figma, WCAG 2.1 AA | 2.0.1 | Apache-2.0 |
 | [**pwdev-feat**](./plugins/pwdev-feat/) | Desenvolvimento simplificado de features — planos PWDEVIA inline + subagentes executor e advisor | 2.1.1 | Apache-2.0 |
-| [**pwdev-prd**](./plugins/pwdev-prd/) | Criação de PRD guiada por entrevista — 12 etapas inline, Markdown + JSON canônico | 2.0.1 | Apache-2.0 |
+| [**pwdev-prd**](./plugins/pwdev-prd/) | PRDs guiados por entrevista para Claude Code, Codex, Hermes Agent e OpenCode — 12 etapas inline, gate de aprovação, roadmap com cadeia de dependências (ondas, caminho crítico), publicação no GitHub | 3.0.0 | Apache-2.0 |
 | [**pwdev-qa**](./plugins/pwdev-qa/) | Garantia de qualidade portátil para Claude Code, Codex e Hermes Agent — 10 fluxos, 17 guias especialistas, recomendação de ferramentas, evidência auditável, relatórios offline em HTML e PDF | 0.1.0 | Apache-2.0 |
 | [**pwdev-skills**](./plugins/pwdev-skills/) | Engenharia de skills para Claude Code, Codex e Hermes Agent — revisão e refatoração de skills, perfis lean/guided por medição, descoberta de runtimes e modelos, benchmark A/B headless objetivo em Claude Code, Codex, Hermes e OpenCode | 0.1.0 | Apache-2.0 |
 | [**pwdev-copy**](./plugins/pwdev-copy/) | Framework de copywriting treinável — 20 skills no ciclo completo (VOC → copy → revisão → análise), 5 subagentes reais | 1.1.0 | Apache-2.0 |
 | [**pwdev-social-media**](./plugins/pwdev-social-media/) | Geração de criativos por IA — orquestração de APIs (Ideogram, Leonardo, Flux, Runway, Freepik) com trava de gasto, 19 skills, 4 subagentes | 2.0.1 | Apache-2.0 |
 | [**pwdev-devops**](./plugins/pwdev-devops/) | Plataforma, operação e incidente — postura de execução segura com guard script, 24 skills, 4 subagentes | 1.0.0 | Apache-2.0 |
 | [**pwdev-youtrack**](./plugins/pwdev-youtrack/) | Gestão do YouTrack — MCP oficial embutido (2025.3+) para issues, artigos e log de trabalho; fallback REST para boards, sprints e relatórios de tempo | 1.0.0 | Apache-2.0 |
+| [**pwdev-github**](./plugins/pwdev-github/) | GitHub Projects para Claude Code, Codex, Hermes Agent e OpenCode — templates personalizáveis, publicação idempotente de roadmaps (issues, sub-issues, milestones, blocked-by nativo) e skill para criar, atualizar e fechar issues e tarefas de Project, via gh CLI | 0.1.0 | Apache-2.0 |
 | [**pwdev-glpi**](./plugins/pwdev-glpi/) | GLPI 10/11 ITSM multi-runtime para Claude Code, Codex e Hermes — servidor MCP próprio via npx (@soarescbm/mcp-glpi): CRUD de tickets, triagem com prompts MCP, relatórios de fila, ativos e KB | 1.2.0 | Apache-2.0 |
 | [**pwdev-postgres**](./plugins/pwdev-postgres/) | PostgreSQL — servidor MCP próprio via npx (@soarescbm/postgres-mcp): SELECT somente-leitura validado por AST, inspeção de schema, DML/DDL com dry-run obrigatório | 1.0.0 | Apache-2.0 |
 | [**pwdev-obsidian**](./plugins/pwdev-obsidian/) | Vault do Obsidian — servidor MCP embutido no plugin comunitário Local REST API: leitura, escrita e edição estrutural de notas (heading/bloco/frontmatter), busca JsonLogic e texto livre, tags, arquivo ativo, paleta de comandos | 1.0.0 | Apache-2.0 |
@@ -215,18 +216,39 @@ Veja a [documentação completa do plugin](./plugins/pwdev-feat/README.md).
 ### pwdev-prd
 
 **Criação de PRD** guiada por entrevista com um processo estruturado em 12
-etapas — rodando inline (o entrevistador conversa com você; zero subagentes
-por design). Agnóstico de tecnologia, gera Markdown + JSON canônico.
+etapas — rodando inline (o entrevistador conversa com você). Agnóstico de
+tecnologia, gera Markdown + JSON canônico; o PRD aprovado vira um roadmap com
+cadeia de dependências explícita, publicado no GitHub pelo pwdev-github.
 
 ```
-Interview (12 steps) ─▶ PRD.md ─▶ Export (JSON / GitHub Issue)
+Entrevista (12 etapas) ─▶ PRD.md (APPROVED, RN) ─▶ roadmap + DEPENDENCIES.md ─▶ histórias (US, CA, RN) por feature ─▶ GitHub Project (pwdev-github)
 ```
 
 **Saídas:** PRD estruturado com objetivos, métricas, requisitos funcionais/não-funcionais, arquitetura, riscos e critérios de aceitação
 
-**Inclui:** 6 comandos · sem subagentes, por design · hooks
+Portável: nove skills `prd-*` rodam no Claude Code, Codex, Hermes Agent e OpenCode
+(`python3 plugins/pwdev-prd/.opencode-plugin/install.py` para o OpenCode).
+
+**Inclui:** 9 comandos · 9 skills · 1 subagente (roadmap) · hooks
 
 Veja a [documentação completa do plugin](./plugins/pwdev-prd/README.md).
+
+### pwdev-github
+
+**GitHub Projects e issues** pelo `gh` CLI: Projects a partir de presets
+personalizáveis (ou copiados de um Project-modelo), roadmaps publicados com
+sub-issues, milestones e blocked-by nativo, e uma skill para o dia a dia das issues.
+
+```
+roadmap.json ─▶ Project a partir de template ─▶ issues + sub-issues + blocked-by ─▶ skill github-issues
+```
+
+Portável: cinco skills `github-*` rodam no Claude Code, Codex, Hermes Agent e OpenCode
+(`python3 plugins/pwdev-github/.opencode-plugin/install.py` para o OpenCode).
+
+**Inclui:** 4 comandos · 5 skills · sem subagentes
+
+Veja a [documentação completa do plugin](./plugins/pwdev-github/README.md).
 
 ### pwdev-qa
 
@@ -474,8 +496,13 @@ claude plugin install pwdev-uiux@pwdev-claude-marketplace
 # Desenvolvimento simplificado de features (planos com 7 perguntas)
 claude plugin install pwdev-feat@pwdev-claude-marketplace
 
-# Criação de PRD guiada por entrevista (processo em 12 etapas)
+# Criação de PRD guiada por entrevista (processo em 12 etapas) — também Codex, Hermes e OpenCode
 claude plugin install pwdev-prd@pwdev-claude-marketplace
+#   OpenCode: python3 plugins/pwdev-prd/.opencode-plugin/install.py     (--project . / --uninstall)
+
+# GitHub Projects a partir de templates, publicação de roadmap, skill de issues — também Codex, Hermes e OpenCode
+claude plugin install pwdev-github@pwdev-claude-marketplace
+#   OpenCode: python3 plugins/pwdev-github/.opencode-plugin/install.py  (--project . / --uninstall)
 
 # Garantia de qualidade portátil (10 fluxos, evidência, relatórios HTML/PDF)
 claude plugin install pwdev-qa@pwdev-claude-marketplace
@@ -551,7 +578,7 @@ necessário:
   (o executor também roteia por task via o header `Complexity:` do plano)
 - pwdev-feat: `"feat-executor"`, `"feat-advisor"`
 - pwdev-uiux: `"uiux-ui-builder"`, `"uiux-ux-critic"`, ...
-- pwdev-prd: sem subagentes — nada a configurar
+- pwdev-prd: um subagente (`roadmap`, `model: inherit`) — nada a configurar
 
 ```json
 {
@@ -630,6 +657,7 @@ claude plugin install pwdev-code@pwdev-claude-marketplace
 claude plugin install pwdev-uiux@pwdev-claude-marketplace
 claude plugin install pwdev-feat@pwdev-claude-marketplace
 claude plugin install pwdev-prd@pwdev-claude-marketplace
+claude plugin install pwdev-github@pwdev-claude-marketplace
 claude plugin install pwdev-qa@pwdev-claude-marketplace
 claude plugin install pwdev-skills@pwdev-claude-marketplace
 claude plugin install pwdev-copy@pwdev-claude-marketplace

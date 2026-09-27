@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV PRD List"
+  short_description: "List PRDs and their state"
+  default_prompt: "Use $prd-list to show the PRDs of this project."

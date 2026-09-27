@@ -4,7 +4,7 @@ Database: `.planning/pwdev-audit.db` — opt-in (`"audit": true` in `.planning/c
 
 **How data gets here (v2.0):** mechanical events are recorded automatically by
 the plugin's hooks (`hooks/hooks.json` → `scripts/audit-hook.sh`): session
-start/stop, subagent started/completed (none today — future-proof) with real `duration_ms`, and
+start/stop, subagent started/completed (the `roadmap` subagent) with real `duration_ms`, and
 `.planning/` artifact writes. `scripts/audit-log.sh` records semantic entries
 (`event` at command milestones, `config` for configuration changes). Agents do
 NOT run inline INSERTs.
@@ -14,7 +14,7 @@ in the project. Rows are distinguished by the `plugin` column (`pwdev-prd` vs
 `pwdev-code`). Either plugin's `init` may create the schema — it is identical.
 Query this plugin's rows with `WHERE plugin='pwdev-prd'`. Note: an
 `agent_type` without a plugin namespace could be logged by both plugins'
-hooks; spawns always use `pwdev-prd:executor`, so this is rare.
+hooks; this plugin's only subagent is spawned as `pwdev-prd:roadmap`, so this is rare.
 
 ## Schema
 
@@ -47,7 +47,7 @@ CREATE INDEX IF NOT EXISTS idx_events_command ON events(command);
 
 ## Action vocabulary (subset used by pwdev-prd)
 
-`session_start`, `turn_completed`, `started`, `completed`, `failed`.
+`session_start`, `turn_completed`, `started`, `completed`, `approved`, `failed`.
 
 ## Rules
 
@@ -69,7 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_events_command ON events(command);
 -- This plugin's recent activity
 SELECT timestamp, command, agent, action, duration_ms FROM events
 WHERE plugin='pwdev-prd' ORDER BY id DESC LIMIT 50;
--- Executor average duration
+-- Roadmap subagent average duration
 SELECT AVG(duration_ms) avg_ms FROM events
 WHERE plugin='pwdev-prd' AND action='completed' AND duration_ms IS NOT NULL;
 -- Configuration history

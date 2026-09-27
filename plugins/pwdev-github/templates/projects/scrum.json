@@ -1,0 +1,192 @@
+{
+  "name": "scrum",
+  "label": "Scrum (roadmap + sprints)",
+  "summary": "Roadmap de produto com campo Sprint de iterações de 2 semanas.",
+  "description": "Roadmap de produto organizado em sprints.",
+  "readme": "Itens gerados por pwdev-github a partir de um roadmap pwdev-roadmap/1.\n\n- **Onda**: features da mesma onda podem rodar em paralelo.\n- **Blocked by**: a cadeia de dependências fica nas próprias issues.\n- Não edite títulos gerados à mão: o próximo publish sobrescreve.",
+  "fields": [
+    {
+      "name": "Status",
+      "role": "status",
+      "type": "SINGLE_SELECT",
+      "builtin": true,
+      "options": [
+        {
+          "name": "Backlog",
+          "color": "GRAY",
+          "description": "Ainda não priorizado",
+          "value": "backlog"
+        },
+        {
+          "name": "Pronto",
+          "color": "BLUE",
+          "description": "Dependências resolvidas, pode começar",
+          "value": "ready"
+        },
+        {
+          "name": "Em andamento",
+          "color": "YELLOW",
+          "description": "Alguém está trabalhando nisso",
+          "value": "in_progress"
+        },
+        {
+          "name": "Em revisão",
+          "color": "PURPLE",
+          "description": "Aguardando revisão ou validação",
+          "value": "in_review"
+        },
+        {
+          "name": "Concluído",
+          "color": "GREEN",
+          "description": "Critérios de aceite atendidos",
+          "value": "done"
+        }
+      ]
+    },
+    {
+      "name": "Tipo",
+      "role": "type",
+      "type": "SINGLE_SELECT",
+      "options": [
+        {
+          "name": "Épico",
+          "color": "PURPLE",
+          "description": "Grupo funcional",
+          "value": "epic"
+        },
+        {
+          "name": "Feature",
+          "color": "BLUE",
+          "description": "Entrega verificável",
+          "value": "feature"
+        },
+        {
+          "name": "História",
+          "color": "GREEN",
+          "description": "História de usuário com CA e RN",
+          "value": "story"
+        },
+        {
+          "name": "Task",
+          "color": "GRAY",
+          "description": "Trabalho atômico",
+          "value": "task"
+        }
+      ]
+    },
+    {
+      "name": "Prioridade",
+      "role": "priority",
+      "type": "SINGLE_SELECT",
+      "options": [
+        {
+          "name": "Must",
+          "color": "RED",
+          "description": "Obrigatório",
+          "value": "must"
+        },
+        {
+          "name": "Should",
+          "color": "ORANGE",
+          "description": "Importante",
+          "value": "should"
+        },
+        {
+          "name": "Could",
+          "color": "YELLOW",
+          "description": "Desejável",
+          "value": "could"
+        },
+        {
+          "name": "Won't",
+          "color": "GRAY",
+          "description": "Fora desta entrega",
+          "value": "wont"
+        }
+      ]
+    },
+    {
+      "name": "Estimativa",
+      "role": "estimate",
+      "type": "SINGLE_SELECT",
+      "options": [
+        {
+          "name": "P",
+          "color": "GREEN",
+          "description": "Pequena",
+          "value": "S"
+        },
+        {
+          "name": "M",
+          "color": "YELLOW",
+          "description": "Média",
+          "value": "M"
+        },
+        {
+          "name": "G",
+          "color": "RED",
+          "description": "Grande",
+          "value": "L"
+        }
+      ]
+    },
+    {
+      "name": "Fase",
+      "role": "phase",
+      "type": "TEXT"
+    },
+    {
+      "name": "Onda",
+      "role": "wave",
+      "type": "NUMBER"
+    },
+    {
+      "name": "Requisitos",
+      "role": "requirements",
+      "type": "TEXT"
+    },
+    {
+      "name": "Início",
+      "role": "start",
+      "type": "DATE"
+    },
+    {
+      "name": "Fim",
+      "role": "end",
+      "type": "DATE"
+    },
+    {
+      "name": "Sprint",
+      "role": "sprint",
+      "type": "ITERATION",
+      "iteration": {
+        "start": "next-monday",
+        "duration": 14,
+        "count": 6,
+        "title": "Sprint {n}"
+      }
+    }
+  ],
+  "views": [
+    {
+      "name": "Quadro",
+      "layout": "Board",
+      "setup": "Agrupar colunas por Status; filtro Tipo:Feature"
+    },
+    {
+      "name": "Por onda",
+      "layout": "Table",
+      "setup": "Agrupar por Onda; ordenar por Prioridade"
+    },
+    {
+      "name": "Linha do tempo",
+      "layout": "Roadmap",
+      "setup": "Datas Início/Fim; agrupar por Fase"
+    },
+    {
+      "name": "Sprint atual",
+      "layout": "Board",
+      "setup": "Filtro Sprint:@current; colunas por Status"
+    }
+  ]
+}

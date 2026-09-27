@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV PRD Publish"
+  short_description: "Publish the roadmap to GitHub"
+  default_prompt: "Use $prd-publish to publish an approved roadmap to GitHub."

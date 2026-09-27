@@ -1,0 +1,6 @@
+name: pwdev-github
+version: 0.1.0
+description: PWDEV GitHub Projects from templates, roadmap publishing and issue management via gh (Claude Code, Codex, Hermes Agent, OpenCode); this manifest is the Hermes entry point
+author: Paulo Soares
+provides_hooks:
+  - pre_llm_call

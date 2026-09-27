@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV GitHub Publish"
+  short_description: "Publish a roadmap to GitHub"
+  default_prompt: "Use $github-publish to publish a roadmap.json to GitHub."

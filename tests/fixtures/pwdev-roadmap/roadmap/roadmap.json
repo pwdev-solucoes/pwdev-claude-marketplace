@@ -1,0 +1,243 @@
+{
+  "schema": "pwdev-roadmap/1",
+  "meta": {
+    "slug": "catalogo-produtos",
+    "product": "Loja",
+    "title": "Catálogo de produtos",
+    "prd": ".planning/prds/catalogo-produtos/PRD.md",
+    "prd_version": "1.0.0",
+    "language": "pt-BR"
+  },
+  "requirements": [
+    "FR-01",
+    "FR-02",
+    "FR-03",
+    "NFR-01"
+  ],
+  "nodes": [
+    {
+      "id": "F01",
+      "type": "phase",
+      "title": "Fundação",
+      "parent": null,
+      "path": "F01-fundacao/PHASE.md",
+      "summary": "Acesso e catálogo básico"
+    },
+    {
+      "id": "F01-E01",
+      "type": "epic",
+      "title": "Acesso",
+      "parent": "F01",
+      "path": "F01-fundacao/F01-E01-acesso/EPIC.md"
+    },
+    {
+      "id": "F01-E01-FT01",
+      "type": "feature",
+      "title": "Login de administrador",
+      "parent": "F01-E01",
+      "path": "F01-fundacao/F01-E01-acesso/F01-E01-FT01-login.md",
+      "priority": "must",
+      "estimate": "M",
+      "intensity": "Standard",
+      "requirements": [
+        "FR-01",
+        "NFR-01"
+      ],
+      "acceptance": [
+        "Credencial inválida retorna erro sem revelar qual campo falhou",
+        "Sessão expira após 30 minutos sem uso"
+      ]
+    },
+    {
+      "id": "F01-E01-FT01-T01",
+      "type": "task",
+      "title": "Modelo de usuário e senha com hash",
+      "parent": "F01-E01-FT01",
+      "path": "F01-fundacao/F01-E01-acesso/F01-E01-FT01-login.md"
+    },
+    {
+      "id": "F01-E01-FT01-T02",
+      "type": "task",
+      "title": "Tela e endpoint de login",
+      "parent": "F01-E01-FT01",
+      "path": "F01-fundacao/F01-E01-acesso/F01-E01-FT01-login.md"
+    },
+    {
+      "id": "F01-E02",
+      "type": "epic",
+      "title": "Catálogo",
+      "parent": "F01",
+      "path": "F01-fundacao/F01-E02-catalogo/EPIC.md"
+    },
+    {
+      "id": "F01-E02-FT01",
+      "type": "feature",
+      "title": "Cadastro de produto",
+      "parent": "F01-E02",
+      "path": "F01-fundacao/F01-E02-catalogo/F01-E02-FT01-cadastro.md",
+      "priority": "must",
+      "estimate": "L",
+      "intensity": "Standard",
+      "requirements": [
+        "FR-02"
+      ],
+      "acceptance": [
+        "Produto sem nome é rejeitado com mensagem de campo obrigatório"
+      ]
+    },
+    {
+      "id": "F01-E02-FT02",
+      "type": "feature",
+      "title": "Busca de produtos",
+      "parent": "F01-E02",
+      "path": "F01-fundacao/F01-E02-catalogo/F01-E02-FT02-busca.md",
+      "priority": "should",
+      "estimate": "S",
+      "intensity": "Quick",
+      "requirements": [
+        "FR-03"
+      ],
+      "acceptance": [
+        "Busca por parte do nome retorna o produto em até 1 segundo"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "F01-E01-FT01",
+      "to": "F01-E02-FT01",
+      "kind": "technical"
+    },
+    {
+      "from": "F01-E02-FT01",
+      "to": "F01-E02-FT02",
+      "kind": "data"
+    },
+    {
+      "from": "F01-E01-FT01-T01",
+      "to": "F01-E01-FT01-T02",
+      "kind": "technical"
+    }
+  ],
+  "rules": [
+    {
+      "id": "RN-01",
+      "title": "Bloqueio após tentativas inválidas",
+      "rule": "Após 5 tentativas de login inválidas em 15 minutos, a conta fica bloqueada por 30 minutos.",
+      "example": "5 senhas erradas às 10:00–10:10 → login só volta a ser aceito às 10:40."
+    },
+    {
+      "id": "RN-02",
+      "title": "SKU único",
+      "rule": "Não podem existir dois produtos ativos com o mesmo SKU.",
+      "example": "SKU ABC-1 ativo impede um novo cadastro com ABC-1; se o antigo for inativado, pode."
+    }
+  ],
+  "stories": [
+    {
+      "id": "US-01",
+      "feature": "F01-E01-FT01",
+      "title": "Entrar como administrador",
+      "persona": "administrador da loja",
+      "action": "entrar com e-mail e senha",
+      "value": "gerenciar o catálogo sem expor a área administrativa",
+      "priority": "must",
+      "status": "ready",
+      "rules": [
+        "RN-01"
+      ],
+      "depends_on": [],
+      "out_of_scope": "Login social e recuperação de senha.",
+      "acceptance": [
+        {
+          "id": "CA-01",
+          "path": "happy",
+          "type": "gherkin",
+          "text": "Dado que sou administrador ativo\nQuando informo e-mail e senha corretos\nEntão entro no painel do catálogo"
+        },
+        {
+          "id": "CA-02",
+          "path": "error",
+          "type": "gherkin",
+          "text": "Dado que informo uma senha errada\nQuando envio o formulário\nEntão vejo \"credenciais inválidas\" sem indicar qual campo falhou"
+        },
+        {
+          "id": "CA-03",
+          "path": "error",
+          "type": "gherkin",
+          "rules": [
+            "RN-01"
+          ],
+          "text": "Dado que errei a senha 5 vezes em 15 minutos\nQuando tento entrar de novo\nEntão vejo que a conta está bloqueada por 30 minutos"
+        },
+        {
+          "id": "CA-04",
+          "path": "edge",
+          "type": "check",
+          "text": "A sessão expira após 30 minutos sem uso"
+        }
+      ]
+    },
+    {
+      "id": "US-02",
+      "feature": "F01-E02-FT01",
+      "title": "Cadastrar produto",
+      "persona": "administrador da loja",
+      "action": "cadastrar um produto com nome, SKU e preço",
+      "value": "colocá-lo à venda no catálogo",
+      "priority": "must",
+      "status": "ready",
+      "rules": [
+        "RN-02"
+      ],
+      "depends_on": [
+        "US-01"
+      ],
+      "acceptance": [
+        {
+          "id": "CA-01",
+          "path": "happy",
+          "type": "gherkin",
+          "text": "Dado que estou no painel\nQuando salvo um produto com nome, SKU e preço válidos\nEntão ele aparece na lista de produtos ativos"
+        },
+        {
+          "id": "CA-02",
+          "path": "error",
+          "type": "gherkin",
+          "text": "Dado um produto sem nome\nQuando tento salvar\nEntão vejo \"nome é obrigatório\" e nada é gravado"
+        },
+        {
+          "id": "CA-03",
+          "path": "error",
+          "type": "gherkin",
+          "rules": [
+            "RN-02"
+          ],
+          "text": "Dado um produto ativo com SKU ABC-1\nQuando cadastro outro com SKU ABC-1\nEntão vejo \"SKU já em uso\""
+        }
+      ]
+    },
+    {
+      "id": "US-03",
+      "feature": "F01-E02-FT02",
+      "title": "Buscar produto pelo nome",
+      "persona": "cliente",
+      "action": "buscar produtos por parte do nome",
+      "value": "encontrar o que quero comprar sem navegar por categorias",
+      "priority": "should",
+      "status": "draft",
+      "rules": [],
+      "depends_on": [
+        "US-02"
+      ],
+      "acceptance": [
+        {
+          "id": "CA-01",
+          "path": "happy",
+          "type": "gherkin",
+          "text": "Dado produtos cadastrados\nQuando busco \"camis\"\nEntão vejo os produtos cujo nome contém \"camis\" em até 1 segundo"
+        }
+      ]
+    }
+  ]
+}

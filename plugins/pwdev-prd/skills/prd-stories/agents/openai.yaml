@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV PRD Stories"
+  short_description: "Evolve features with stories, CA and RN"
+  default_prompt: "Use $prd-stories to evolve the next feature of the roadmap with user stories."
