@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Fumadocs Doctor"
+  short_description: "Diagnose Fumadocs errors and health"
+  default_prompt: "Use $fumadocs-doctor to find why the docs build fails."

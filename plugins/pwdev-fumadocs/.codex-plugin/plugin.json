@@ -1,0 +1,40 @@
+{
+  "name": "pwdev-fumadocs",
+  "version": "0.1.0",
+  "description": "Build Fumadocs documentation sites from the live official docs: setup on new or existing React apps, content and navigation, features through @fumadocs/cli, and diagnosis with a deterministic project scanner — verified by type-check and build.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "codex",
+    "fumadocs",
+    "documentation",
+    "mdx",
+    "nextjs",
+    "react-router",
+    "tanstack-start",
+    "hermes",
+    "opencode"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "PWDEV Fumadocs",
+    "shortDescription": "Fumadocs setup, content, features and diagnosis",
+    "longDescription": "Create a Fumadocs site or add Fumadocs to an existing Next.js, React Router, TanStack Start, Waku or Astro app; write and organize MDX pages and meta.json navigation; add search, llms.txt, an MCP server, OG images, OpenAPI, i18n or static export through @fumadocs/cli or the official page; and diagnose build and runtime errors. Every code change follows the live Fumadocs documentation and is verified by type-check and build.",
+    "developerName": "PWDEV Solucoes",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Add Fumadocs docs under /docs to this Next.js app.",
+      "Organize content/docs into tabs for Guides and API Reference.",
+      "Add llms.txt and an MCP server to these docs, then verify the routes."
+    ]
+  }
+}

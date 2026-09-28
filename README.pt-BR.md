@@ -24,6 +24,7 @@ Reinicie o runtime após a instalação. Consulte o README de cada plugin para s
 | Engenharia de skills | [pwdev-skills](./plugins/pwdev-skills/) |
 | Copy e conteúdo social | [pwdev-copy](./plugins/pwdev-copy/), [pwdev-social-media](./plugins/pwdev-social-media/) |
 | Planejamento visual | [pwdev-excalidraw](./plugins/pwdev-excalidraw/) |
+| Sites de documentação | [pwdev-fumadocs](./plugins/pwdev-fumadocs/) |
 | DevOps e operações | [pwdev-devops](./plugins/pwdev-devops/) |
 | Conhecimento e integrações | [pwdev-brain](./plugins/pwdev-brain/), [pwdev-github](./plugins/pwdev-github/), [pwdev-glpi](./plugins/pwdev-glpi/), [pwdev-obsidian](./plugins/pwdev-obsidian/), [pwdev-postgres](./plugins/pwdev-postgres/), [pwdev-youtrack](./plugins/pwdev-youtrack/) |
 | Suporte ao terminal | [pwdev-statusline](./plugins/pwdev-statusline/) |
@@ -71,6 +72,7 @@ Comandos: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 | [**pwdev-obsidian**](./plugins/pwdev-obsidian/) | Vault do Obsidian — servidor MCP embutido no plugin comunitário Local REST API: leitura, escrita e edição estrutural de notas (heading/bloco/frontmatter), busca JsonLogic e texto livre, tags, arquivo ativo, paleta de comandos | 1.0.0 | Apache-2.0 |
 | [**pwdev-brain**](./plugins/pwdev-brain/) | Segundo cérebro em LLM Wiki (padrão Karpathy) no Open Knowledge Format v0.2 — ingest discutido com citação por afirmação, query citada, lint de conformidade; 2 subagentes, MCP embutido somente-leitura (6 tools) | 1.1.0 | Apache-2.0 |
 | [**pwdev-excalidraw**](./plugins/pwdev-excalidraw/) | Planejamento visual com diagramas Excalidraw via servidor MCP oficial — arquitetura, fluxos, dependências, decisões e roadmaps editáveis | 0.2.0 | Apache-2.0 |
+| [**pwdev-fumadocs**](./plugins/pwdev-fumadocs/) | Sites de documentação Fumadocs para Claude Code, Codex, Hermes Agent e OpenCode — documentação oficial ao vivo pelo servidor MCP do Fumadocs, instalação, conteúdo MDX e navegação, features via @fumadocs/cli, scanner determinístico do projeto, verificação por type-check e build | 0.1.0 | Apache-2.0 |
 | [**pwdev-statusline**](./plugins/pwdev-statusline/) | Barra de status rica — cores dinâmicas, tokens formatados, totalmente configurável | 1.1.0 | Apache-2.0 |
 
 ### pwdev-power
@@ -459,6 +461,24 @@ fluxos, mapas de dependência, registros de decisão e roadmaps que continuam ed
 
 Veja a [documentação completa do plugin](./plugins/pwdev-excalidraw/README.pt-BR.md).
 
+### pwdev-fumadocs
+
+**Sites de documentação Fumadocs** construídos a partir da documentação oficial ao vivo
+(servidor MCP oficial do Fumadocs, páginas `.mdx` como alternativa): instalação em apps React
+novos ou existentes, conteúdo MDX e navegação, features via `@fumadocs/cli` e diagnóstico com
+scanner determinístico — toda mudança verificada por type-check e build.
+
+```
+fdscan (fatos do projeto) ─▶ página oficial ─▶ @fumadocs/cli ou edição manual ─▶ scan + type-check + build
+```
+
+Portável: quatro skills `fumadocs-*` rodam no Claude Code, Codex, Hermes Agent e OpenCode
+(`python3 plugins/pwdev-fumadocs/.opencode-plugin/install.py` para o OpenCode).
+
+**Inclui:** 4 comandos · 4 skills · servidor MCP (Fumadocs oficial) · sem subagentes
+
+Veja a [documentação completa do plugin](./plugins/pwdev-fumadocs/README.pt-BR.md).
+
 ### pwdev-statusline
 
 **Barra de status** rica para o terminal do Claude Code. Exibe modelo, branch git, uso de contexto, rate limits e contagem de tokens em uma linha colorida — cada segmento pode ser ligado/desligado.
@@ -557,6 +577,10 @@ claude plugin install pwdev-statusline@pwdev-claude-marketplace
 
 # Planejamento visual com Excalidraw (servidor MCP oficial)
 claude plugin install pwdev-excalidraw@pwdev-claude-marketplace
+
+# Sites de documentação Fumadocs (MCP oficial do Fumadocs) — também Codex, Hermes e OpenCode
+claude plugin install pwdev-fumadocs@pwdev-claude-marketplace
+#   OpenCode: python3 plugins/pwdev-fumadocs/.opencode-plugin/install.py  (--project . / --uninstall)
 ```
 
 Instale apenas os plugins de que você precisa. Cada um funciona de forma independente.
@@ -684,6 +708,7 @@ claude plugin install pwdev-devops@pwdev-claude-marketplace
 claude plugin install pwdev-youtrack@pwdev-claude-marketplace
 claude plugin install pwdev-glpi@pwdev-claude-marketplace
 claude plugin install pwdev-postgres@pwdev-claude-marketplace
+claude plugin install pwdev-fumadocs@pwdev-claude-marketplace
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
 ```
 

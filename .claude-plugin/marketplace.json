@@ -359,6 +359,27 @@
         "pt-br"
       ],
       "strict": true
+    },
+    {
+      "name": "pwdev-fumadocs",
+      "displayName": "PWDEV Fumadocs — Sites de Documentação",
+      "source": "./plugins/pwdev-fumadocs",
+      "description": "Sites de documentação Fumadocs a partir da documentação oficial ao vivo (MCP do fumadocs.dev): instalação em projeto novo ou existente, conteúdo e navegação MDX, features via @fumadocs/cli (busca, llms.txt, MCP, OG, OpenAPI, i18n, export estático) e diagnóstico com scanner determinístico — Claude Code, Codex, Hermes e OpenCode.",
+      "category": "development",
+      "tags": [
+        "fumadocs",
+        "documentation",
+        "mdx",
+        "nextjs",
+        "react-router",
+        "tanstack-start",
+        "mcp",
+        "codex",
+        "hermes",
+        "opencode",
+        "pt-br"
+      ],
+      "strict": true
     }
   ]
 }

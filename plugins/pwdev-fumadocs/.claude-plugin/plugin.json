@@ -1,0 +1,30 @@
+{
+  "name": "pwdev-fumadocs",
+  "displayName": "PWDEV Fumadocs — Sites de Documentação",
+  "version": "0.1.0",
+  "description": "Implementação de Fumadocs guiada pela documentação oficial ao vivo (MCP do fumadocs.dev): instalação em projeto novo ou existente (Next.js, React Router, TanStack Start, Waku, Astro), conteúdo e navegação (MDX, meta.json, abas, versões, i18n), features via @fumadocs/cli (busca, llms.txt, MCP, OG, OpenAPI, export estático) e diagnóstico com scanner determinístico — verificação por type-check e build; skills portáveis para Claude Code, Codex, Hermes Agent e OpenCode.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "claude-code",
+    "claude-plugin",
+    "fumadocs",
+    "documentation",
+    "docs-site",
+    "mdx",
+    "nextjs",
+    "react-router",
+    "tanstack-start",
+    "mcp",
+    "pt-br",
+    "hermes",
+    "opencode",
+    "portable"
+  ],
+  "mcpServers": "./.mcp.json"
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Fumadocs Feature"
+  short_description: "Search, llms.txt, MCP, OG, OpenAPI, i18n"
+  default_prompt: "Use $fumadocs-feature to add llms.txt to these docs."
