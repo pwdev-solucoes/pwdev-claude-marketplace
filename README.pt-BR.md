@@ -26,7 +26,7 @@ Reinicie o runtime após a instalação. Consulte o README de cada plugin para s
 | Planejamento visual | [pwdev-excalidraw](./plugins/pwdev-excalidraw/) |
 | DevOps e operações | [pwdev-devops](./plugins/pwdev-devops/) |
 | Conhecimento e integrações | [pwdev-brain](./plugins/pwdev-brain/), [pwdev-github](./plugins/pwdev-github/), [pwdev-glpi](./plugins/pwdev-glpi/), [pwdev-obsidian](./plugins/pwdev-obsidian/), [pwdev-postgres](./plugins/pwdev-postgres/), [pwdev-youtrack](./plugins/pwdev-youtrack/) |
-| Suporte ao terminal | [pwdev-statusline](./plugins/pwdev-statusline/) |
+| Suporte ao terminal | [pwdev-statusline](./plugins/pwdev-statusline/), [pwdev-mods](./plugins/pwdev-mods/) |
 
 ### PWDEV Flow — runtime duplo
 
@@ -72,6 +72,7 @@ Comandos: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 | [**pwdev-brain**](./plugins/pwdev-brain/) | Segundo cérebro em LLM Wiki (padrão Karpathy) no Open Knowledge Format v0.2 — ingest discutido com citação por afirmação, query citada, lint de conformidade; 2 subagentes, MCP embutido somente-leitura (6 tools) | 1.1.0 | Apache-2.0 |
 | [**pwdev-excalidraw**](./plugins/pwdev-excalidraw/) | Planejamento visual com diagramas Excalidraw via servidor MCP oficial — arquitetura, fluxos, dependências, decisões e roadmaps editáveis | 0.2.0 | Apache-2.0 |
 | [**pwdev-statusline**](./plugins/pwdev-statusline/) | Barra de status rica — cores dinâmicas, tokens formatados, totalmente configurável | 1.1.0 | Apache-2.0 |
+| [**pwdev-mods**](./plugins/pwdev-mods/) | Mod do Claude Code — painel de gestão de subagentes (monitorar, parar, disparar), tokens, custo e histórico diário | 0.1.0 | Apache-2.0 |
 
 ### pwdev-power
 
@@ -475,6 +476,18 @@ PWDEV | Paulo Soares | session | …/skills-ia/projeto | Fable 5 | main | ctx:�
 
 Veja a [documentação completa do plugin](./plugins/pwdev-statusline/README.pt-BR.md).
 
+### pwdev-mods
+
+Um **mod** do Claude Code (requer Claude Code v2.1.287+): código que roda dentro do Claude Code e desenha um painel de gestão ao lado da transcrição.
+
+**Abas do painel:** Visão geral (barra de contexto, custo da sessão/dia, rate limits) · Subagentes (lista ao vivo, **Parar**, formulário **Disparar**) · Tokens (por turno, modelo e loop de agente, cache hit) · Histórico (sparkline diária mantida entre sessões)
+
+**Também:** faixa de uma linha acima do prompt, toasts de orçamento diário em 80% / 100%, resumo em texto onde não há painel (VS Code, `-p`)
+
+**Inclui:** 1 mod (módulo de hooks) · `/pwdev-mods [overview|agents|tokens|history]` · sem subagentes, sem MCP
+
+Veja a [documentação completa do plugin](./plugins/pwdev-mods/README.pt-BR.md).
+
 ---
 
 ## Instalação
@@ -554,6 +567,9 @@ claude plugin install pwdev-brain@pwdev-claude-marketplace
 
 # Barra de status rica para o terminal
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
+
+# Painel de gestão do Claude Code (mod): subagentes, tokens, custo, histórico
+claude plugin install pwdev-mods@pwdev-claude-marketplace
 
 # Planejamento visual com Excalidraw (servidor MCP oficial)
 claude plugin install pwdev-excalidraw@pwdev-claude-marketplace
@@ -684,6 +700,7 @@ claude plugin install pwdev-devops@pwdev-claude-marketplace
 claude plugin install pwdev-youtrack@pwdev-claude-marketplace
 claude plugin install pwdev-glpi@pwdev-claude-marketplace
 claude plugin install pwdev-postgres@pwdev-claude-marketplace
+claude plugin install pwdev-mods@pwdev-claude-marketplace
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
 ```
 

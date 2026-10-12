@@ -136,6 +136,21 @@
       "strict": true
     },
     {
+      "name": "pwdev-mods",
+      "displayName": "PWDEV Mods — Painel de gestão do Claude Code",
+      "source": "./plugins/pwdev-mods",
+      "description": "Mod v0.1 — painel no terminal com subagentes ao vivo (monitorar, parar, disparar), tokens por turno, modelo e subagente, custo, contexto, rate limits e histórico diário entre sessões com alerta de orçamento",
+      "category": "developer-experience",
+      "tags": [
+        "mods",
+        "dashboard",
+        "tokens",
+        "subagents",
+        "cost"
+      ],
+      "strict": true
+    },
+    {
       "name": "pwdev-copy",
       "displayName": "PWDEV Copy — Framework de Copywriting Treinável",
       "source": "./plugins/pwdev-copy",
