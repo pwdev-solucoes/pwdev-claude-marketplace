@@ -27,7 +27,7 @@ Restart the runtime after installation. Read each plugin README for its setup an
 | Documentation sites | [pwdev-fumadocs](./plugins/pwdev-fumadocs/) |
 | DevOps and operations | [pwdev-devops](./plugins/pwdev-devops/) |
 | Knowledge and integrations | [pwdev-brain](./plugins/pwdev-brain/), [pwdev-github](./plugins/pwdev-github/), [pwdev-glpi](./plugins/pwdev-glpi/), [pwdev-obsidian](./plugins/pwdev-obsidian/), [pwdev-postgres](./plugins/pwdev-postgres/), [pwdev-youtrack](./plugins/pwdev-youtrack/) |
-| Terminal support | [pwdev-statusline](./plugins/pwdev-statusline/) |
+| Terminal support | [pwdev-statusline](./plugins/pwdev-statusline/), [pwdev-mods](./plugins/pwdev-mods/) |
 
 ### PWDEV Flow — dual runtime
 
@@ -74,6 +74,7 @@ Commands: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 | [**pwdev-excalidraw**](./plugins/pwdev-excalidraw/) | Visual planning with Excalidraw diagrams through the official MCP server — architecture, flows, dependencies, decisions and editable roadmaps | 0.2.0 | Apache-2.0 |
 | [**pwdev-fumadocs**](./plugins/pwdev-fumadocs/) | Fumadocs documentation sites for Claude Code, Codex, Hermes Agent and OpenCode — live official docs through the Fumadocs MCP server, setup, MDX content and navigation, features via @fumadocs/cli, deterministic project scanner, verified by type-check and build | 0.1.0 | Apache-2.0 |
 | [**pwdev-statusline**](./plugins/pwdev-statusline/) | Rich terminal status line — dynamic colors, formatted tokens, fully configurable | 1.1.0 | Apache-2.0 |
+| [**pwdev-mods**](./plugins/pwdev-mods/) | Claude Code mod — management pane for subagents (monitor, stop, spawn), tokens, cost and daily history | 0.1.0 | Apache-2.0 |
 
 ### pwdev-power
 
@@ -493,6 +494,18 @@ PWDEV | Paulo Soares | session | …/skills-ia/project | Fable 5 | main | ctx:�
 
 See the [full plugin documentation](./plugins/pwdev-statusline/README.md).
 
+### pwdev-mods
+
+A Claude Code **mod** (requires Claude Code v2.1.287+): code that runs inside Claude Code and draws a management pane next to the transcript.
+
+**Pane tabs:** Overview (context bar, session/day cost, rate limits) · Subagents (live list, **Stop**, **Spawn** form) · Tokens (per turn, model and agent loop, cache hit) · History (daily sparkline kept across sessions)
+
+**Also:** one-line band above the prompt, daily budget toasts at 80% / 100%, text summary where no pane is drawn (VS Code, `-p`)
+
+**Ships:** 1 mod (hooks module) · `/pwdev-mods [overview|agents|tokens|history]` · no subagents, no MCP
+
+See the [full plugin documentation](./plugins/pwdev-mods/README.md).
+
 ---
 
 ## Installation
@@ -574,6 +587,9 @@ claude plugin install pwdev-brain@pwdev-claude-marketplace
 
 # Rich terminal status line
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
+
+# Claude Code management pane (mod): subagents, tokens, cost, history
+claude plugin install pwdev-mods@pwdev-claude-marketplace
 
 # Visual planning with Excalidraw (official MCP server)
 claude plugin install pwdev-excalidraw@pwdev-claude-marketplace
@@ -707,6 +723,7 @@ claude plugin install pwdev-youtrack@pwdev-claude-marketplace
 claude plugin install pwdev-glpi@pwdev-claude-marketplace
 claude plugin install pwdev-postgres@pwdev-claude-marketplace
 claude plugin install pwdev-fumadocs@pwdev-claude-marketplace
+claude plugin install pwdev-mods@pwdev-claude-marketplace
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
 ```
 
