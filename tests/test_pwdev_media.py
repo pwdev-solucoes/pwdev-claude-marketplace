@@ -538,6 +538,15 @@ class KeysTest(Isolated):
         rows = {r["provedor"]: r["origem"] for r in json.loads(out)["chaves"]}
         self.assertEqual(rows["fal"], "env")
 
+    def test_store_never_puts_the_secret_in_process_arguments(self):
+        with mock.patch.object(keys, "_keychain_available", return_value=True), \
+                mock.patch.object(keys.subprocess, "run") as run:
+            keys.store("openrouter", "sk-segredo")
+        argv = run.call_args.args[0]
+        self.assertNotIn("sk-segredo", " ".join(argv))
+        self.assertEqual(argv[-1], "-w")
+        self.assertEqual(run.call_args.kwargs["input"], "sk-segredo\nsk-segredo\n")
+
     def test_unknown_provider_is_refused(self):
         with self.assertRaises(ValueError):
             keys.store("inexistente", "x")

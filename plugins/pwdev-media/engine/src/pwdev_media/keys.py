@@ -78,8 +78,10 @@ def store(provider: str, secret: str | None = None) -> str:
     if not secret:
         return "Nada guardado: a chave veio vazia."
     user = os.environ.get("USER") or getpass.getuser()
-    subprocess.run(["security", "add-generic-password", "-U", "-s", service(provider), "-a", user,
-                    "-w", secret], check=True, capture_output=True)
+    # `-w` last and without a value: `security` reads the secret (twice) from stdin, so it never
+    # shows up in the process arguments (`ps`).
+    subprocess.run(["security", "add-generic-password", "-U", "-s", service(provider), "-a", user, "-w"],
+                   input=f"{secret}\n{secret}\n", text=True, check=True, capture_output=True)
     return (f"Chave de {provider} guardada no Keychain ({service(provider)}). "
             f"O pwdev-media lê de lá sozinho; não precisa exportar {ENV[provider]}.")
 
