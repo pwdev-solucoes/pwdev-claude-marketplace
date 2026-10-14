@@ -123,6 +123,18 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Developer Tools"
+    },
+    {
+      "name": "pwdev-video-hyperframes",
+      "source": {
+        "source": "local",
+        "path": "./plugins/pwdev-video-hyperframes"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
     }
   ]
 }

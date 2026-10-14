@@ -1,5 +1,23 @@
 # Changelog — pwdev-media
 
+## 0.2.0 — 2026-10-14
+
+Talking-video pipeline shared by the video plugins (`pwdev-media video ...`).
+
+- `ffmpeg --instalar`: static ffmpeg/ffprobe in `~/.pwdev/bin`, no sudo (public `static-ffmpeg`).
+- `transcrever`: local word-level transcription (mlx-whisper on Apple Silicon with macOS 14+,
+  faster-whisper elsewhere) in an isolated `uv run --with` environment; phrases and abandoned
+  takes in `frases.md`.
+- `juntar`, `montar` (EDL from phrase ids or automatic: last take wins), `cortar` (cut by the
+  waveform: real onsets/offsets, every silence of 0.25 s or more removed, ~0.12 s joints, click-free
+  fades), `legendas` (cues of up to N words, every spoken word covered, corrections), `fala`,
+  `respiros`, `sondar`.
+- `portao`: quality gate (no breaths, no clipping, captions cover every word; loudness warning).
+- `projeto`: engine-neutral `projeto.json` (`pwdev-projeto-video/1`) creation and validation,
+  including "one idea at a time" overlap checks.
+- Fix: keys are written to the Keychain through stdin; output file names from provider responses
+  are sanitized.
+
 ## 0.1.0 — 2026-10-14
 
 First release: the core of the pwdev media suite.

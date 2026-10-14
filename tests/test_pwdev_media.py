@@ -76,7 +76,8 @@ class PortableLayoutTest(unittest.TestCase):
                 self.assertIsNotNone(front)
                 self.assertIn(f"name: {skill}\n", front.group(1))
                 self.assertIn("Use quando", front.group(1))
-                self.assertIn("version: 0.1.0", front.group(1))
+                version = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))["version"]
+                self.assertIn(f"version: {version}", front.group(1))
                 for token in FORBIDDEN_IN_SKILLS:
                     self.assertNotIn(token, text)
                 self.assertIn("references/runtime.md", text)

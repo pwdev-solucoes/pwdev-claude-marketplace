@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Video Scenes"
+  short_description: "Custom animated scene for a moment of speech"
+  default_prompt: "Use $vhf-cenas to animate the three steps when I list them."

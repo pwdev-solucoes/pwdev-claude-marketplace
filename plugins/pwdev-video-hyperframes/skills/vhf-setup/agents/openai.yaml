@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Video Setup"
+  short_description: "Prepare tools for HyperFrames video editing"
+  default_prompt: "Use $vhf-setup to check that video editing with HyperFrames is ready."

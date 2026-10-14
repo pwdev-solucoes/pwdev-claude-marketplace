@@ -30,10 +30,10 @@ Os arquivos de saída são todos os `url` encontrados no resultado.
 | Código | Significado | O que fazer |
 |---|---|---|
 | 0 | ok | — |
-| 1 | conferência falhou (`catalogo validar`, `formatos conferir`) | ler a lista de problemas |
+| 1 | conferência falhou (`catalogo validar`, `formatos conferir`, `video portao`) | ler a lista de problemas |
 | 2 | uso errado (falta argumento, id inexistente) | corrigir o comando |
 | 3 | chamada paga sem `--confirmar` | mostrar a estimativa e pedir o ok da pessoa |
 | 4 | passaria do orçamento mensal | avisar; só seguir com ok explícito (`--acima-do-orcamento`) |
-| 5 | erro do provedor ou contrato mudou | mostrar a mensagem; não tentar adivinhar o formato novo |
-| 6 | sem chave | pedir para a pessoa guardar a chave |
+| 5 | erro do provedor, contrato mudou ou ffmpeg falhou | mostrar a mensagem; não tentar adivinhar o formato novo |
+| 6 | sem chave ou sem ferramenta (ffmpeg) | pedir para a pessoa guardar a chave; `pwdev-media video ffmpeg --instalar` |
 | 7 | operação ou provedor sem adaptador | sugerir outro item (`catalogo recomendar`) |

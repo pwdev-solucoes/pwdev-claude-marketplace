@@ -417,6 +417,25 @@
         "portable"
       ],
       "strict": true
+    },
+    {
+      "name": "pwdev-video-hyperframes",
+      "displayName": "PWDEV Video HyperFrames — Edição de Vídeo Falado",
+      "source": "./plugins/pwdev-video-hyperframes",
+      "description": "Edição de vídeo falado por conversa com HyperFrames: corte pela onda do áudio, última tomada certa, legendas por palavra, zooms, textos na zona segura, cenas sob medida, trilha e efeitos, estúdio e render com portão de qualidade — Claude Code, Codex e Hermes Agent.",
+      "category": "media",
+      "tags": [
+        "video",
+        "video-editing",
+        "hyperframes",
+        "captions",
+        "reels",
+        "ads",
+        "codex",
+        "hermes",
+        "portable"
+      ],
+      "strict": true
     }
   ]
 }

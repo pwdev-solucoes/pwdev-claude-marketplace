@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Video Sound"
+  short_description: "Music bed and synced sound effects"
+  default_prompt: "Use $vhf-som to add my music under the voice and effects on the texts."

@@ -1,7 +1,7 @@
 """`pwdev-media` command line. Text output in pt-BR; `--json` for skills and scripts.
 
-Exit codes: 0 ok · 2 uso · 3 precisa de confirmação · 4 orçamento · 5 erro do provedor/contrato
-· 6 sem chave · 7 não suportado.
+Exit codes: 0 ok · 1 conferência reprovada · 2 uso · 3 precisa de confirmação · 4 orçamento
+· 5 erro do provedor/contrato/ffmpeg · 6 sem chave ou ferramenta · 7 não suportado.
 """
 from __future__ import annotations
 
@@ -9,10 +9,16 @@ import argparse
 import json
 import shutil
 import sys
+from pathlib import Path
 
 from . import __version__, catalog, discovery, formats, generate, http, keys, providers, schedule, spend
 
 EXIT_CONFIRM, EXIT_BUDGET, EXIT_PROVIDER, EXIT_KEY, EXIT_UNSUPPORTED = 3, 4, 5, 6, 7
+
+
+def _missing_tool():
+    from .video.tools import MissingTool
+    return MissingTool
 
 
 def emit(args, data, text: str) -> None:
@@ -188,6 +194,90 @@ def cmd_custo(args) -> int:
     return 0
 
 
+# ---------------------------------------------------------------- vídeo
+
+def cmd_video(args) -> int:
+    from .video import audio, tools as vtools, workflow
+    a = args.acao
+    if a == "ffmpeg":
+        if args.instalar:
+            info = vtools.install()
+            note = "" if info["no_path"] else (f"\nA pasta {info['pasta']} não está no PATH; o pwdev-media acha "
+                                                "sozinho, mas outros programas (HyperFrames, Remotion) precisam dela.")
+            emit(args, info, f"ffmpeg e ffprobe instalados em {info['pasta']}.{note}")
+        else:
+            found = {t: vtools.find(t) for t in ("ffmpeg", "ffprobe")}
+            emit(args, found, "\n".join(f"{t}: {p or 'não encontrado'}" for t, p in found.items()))
+            return 0 if all(found.values()) else 6
+        return 0
+    if a == "sondar":
+        info = vtools.probe(args.alvo)
+        v = info["video"] or {}
+        emit(args, info, f"{info['duracao']:.2f}s · {v.get('largura', '?')}x{v.get('altura', '?')} · "
+                         f"{v.get('fps', '?')} fps · áudio {'sim' if info['audio'] else 'não'}")
+        return 0
+    if a == "juntar":
+        r = workflow.join(args.alvo, args.arquivos)
+        emit(args, r, f"{r['partes']} gravações juntadas em {r['arquivo']}")
+        return 0
+    if a == "transcrever":
+        r = workflow.do_transcribe(args.alvo, args.edit, args.idioma, args.prompt or "", args.motor)
+        emit(args, r, f"{r['palavras']} palavras ({r['idioma']}, {r['motor']}) · {r['frases']} frases, "
+                      f"{r['refeitas']} tomadas refeitas · leitura em {r['leitura']}")
+        return 0
+    if a == "frases":
+        r = workflow.do_phrases(args.alvo)
+        emit(args, r, f"{r['frases']} frases, {r['refeitas']} tomadas refeitas · {r['leitura']}")
+        return 0
+    if a == "montar":
+        ids = [i.strip() for i in args.frases.split(",") if i.strip()] if args.frases else None
+        r = workflow.do_assemble(args.alvo, ids)
+        emit(args, r, f"EDL com {r['frases']} frases ({r['descartadas']} fora), ~{r['fala_aprox_s']}s de fala · {r['edl']}")
+        return 0
+    if a == "cortar":
+        r = workflow.do_cut(args.alvo, args.qualidade, args.max_palavras)
+        emit(args, r, f"Corte: {r['duracao']:.2f}s (era {r['duracao_original']:.2f}s), {r['segmentos']} trechos, "
+                      f"{r['legendas']} legendas · {r['arquivo']}")
+        return 0
+    if a == "legendas":
+        r = workflow.do_captions(args.alvo, args.max_palavras)
+        emit(args, r, f"{r['cues']} legendas · {r['arquivo']}")
+        return 0
+    if a == "fala":
+        text = workflow.cut_text(args.alvo)
+        emit(args, {"texto": text}, text)
+        return 0
+    if a == "respiros":
+        env = audio.envelope(args.alvo)
+        found = audio.silences(env, args.minimo)
+        emit(args, found, "\n".join(f"{x:.2f}–{y:.2f}s ({y - x:.2f}s)" for x, y in found) or "Nenhum.")
+        return 0
+    if a == "projeto":
+        from .video import project
+        path = Path(args.alvo).expanduser()
+        if args.novo:
+            if not args.edit:
+                print("projeto --novo precisa de --edit.", file=sys.stderr)
+                return 2
+            proj = project.new(args.nome or path.parent.name, args.edit, args.formato)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            project.save(proj, path)
+        proj = project.load(path)
+        timeline = Path(proj["edit"]) / "cut_timeline.json"
+        duration = json.loads(timeline.read_text(encoding="utf-8"))["duracao"] if timeline.is_file() else None
+        errors = project.validate(proj, duration)
+        emit(args, {"erros": errors, "duracao_corte": duration},
+             "\n".join(errors) or f"projeto.json válido (corte de {duration or '?'}s).")
+        return 1 if errors else 0
+    if a == "portao":
+        r = workflow.do_gate(args.alvo, args.edit)
+        lines = [r["veredito"], f"Duração {r['duracao']:.2f}s · {r['lufs']:.1f} LUFS · pico {r['pico_dbtp']:.1f} dBTP"]
+        lines += [f"- {p}" for p in r["problemas"]] + [f"aviso: {w}" for w in r["avisos"]]
+        emit(args, r, "\n".join(lines))
+        return 0 if r["veredito"] == "PASSOU" else 1
+    return 2
+
+
 # ---------------------------------------------------------------- parser
 
 def parser() -> argparse.ArgumentParser:
@@ -240,6 +330,23 @@ def parser() -> argparse.ArgumentParser:
     s.add_argument("--confirmar", action="store_true", help="autoriza a chamada paga")
     s.add_argument("--acima-do-orcamento", action="store_true")
 
+    s = sub.add_parser("video", help="pipeline de vídeo falado: transcrição, corte pela onda, conferência")
+    s.add_argument("acao", choices=("ffmpeg", "sondar", "juntar", "transcrever", "frases", "montar", "cortar",
+                                     "legendas", "fala", "respiros", "portao", "projeto"))
+    s.add_argument("alvo", nargs="?", help="vídeo, pasta de edição ou arquivo de saída (juntar)")
+    s.add_argument("arquivos", nargs="*", help="juntar: gravações na ordem")
+    s.add_argument("--edit", help="pasta de edição")
+    s.add_argument("--idioma", default="pt")
+    s.add_argument("--prompt", help="nomes difíceis para a transcrição acertar, separados por vírgula")
+    s.add_argument("--motor", choices=("mlx", "faster"))
+    s.add_argument("--frases", help="montar: ids na ordem, ex.: F001,F004,F005 (sem isso: automático)")
+    s.add_argument("--qualidade", choices=("rascunho", "padrao", "alta"), default="padrao")
+    s.add_argument("--max-palavras", type=int, default=3)
+    s.add_argument("--minimo", type=float, default=0.25, help="respiros: duração mínima em segundos")
+    s.add_argument("--instalar", action="store_true", help="ffmpeg: baixa sem sudo para ~/.pwdev/bin")
+    s.add_argument("--novo", action="store_true", help="projeto: cria o projeto.json")
+    s.add_argument("--nome")
+    s.add_argument("--formato", default="reels-9x16")
     s = sub.add_parser("custo")
     s.add_argument("acao", choices=("extrato", "orcamento"), nargs="?", default="extrato")
     s.add_argument("valor", nargs="?", type=float, help="orçamento mensal em US$ (negativo remove)")
@@ -265,8 +372,17 @@ def main(argv: list[str] | None = None) -> int:
         if args.cmd == "formatos" and args.acao == "conferir" and not args.caixa:
             print("Informe --caixa x,y,largura,altura.", file=sys.stderr)
             return 2
-        handler = {"status": cmd_status, "chaves": cmd_chaves, "catalogo": cmd_catalogo,
-                   "formatos": cmd_formatos, "gerar": cmd_gerar, "custo": cmd_custo}[args.cmd]
+        if args.cmd == "video" and args.acao not in ("ffmpeg",) and not args.alvo:
+            print("Informe o vídeo ou a pasta de edição.", file=sys.stderr)
+            return 2
+        if args.cmd == "video" and args.acao == "transcrever" and not args.edit:
+            print("Informe --edit <pasta de edição> (ao lado dos vídeos, nunca dentro deles).", file=sys.stderr)
+            return 2
+        if args.cmd == "video" and args.acao == "juntar" and len(args.arquivos) < 2:
+            print("juntar: informe a saída e pelo menos duas gravações.", file=sys.stderr)
+            return 2
+        handler = {"status": cmd_status, "chaves": cmd_chaves, "catalogo": cmd_catalogo, "formatos": cmd_formatos,
+                   "gerar": cmd_gerar, "custo": cmd_custo, "video": cmd_video}[args.cmd]
         return handler(args)
     except spend.NeedsConfirmation as exc:
         est = exc.estimate
@@ -282,11 +398,17 @@ def main(argv: list[str] | None = None) -> int:
     except keys.MissingKey as exc:
         print(str(exc), file=sys.stderr)
         return EXIT_KEY
+    except _missing_tool() as exc:
+        print(str(exc), file=sys.stderr)
+        return EXIT_KEY
     except providers.Unsupported as exc:
         print(str(exc), file=sys.stderr)
         return EXIT_UNSUPPORTED
+    except FileNotFoundError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
     except (http.HttpError, http.ContractError, TimeoutError, RuntimeError) as exc:
-        print(f"Erro do provedor: {exc}", file=sys.stderr)
+        print(f"Erro: {exc}", file=sys.stderr)
         return EXIT_PROVIDER
     except (KeyError, ValueError) as exc:
         print(str(exc).strip("'\""), file=sys.stderr)
