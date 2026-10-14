@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Media Cost"
+  short_description: "Spending report and monthly budget"
+  default_prompt: "Use $media-custo to show what I spent this month."

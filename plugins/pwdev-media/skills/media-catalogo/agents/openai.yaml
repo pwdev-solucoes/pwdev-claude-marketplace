@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Media Catalog"
+  short_description: "Pick the right AI media model by goal and price"
+  default_prompt: "Use $media-catalogo to find the cheapest good video model for a 9:16 clip."

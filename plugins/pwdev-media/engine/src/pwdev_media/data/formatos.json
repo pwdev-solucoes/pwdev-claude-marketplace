@@ -1,0 +1,299 @@
+{
+  "schema": "pwdev-media-formatos/1",
+  "formatos": [
+    {
+      "id": "reels-9x16",
+      "nome": "Reels 9:16",
+      "plataformas": [
+        "instagram",
+        "facebook"
+      ],
+      "largura": 1080,
+      "altura": 1920,
+      "tipo": "video",
+      "zona_segura_pct": {
+        "topo": 14,
+        "direita": 6,
+        "base": 35,
+        "esquerda": 6
+      },
+      "fonte": "Guias públicos das plataformas (margens aproximadas); conferir na rede antes de veicular",
+      "verificado_em": "2026-10-14",
+      "notas": "Base reservada para legenda da rede, nome e botões."
+    },
+    {
+      "id": "stories-9x16",
+      "nome": "Stories 9:16",
+      "plataformas": [
+        "instagram",
+        "facebook"
+      ],
+      "largura": 1080,
+      "altura": 1920,
+      "tipo": "video",
+      "zona_segura_pct": {
+        "topo": 14,
+        "direita": 6,
+        "base": 20,
+        "esquerda": 6
+      },
+      "fonte": "Guias públicos das plataformas (margens aproximadas); conferir na rede antes de veicular",
+      "verificado_em": "2026-10-14",
+      "notas": ""
+    },
+    {
+      "id": "tiktok-9x16",
+      "nome": "TikTok 9:16",
+      "plataformas": [
+        "tiktok"
+      ],
+      "largura": 1080,
+      "altura": 1920,
+      "tipo": "video",
+      "zona_segura_pct": {
+        "topo": 8,
+        "direita": 13,
+        "base": 25,
+        "esquerda": 6
+      },
+      "fonte": "Guias públicos das plataformas (margens aproximadas); conferir na rede antes de veicular",
+      "verificado_em": "2026-10-14",
+      "notas": "Botões na lateral direita."
+    },
+    {
+      "id": "shorts-9x16",
+      "nome": "YouTube Shorts 9:16",
+      "plataformas": [
+        "youtube"
+      ],
+      "largura": 1080,
+      "altura": 1920,
+      "tipo": "video",
+      "zona_segura_pct": {
+        "topo": 15,
+        "direita": 12,
+        "base": 25,
+        "esquerda": 6
+      },
+      "fonte": "Guias públicos das plataformas (margens aproximadas); conferir na rede antes de veicular",
+      "verificado_em": "2026-10-14",
+      "notas": ""
+    },
+    {
+      "id": "feed-4x5",
+      "nome": "Feed 4:5",
+      "plataformas": [
+        "instagram",
+        "facebook",
+        "linkedin"
+      ],
+      "largura": 1080,
+      "altura": 1350,
+      "tipo": "ambos",
+      "zona_segura_pct": {
+        "topo": 5,
+        "direita": 5,
+        "base": 5,
+        "esquerda": 5
+      },
+      "fonte": "Guias públicos das plataformas (margens aproximadas); conferir na rede antes de veicular",
+      "verificado_em": "2026-10-14",
+      "notas": ""
+    },
+    {
+      "id": "feed-1x1",
+      "nome": "Feed 1:1",
+      "plataformas": [
+        "instagram",
+        "facebook",
+        "linkedin"
+      ],
+      "largura": 1080,
+      "altura": 1080,
+      "tipo": "ambos",
+      "zona_segura_pct": {
+        "topo": 5,
+        "direita": 5,
+        "base": 5,
+        "esquerda": 5
+      },
+      "fonte": "Guias públicos das plataformas (margens aproximadas); conferir na rede antes de veicular",
+      "verificado_em": "2026-10-14",
+      "notas": ""
+    },
+    {
+      "id": "link-1.91x1",
+      "nome": "Anúncio de link 1,91:1",
+      "plataformas": [
+        "facebook",
+        "linkedin",
+        "google"
+      ],
+      "largura": 1200,
+      "altura": 628,
+      "tipo": "imagem",
+      "zona_segura_pct": {
+        "topo": 5,
+        "direita": 5,
+        "base": 5,
+        "esquerda": 5
+      },
+      "fonte": "Guias públicos das plataformas (margens aproximadas); conferir na rede antes de veicular",
+      "verificado_em": "2026-10-14",
+      "notas": ""
+    },
+    {
+      "id": "youtube-16x9",
+      "nome": "YouTube / tutorial 16:9",
+      "plataformas": [
+        "youtube",
+        "site"
+      ],
+      "largura": 1920,
+      "altura": 1080,
+      "tipo": "video",
+      "zona_segura_pct": {
+        "topo": 5,
+        "direita": 5,
+        "base": 10,
+        "esquerda": 5
+      },
+      "fonte": "Guias públicos das plataformas (margens aproximadas); conferir na rede antes de veicular",
+      "verificado_em": "2026-10-14",
+      "notas": "Base com folga para barra do player e legenda."
+    },
+    {
+      "id": "pinterest-2x3",
+      "nome": "Pinterest 2:3",
+      "plataformas": [
+        "pinterest"
+      ],
+      "largura": 1000,
+      "altura": 1500,
+      "tipo": "imagem",
+      "zona_segura_pct": {
+        "topo": 5,
+        "direita": 5,
+        "base": 10,
+        "esquerda": 5
+      },
+      "fonte": "Guias públicos das plataformas (margens aproximadas); conferir na rede antes de veicular",
+      "verificado_em": "2026-10-14",
+      "notas": ""
+    },
+    {
+      "id": "display-300x250",
+      "nome": "Display retângulo médio",
+      "plataformas": [
+        "google"
+      ],
+      "largura": 300,
+      "altura": 250,
+      "tipo": "imagem",
+      "zona_segura_pct": {
+        "topo": 4,
+        "direita": 4,
+        "base": 4,
+        "esquerda": 4
+      },
+      "fonte": "Guias públicos das plataformas (margens aproximadas); conferir na rede antes de veicular",
+      "verificado_em": "2026-10-14",
+      "notas": ""
+    },
+    {
+      "id": "display-336x280",
+      "nome": "Display retângulo grande",
+      "plataformas": [
+        "google"
+      ],
+      "largura": 336,
+      "altura": 280,
+      "tipo": "imagem",
+      "zona_segura_pct": {
+        "topo": 4,
+        "direita": 4,
+        "base": 4,
+        "esquerda": 4
+      },
+      "fonte": "Guias públicos das plataformas (margens aproximadas); conferir na rede antes de veicular",
+      "verificado_em": "2026-10-14",
+      "notas": ""
+    },
+    {
+      "id": "display-728x90",
+      "nome": "Display leaderboard",
+      "plataformas": [
+        "google"
+      ],
+      "largura": 728,
+      "altura": 90,
+      "tipo": "imagem",
+      "zona_segura_pct": {
+        "topo": 8,
+        "direita": 2,
+        "base": 8,
+        "esquerda": 2
+      },
+      "fonte": "Guias públicos das plataformas (margens aproximadas); conferir na rede antes de veicular",
+      "verificado_em": "2026-10-14",
+      "notas": ""
+    },
+    {
+      "id": "display-970x250",
+      "nome": "Display billboard",
+      "plataformas": [
+        "google"
+      ],
+      "largura": 970,
+      "altura": 250,
+      "tipo": "imagem",
+      "zona_segura_pct": {
+        "topo": 6,
+        "direita": 3,
+        "base": 6,
+        "esquerda": 3
+      },
+      "fonte": "Guias públicos das plataformas (margens aproximadas); conferir na rede antes de veicular",
+      "verificado_em": "2026-10-14",
+      "notas": ""
+    },
+    {
+      "id": "display-160x600",
+      "nome": "Display arranha-céu largo",
+      "plataformas": [
+        "google"
+      ],
+      "largura": 160,
+      "altura": 600,
+      "tipo": "imagem",
+      "zona_segura_pct": {
+        "topo": 2,
+        "direita": 6,
+        "base": 2,
+        "esquerda": 6
+      },
+      "fonte": "Guias públicos das plataformas (margens aproximadas); conferir na rede antes de veicular",
+      "verificado_em": "2026-10-14",
+      "notas": ""
+    },
+    {
+      "id": "display-320x50",
+      "nome": "Display banner móvel",
+      "plataformas": [
+        "google"
+      ],
+      "largura": 320,
+      "altura": 50,
+      "tipo": "imagem",
+      "zona_segura_pct": {
+        "topo": 8,
+        "direita": 3,
+        "base": 8,
+        "esquerda": 3
+      },
+      "fonte": "Guias públicos das plataformas (margens aproximadas); conferir na rede antes de veicular",
+      "verificado_em": "2026-10-14",
+      "notas": ""
+    }
+  ]
+}

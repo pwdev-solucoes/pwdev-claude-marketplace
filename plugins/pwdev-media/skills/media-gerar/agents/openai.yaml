@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Media Generate"
+  short_description: "Generate image, video or audio with cost control"
+  default_prompt: "Use $media-gerar to generate a 5 second 9:16 product clip after showing the estimate."

@@ -1,0 +1,6 @@
+name: pwdev-media
+version: 0.1.0
+description: PWDEV Media — model catalog by category, providers (OpenRouter, fal, ElevenLabs), keys, cost guard and creative formats for the pwdev media suite (Claude Code, Codex, Hermes Agent); this manifest is the Hermes entry point
+author: Paulo Soares
+provides_hooks:
+  - pre_llm_call

@@ -395,6 +395,28 @@
         "pt-br"
       ],
       "strict": true
+    },
+    {
+      "name": "pwdev-media",
+      "displayName": "PWDEV Media — Catálogo de Modelos, Provedores e Custo",
+      "source": "./plugins/pwdev-media",
+      "description": "Núcleo da suíte pwdev de mídia: catálogo de modelos e apps de IA por categoria com rotina de atualização, geração por OpenRouter, fal e ElevenLabs com estimativa e confirmação de custo, chaves no Keychain, orçamento, ledger e formatos de criativos com zonas seguras — Claude Code, Codex e Hermes Agent.",
+      "category": "media",
+      "tags": [
+        "media",
+        "video",
+        "image",
+        "audio",
+        "openrouter",
+        "fal",
+        "elevenlabs",
+        "catalog",
+        "cost-control",
+        "codex",
+        "hermes",
+        "portable"
+      ],
+      "strict": true
     }
   ]
 }

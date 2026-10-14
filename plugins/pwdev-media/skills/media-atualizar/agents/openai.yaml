@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Media Update"
+  short_description: "Refresh the model catalog and report changes"
+  default_prompt: "Use $media-atualizar to refresh the catalog and summarize what changed."
