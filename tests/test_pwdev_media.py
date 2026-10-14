@@ -483,6 +483,22 @@ class ProvidersTest(Isolated):
         self.assertEqual(fake.calls[0][3], {"prompt": "p", "duration": "5"})
         self.assertEqual(fake.calls[0][2]["Authorization"], "Key fal-segredo")
 
+    def test_fal_output_names_from_the_response_cannot_escape_the_output_folder(self):
+        os.environ["FAL_KEY"] = "k"
+        routes = {
+            ("POST", "https://queue.fal.run/m"): {"request_id": "r"},
+            ("GET", "https://queue.fal.run/m/requests/r/status"): {"status": "COMPLETED"},
+            ("GET", "https://queue.fal.run/m/requests/r"): {"../../../fora": {"url": "https://cdn/x"},
+                                                            "/etc/passwd": {"url": "https://cdn/y"}},
+            ("GET", "https://cdn/"): b"DATA",
+        }
+        with tempfile.TemporaryDirectory() as parent, mock.patch.object(http, "request", FakeHttp(routes)):
+            out = Path(parent) / "saida"
+            result = fal.Fal().generate(item(provedor="fal", modelo="m"), {"prompt": "p"}, out)
+            for path in result.arquivos:
+                self.assertEqual(Path(path).resolve().parent, out.resolve())
+            self.assertEqual(sorted(p.name for p in Path(parent).iterdir()), ["saida"])
+
     def test_fal_error_and_empty_result(self):
         os.environ["FAL_KEY"] = "k"
         base = {("POST", "https://queue.fal.run/m"): {"request_id": "r"}}

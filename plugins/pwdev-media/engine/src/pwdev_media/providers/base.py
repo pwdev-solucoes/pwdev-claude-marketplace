@@ -1,6 +1,7 @@
 """Common provider interface."""
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -54,7 +55,14 @@ class Provider:
             time.sleep(self.poll_seconds)
 
 
+def safe_name(text: str, fallback: str) -> str:
+    """Names may come from a provider response: keep [a-z0-9_-] only, so a path can never escape."""
+    cleaned = re.sub(r"[^a-z0-9_-]+", "-", str(text).lower()).strip("-_")[:40]
+    return cleaned or fallback
+
+
 def write_bytes(out_dir: Path, stem: str, ext: str, data: bytes) -> str:
+    stem, ext = safe_name(stem, "saida"), safe_name(ext, "bin")
     path = out_dir / f"{stem}.{ext}"
     n = 1
     while path.exists():
