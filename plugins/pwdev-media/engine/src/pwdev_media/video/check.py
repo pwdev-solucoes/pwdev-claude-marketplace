@@ -27,7 +27,10 @@ def loudness(path: str | Path) -> dict:
     summary = out[out.rfind("Summary:"):] if "Summary:" in out else out
     lufs = re.search(r"I:\s*([-+]?[\d.]+|-inf)\s*LUFS", summary)
     peak = re.search(r"Peak:\s*([-+]?[\d.]+|-inf)\s*dBFS", summary)
-    to_float = lambda m: float("-inf") if not m or m.group(1) == "-inf" else float(m.group(1))
+
+    def to_float(m):
+        return float("-inf") if not m or m.group(1) == "-inf" else float(m.group(1))
+
     return {"lufs": to_float(lufs), "pico_dbtp": to_float(peak)}
 
 

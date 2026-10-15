@@ -272,7 +272,9 @@ class CatalogTest(Isolated):
                               preco={**item()["preco"], "valor": 0.01}),
                          item(id="sem-nota", qualidade=None),
                          item(id="removido", qualidade=5, status="removido")]}
-        ids = lambda rows: [r["id"] for r in rows]
+        def ids(rows):
+            return [r["id"] for r in rows]
+
         self.assertEqual(ids(catalog.recommend(cat, "video-gerar", "barato"))[:3], ["barato", "bom", "top"])
         self.assertEqual(ids(catalog.recommend(cat, "video-gerar", "maximo"))[:2], ["top", "assinatura"])
         self.assertEqual(ids(catalog.recommend(cat, "video-gerar", "equilibrado"))[0], "bom")
@@ -588,7 +590,9 @@ class DirectProvidersTest(Isolated):
         self.assertEqual((sent["fields"]["prompt"], sent["fields"]["aspect_ratio"], sent["fields"]["num_images"]),
                          ("Oferta R$97", "4x5", 2))
         self.assertEqual((len(result.arquivos), result.extra["bloqueadas"]), (1, 1))
-        blocked = lambda *a, **k: http.Response(200, {}, json.dumps({"data": [{"url": "", "is_image_safe": False}]}).encode())
+        def blocked(*a, **k):
+            return http.Response(200, {}, json.dumps({"data": [{"url": "", "is_image_safe": False}]}).encode())
+
         with mock.patch.object(http, "request_multipart", blocked), self.assertRaisesRegex(RuntimeError, "bloqueada"):
             ideogram.Ideogram().generate(item(provedor="ideogram", operacao="imagem", modelo="ideogram-3"),
                                          {"prompt": "x"}, self.out())

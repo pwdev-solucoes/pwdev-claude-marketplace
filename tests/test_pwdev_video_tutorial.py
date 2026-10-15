@@ -179,7 +179,7 @@ class CodeScanTest(unittest.TestCase):
         named = next(r for r in doc["rotas"] if r["caminho"] == "/clientes" and r["metodo"] == "GET")
         self.assertEqual((named["nome"], named["arquivo"], named["linha"]), ("clientes.index", "routes/web.php", 1))
         self.assertIn({"texto": "Relatórios", "destino": "/relatorios", "arquivo": "src/components/Menu.tsx"}, doc["links_menu"])
-        self.assertIn("Clientes", {l["texto"] for l in doc["links_menu"]})
+        self.assertIn("Clientes", {lk["texto"] for lk in doc["links_menu"]})
         form = next(f for f in doc["formularios"] if f["arquivo"].endswith("form.blade.php"))
         self.assertEqual(form["campos"], ["cpf", "email", "nome"])
         self.assertEqual(form["dados_pessoais"], ["cpf", "email"])
@@ -478,8 +478,11 @@ class CliTest(unittest.TestCase):
             good, bad = Path(tmp) / "r.json", Path(tmp) / "b.json"
             good.write_text(json.dumps(script()))
             bad.write_text(json.dumps(script(url_base="ftp://x")))
-            run = lambda f: subprocess.run([sys.executable, str(PLUGIN / "scripts" / "tutorial.py"), "validar", str(f)],
-                                           capture_output=True, text=True).returncode
+
+            def run(f):
+                return subprocess.run([sys.executable, str(PLUGIN / "scripts" / "tutorial.py"), "validar", str(f)],
+                                      capture_output=True, text=True).returncode
+
             self.assertEqual((run(good), run(bad)), (0, 1))
 
     def test_unknown_local_voice(self):
