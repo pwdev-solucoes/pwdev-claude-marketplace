@@ -7,7 +7,7 @@ description: >
   por plataforma, mostra a zona segura em pixels e confere se um elemento está dentro. Não use
   para gerar o criativo (media-gerar ou pwdev-social-media).
 metadata:
-  version: 0.2.0
+  version: 0.3.0
 ---
 
 # Formatos e zonas seguras

@@ -7,7 +7,7 @@ description: >
   API (OpenRouter, npm), mescla sem tocar na curadoria, gera relatório de diferenças e lista o que
   precisa ser conferido à mão. Não use para recomendar um modelo (media-catalogo).
 metadata:
-  version: 0.2.0
+  version: 0.3.0
 ---
 
 # Atualizar o catálogo

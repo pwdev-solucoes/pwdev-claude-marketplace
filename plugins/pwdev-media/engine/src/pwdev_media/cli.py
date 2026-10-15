@@ -269,6 +269,11 @@ def cmd_video(args) -> int:
         emit(args, {"erros": errors, "duracao_corte": duration},
              "\n".join(errors) or f"projeto.json válido (corte de {duration or '?'}s).")
         return 1 if errors else 0
+    if a == "plano-render":
+        from .video import render_plan
+        plan = render_plan.from_files(args.alvo)
+        print(json.dumps(plan, ensure_ascii=False, indent=None if args.json else 2))
+        return 0
     if a == "portao":
         r = workflow.do_gate(args.alvo, args.edit)
         lines = [r["veredito"], f"Duração {r['duracao']:.2f}s · {r['lufs']:.1f} LUFS · pico {r['pico_dbtp']:.1f} dBTP"]
@@ -332,7 +337,7 @@ def parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("video", help="pipeline de vídeo falado: transcrição, corte pela onda, conferência")
     s.add_argument("acao", choices=("ffmpeg", "sondar", "juntar", "transcrever", "frases", "montar", "cortar",
-                                     "legendas", "fala", "respiros", "portao", "projeto"))
+                                     "legendas", "fala", "respiros", "portao", "projeto", "plano-render"))
     s.add_argument("alvo", nargs="?", help="vídeo, pasta de edição ou arquivo de saída (juntar)")
     s.add_argument("arquivos", nargs="*", help="juntar: gravações na ordem")
     s.add_argument("--edit", help="pasta de edição")

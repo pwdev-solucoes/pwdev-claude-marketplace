@@ -1,0 +1,21 @@
+{
+  "schema": "pwdev-plano-render/1",
+  "nome": "modelo",
+  "formato": "reels-9x16",
+  "largura": 1080,
+  "altura": 1920,
+  "fps": 30,
+  "duracao": 1,
+  "amostra": false,
+  "janela": {"inicio": 0, "fim": 1},
+  "video": {"arquivo": "cut.mp4", "inicio_midia": 0},
+  "estilo": {"fonte": "Montserrat", "texto": "#FFFFFF", "destaque": "#FF6A00", "fundo": "#0A0A0A"},
+  "legenda": {"estilo": "discreta", "topo": 1344, "esquerda": 65, "largura": 950, "tamanho": 54},
+  "zona_segura": {"x": 65, "y": 269, "largura": 950, "altura": 979},
+  "unidade": 1,
+  "cues": [],
+  "textos": [],
+  "blocos": [],
+  "cenas": [],
+  "audio": {"trilha": null, "efeitos": []}
+}

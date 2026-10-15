@@ -6,7 +6,7 @@ description: >
   o limite', 'o que mais custou'. Lê o ledger local do pwdev-media e define o teto mensal. Não use
   para estimar uma geração específica (media-gerar faz isso antes de gerar).
 metadata:
-  version: 0.2.0
+  version: 0.3.0
 ---
 
 # Custo e orçamento

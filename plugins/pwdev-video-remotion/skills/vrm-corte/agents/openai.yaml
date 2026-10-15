@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Remotion Cut"
+  short_description: "Cut pauses, breaths and bad takes"
+  default_prompt: "Use $vrm-corte to cut the pauses and mistakes of this recording."

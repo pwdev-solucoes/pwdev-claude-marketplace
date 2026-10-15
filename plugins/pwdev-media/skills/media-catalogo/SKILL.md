@@ -8,7 +8,7 @@ description: >
   categoria, objetivo (barato, equilibrado, máximo), preço, qualidade e licença comercial. Não use
   para atualizar preços (media-atualizar) nem para gerar (media-gerar).
 metadata:
-  version: 0.2.0
+  version: 0.3.0
 ---
 
 # Consultar e recomendar no catálogo

@@ -1,5 +1,13 @@
 # Changelog — pwdev-media
 
+## 0.3.0 — 2026-10-14
+
+- `video plano-render`: engine-neutral render plan (`pwdev-plano-render/1`) resolved once for both
+  video plugins — sample window, clipped and shifted times, caption corrections, safe-zone layout
+  scaled to the format, dB volumes as linear gain.
+- `projeto.json` scenes may be `.html` (HyperFrames) or `.tsx` (Remotion) under `compositions/`;
+  paths with `..` are refused.
+
 ## 0.2.0 — 2026-10-14
 
 Talking-video pipeline shared by the video plugins (`pwdev-media video ...`).

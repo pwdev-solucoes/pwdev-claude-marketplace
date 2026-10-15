@@ -25,7 +25,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "plugins" / "pwdev-media" / "engine" / "src"))
 
 from pwdev_media import cli  # noqa: E402
-from pwdev_media.video import audio, captions, check, cut, phrases, project, tools, transcribe, workflow  # noqa: E402
+from pwdev_media import formats  # noqa: E402
+from pwdev_media.video import (audio, captions, check, cut, phrases, project, render_plan, tools,  # noqa: E402
+                               transcribe, workflow)
 
 HAS_FFMPEG = bool(tools.find("ffmpeg") and tools.find("ffprobe"))
 needs_ffmpeg = unittest.skipUnless(HAS_FFMPEG, "ffmpeg não instalado (pwdev-media video ffmpeg --instalar)")
@@ -335,6 +337,89 @@ class ProjectTest(unittest.TestCase):
         for expected in ("schema", "formato", "legenda.estilo", "max_palavras", "fora do corte", "zoom",
                          "fim (1) antes", "texto vazio", "tipo deve ser", "posicao", "compositions/"):
             self.assertIn(expected, errors)
+
+
+# ---------------------------------------------------------------------------- render plan
+
+class RenderPlanTest(unittest.TestCase):
+    WORDS = [{"w": "Hoje", "inicio": 0.1, "fim": 0.3}, {"w": "chip,", "inicio": 0.35, "fim": 0.6},
+             {"w": "três", "inicio": 2.6, "fim": 2.9}, {"w": "dicas.", "inicio": 2.95, "fim": 3.3}]
+
+    def setUp(self):
+        self.timeline = {"duracao": 4.0, "palavras": self.WORDS}
+        self.cues = captions.build(self.WORDS, 3)["cues"]
+        self.proj = project.new("dicas", "/tmp/edit", "reels-9x16")
+
+    def plan(self):
+        return render_plan.build(self.proj, self.timeline, self.cues)
+
+    def test_whole_video(self):
+        plan = self.plan()
+        self.assertEqual(plan["schema"], render_plan.SCHEMA)
+        self.assertEqual((plan["largura"], plan["altura"], plan["fps"], plan["duracao"]), (1080, 1920, 30, 4.0))
+        self.assertEqual(plan["video"], {"arquivo": str(Path("/tmp/edit").resolve() / "cut.mp4"), "inicio_midia": 0.0})
+        self.assertEqual([w["texto"] for c in plan["cues"] for w in c["palavras"]], ["Hoje", "chip,", "três", "dicas."])
+
+    def test_sample_window_shifts_and_clips(self):
+        self.proj["amostra"] = {"inicio": 2.5, "fim": 3.5}
+        self.proj["textos"] = [{"inicio": 2.0, "fim": 3.0, "texto": "Dica", "tipo": "rotulo", "posicao": "topo"},
+                               {"inicio": 0.0, "fim": 1.0, "texto": "Fora", "tipo": "titulo", "posicao": "topo"}]
+        self.proj["audio"]["efeitos"] = [{"t": 2.6, "arquivo": "/a/s.mp3", "volume_db": -12},
+                                         {"t": 0.5, "arquivo": "/a/fora.mp3"}]
+        plan = self.plan()
+        self.assertEqual(plan["duracao"], 1.0)
+        self.assertEqual(plan["video"]["inicio_midia"], 2.5)
+        self.assertEqual([(t["texto"], t["inicio"], t["duracao"]) for t in plan["textos"]], [("Dica", 0.0, 0.5)])
+        self.assertEqual(len(plan["cues"]), 1)
+        self.assertEqual(plan["cues"][0]["palavras"][0], {"texto": "três", "inicio": 0.1})
+        self.assertEqual([(e["inicio"], e["volume"]) for e in plan["audio"]["efeitos"]], [(0.1, round(10 ** (-12 / 20), 4))])
+
+    def test_corrections_layout_and_volumes(self):
+        self.proj["correcoes"] = {"chip": "Chip IA"}
+        self.proj["legenda"]["y"] = 0.99
+        self.proj["textos"] = [{"inicio": 1.0, "fim": 2.0, "texto": "Oi", "tipo": "titulo", "posicao": "base"}]
+        self.proj["audio"]["trilha"] = {"arquivo": "/m/t.mp3", "volume_db": -20}
+        plan = self.plan()
+        self.assertEqual(plan["cues"][0]["palavras"][1]["texto"], "Chip IA,")
+        sx, sy, sw, sh = formats.safe_box(formats.get("reels-9x16"))
+        self.assertEqual(plan["zona_segura"], {"x": sx, "y": sy, "largura": sw, "altura": sh})
+        self.assertTrue(sy <= plan["legenda"]["topo"] < sy + sh)
+        self.assertTrue(sy <= plan["textos"][0]["topo"] < sy + sh)
+        self.assertEqual(plan["audio"]["trilha"]["volume"], 0.1)
+
+    def test_scales_with_the_format(self):
+        self.proj["formato"] = "display-300x250"
+        plan = self.plan()
+        self.assertLess(plan["legenda"]["tamanho"], 54)
+        self.assertLess(plan["unidade"], 1)
+
+    def test_invalid_project_is_refused(self):
+        self.proj["textos"] = [{"inicio": 3, "fim": 9, "texto": "x", "tipo": "rotulo"}]
+        with self.assertRaisesRegex(ValueError, "fora do corte"):
+            self.plan()
+
+    def test_scene_paths(self):
+        for src, ok in (("compositions/a.html", True), ("compositions/a.tsx", True),
+                        ("compositions/../a.tsx", False), ("src/a.tsx", False), ("compositions/a.js", False)):
+            self.proj["cenas"] = [{"inicio": 0, "fim": 1, "src": src}]
+            with self.subTest(src=src):
+                self.assertEqual(not project.validate(self.proj, 4.0), ok)
+
+    def test_cli_and_missing_artifacts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            edit = Path(tmp) / "edit"
+            edit.mkdir()
+            proj_file = Path(tmp) / "p" / "projeto.json"
+            proj_file.parent.mkdir()
+            project.save(project.new("x", str(edit)), proj_file)
+            code, _, err = run_cli("video", "plano-render", str(proj_file))
+            self.assertEqual(code, 2)
+            self.assertIn("cut_timeline.json", err)
+            (edit / "cut_timeline.json").write_text(json.dumps(self.timeline))
+            (edit / "legendas.json").write_text(json.dumps({"cues": self.cues}))
+            code, out, _ = run_cli("video", "plano-render", str(proj_file))
+            self.assertEqual(code, 0)
+            self.assertEqual(json.loads(out)["schema"], render_plan.SCHEMA)
 
 
 # ---------------------------------------------------------------------------- workflow and CLI

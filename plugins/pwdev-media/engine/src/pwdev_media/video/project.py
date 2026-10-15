@@ -12,7 +12,7 @@ Times are in seconds on the cut (cut.mp4). Schema `pwdev-projeto-video/1`:
   "legenda": {"ativa": true, "estilo": "discreta" | "destaque", "max_palavras": 3, "y": 0.70},
   "blocos": [{"inicio", "fim", "tipo": "tela_cheia", "zoom": 1.0, "origem": "50% 35%"}],
   "textos": [{"inicio", "fim", "texto", "tipo": "rotulo" | "titulo", "posicao": "topo" | "centro" | "base"}],
-  "cenas":  [{"inicio", "fim", "src": "compositions/<cena>.html", "sobre_a_pessoa": true}],
+  "cenas":  [{"inicio", "fim", "src": "compositions/<cena>.html|.tsx", "sobre_a_pessoa": true}],
   "audio":  {"trilha": {"arquivo", "volume_db": -23} | null, "efeitos": [{"t", "arquivo", "volume_db": -12}]},
   "correcoes": {"palavra errada": "certa"},
   "amostra": {"inicio", "fim"} | null           # build only this stretch while reviewing
@@ -30,6 +30,7 @@ TIPOS_BLOCO = {"tela_cheia"}
 TIPOS_TEXTO = {"rotulo", "titulo"}
 POSICOES = {"topo", "centro", "base"}
 ESTILOS_LEGENDA = {"discreta", "destaque"}
+SCENE_EXTENSIONS = (".html", ".tsx")
 
 
 def new(nome: str, edit: str, formato: str = "reels-9x16", fps: int = 30) -> dict:
@@ -81,8 +82,9 @@ def validate(proj: dict, duration: float | None = None) -> list[str]:
             errors.append(f"textos[{n}]: posicao deve ser uma de {sorted(POSICOES)}")
     for n, c in enumerate(proj.get("cenas", [])):
         _span(c, f"cenas[{n}]", duration, errors)
-        if not str(c.get("src", "")).startswith("compositions/"):
-            errors.append(f"cenas[{n}]: src fica em compositions/")
+        src = str(c.get("src", ""))
+        if not src.startswith("compositions/") or ".." in src or not src.endswith(SCENE_EXTENSIONS):
+            errors.append(f"cenas[{n}]: src fica em compositions/ e termina em .html (HyperFrames) ou .tsx (Remotion)")
     for n, e in enumerate(proj.get("audio", {}).get("efeitos", [])):
         if not isinstance(e.get("t"), (int, float)):
             errors.append(f"audio.efeitos[{n}]: t numérico")

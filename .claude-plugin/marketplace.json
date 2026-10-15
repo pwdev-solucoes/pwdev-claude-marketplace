@@ -436,6 +436,26 @@
         "portable"
       ],
       "strict": true
+    },
+    {
+      "name": "pwdev-video-remotion",
+      "displayName": "PWDEV Video Remotion — Edição de Vídeo Falado em React",
+      "source": "./plugins/pwdev-video-remotion",
+      "description": "Edição de vídeo falado por conversa com Remotion (React), com o mesmo fluxo e o mesmo projeto.json do pwdev-video-hyperframes: corte pela onda, legendas por palavra, zooms, cenas em React, trilha, estúdio, render com portão e aviso de licença — Claude Code, Codex e Hermes Agent.",
+      "category": "media",
+      "tags": [
+        "video",
+        "video-editing",
+        "remotion",
+        "react",
+        "captions",
+        "reels",
+        "ads",
+        "codex",
+        "hermes",
+        "portable"
+      ],
+      "strict": true
     }
   ]
 }

@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Remotion Plan"
+  short_description: "Plan what appears on screen word by word"
+  default_prompt: "Use $vrm-plano to add zooms and labels to the cut."

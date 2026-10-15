@@ -8,7 +8,7 @@ description: >
   rótulo de IA. Não use para escolher entre modelos sem gerar (media-catalogo) nem para editar um
   vídeo gravado (plugins pwdev-video-*).
 metadata:
-  version: 0.2.0
+  version: 0.3.0
 ---
 
 # Gerar mídia com custo controlado

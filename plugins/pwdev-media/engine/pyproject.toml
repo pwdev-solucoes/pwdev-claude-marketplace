@@ -1,6 +1,6 @@
 [project]
 name = "pwdev-media"
-version = "0.2.0"
+version = "0.3.0"
 description = "Núcleo da suíte pwdev de mídia: catálogo de modelos por categoria, provedores (OpenRouter, fal, ElevenLabs), chaves, guarda de custo e formatos de criativos"
 requires-python = ">=3.10"
 license = "Apache-2.0"
