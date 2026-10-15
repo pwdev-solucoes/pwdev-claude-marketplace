@@ -285,6 +285,10 @@ class RecordingScriptTest(unittest.TestCase):
     def test_locator_text_never_reaches_the_code(self):
         with self.assertRaises(ValueError):
             tut._locator("getByText('a')).then(() => process.exit()")
+        bad = script()
+        bad["cenas"][1]["acoes"][0]["alvo"] = "getByText('a')).then(() => process.exit()"
+        with tempfile.TemporaryDirectory() as tmp, self.assertRaises(ValueError):
+            tut.build_js(bad, Path(tmp), None)
         s = script()
         s["cenas"][1]["acoes"][0]["alvo"] = "getByText('x\\'); process.exit(); (\\'')"
         s["cenas"][1]["acoes"][0]["nota"] = "<img src=x onerror=alert(1)>"

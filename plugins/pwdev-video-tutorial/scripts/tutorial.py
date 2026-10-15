@@ -398,6 +398,9 @@ def _url(base: str, value: str) -> str:
 
 
 def build_js(script: dict, folder: Path, narration: dict | None) -> str:
+    errors = validate_script(script)
+    if errors:  # never generate code from a roteiro that did not pass validation
+        raise ValueError("roteiro com problemas: " + "; ".join(errors))
     vw = int((script.get("viewport") or {}).get("largura", 1920))
     vh = int((script.get("viewport") or {}).get("altura", 1080))
     durations = {c["id"]: c["duracao"] for c in (narration or {}).get("cenas", [])}
