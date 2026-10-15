@@ -240,9 +240,23 @@ class ValidatorTest(unittest.TestCase):
     def test_locators(self):
         for alvo, valid in (("getByLabel('Nome')", True), ("getByTestId(\"salvar\")", True), ("#salvar", True),
                             ("getByRole('a'); x", False), ("getByRole(`x`)", False), ("evaluate('x')", True),
-                            ("", False)):
+                            ("", False),
+                            ("getByRole('button', { name: 'Salvar', exact: true, level: 2 })", True),
+                            ("getByText('it\\'s ok')", True),
+                            # code smuggled without ';', backtick or line break
+                            ("getByText('a')).then(() => process.exit()", False),
+                            ("getByText('a').and(page.evaluate(() => 1))", False),
+                            ("getByText('a', { name: require('fs') })", False),
+                            ("getByRole('a', { evil: 'x' })", False),
+                            ("getByText('a' + process.env.HOME)", False),
+                            ("getByEvaluate('x')", False)):
             with self.subTest(alvo=alvo):
                 self.assertEqual(tut.validate_locator(alvo) is None, valid)
+
+    def test_locator_is_parsed_into_values(self):
+        self.assertEqual(tut.parse_locator("getByRole('button', { name: 'Salvar', exact: true })"),
+                         ("getByRole", "button", {"name": "Salvar", "exact": True}))
+        self.assertEqual(tut.parse_locator("getByText(\"it\\\"s\")"), ("getByText", 'it"s', {}))
 
 
 # ---------------------------------------------------------------------------- recording script
@@ -257,7 +271,7 @@ class RecordingScriptTest(unittest.TestCase):
         js, tmp = self.build(narration)
         self.assertTrue(js.startswith("async page => {"))
         self.assertIn('page.goto("https://homolog.exemplo.com/clientes")', js)
-        self.assertIn("page.getByRole('button', { name: 'Novo cliente' })", js)
+        self.assertIn('page.getByRole("button", {"name": "Novo cliente"})', js)
         self.assertIn('page.locator("#email")', js)
         self.assertIn('pressSequentially("maria@exemplo.com"', js)
         self.assertIn('#email { filter: blur(8px) !important; }', js)
@@ -267,6 +281,19 @@ class RecordingScriptTest(unittest.TestCase):
         self.assertIn("cena.narracao_inicio + 3.400 - now()", js)
         self.assertIn(str(Path(tmp).resolve() / "gravacao.webm"), js)
         self.assertIn("page.screencast.stop()", js)
+
+    def test_locator_text_never_reaches_the_code(self):
+        with self.assertRaises(ValueError):
+            tut._locator("getByText('a')).then(() => process.exit()")
+        s = script()
+        s["cenas"][1]["acoes"][0]["alvo"] = "getByText('x\\'); process.exit(); (\\'')"
+        s["cenas"][1]["acoes"][0]["nota"] = "<img src=x onerror=alert(1)>"
+        s["cenas"][0]["id"] = "C01\nprocess.exit()"
+        with tempfile.TemporaryDirectory() as tmp:
+            js = tut.build_js(s, Path(tmp), None)
+        self.assertIn('page.getByText("x\'); process.exit(); (\'")', js)
+        self.assertNotIn("<img", js)
+        self.assertNotIn("\nprocess.exit()", js)
 
     def test_text_is_escaped(self):
         s = script()

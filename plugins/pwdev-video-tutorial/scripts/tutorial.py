@@ -18,6 +18,7 @@ personal data on screen is blurred by the `mascarar` selectors of the script.
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import os
 import re
@@ -36,7 +37,12 @@ SKIP_DIRS = {"node_modules", "vendor", ".git", "dist", "build", ".next", ".nuxt"
 CODE_EXT = {".php", ".js", ".jsx", ".ts", ".tsx", ".vue", ".py", ".rb", ".html", ".svelte"}
 MAX_FILES = 6000
 ACOES = {"ir", "clicar", "preencher", "pressionar", "passar", "selecionar", "rolar", "esperar", "destacar"}
-LOCATOR_RE = re.compile(r"^getBy(Role|Text|Label|Placeholder|TestId|Title|AltText)\((?:[^;`\n\\]|\\.)*\)$")
+LOCATOR_METHODS = {"Role", "Text", "Label", "Placeholder", "TestId", "Title", "AltText"}
+LOCATOR_OPTIONS = {"name", "exact", "level", "checked", "disabled", "expanded", "includeHidden", "pressed", "selected"}
+_JS_STR = r"'(?:[^'\\\n]|\\.)*'|\"(?:[^\"\\\n]|\\.)*\""
+_JS_VALUE = rf"{_JS_STR}|true|false|-?\d+(?:\.\d+)?"
+LOCATOR_RE = re.compile(rf"^getBy(\w+)\(\s*({_JS_STR})\s*(?:,\s*\{{(.*)\}}\s*)?\)$", re.S)
+LOCATOR_OPT_RE = re.compile(rf"\s*(\w+)\s*:\s*({_JS_VALUE})\s*(?:,|$)")
 PII_HINT = re.compile(r"(e-?mail|cpf|cnpj|telefone|celular|phone|senha|password|cart[aã]o|card|rg\b|endere[cç]o)", re.I)
 TTS_VOICES = {"pf_dora": "feminina", "pm_alex": "masculina", "pm_santa": "masculina"}
 FONT_PAUSE = 0.4  # seconds of breathing room after the narration of a scene
@@ -246,9 +252,40 @@ def validate_roadmap(doc: dict) -> tuple[list[str], list[str]]:
     return errors, order
 
 
+def _js_literal(token: str):
+    """Value of a JS string, boolean or number literal (only the forms the locator grammar allows)."""
+    if token in ("true", "false"):
+        return token == "true"
+    if token[0] not in "'\"":
+        return float(token) if "." in token else int(token)
+    escapes = {"n": "\n", "t": "\t", "r": "\r", "0": "\0"}
+    return re.sub(r"\\(.)", lambda m: escapes.get(m.group(1), m.group(1)), token[1:-1])
+
+
+def parse_locator(alvo: str) -> tuple[str, str, dict] | None:
+    """`getByX('text', { key: value })` as (method, text, options), or None when it is not exactly that.
+
+    The script never pastes the locator text into the recording code: it is parsed here and
+    re-emitted from these values, so a locator cannot carry code.
+    """
+    m = LOCATOR_RE.match(alvo.strip())
+    if not m or m.group(1) not in LOCATOR_METHODS:
+        return None
+    options = {}
+    body = (m.group(3) or "").strip()
+    pos = 0
+    while pos < len(body):
+        opt = LOCATOR_OPT_RE.match(body, pos)
+        if not opt or opt.end() == pos or opt.group(1) not in LOCATOR_OPTIONS:
+            return None
+        options[opt.group(1)] = _js_literal(opt.group(2))
+        pos = opt.end()
+    return "getBy" + m.group(1), _js_literal(m.group(2)), options
+
+
 def validate_locator(alvo: str) -> str | None:
     if alvo.startswith("getBy"):
-        return None if LOCATOR_RE.match(alvo) else f"localizador inválido: {alvo}"
+        return None if parse_locator(alvo) else f"localizador inválido: {alvo}"
     if any(c in alvo for c in "`\n;") or not alvo.strip():
         return f"seletor inválido: {alvo!r}"
     return None
@@ -345,7 +382,13 @@ def _js(value) -> str:
 
 
 def _locator(alvo: str) -> str:
-    return f"page.{alvo}" if alvo.startswith("getBy") else f"page.locator({_js(alvo)})"
+    if not alvo.startswith("getBy"):
+        return f"page.locator({_js(alvo)})"
+    parsed = parse_locator(alvo)
+    if parsed is None:
+        raise ValueError(f"localizador inválido: {alvo}")
+    method, text, options = parsed
+    return f"page.{method}({_js(text)}" + (f", {_js(options)})" if options else ")")
 
 
 def _url(base: str, value: str) -> str:
@@ -388,7 +431,7 @@ def build_js(script: dict, folder: Path, narration: dict | None) -> str:
     ]
     for c in script["cenas"]:
         need = float(durations.get(c["id"], 0)) + FONT_PAUSE
-        lines += [f"  // cena {c['id']}", "  {", "    const cena = { id: " + _js(c["id"]) + ", inicio: now(), acoes: [] };"]
+        lines += [f"  // cena {_js(str(c['id']))}", "  {", "    const cena = { id: " + _js(c["id"]) + ", inicio: now(), acoes: [] };"]
         if c.get("capitulo"):
             cap = c["capitulo"]
             lines.append(f"    await page.screencast.showChapter({_js(cap.get('titulo', ''))}, "
@@ -406,7 +449,7 @@ def build_js(script: dict, folder: Path, narration: dict | None) -> str:
             elif tipo in ("clicar", "preencher", "passar", "selecionar", "destacar"):
                 loc = _locator(alvo)
                 lines.append(f"    {{ const loc = {loc}; await loc.first().scrollIntoViewIfNeeded().catch(() => {{}});")
-                lines.append(f"      const box = await mark(loc, {_js(a.get('nota', ''))}); const t = now();")
+                lines.append(f"      const box = await mark(loc, {_js(html.escape(str(a.get('nota', ''))))}); const t = now();")
                 if tipo == "clicar":
                     lines.append("      await loc.first().click();")
                 elif tipo == "preencher":

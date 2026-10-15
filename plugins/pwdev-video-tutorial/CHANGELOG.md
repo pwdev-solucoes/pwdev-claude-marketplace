@@ -21,7 +21,9 @@ First release.
 - `vtut-gravar`: playwright-cli `run-code` recording with `page.screencast`: chapter cards, orange
   outline and note on each target, human typing, CSS blur on masked fields across navigations,
   each scene held for its narration; per-action timings and target boxes (`cenas.json`) and one
-  screenshot per scene.
+  screenshot per scene. Locators are parsed (`getByX('text', { option: value })`, simple values
+  only) and re-emitted from their values, never pasted into the recording code; notes are
+  HTML-escaped.
 - `vtut-montar`: recording + narration into a video-plugin edit folder (normalized loudness,
   captions from the narration transcript or, as a fallback, from the script text), click-zoom
   blocks and readable `caixa` captions for pwdev-video-hyperframes; text tutorial with screenshots.
