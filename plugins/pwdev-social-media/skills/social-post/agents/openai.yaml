@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Post"
+  short_description: "Single feed piece: quote, data card, ad"
+  default_prompt: "Use $social-post to build a data card for this number with its source."

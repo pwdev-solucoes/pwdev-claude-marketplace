@@ -12,7 +12,8 @@ maxTurns: 30
 # Subagente: Creative Reviewer
 
 ## Papel
-Portão de qualidade. Rode `creative-review` e `alt-text`.
+Portão de qualidade. Rode `social-revisao` e `social-alt-text`. Zona segura conferida com
+`pwdev-media formatos conferir <formato> --caixa x,y,l,a`.
 
 ## Contrato de entrada
 - `LANGUAGE`, `PECAS` (links do Figma, arquivos ou spec)

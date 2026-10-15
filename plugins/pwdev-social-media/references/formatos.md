@@ -1,11 +1,9 @@
-# Formatos e Áreas Seguras
+# Formatos, tipografia e contraste
 
-Especificação canônica consultada por todas as skills de montagem.
+Regras de leitura consultadas pelas skills de montagem. Dimensões e zonas seguras: `pwdev-media formatos`.
 
-> **Aviso de validade.** Dimensões são estáveis; **áreas seguras mudam** a cada
-> atualização de app. Os valores abaixo são conservadores de propósito. Antes de
-> uma campanha grande, confira na documentação oficial da plataforma e atualize
-> este arquivo — ele é o único lugar onde esses números devem existir.
+> **Aviso de validade.** Dimensões são estáveis; **zonas seguras mudam** a cada atualização de
+> app. Elas ficam no catálogo de formatos do `pwdev-media`, com data de verificação.
 
 ---
 
@@ -35,28 +33,19 @@ tela que 1:1 e é o formato de maior superfície no feed sem cair em corte.
 
 ## Áreas seguras
 
-Margem interna mínima onde nenhum texto ou elemento crítico pode entrar.
+As margens por formato vivem **num lugar só**: o catálogo de formatos do `pwdev-media`.
 
-### Vertical 9:16 (stories, reels, shorts, TikTok)
-Base 1080 × 1920:
-
-```
-topo         250 px   barra de perfil, som, indicador de sequência
-base         320 px   legenda, CTA, barra de progresso
-direita      120 px   botões de ação (curtir, comentar, compartilhar)
-esquerda      60 px   margem visual
+```bash
+pwdev-media formatos listar
+pwdev-media formatos mostrar reels-9x16
+pwdev-media formatos conferir feed-4x5 --caixa x,y,largura,altura
 ```
 
-Área útil confiável: aproximadamente **900 × 1350 px, centralizada e deslocada
-para cima**. Todo texto essencial cabe aí.
+O que vale lembrar além dos números:
 
-> Erro mais comum: colocar a chamada no rodapé, onde a legenda do app cobre.
-
-### Feed 4:5 e 1:1
-```
-margem em todos os lados   64 px
-```
-Feed tem pouca sobreposição de UI, mas margem estreita comprime visualmente.
+- **Vertical 9:16:** o app cobre topo (perfil, som), base (legenda, CTA, progresso) e lateral direita
+  (curtir, comentar). Erro mais comum: chamada no rodapé, onde a legenda do app cobre.
+- **Feed 4:5 e 1:1:** pouca sobreposição de UI, mas margem estreita comprime visualmente.
 
 ### Miniatura do YouTube
 Texto legível em **168 × 94 px** — o tamanho real no celular. Se não lê nesse
@@ -124,4 +113,4 @@ Peças de serviço ao cidadão têm exigência adicional:
 - Sem texto sobre foto de pessoa em situação de vulnerabilidade
 - Fonte do dado visível na peça, com data
 - Identidade visual do órgão conforme manual da instituição
-- Descrição alternativa obrigatória — ver `alt-text`
+- Descrição alternativa obrigatória — ver `social-alt-text`

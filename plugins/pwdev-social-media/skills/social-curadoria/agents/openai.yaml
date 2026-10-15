@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Curation"
+  short_description: "Compare variations and pick the right one"
+  default_prompt: "Use $social-curadoria to compare these variations and record the chosen seed."

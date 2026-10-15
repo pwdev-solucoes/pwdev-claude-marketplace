@@ -1,0 +1,27 @@
+{
+  "name": "pwdev-video-remotion",
+  "displayName": "PWDEV Video Remotion — Edição de Vídeo Falado em React",
+  "version": "0.2.0",
+  "description": "Edição de vídeo falado por conversa com Remotion (React): o mesmo fluxo e o mesmo projeto.json do pwdev-video-hyperframes — corte pela onda do áudio sem respiros, plano em blocos, legendas por palavra, zooms, textos na zona segura, cenas sob medida em componentes React, trilha e efeitos, estúdio, render com portão de qualidade e aviso de licença do Remotion; skills portáveis para Claude Code, Codex e Hermes Agent.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "claude-code",
+    "claude-plugin",
+    "video",
+    "video-editing",
+    "remotion",
+    "react",
+    "captions",
+    "reels",
+    "ads",
+    "pt-br",
+    "hermes",
+    "portable"
+  ]
+}

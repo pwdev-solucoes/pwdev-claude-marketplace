@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Vertical"
+  short_description: "9:16 pieces inside the app safe zones"
+  default_prompt: "Use $social-reels to build a story cover inside the Reels safe zone."

@@ -1,0 +1,41 @@
+{
+  "name": "pwdev-mods",
+  "displayName": "PWDEV Mods — Painel de gestão do Claude Code",
+  "version": "0.1.0",
+  "description": "Mod do Claude Code com painel de gestão: subagentes ao vivo (monitorar, parar, disparar), consumo de tokens por turno, modelo e subagente, custo, janela de contexto, rate limits e histórico diário entre sessões com alerta de orçamento.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": ["claude-code", "claude-plugin", "mods", "dashboard", "tokens", "subagents", "cost"],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "dailyBudgetUsd": {
+      "type": "number",
+      "title": "Orçamento diário (USD)",
+      "description": "Avisa ao atingir 80% e 100% do gasto do dia. 0 desliga o alerta.",
+      "default": 0
+    },
+    "historyDays": {
+      "type": "number",
+      "title": "Dias de histórico",
+      "description": "Quantos dias de consumo manter entre sessões.",
+      "default": 30
+    },
+    "showBand": {
+      "type": "boolean",
+      "title": "Faixa acima do prompt",
+      "description": "Mostra contexto, custo do dia e subagentes ativos acima do prompt.",
+      "default": true
+    },
+    "autoOpenPane": {
+      "type": "boolean",
+      "title": "Abrir painel ao iniciar",
+      "description": "Abre o painel pwdev-mods quando a sessão começa (só em terminal largo).",
+      "default": false
+    }
+  }
+}

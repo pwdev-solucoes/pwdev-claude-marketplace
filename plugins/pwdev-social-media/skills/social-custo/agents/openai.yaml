@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Cost"
+  short_description: "Estimate and track generation spend"
+  default_prompt: "Use $social-custo to estimate this batch before generating anything."

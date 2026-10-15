@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Concept"
+  short_description: "Turn approved copy into a visual concept"
+  default_prompt: "Use $social-conceito to turn this approved copy into a visual concept with an asset triage."

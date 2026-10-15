@@ -1,0 +1,38 @@
+{
+  "name": "pwdev-video-tutorial",
+  "version": "0.1.0",
+  "description": "Explainer and tutorial videos of software systems built from the real system: code scan plus live navigation with playwright-cli, system map, video roadmap, storytelling scripts, free local pt-BR narration, screen recording with chapters, highlights and blurred personal data, and assembly with captions and click zoom through pwdev-video-hyperframes, plus a text tutorial.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "codex",
+    "video",
+    "tutorial",
+    "playwright",
+    "screen-recording",
+    "documentation",
+    "hermes"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "PWDEV Video Tutorial",
+    "shortDescription": "Tutorial and explainer videos of a real system",
+    "longDescription": "Read the codebase and navigate the system with playwright-cli to map screens, flows and permissions; plan a roadmap of videos by audience and priority; write storytelling scripts with verified locators; narrate with a free local pt-BR voice; record the screen with chapters, highlights and blurred personal data; assemble the final video with readable captions and click zoom; and export a text tutorial with screenshots.",
+    "developerName": "PWDEV Solucoes",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Explore https://staging.example.com and the code in ./app, then propose a roadmap of tutorial videos.",
+      "Write the script for the 'create a customer' tutorial.",
+      "Record and assemble the tutorial video V02."
+    ]
+  }
+}

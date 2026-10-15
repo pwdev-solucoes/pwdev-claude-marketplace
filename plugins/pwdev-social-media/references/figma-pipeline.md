@@ -54,7 +54,7 @@ irrita time de design é receber um arquivo com o quinto botão diferente.
 3. search_design_system            ← reaproveitar componente existente
 4. use_figma                       ← montar
 5. get_screenshot                  ← conferir o que foi criado
-6. creative-review                 ← auditar antes de exportar
+6. social-revisao                 ← auditar antes de exportar
 ```
 
 ### Regras de montagem

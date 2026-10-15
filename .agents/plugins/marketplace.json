@@ -99,6 +99,78 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Developer Tools"
+    },
+    {
+      "name": "pwdev-fumadocs",
+      "source": {
+        "source": "local",
+        "path": "./plugins/pwdev-fumadocs"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "pwdev-media",
+      "source": {
+        "source": "local",
+        "path": "./plugins/pwdev-media"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "pwdev-video-hyperframes",
+      "source": {
+        "source": "local",
+        "path": "./plugins/pwdev-video-hyperframes"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "pwdev-video-remotion",
+      "source": {
+        "source": "local",
+        "path": "./plugins/pwdev-video-remotion"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "pwdev-social-media",
+      "source": {
+        "source": "local",
+        "path": "./plugins/pwdev-social-media"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "pwdev-video-tutorial",
+      "source": {
+        "source": "local",
+        "path": "./plugins/pwdev-video-tutorial"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
     }
   ]
 }

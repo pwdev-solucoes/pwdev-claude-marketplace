@@ -1,0 +1,19 @@
+[project]
+name = "pwdev-media"
+version = "0.5.0"
+description = "Núcleo da suíte pwdev de mídia: catálogo de modelos por categoria, provedores (OpenRouter, fal, ElevenLabs), chaves, guarda de custo e formatos de criativos"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [{ name = "Paulo Soares" }]
+# Só biblioteca padrão nesta fase: instala em qualquer máquina sem compilar nada.
+dependencies = []
+
+[project.scripts]
+pwdev-media = "pwdev_media.cli:main"
+
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pwdev_media"]

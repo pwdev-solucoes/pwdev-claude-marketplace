@@ -1,0 +1,71 @@
+{
+  "schema": "pwdev-roadmap-videos/1",
+  "sistema": {
+    "nome": "Painel Exemplo",
+    "url": "https://homologacao.exemplo.com.br",
+    "codigo": "/caminho/do/repositorio"
+  },
+  "series": [
+    {
+      "id": "onboarding",
+      "nome": "Primeiros passos",
+      "publico": "novos usuários"
+    },
+    {
+      "id": "clientes",
+      "nome": "Clientes",
+      "publico": "atendente"
+    }
+  ],
+  "videos": [
+    {
+      "id": "V01",
+      "titulo": "Conhecendo o painel",
+      "serie": "onboarding",
+      "tipo": "onboarding",
+      "objetivo": "Entrar e encontrar os menus principais",
+      "publico": "novos usuários",
+      "prerequisitos": [],
+      "rotas": [
+        "/login",
+        "/"
+      ],
+      "telas": [
+        "inicio.png"
+      ],
+      "duracao_alvo_s": 60,
+      "formato": "youtube-16x9",
+      "prioridade": "P1",
+      "status": "planejado",
+      "fontes": [
+        "routes/web.php:12",
+        "explorar/inicio.yml"
+      ]
+    },
+    {
+      "id": "V02",
+      "titulo": "Como cadastrar um cliente",
+      "serie": "clientes",
+      "tipo": "tutorial",
+      "objetivo": "Cadastrar um cliente pessoa física",
+      "publico": "atendente",
+      "prerequisitos": [
+        "V01"
+      ],
+      "rotas": [
+        "/clientes",
+        "/clientes/novo"
+      ],
+      "telas": [
+        "clientes.png"
+      ],
+      "duracao_alvo_s": 90,
+      "formato": "youtube-16x9",
+      "prioridade": "P1",
+      "status": "planejado",
+      "fontes": [
+        "routes/web.php:30"
+      ]
+    }
+  ]
+}

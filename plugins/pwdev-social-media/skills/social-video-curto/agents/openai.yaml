@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Short Video"
+  short_description: "Route short video creatives to the right tool"
+  default_prompt: "Use $social-video-curto to decide how to turn this post into an animated reel."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Video Versions"
+  short_description: "Versions, hook batches and other formats"
+  default_prompt: "Use $vhf-variacoes to make 4:5 and 1:1 versions of this edit."

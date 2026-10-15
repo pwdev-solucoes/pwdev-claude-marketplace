@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Remotion Scenes"
+  short_description: "Custom animated React scene for a moment of speech"
+  default_prompt: "Use $vrm-cenas to animate the three steps when I list them."

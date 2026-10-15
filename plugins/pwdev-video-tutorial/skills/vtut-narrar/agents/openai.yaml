@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Tutorial Narration"
+  short_description: "Narration per scene, free local pt-BR voice"
+  default_prompt: "Use $vtut-narrar to narrate V02 with the local female voice."

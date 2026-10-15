@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Remotion Edit"
+  short_description: "Edit a talking video end to end with Remotion"
+  default_prompt: "Use $vrm-editar to edit the video in this folder into a dynamic 9:16 ad with Remotion."

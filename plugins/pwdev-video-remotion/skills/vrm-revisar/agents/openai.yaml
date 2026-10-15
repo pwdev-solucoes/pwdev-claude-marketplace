@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Remotion Review"
+  short_description: "Review, render and deliver with a quality gate"
+  default_prompt: "Use $vrm-revisar to render the final video and check it."

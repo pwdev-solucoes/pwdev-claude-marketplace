@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Remotion Setup"
+  short_description: "Prepare tools and check the Remotion license"
+  default_prompt: "Use $vrm-setup to check that video editing with Remotion is ready."

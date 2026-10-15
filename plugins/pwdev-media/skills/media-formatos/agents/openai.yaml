@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Media Formats"
+  short_description: "Creative sizes and safe zones per platform"
+  default_prompt: "Use $media-formatos to list the Meta and TikTok video formats with safe zones."

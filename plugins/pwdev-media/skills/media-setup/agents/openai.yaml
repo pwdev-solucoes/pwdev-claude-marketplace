@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Media Setup"
+  short_description: "Install pwdev-media, store keys, check providers"
+  default_prompt: "Use $media-setup to install pwdev-media and check my OpenRouter key."

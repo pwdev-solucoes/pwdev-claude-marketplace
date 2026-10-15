@@ -23,10 +23,12 @@ Reinicie o runtime após a instalação. Consulte o README de cada plugin para s
 | Garantia de qualidade | [pwdev-qa](./plugins/pwdev-qa/) |
 | Engenharia de skills | [pwdev-skills](./plugins/pwdev-skills/) |
 | Copy e conteúdo social | [pwdev-copy](./plugins/pwdev-copy/), [pwdev-social-media](./plugins/pwdev-social-media/) |
+| Mídia: modelos, provedores, custo e edição de vídeo | [pwdev-media](./plugins/pwdev-media/), [pwdev-video-hyperframes](./plugins/pwdev-video-hyperframes/), [pwdev-video-remotion](./plugins/pwdev-video-remotion/), [pwdev-video-tutorial](./plugins/pwdev-video-tutorial/) |
 | Planejamento visual | [pwdev-excalidraw](./plugins/pwdev-excalidraw/) |
+| Sites de documentação | [pwdev-fumadocs](./plugins/pwdev-fumadocs/) |
 | DevOps e operações | [pwdev-devops](./plugins/pwdev-devops/) |
 | Conhecimento e integrações | [pwdev-brain](./plugins/pwdev-brain/), [pwdev-github](./plugins/pwdev-github/), [pwdev-glpi](./plugins/pwdev-glpi/), [pwdev-obsidian](./plugins/pwdev-obsidian/), [pwdev-postgres](./plugins/pwdev-postgres/), [pwdev-youtrack](./plugins/pwdev-youtrack/) |
-| Suporte ao terminal | [pwdev-statusline](./plugins/pwdev-statusline/) |
+| Suporte ao terminal | [pwdev-statusline](./plugins/pwdev-statusline/), [pwdev-mods](./plugins/pwdev-mods/) |
 
 ### PWDEV Flow — runtime duplo
 
@@ -62,7 +64,7 @@ Comandos: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 | [**pwdev-qa**](./plugins/pwdev-qa/) | Garantia de qualidade portátil para Claude Code, Codex e Hermes Agent — 10 fluxos, 17 guias especialistas, recomendação de ferramentas, evidência auditável, relatórios offline em HTML e PDF | 0.1.0 | Apache-2.0 |
 | [**pwdev-skills**](./plugins/pwdev-skills/) | Engenharia de skills para Claude Code, Codex e Hermes Agent — revisão e refatoração de skills, perfis lean/guided por medição, descoberta de runtimes e modelos, benchmark A/B headless objetivo em Claude Code, Codex, Hermes e OpenCode | 0.1.0 | Apache-2.0 |
 | [**pwdev-copy**](./plugins/pwdev-copy/) | Framework de copywriting treinável — 20 skills no ciclo completo (VOC → copy → revisão → análise), 5 subagentes reais | 1.1.0 | Apache-2.0 |
-| [**pwdev-social-media**](./plugins/pwdev-social-media/) | Geração de criativos por IA — orquestração de APIs (Ideogram, Leonardo, Flux, Runway, Freepik) com trava de gasto, 19 skills, 4 subagentes | 2.0.1 | Apache-2.0 |
+| [**pwdev-social-media**](./plugins/pwdev-social-media/) | Criativos por IA para Claude Code, Codex e Hermes Agent — conceito, triagem de custo, geração pelo pwdev-media (Ideogram, Flux, Leonardo, Runway, Magnific, OpenRouter, fal) com estimativa e confirmação, curadoria, Figma opcional, todos os formatos, lote de versões, portão de acessibilidade; 22 skills, 4 subagentes | 3.0.0 | Apache-2.0 |
 | [**pwdev-devops**](./plugins/pwdev-devops/) | Plataforma, operação e incidente — postura de execução segura com guard script, 24 skills, 4 subagentes | 1.0.0 | Apache-2.0 |
 | [**pwdev-youtrack**](./plugins/pwdev-youtrack/) | Gestão do YouTrack — MCP oficial embutido (2025.3+) para issues, artigos e log de trabalho; fallback REST para boards, sprints e relatórios de tempo | 1.0.0 | Apache-2.0 |
 | [**pwdev-github**](./plugins/pwdev-github/) | GitHub Projects para Claude Code, Codex, Hermes Agent e OpenCode — templates personalizáveis, publicação idempotente de roadmaps (issues, sub-issues, milestones, blocked-by nativo) e skill para criar, atualizar e fechar issues e tarefas de Project, via gh CLI | 0.1.0 | Apache-2.0 |
@@ -71,7 +73,13 @@ Comandos: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 | [**pwdev-obsidian**](./plugins/pwdev-obsidian/) | Vault do Obsidian — servidor MCP embutido no plugin comunitário Local REST API: leitura, escrita e edição estrutural de notas (heading/bloco/frontmatter), busca JsonLogic e texto livre, tags, arquivo ativo, paleta de comandos | 1.0.0 | Apache-2.0 |
 | [**pwdev-brain**](./plugins/pwdev-brain/) | Segundo cérebro em LLM Wiki (padrão Karpathy) no Open Knowledge Format v0.2 — ingest discutido com citação por afirmação, query citada, lint de conformidade; 2 subagentes, MCP embutido somente-leitura (6 tools) | 1.1.0 | Apache-2.0 |
 | [**pwdev-excalidraw**](./plugins/pwdev-excalidraw/) | Planejamento visual com diagramas Excalidraw via servidor MCP oficial — arquitetura, fluxos, dependências, decisões e roadmaps editáveis | 0.2.0 | Apache-2.0 |
+| [**pwdev-fumadocs**](./plugins/pwdev-fumadocs/) | Sites de documentação Fumadocs para Claude Code, Codex, Hermes Agent e OpenCode — documentação oficial ao vivo pelo servidor MCP do Fumadocs, instalação, conteúdo MDX e navegação, features via @fumadocs/cli, scanner determinístico do projeto, verificação por type-check e build | 0.1.0 | Apache-2.0 |
+| [**pwdev-media**](./plugins/pwdev-media/) | Núcleo da suíte de mídia para Claude Code, Codex e Hermes Agent — catálogo de modelos e apps de IA em 14 categorias com rotina de atualização, geração por OpenRouter, fal e ElevenLabs com estimativa e confirmação, chaves no Keychain, orçamento mensal, ledger, formatos de criativos com zonas seguras | 0.5.0 | Apache-2.0 |
+| [**pwdev-video-hyperframes**](./plugins/pwdev-video-hyperframes/) | Edição de vídeo falado por conversa com HyperFrames para Claude Code, Codex e Hermes Agent — corte pela onda (sem respiros, última tomada certa), legendas por palavra, zooms, textos na zona segura, cenas sob medida com as skills oficiais do HyperFrames, trilha e efeitos, amostra no estúdio e render com portão de qualidade | 0.2.0 | Apache-2.0 |
+| [**pwdev-video-remotion**](./plugins/pwdev-video-remotion/) | Edição de vídeo falado por conversa com Remotion (React) para Claude Code, Codex e Hermes Agent — mesmo fluxo e mesmo projeto.json do pwdev-video-hyperframes: corte pela onda, legendas por palavra, zooms, cenas em React, trilha, Remotion Studio, render com portão de qualidade e checagem da licença do Remotion | 0.2.0 | Apache-2.0 |
+| [**pwdev-video-tutorial**](./plugins/pwdev-video-tutorial/) | Vídeos explicativos e tutoriais de sistemas para Claude Code, Codex e Hermes Agent — leitura do código e navegação com playwright-cli, mapa do sistema, roadmap de vídeos, roteiro com storytelling, narração local em pt-BR grátis, gravação de tela com dados pessoais borrados, montagem com legenda e zoom no clique, tutorial em texto | 0.1.0 | Apache-2.0 |
 | [**pwdev-statusline**](./plugins/pwdev-statusline/) | Barra de status rica — cores dinâmicas, tokens formatados, totalmente configurável | 1.1.0 | Apache-2.0 |
+| [**pwdev-mods**](./plugins/pwdev-mods/) | Mod do Claude Code — painel de gestão de subagentes (monitorar, parar, disparar), tokens, custo e histórico diário | 0.1.0 | Apache-2.0 |
 
 ### pwdev-power
 
@@ -322,21 +330,23 @@ Veja a [documentação completa do plugin](./plugins/pwdev-copy/README.md).
 
 ### pwdev-social-media
 
-**Geração de criativos por IA** para redes sociais: orquestração de APIs no
-centro — Ideogram, Leonardo, Flux, Runway, Freepik/Magnific — via wrappers com
-trava de gasto. Figma é camada opcional de composição. Complementa o
-`pwdev-copy`: lá o texto, aqui a peça.
+**Criativos por IA** para redes sociais, portável para Claude Code, Codex e Hermes Agent: conceito e
+triagem de ativos, prompts que acertam em duas variações, geração paga pelo núcleo `pwdev-media`
+(Ideogram, Flux, Leonardo, Runway, Magnific, OpenRouter, fal) só depois da estimativa e de um "sim"
+explícito, curadoria com seed registrada, composição opcional no Figma, a mesma peça em todos os
+formatos dentro de cada zona segura, lote gancho × visual × formato e portão de acessibilidade
+obrigatório. Complementa o `pwdev-copy`: lá o texto, aqui a peça. Precisa do `pwdev-media` ≥ 0.4.0.
 
 ```
-conceito ─▶ [CONFIRMAÇÃO DE CUSTO] ─▶ prompt ─▶ geração via API ─▶ curadoria ─▶ [figma] ─▶ revisão ─▶ export
+conceito ─▶ estimativa ─▶ sim ─▶ pwdev-media gerar ─▶ curadoria ─▶ [figma] ─▶ formatos ─▶ revisão ─▶ entrega
 ```
 
-**Subagentes:** art-director, asset-generator, creative-reviewer, figma-builder
-**Principais funcionalidades:** trava de gasto com triagem de custo, modo prompt sem chaves de API, revisão de acessibilidade obrigatória
+**Subagentes (Claude Code):** art-director, asset-generator, creative-reviewer, figma-builder — na própria conversa no Codex e no Hermes
+**Principais funcionalidades:** triagem e confirmação de custo, modo prompt sem chaves de API, derivação em vários formatos, revisão de acessibilidade obrigatória
 
-**Inclui:** 9 comandos · 4 subagentes · 19 skills · MCP
+**Inclui:** 11 comandos · 4 subagentes · 22 skills · MCP
 
-Veja a [documentação completa do plugin](./plugins/pwdev-social-media/README.md).
+Veja a [documentação completa do plugin](./plugins/pwdev-social-media/README.pt-BR.md).
 
 ### pwdev-devops
 
@@ -459,6 +469,98 @@ fluxos, mapas de dependência, registros de decisão e roadmaps que continuam ed
 
 Veja a [documentação completa do plugin](./plugins/pwdev-excalidraw/README.pt-BR.md).
 
+### pwdev-fumadocs
+
+**Sites de documentação Fumadocs** construídos a partir da documentação oficial ao vivo
+(servidor MCP oficial do Fumadocs, páginas `.mdx` como alternativa): instalação em apps React
+novos ou existentes, conteúdo MDX e navegação, features via `@fumadocs/cli` e diagnóstico com
+scanner determinístico — toda mudança verificada por type-check e build.
+
+```
+fdscan (fatos do projeto) ─▶ página oficial ─▶ @fumadocs/cli ou edição manual ─▶ scan + type-check + build
+```
+
+Portável: quatro skills `fumadocs-*` rodam no Claude Code, Codex, Hermes Agent e OpenCode
+(`python3 plugins/pwdev-fumadocs/.opencode-plugin/install.py` para o OpenCode).
+
+**Inclui:** 4 comandos · 4 skills · servidor MCP (Fumadocs oficial) · sem subagentes
+
+Veja a [documentação completa do plugin](./plugins/pwdev-fumadocs/README.pt-BR.md).
+
+### pwdev-media
+
+**Núcleo da suíte pwdev de mídia**: uma CLI (`pwdev-media`) com catálogo de modelos e apps de IA por
+categoria (imagem, vídeo, áudio, transcrição, LLM/visão, motores de render), rotina mensal de
+atualização que nunca sobrescreve a curadoria, geração por OpenRouter, fal e ElevenLabs só depois da
+estimativa e de um "sim" explícito, chaves no Keychain, orçamento, ledger e formatos de criativos com
+zonas seguras. Os plugins de vídeo e de criativos da suíte se apoiam nele.
+
+```
+catálogo (curado + descoberto) ─▶ recomendação por objetivo ─▶ estimativa ─▶ sim ─▶ provedor ─▶ ledger
+```
+
+Portável: seis skills `media-*` rodam no Claude Code, Codex e Hermes Agent.
+
+**Inclui:** 7 comandos · 6 skills · sem servidor MCP · sem subagentes
+
+Veja a [documentação completa do plugin](./plugins/pwdev-media/README.pt-BR.md).
+
+### pwdev-video-hyperframes
+
+**Edição de vídeo falado por conversa** (anúncio, Reels, TikTok, VSL, aula) com HyperFrames: o corte é
+medido na onda do áudio (nenhuma pausa de 0,25 s ou mais, última tomada certa, fim das palavras
+preservado); depois um `projeto.json` neutro de motor planeja legendas, zooms, rótulos, cenas sob
+medida e som, que o `build.py` transforma na composição oficial do HyperFrames. Primeiro uma amostra
+curta no estúdio; o render só é entregue quando o portão de qualidade diz PASSOU.
+
+```
+gravações ─▶ transcrição ─▶ frases/tomadas ─▶ corte pela onda ─▶ projeto.json ─▶ estúdio ─▶ render + portão
+```
+
+Portável: oito skills `vhf-*` rodam no Claude Code, Codex e Hermes Agent; precisa do `pwdev-media`.
+
+**Inclui:** 9 comandos · 8 skills · sem servidor MCP · sem subagentes
+
+Veja a [documentação completa do plugin](./plugins/pwdev-video-hyperframes/README.pt-BR.md).
+
+### pwdev-video-remotion
+
+**Edição de vídeo falado com Remotion (React)**, com o mesmo fluxo e o mesmo `projeto.json` do
+pwdev-video-hyperframes: o núcleo `pwdev-media` resolve um plano de render uma vez, o `build.py` o
+transforma em dados para um projeto Remotion com versões fixas, e as cenas sob medida são componentes
+React tipados. Para times em React, lotes a partir de dados e render distribuído; a licença do
+Remotion é conferida antes do primeiro projeto.
+
+```
+projeto.json ─▶ plano-render ─▶ src/dados.json ─▶ Remotion (React) ─▶ render + portão
+```
+
+Portável: oito skills `vrm-*` rodam no Claude Code, Codex e Hermes Agent; precisa do `pwdev-media`.
+
+**Inclui:** 9 comandos · 8 skills · sem servidor MCP · sem subagentes
+
+Veja a [documentação completa do plugin](./plugins/pwdev-video-remotion/README.pt-BR.md).
+
+### pwdev-video-tutorial
+
+**Vídeos explicativos e tutoriais de sistemas**, feitos a partir do sistema real: a IA lê o código
+(rotas, menus, formulários, permissões) e navega no sistema com o playwright-cli (o login é feito
+pela pessoa), escreve o mapa do sistema com fontes, planeja um roadmap de vídeos por público e
+prioridade, escreve roteiros com storytelling e localizadores verificados, narra com voz local em
+português (grátis), grava a tela com capítulos, destaques e dados pessoais borrados, e monta o vídeo
+final com legenda legível e zoom no clique pelo pwdev-video-hyperframes, além do tutorial em texto.
+
+```
+código + navegação ─▶ mapa ─▶ roadmap ─▶ roteiro ─▶ narração ─▶ gravação ─▶ montagem ─▶ portão
+```
+
+Portável: oito skills `vtut-*` rodam no Claude Code, Codex e Hermes Agent; precisa do `pwdev-media`
+e do `pwdev-video-hyperframes`.
+
+**Inclui:** 9 comandos · 8 skills · sem servidor MCP · sem subagentes
+
+Veja a [documentação completa do plugin](./plugins/pwdev-video-tutorial/README.pt-BR.md).
+
 ### pwdev-statusline
 
 **Barra de status** rica para o terminal do Claude Code. Exibe modelo, branch git, uso de contexto, rate limits e contagem de tokens em uma linha colorida — cada segmento pode ser ligado/desligado.
@@ -474,6 +576,18 @@ PWDEV | Paulo Soares | session | …/skills-ia/projeto | Fable 5 | main | ctx:�
 **Inclui:** 4 comandos · sem subagentes, sem skills, sem MCP
 
 Veja a [documentação completa do plugin](./plugins/pwdev-statusline/README.pt-BR.md).
+
+### pwdev-mods
+
+Um **mod** do Claude Code (requer Claude Code v2.1.287+): código que roda dentro do Claude Code e desenha um painel de gestão ao lado da transcrição.
+
+**Abas do painel:** Visão geral (barra de contexto, custo da sessão/dia, rate limits) · Subagentes (lista ao vivo, **Parar**, formulário **Disparar**) · Tokens (por turno, modelo e loop de agente, cache hit) · Histórico (sparkline diária mantida entre sessões)
+
+**Também:** faixa de uma linha acima do prompt, toasts de orçamento diário em 80% / 100%, resumo em texto onde não há painel (VS Code, `-p`)
+
+**Inclui:** 1 mod (módulo de hooks) · `/pwdev-mods [overview|agents|tokens|history]` · sem subagentes, sem MCP
+
+Veja a [documentação completa do plugin](./plugins/pwdev-mods/README.pt-BR.md).
 
 ---
 
@@ -555,8 +669,27 @@ claude plugin install pwdev-brain@pwdev-claude-marketplace
 # Barra de status rica para o terminal
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
 
+# Painel de gestão do Claude Code (mod): subagentes, tokens, custo, histórico
+claude plugin install pwdev-mods@pwdev-claude-marketplace
+
 # Planejamento visual com Excalidraw (servidor MCP oficial)
 claude plugin install pwdev-excalidraw@pwdev-claude-marketplace
+
+# Sites de documentação Fumadocs (MCP oficial do Fumadocs) — também Codex, Hermes e OpenCode
+claude plugin install pwdev-fumadocs@pwdev-claude-marketplace
+#   OpenCode: python3 plugins/pwdev-fumadocs/.opencode-plugin/install.py  (--project . / --uninstall)
+
+# Núcleo da suíte de mídia: catálogo de modelos, provedores (OpenRouter, fal, ElevenLabs), chaves e custo — também Codex e Hermes
+claude plugin install pwdev-media@pwdev-claude-marketplace
+
+# Edição de vídeo falado com HyperFrames (precisa do pwdev-media) — também Codex e Hermes
+claude plugin install pwdev-video-hyperframes@pwdev-claude-marketplace
+
+# Edição de vídeo falado com Remotion/React (precisa do pwdev-media; confira a licença do Remotion) — também Codex e Hermes
+claude plugin install pwdev-video-remotion@pwdev-claude-marketplace
+
+# Vídeos tutoriais e explicativos de sistemas (playwright-cli; precisa do pwdev-media e do pwdev-video-hyperframes)
+claude plugin install pwdev-video-tutorial@pwdev-claude-marketplace
 ```
 
 Instale apenas os plugins de que você precisa. Cada um funciona de forma independente.
@@ -684,6 +817,12 @@ claude plugin install pwdev-devops@pwdev-claude-marketplace
 claude plugin install pwdev-youtrack@pwdev-claude-marketplace
 claude plugin install pwdev-glpi@pwdev-claude-marketplace
 claude plugin install pwdev-postgres@pwdev-claude-marketplace
+claude plugin install pwdev-fumadocs@pwdev-claude-marketplace
+claude plugin install pwdev-media@pwdev-claude-marketplace
+claude plugin install pwdev-video-hyperframes@pwdev-claude-marketplace
+claude plugin install pwdev-video-remotion@pwdev-claude-marketplace
+claude plugin install pwdev-video-tutorial@pwdev-claude-marketplace
+claude plugin install pwdev-mods@pwdev-claude-marketplace
 claude plugin install pwdev-statusline@pwdev-claude-marketplace
 ```
 

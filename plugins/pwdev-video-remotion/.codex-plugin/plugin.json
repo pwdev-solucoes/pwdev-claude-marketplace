@@ -1,0 +1,38 @@
+{
+  "name": "pwdev-video-remotion",
+  "version": "0.2.0",
+  "description": "Talking-video editing by conversation with Remotion (React): the same flow and projeto.json as pwdev-video-hyperframes — cut by the waveform, block plan, word-timed captions, zooms, safe-zone texts, custom React scenes, music and effects, studio, render quality gate and a Remotion license check.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "codex",
+    "video",
+    "remotion",
+    "react",
+    "captions",
+    "ads",
+    "hermes"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "PWDEV Video Remotion",
+    "shortDescription": "Edit talking videos with Remotion (React) by conversation",
+    "longDescription": "Cut a talking video by its waveform, plan what appears on screen word by word, add captions, zooms, labels and custom React scenes, music and effects, review in Remotion Studio and render with a quality gate. Shares projeto.json with the HyperFrames plugin and checks the Remotion license before the first project.",
+    "developerName": "PWDEV Solucoes",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Edit the video in ~/Videos/ad with Remotion: cut pauses and add captions.",
+      "Animate the three steps with a custom React scene.",
+      "Render the final video and check it before delivering."
+    ]
+  }
+}

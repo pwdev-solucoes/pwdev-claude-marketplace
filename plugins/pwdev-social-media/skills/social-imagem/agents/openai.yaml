@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Image"
+  short_description: "Generate an image with cost control"
+  default_prompt: "Use $social-imagem to generate a 4:5 background with a clean area for the headline."

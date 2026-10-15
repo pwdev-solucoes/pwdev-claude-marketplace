@@ -1,6 +1,6 @@
 # Contexto de Criativos — {{ORGANIZACAO}}
 
-> Gerado por `/pwdev-social-media:init`. Toda skill deste plugin lê este arquivo antes
+> Gerado por `social-contexto` (`/pwdev-social-media:init`). Toda skill deste plugin lê este arquivo antes
 > de perguntar qualquer coisa.
 >
 > Local canônico: `.claude/pwdev-social-context.md`
@@ -34,7 +34,7 @@
 
 ## 3. Brand kit
 
-Preenchido por `brand-kit`, extraído do Figma quando possível.
+Preenchido por `social-marca`, extraído do Figma quando possível.
 
 ### Cores (tokens, não hex solto)
 | Token | Uso | Valor |
@@ -80,21 +80,25 @@ Só produza para o que estiver aqui.
 
 ## 6. Geradores de imagem e vídeo *(caminho principal)*
 
-| Ferramenta | Chave configurada | Variável | Uso previsto |
-|---|---|---|---|
-| Ideogram | não | `IDEOGRAM_API_KEY` | imagem com texto |
-| Leonardo | não | `LEONARDO_API_KEY` | ilustração |
-| Flux | não | `BFL_API_KEY` | fotorrealismo |
-| Runway | não | `RUNWAY_API_KEY` | vídeo |
-| Freepik/Magnific | não | `FREEPIK_API_KEY` | upscale |
+Gerado pelo núcleo `pwdev-media` (≥ 0.4.0). Registre só **se** a chave existe — nunca o valor.
+Para guardar: `pwdev-media chaves guardar <provedor>` (Keychain).
 
-- **Orçamento por campanha:** {{ORCAMENTO}}
+| Item do catálogo | Chave configurada | Provedor | Uso previsto |
+|---|---|---|---|
+| `ideogram:ideogram-3` | não | `ideogram` | imagem com texto |
+| `bfl:flux-2-pro` | não | `bfl` | fotorrealismo |
+| `leonardo:conta` | não | `leonardo` | ilustração |
+| `runway:gen4_turbo` | não | `runway` | vídeo a partir de imagem |
+| `magnific:upscale` | não | `magnific` | upscale |
+| agregadores (OpenRouter, fal) | não | `openrouter`, `fal` | alternativa por custo |
+
+- **Orçamento por campanha:** {{ORCAMENTO}} · teto mensal no núcleo: `pwdev-media custo orcamento`
 - **Exige aprovação antes de gastar:** sim (padrão, não alterar sem decisão)
 
 ### Consistência da campanha
-Fixado por `visual-consistency` — não alterar no meio da campanha.
+Fixado por `social-consistencia` — não alterar no meio da campanha.
 
-- **Ferramenta e modelo:** {{FERRAMENTA}} / {{MODELO}}
+- **Item do catálogo e modelo:** {{ITEM}} / {{MODELO}}
 - **Bloco base do prompt:** {{BLOCO_BASE}}
 - **Referência de estilo:** {{REFERENCIA}}
 - **Seeds aprovadas:** {{SEEDS}}

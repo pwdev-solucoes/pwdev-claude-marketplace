@@ -1,14 +1,14 @@
 # Protocolo de Idioma (STEP 0)
 
-Todo comando do pwdev-social-media roda isto como **STEP 0**, antes de qualquer outra etapa.
+Toda skill do pwdev-social-media resolve o idioma antes de qualquer outra etapa.
 
-## Ordem de resolução (silenciosa — todos os comandos exceto `treinar`)
+## Ordem de resolução (silenciosa — exceto na configuração, em `social-contexto`)
 
 1. Ler `.claude/pwdev-social-context.md` → seção 1, campo **Idioma das peças**.
    Se válido (`pt-BR` ou `en`) → usar silenciosamente.
 2. Se ausente, ler `.planning/config.json` → campo `lang` (compartilhado com
    pwdev-code e pwdev-feat).
-3. Se ainda ausente, detectar o idioma de `$ARGUMENTS`.
+3. Se ainda ausente, detectar o idioma do pedido.
 4. Se ambíguo ou vazio, perguntar:
 
    ```
@@ -40,5 +40,5 @@ iguais.
   design system, token, Auto Layout, frame, feed, story, reels, thumbnail.
 - **Nomes de arquivo** permanecem em inglês: `SKILL.md`, `pwdev-social-context.md`.
 - **Chaves de dados estruturados** permanecem em inglês.
-- **Spawn de subagente**: sempre passar `LANGUAGE: {{LANG}}` e
+- **Subagente** (quando o runtime tem): sempre passar `LANGUAGE: {{LANG}}` e
   `ASSET_LANGUAGE: {{ASSET_LANG}}` no prompt.

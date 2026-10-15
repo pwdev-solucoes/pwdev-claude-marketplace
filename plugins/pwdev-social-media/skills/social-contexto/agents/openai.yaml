@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Setup"
+  short_description: "Brand context, keys and status"
+  default_prompt: "Use $social-contexto to set up the brand context and check which generators are ready."

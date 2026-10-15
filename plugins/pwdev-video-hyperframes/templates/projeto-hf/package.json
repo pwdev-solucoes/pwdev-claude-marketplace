@@ -1,0 +1,11 @@
+{
+  "name": "pwdev-video-hyperframes-projeto",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes hyperframes@0.8.158 preview",
+    "lint": "npx --yes hyperframes@0.8.158 lint",
+    "check": "npx --yes hyperframes@0.8.158 check",
+    "render": "npx --yes hyperframes@0.8.158 render"
+  }
+}

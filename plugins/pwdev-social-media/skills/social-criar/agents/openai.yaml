@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Create"
+  short_description: "End-to-end creative production"
+  default_prompt: "Use $social-criar to produce the campaign creatives from this approved copy."

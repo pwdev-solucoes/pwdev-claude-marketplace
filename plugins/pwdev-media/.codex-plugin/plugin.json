@@ -1,0 +1,40 @@
+{
+  "name": "pwdev-media",
+  "version": "0.5.0",
+  "description": "Core of the pwdev media suite: a catalog of AI models and apps by category with an update routine, generation through OpenRouter, fal, ElevenLabs, BFL, Ideogram, Leonardo, Runway and Magnific with cost estimate and confirmation, keys in the Keychain, monthly budget, ledger and creative formats with safe zones.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "codex",
+    "media",
+    "video",
+    "image",
+    "openrouter",
+    "fal",
+    "elevenlabs",
+    "catalog",
+    "hermes"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "PWDEV Media",
+    "shortDescription": "Model catalog, providers, keys and cost for media generation",
+    "longDescription": "Install the pwdev-media CLI, keep API keys in the Keychain, browse and refresh a catalog of image, video, audio, transcription and render models by category, get a recommendation by goal (cheap, balanced, max), generate through OpenRouter, fal or ElevenLabs only after showing the estimate and getting a yes, and check creative formats and safe zones per platform.",
+    "developerName": "PWDEV Solucoes",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Set up pwdev-media and check my OpenRouter key.",
+      "Which video model is cheapest for a 5 second 9:16 clip?",
+      "Update the model catalog and show me what changed."
+    ]
+  }
+}

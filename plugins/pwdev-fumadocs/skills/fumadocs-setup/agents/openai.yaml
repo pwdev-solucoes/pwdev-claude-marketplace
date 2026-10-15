@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Fumadocs Setup"
+  short_description: "Create a Fumadocs site or add it to an app"
+  default_prompt: "Use $fumadocs-setup to add Fumadocs docs to this app."

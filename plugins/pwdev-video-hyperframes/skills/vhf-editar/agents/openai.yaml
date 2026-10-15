@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Video Edit"
+  short_description: "Edit a talking video end to end"
+  default_prompt: "Use $vhf-editar to edit the video in this folder into a dynamic 9:16 ad."

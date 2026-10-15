@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Tutorial Roadmap"
+  short_description: "Plan the series of tutorial videos"
+  default_prompt: "Use $vtut-roadmap to plan onboarding and module tutorials from the system map."

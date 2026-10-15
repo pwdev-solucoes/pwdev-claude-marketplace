@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Formats"
+  short_description: "Sizes, safe zones and multi-format derivation"
+  default_prompt: "Use $social-formatos to adapt this approved post to 9:16, 4:5, 1:1 and 16:9."

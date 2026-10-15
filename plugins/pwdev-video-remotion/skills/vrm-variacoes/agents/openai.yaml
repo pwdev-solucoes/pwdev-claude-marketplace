@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Remotion Versions"
+  short_description: "Versions, hook batches and other formats"
+  default_prompt: "Use $vrm-variacoes to make 4:5 and 1:1 versions of this edit."

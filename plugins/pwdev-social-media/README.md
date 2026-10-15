@@ -1,153 +1,80 @@
-# PWDEV Social Media — Produção de Criativos
+# PWDEV Social Media — AI Creatives
 
-Plugin de produção de criativos para redes sociais com **orquestração de APIs de
-geração no centro**: Ideogram, Leonardo, Flux, Runway e Freepik/Magnific.
+AI-first creative production for social media on Claude Code, Codex and Hermes Agent. From approved
+copy to a delivered piece:
+- concept, cost triage and prompts;
+- generation with an estimate and an explicit yes;
+- curation and optional Figma composition;
+- every format, an accessibility gate and a delivery package.
 
-Figma entra como **camada opcional** de composição, para quando o time de design
-precisa do arquivo editável.
+Conversation and skills are in Brazilian Portuguese ([README.pt-BR.md](./README.pt-BR.md) has the
+full manual). Every paid call goes through the [`pwdev-media`](../pwdev-media/README.md) core.
 
-Complementa o `pwdev-copy` — lá o texto, aqui a peça.
-
----
-
-## Instalação
-
-```
-/plugin marketplace add pwdev-solucoes/pwdev-claude-marketplace
-/plugin install pwdev-social-media
-```
-
-Chaves de API vão no ambiente, **nunca em arquivo do projeto**:
+## Installation
 
 ```bash
-export IDEOGRAM_API_KEY=...    # imagem com texto legível
-export LEONARDO_API_KEY=...    # ilustração de marca
-export BFL_API_KEY=...         # Flux — fotorrealismo
-export RUNWAY_API_KEY=...      # vídeo
-export FREEPIK_API_KEY=...     # upscale/Magnific
+claude plugin install pwdev-media@pwdev-claude-marketplace
+claude plugin install pwdev-social-media@pwdev-claude-marketplace
 ```
 
-Confira com `scripts/check-keys.sh`. **Sem chave o plugin funciona em modo
-prompt** — entrega o prompt otimizado para execução manual.
+In a new conversation: `/pwdev-social-media:init` (Codex: `$social-contexto`; Hermes:
+`skill_view("pwdev-social-media:social-contexto")`). It does three things:
+- creates the brand context;
+- checks `pwdev-media` (0.4.0+);
+- stores API keys in the Keychain with `pwdev-media chaves guardar <provider>`, typed by the person.
 
-## Primeiro uso
+Without keys the plugin runs in prompt mode.
 
-```
-/pwdev-social-media:init      # brand kit, formatos, chaves, restrições
-/pwdev-social-media:gerar     # triagem → prompt → custo → geração → curadoria
-/pwdev-social-media:criar     # produção end-to-end
-```
+## Commands
 
----
-
-## Pipeline
-
-```
-copy aprovada (pwdev-copy)
-      ↓
-conceito + triagem de ativos      art-director
-      ↓
-[CONFIRMAÇÃO DE CUSTO]            cost-control
-      ↓
-prompt → geração via API          asset-generator   ← núcleo
-      ↓
-curadoria das variações           asset-curation    ← Artifact para aprovação
-      ↓
-composição                        figma-builder     ← OPCIONAL
-      ↓
-revisão                           creative-reviewer
-      ↓
-export + handoff
-```
-
-### Comandos
-
-| Comando | Função |
-|---|---|
-| `/pwdev-social-media:init` | Configura brand kit, formatos, chaves |
-| `/pwdev-social-media:gerar` | Gera ativo — triagem, prompt, custo, curadoria |
-| `/pwdev-social-media:criar` | Produção end-to-end |
-| `/pwdev-social-media:carrossel` | Carrossel completo |
-| `/pwdev-social-media:video` | Roteiro, storyboard e geração via Runway |
-| `/pwdev-social-media:custo` | Estimativa e acompanhamento de gasto |
-| `/pwdev-social-media:revisar` | Auditoria de criativo |
-| `/pwdev-social-media:exportar` | Pacote de entrega |
-| `/pwdev-social-media:status` | Estado, chaves e gasto acumulado |
-
-### Subagentes
-
-| Agente | Modelo | Papel |
+| Claude Code | Codex | Purpose |
 |---|---|---|
-| `art-director` | opus | Conceito, triagem de ativos, prompts |
-| `asset-generator` | sonnet | **Núcleo** — custo, prompt, geração, curadoria |
-| `figma-builder` | sonnet | Composição no Figma (opcional) |
-| `creative-reviewer` | sonnet | Portão de qualidade e acessibilidade |
+| `/pwdev-social-media:init` · `:status` | `$social-contexto` | brand context, keys, current mode |
+| `:criar` | `$social-criar` | end-to-end production |
+| `:gerar` | `$social-imagem` | one AI-generated asset |
+| `:carrossel` | `$social-carrossel` | full carousel |
+| `:video` | `$social-video` | script, storyboard and AI clip |
+| `:revisar` | `$social-revisao` | quality gate |
+| `:exportar` | `$social-entrega` | delivery package |
+| `:custo` | `$social-custo` | estimate, budget, spend |
+| `:formatos` | `$social-formatos` | sizes, safe zones, every format |
+| `:lote` | `$social-lote` | hook × visual × format test batch |
 
-### Skills
+Hermes: `skill_view("pwdev-social-media:social-<name>")`.
 
-**Fundação:** `social-context`, `brand-kit`, `format-specs`
+The four Claude Code subagents (`art-director`, `asset-generator`, `figma-builder`, `creative-reviewer`)
+run inline on Codex and Hermes.
 
-**Concepção:** `creative-concept`
+## Security
 
-**Geração (núcleo):** `prompt-craft`, `visual-consistency`, `cost-control`,
-`image-gen`, `video-gen`, `asset-upscale`, `asset-curation`
+- **Money:**
+  - no generation without `pwdev-media gerar --estimar` and the person's explicit yes;
+  - `--confirmar` and the monthly budget are enforced by the core;
+  - identical requests are reused for free.
+- **Keys:** in the Keychain or the environment, never in project files, the context file or the
+  conversation.
+- **No simulated results:** without a key or Figma, the skill says "NÃO GERADO" / "not composed" and
+  delivers the prompt or a spec.
+- **Accessibility is a gate:** contrast, safe zone and alt text can fail a piece.
+- **Never publishes.**
 
-**Composição:** `figma-pipeline`, `carousel-builder`, `post-visual`, `story-reels`
+## Migrating from v2
 
-**Qualidade:** `creative-review`, `alt-text`
+Install `pwdev-media`, run `/pwdev-social-media:init` to store the keys, and see
+[`CHANGELOG.md`](./CHANGELOG.md):
+- the bash scripts are gone;
+- skills were renamed with the `social-` prefix (Claude command names are unchanged);
+- generations are now recorded in the `pwdev-media` ledger.
 
-**Entrega:** `export-handoff`, `vault-sync`
+## Development
 
----
+```bash
+python3 -m unittest tests.test_pwdev_social_media
+claude plugin validate plugins/pwdev-social-media
+hermes plugins doctor --ci plugins/pwdev-social-media
+```
 
-## Scripts
+## Credits
 
-Wrappers em `scripts/`, com duas barreiras de segurança:
-
-- **`--confirm` obrigatório** — o script recusa gastar sem ele, mesmo que a
-  skill erre
-- **nunca imprimem a chave** — só presença
-
-Toda geração registra em `.pwdev-social/gerados/manifest.jsonl`:
-ferramenta, modelo, prompt, seed, arquivo. Sem isso não há reprodução nem
-auditoria.
-
----
-
-## Conectores — status real
-
-| Ferramenta | Status |
-|---|---|
-| **Ideogram, Leonardo, Flux, Runway, Freepik** | 🔑 sem MCP oficial — API via chave, wrappers inclusos |
-| **Figma** | ✅ MCP oficial — camada opcional de composição |
-| **Notion** | ✅ MCP oficial |
-| **Obsidian** | 🚫 não precisa — markdown em disco, Read/Write direto |
-| **Claude design** | 🚫 não é conector — Artifacts servem de superfície de preview |
-| **Canva** | ⚠️ indício de MCP oficial, não confirmado |
-| **Higgsfield** | ❓ sem evidência de API pública estável — segue manual |
-
-Detalhes em `references/apis.md` e `references/mcp-roadmap.md`.
-
----
-
-## Regras que o plugin não negocia
-
-1. **Triagem antes de gerar.** A geração mais barata é a que não acontece.
-2. **Não gasta crédito sem confirmação**, com estimativa em chamadas.
-3. **2 variações na primeira rodada**, nunca 8.
-4. **Seed da peça aprovada é registrada sempre** — sem ela é irreproduzível.
-5. **Nunca grava chave de API** em arquivo do projeto.
-6. **Não simula geração.** Sem chave, entrega prompt e declara "NÃO GERADO".
-7. **`/figma-use` antes de `use_figma`** — exigência do MCP.
-8. **Acessibilidade é portão** — contraste e alt text reprovam.
-9. **Não publica.**
-
-Codificadas em `references/anatomia-skill.md`.
-
----
-
-## Créditos
-
-Deriva de [social-media-skills](https://github.com/blacktwist/social-media-skills)
-(MIT) — que produz texto e declara não fazer design visual. Este plugin cobre
-essa lacuna. Detalhes em `NOTICE.md`. Licença Apache-2.0.
+Derived from [social-media-skills](https://github.com/blacktwist/social-media-skills) (MIT). See
+`NOTICE.md`. Apache-2.0.

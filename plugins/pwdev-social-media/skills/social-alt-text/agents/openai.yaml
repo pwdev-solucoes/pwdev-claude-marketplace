@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Alt Text"
+  short_description: "Alt text for every piece and slide"
+  default_prompt: "Use $social-alt-text to write the alt text of each slide of this carousel."

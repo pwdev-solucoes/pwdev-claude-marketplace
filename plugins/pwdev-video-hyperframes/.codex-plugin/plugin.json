@@ -1,0 +1,38 @@
+{
+  "name": "pwdev-video-hyperframes",
+  "version": "0.2.0",
+  "description": "Talking-video editing by conversation with HyperFrames: cut by the waveform with no breaths, last good take, block plan, word-timed captions, zooms, safe-zone texts, custom scenes with the official HyperFrames skills, music and sound effects, studio sample and a render quality gate.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "codex",
+    "video",
+    "hyperframes",
+    "captions",
+    "reels",
+    "ads",
+    "hermes"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "PWDEV Video HyperFrames",
+    "shortDescription": "Edit talking videos with HyperFrames by conversation",
+    "longDescription": "Cut a talking video by its waveform (no pauses or breaths, last good take), plan what appears on screen word by word, add captions, zooms, labels and custom HyperFrames scenes, music and sound effects, review a short sample in the studio and render with a quality gate. Uses the pwdev-media CLI for transcription, cut and checks.",
+    "developerName": "PWDEV Solucoes",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Edit the video in ~/Videos/ad: cut pauses and mistakes and make it dynamic with captions.",
+      "Only cut this recording, keep the last good take.",
+      "Render the final video and check it before delivering."
+    ]
+  }
+}
