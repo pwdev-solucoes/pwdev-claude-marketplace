@@ -1,0 +1,6 @@
+name: pwdev-video-tutorial
+version: 0.1.0
+description: PWDEV Video Tutorial — explainer and tutorial videos of software systems from the real system (code scan + playwright-cli navigation, video roadmap, storytelling scripts, local narration, screen recording, assembly) on Claude Code, Codex and Hermes Agent; this manifest is the Hermes entry point
+author: Paulo Soares
+provides_hooks:
+  - pre_llm_call

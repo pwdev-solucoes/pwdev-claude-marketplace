@@ -34,7 +34,7 @@ export type Plano = {
   janela: {inicio: number; fim: number};
   video: {arquivo: string; inicio_midia: number};
   estilo: Estilo;
-  legenda: {estilo: 'discreta' | 'destaque'; topo: number; esquerda: number; largura: number; tamanho: number};
+  legenda: {estilo: 'discreta' | 'destaque' | 'caixa'; topo: number; esquerda: number; largura: number; tamanho: number};
   zona_segura: {x: number; y: number; largura: number; altura: number};
   unidade: number;
   cues: Cue[];

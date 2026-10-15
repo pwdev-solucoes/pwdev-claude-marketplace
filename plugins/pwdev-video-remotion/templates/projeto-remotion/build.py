@@ -14,7 +14,7 @@ src/dados.json and src/cenas.generated.ts. The React code in src/ renders it.
     python3 build.py quadro <segundo>       # PNG of one frame in renders/quadros/
     python3 build.py estudio [--parar|--status]
     python3 build.py rm <args...>           # pinned Remotion CLI in this project
-    python3 build.py render [--qualidade rascunho|padrao|alta]
+    python3 build.py render [--max-silencio s] [--qualidade rascunho|padrao|alta]
 
 Times come from the measured cut; nothing here estimates a time.
 """
@@ -239,6 +239,8 @@ def cmd_render(argv: list[str]) -> None:
     out = HERE / "renders" / f"{name}.mp4"
     remotion(["render", ENTRY, COMPOSITION, str(out), "--codec=h264", f"--crf={CRF[quality]}"])
     args = ["video", "portao", str(out)]
+    if "--max-silencio" in argv:  # tutorials: pauses while the screen loads are expected
+        args += ["--max-silencio", argv[argv.index("--max-silencio") + 1]]
     if not info["amostra"]:
         args += ["--edit", proj["edit"]]
     gate = media(*args)

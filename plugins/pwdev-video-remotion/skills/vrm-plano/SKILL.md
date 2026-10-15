@@ -7,7 +7,7 @@ description: >
   projeto.json, cada um entrando na palavra certa. Não use para cortar (vrm-corte) nem para criar
   uma animação sob medida (vrm-cenas).
 metadata:
-  version: 0.1.0
+  version: 0.2.0
 ---
 
 # Plano em blocos

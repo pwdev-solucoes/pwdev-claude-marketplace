@@ -8,7 +8,7 @@ description: >
   portão de qualidade e entrega. Não use para gerar vídeo do zero por IA (media-gerar), para vídeo
   em Remotion (pwdev-video-remotion) nem para tutorial de sistema (pwdev-video-tutorial).
 metadata:
-  version: 0.1.0
+  version: 0.2.0
 ---
 
 # Editar um vídeo falado com HyperFrames

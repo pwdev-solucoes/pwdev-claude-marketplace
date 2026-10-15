@@ -250,6 +250,14 @@ class BuilderTest(BuilderBase):
         self.assertEqual(on, [("0", "0.1"), ("1", "0.35"), ("2", "0.5")])
         self.assertIn("text-transform: uppercase", page)
 
+    def test_caixa_captions_sit_on_a_dark_band(self):
+        self.proj["legenda"]["estilo"] = "caixa"
+        page = self.run_build()
+        self.assertIn('<span class="faixa">', page)
+        self.assertRegex(page, r"\.cue \.faixa \{ background: rgba\(10,10,10,\.82\)")
+        self.proj["legenda"]["estilo"] = "discreta"
+        self.assertNotRegex(self.run_build(), r"\.cue \.faixa \{ background")
+
     def test_captions_and_texts_stay_inside_the_safe_zone(self):
         self.proj["textos"] = [{"inicio": 2.6, "fim": 3.4, "texto": "Dica 1", "tipo": "rotulo", "posicao": "topo"}]
         self.proj["legenda"]["y"] = 0.95  # asks for a spot below the safe zone

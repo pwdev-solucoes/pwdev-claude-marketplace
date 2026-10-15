@@ -1,7 +1,7 @@
 {
   "name": "pwdev-video-hyperframes",
   "displayName": "PWDEV Video HyperFrames — Edição de Vídeo Falado",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Edição de vídeo falado (anúncio, Reels, TikTok, VSL, aula) por conversa com HyperFrames: corte pela onda do áudio sem respiros, última tomada certa, plano em blocos, legendas por palavra, zooms, textos na zona segura, cenas sob medida com as skills oficiais do HyperFrames, trilha e efeitos, amostra no estúdio e render com portão de qualidade — usa o núcleo pwdev-media; skills portáveis para Claude Code, Codex e Hermes Agent.",
   "author": {
     "name": "Paulo Soares",

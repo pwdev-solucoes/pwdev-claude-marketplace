@@ -159,6 +159,18 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Developer Tools"
+    },
+    {
+      "name": "pwdev-video-tutorial",
+      "source": {
+        "source": "local",
+        "path": "./plugins/pwdev-video-tutorial"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
     }
   ]
 }

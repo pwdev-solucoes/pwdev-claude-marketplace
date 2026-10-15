@@ -1,5 +1,28 @@
 # Changelog — pwdev-media
 
+## 0.5.0 — 2026-10-14
+
+- Caption style `caixa`: text on a dark band, readable over light interfaces (tutorials).
+- `video portao --max-silencio`: longest pause allowed (0.25 s for talking videos; tutorials use 5 s).
+- Cut fixes found on a real recording (35.1 s → 24.3 s, gate PASSOU):
+  - a soft first syllable no longer moves the start past the transcript's word start (a word was
+    being dropped from the captions);
+  - word ends follow the last loud frame, not Whisper's late end (pauses survived at joints);
+  - pauses are cut from 0.20 s (`SPLIT_AT`), so the 0.25 s rule holds after measurement slack;
+  - captions keep a word by its overlap with the kept audio, not by its middle;
+  - every cut goes through a limiter (true peak was +0.3 dBTP after AAC);
+  - the gate judges a cut with its source's silence threshold, and the threshold stays at least
+    30 dB under speech (an edited video's own threshold turned soft sounds into "pauses").
+- Cut fixes found on a WhatsApp recording (28.1 s → 20.0 s, gate PASSOU):
+  - a retake wrapped in new words ("ou seja, …") is detected: a phrase mostly contained in a
+    later one is dropped (`CONTAINED` 0.7, at least 4 words);
+  - consecutive segments never overlap (a phrase could start before the previous one's real end,
+    repeating 0.3 s of audio);
+  - clicks shorter than 50 ms inside a pause no longer split it (`BLIP_FRAMES`);
+  - `tighten()` simulates the cut and squeezes joints still too long, judged 2 dB stricter than
+    the gate (`GATE_MARGIN_DB`);
+  - segments continuous in the source are merged (no fades in the middle of speech).
+
 ## 0.4.0 — 2026-10-14
 
 Direct providers ported from pwdev-social-media 2.x scripts, so that plugin can drop its bash

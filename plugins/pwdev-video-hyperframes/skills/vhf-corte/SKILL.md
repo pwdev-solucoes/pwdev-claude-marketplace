@@ -7,7 +7,7 @@ description: >
   EDL, corta pela onda do áudio (sem respiros de 0,25 s ou mais) e confere. Não use para animação,
   legenda estilizada ou render final (vhf-editar, vhf-revisar).
 metadata:
-  version: 0.1.0
+  version: 0.2.0
 ---
 
 # Corte pela onda

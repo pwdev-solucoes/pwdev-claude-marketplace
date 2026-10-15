@@ -7,7 +7,7 @@ description: >
   pwdev-media, ffmpeg, Node 22+ e as skills oficiais do HyperFrames, e desliga a telemetria. Não use
   para editar um vídeo (vhf-editar).
 metadata:
-  version: 0.1.0
+  version: 0.2.0
 ---
 
 # Preparar o editor de vídeo

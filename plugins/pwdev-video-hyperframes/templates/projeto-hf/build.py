@@ -11,7 +11,7 @@ scenes live in compositions/ and are written with the official HyperFrames skill
     python3 build.py completo               # clear the sample and build the whole video
     python3 build.py estudio [--parar|--status]
     python3 build.py hf <args...>           # pinned HyperFrames CLI in this project
-    python3 build.py render [--qualidade draft|standard|high]
+    python3 build.py render [--max-silencio s] [--qualidade draft|standard|high]
     python3 build.py gsap                   # baixa a cópia local verificada do GSAP (render offline)
 
 Times come from the measured cut; nothing here estimates a time.
@@ -157,7 +157,7 @@ def css(fmt: dict, style: dict, legenda: dict) -> str:
     w, h = fmt["largura"], fmt["altura"]
     sx, sy, sw, sh = safe_box(fmt)
     unit = min(w, h) / 1080
-    cap_size = round((72 if legenda["estilo"] == "destaque" else 54) * unit)
+    cap_size = round({"destaque": 72, "caixa": 46}.get(legenda["estilo"], 54) * unit)
     cap_top = min(max(round(legenda.get("y", 0.7) * h), sy), sy + sh - round(cap_size * 2.6))
     return f"""
       @font-face {{ font-family: "Montserrat"; src: url("assets/fonts/Montserrat.ttf") format("truetype");
@@ -172,6 +172,7 @@ def css(fmt: dict, style: dict, legenda: dict) -> str:
               color: {style['texto']}; {'text-transform: uppercase;' if legenda['estilo'] == 'destaque' else ''}
               text-shadow: 0 {round(3 * unit)}px {round(10 * unit)}px rgba(0,0,0,.65), 0 0 {round(2 * unit)}px #000; }}
       .cue .w {{ display: inline-block; padding: 0 {round(8 * unit)}px; border-radius: {round(10 * unit)}px; }}
+      .cue .faixa {{ {'background: rgba(10,10,10,.82); padding: ' + str(round(10 * unit)) + 'px ' + str(round(18 * unit)) + 'px; border-radius: ' + str(round(12 * unit)) + 'px; box-decoration-break: clone; -webkit-box-decoration-break: clone;' if legenda['estilo'] == 'caixa' else ''} }}
       .texto {{ position: absolute; left: {sx}px; width: {sw}px; text-align: center; color: {style['texto']};
                 font-weight: 800; line-height: 1.1; }}
       .texto.rotulo {{ font-size: {round(56 * unit)}px; }}
@@ -230,7 +231,7 @@ def build(proj: dict) -> dict:
                 text = fix[bare] + text[len(text.rstrip(".,;:?!…")):]
             words.append(f'<span class="w" id="c{n}w{k}">{esc(text)}</span>')
         body.append(f'<div id="c{n}" class="clip cue" data-start="{num(start)}" data-duration="{num(dur)}" '
-                    f'data-track-index="2">{" ".join(words)}</div>')
+                    f'data-track-index="2"><span class="faixa">{" ".join(words)}</span></div>')
         script.append(f'tl.fromTo("#c{n}", {{ opacity: 0, y: 14 }}, {{ opacity: 1, y: 0, duration: 0.12 }}, {num(start)});')
         if proj["legenda"]["estilo"] == "destaque":
             # the word being said sits on a highlight pill with dark text (readable on any footage)
@@ -360,6 +361,8 @@ def cmd_render(argv: list[str]) -> None:
     out = HERE / "renders" / f"{name}.mp4"
     hf(["render", "-q", quality, "-f", str(proj.get("fps", 30)), "-o", str(out)])
     args = ["video", "portao", str(out)]
+    if "--max-silencio" in argv:  # tutorials: pauses while the screen loads are expected
+        args += ["--max-silencio", argv[argv.index("--max-silencio") + 1]]
     if not info["amostra"]:
         args += ["--edit", proj["edit"]]
     gate = media(*args)

@@ -31,9 +31,9 @@ def loudness(path: str | Path) -> dict:
     return {"lufs": to_float(lufs), "pico_dbtp": to_float(peak)}
 
 
-def breaths(env: audio.Envelope) -> list[tuple[float, float]]:
+def breaths(env: audio.Envelope, limit: float = RESPIRO) -> list[tuple[float, float]]:
     inner = []
-    for a, b in audio.silences(env, RESPIRO):
+    for a, b in audio.silences(env, limit):
         if a <= HEAD_ALLOWANCE and (b - a) <= HEAD_ALLOWANCE + 0.05:
             continue
         if b >= env.duration - 0.02 and (b - a) <= TAIL_ALLOWANCE:
@@ -51,17 +51,25 @@ def caption_gaps(timeline: dict, cues: list[dict]) -> list[str]:
     return covered
 
 
-def gate(path: str | Path, timeline: dict | None = None, cues: list[dict] | None = None) -> dict:
+def gate(path: str | Path, timeline: dict | None = None, cues: list[dict] | None = None,
+         max_silencio: float = RESPIRO) -> dict:
+    """`max_silencio`: longest pause allowed (0.25 s for talking videos; longer for tutorials,
+    where the screen is loading or the cursor is moving while nobody speaks)."""
     info = tools.probe(path)
     env = audio.envelope(path)
-    found = breaths(env)
+    source = (timeline or {}).get("fonte")
+    if source and Path(source).is_file() and Path(source).resolve() != Path(path).resolve():
+        # Judge the cut with the same silence threshold the cutter used on the source: an edited
+        # video has little silence left, so its own threshold would turn soft sounds into "pauses".
+        env.fixed = audio.envelope(source).own_threshold
+    found = breaths(env, max_silencio)
     loud = loudness(path)
     problems, warnings = [], []
     if info["duracao"] <= 0:
         problems.append("vídeo vazio")
     if found:
         listed = ", ".join(f"{a:.2f}–{b:.2f}s" for a, b in found[:8])
-        problems.append(f"{len(found)} respiro(s) de {RESPIRO}s ou mais: {listed}")
+        problems.append(f"{len(found)} pausa(s) de {max_silencio:g}s ou mais: {listed}")
     if loud["pico_dbtp"] > MAX_TRUE_PEAK:
         problems.append(f"áudio estourando (pico {loud['pico_dbtp']:.1f} dBTP)")
     if loud["lufs"] != float("-inf") and not (LUFS_RANGE[0] <= loud["lufs"] <= LUFS_RANGE[1]):

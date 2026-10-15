@@ -1,6 +1,6 @@
 {
   "name": "pwdev-video-remotion",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Talking-video editing by conversation with Remotion (React): the same flow and projeto.json as pwdev-video-hyperframes — cut by the waveform, block plan, word-timed captions, zooms, safe-zone texts, custom React scenes, music and effects, studio, render quality gate and a Remotion license check.",
   "author": {
     "name": "Paulo Soares",

@@ -7,7 +7,7 @@ description: >
   um com portão e entrega uma planilha de versões. Não use para editar a versão principal
   (vrm-editar).
 metadata:
-  version: 0.1.0
+  version: 0.2.0
 ---
 
 # Versões e lote de ganchos

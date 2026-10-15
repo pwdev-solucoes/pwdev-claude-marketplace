@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Tutorial Record"
+  short_description: "Record the screen by running the script"
+  default_prompt: "Use $vtut-gravar to record V02 on the staging system."

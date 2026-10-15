@@ -102,14 +102,14 @@ def do_captions(edit: str, max_palavras: int) -> dict:
     return {"cues": len(doc["cues"]), "arquivo": str(e / "legendas.json")}
 
 
-def do_gate(video: str, edit: str | None) -> dict:
+def do_gate(video: str, edit: str | None, max_silencio: float = check.RESPIRO) -> dict:
     timeline = cues = None
     if edit:
         e = edit_path(edit)
         if (e / "cut_timeline.json").is_file() and (e / "legendas.json").is_file():
             timeline = read(e / "cut_timeline.json")
             cues = read(e / "legendas.json")["cues"]
-    return check.gate(video, timeline, cues)
+    return check.gate(video, timeline, cues, max_silencio)
 
 
 def cut_text(edit: str) -> str:

@@ -1,6 +1,6 @@
 {
   "name": "pwdev-video-hyperframes",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Talking-video editing by conversation with HyperFrames: cut by the waveform with no breaths, last good take, block plan, word-timed captions, zooms, safe-zone texts, custom scenes with the official HyperFrames skills, music and sound effects, studio sample and a render quality gate.",
   "author": {
     "name": "Paulo Soares",

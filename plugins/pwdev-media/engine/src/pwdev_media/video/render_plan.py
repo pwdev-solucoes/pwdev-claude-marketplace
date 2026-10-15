@@ -19,7 +19,7 @@ from . import project
 
 SCHEMA = "pwdev-plano-render/1"
 PUNCT = ".,;:?!…"
-CAPTION_SIZE = {"discreta": 54, "destaque": 72}
+CAPTION_SIZE = {"discreta": 54, "destaque": 72, "caixa": 46}  # caixa: text on a dark band (tutorials, light UIs)
 TEXT_SIZE = {"rotulo": 56, "titulo": 96}
 
 

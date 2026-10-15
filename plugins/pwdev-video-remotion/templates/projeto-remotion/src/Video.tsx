@@ -61,6 +61,7 @@ const Legenda: React.FC<{cue: Cue}> = ({cue}) => {
   const enter = interpolate(frame, [0, toFrames(0.12, fps)], [0, 1], {extrapolateRight: 'clamp'});
   const {legenda, estilo, unidade} = plano;
   const destaque = legenda.estilo === 'destaque';
+  const caixa = legenda.estilo === 'caixa';
   return (
     <div
       style={{
@@ -80,6 +81,14 @@ const Legenda: React.FC<{cue: Cue}> = ({cue}) => {
         textShadow: `0 ${3 * unidade}px ${10 * unidade}px rgba(0,0,0,.65), 0 0 ${2 * unidade}px #000`,
       }}
     >
+      <span
+        style={
+          caixa
+            ? {background: 'rgba(10,10,10,.82)', padding: `${10 * unidade}px ${18 * unidade}px`,
+               borderRadius: 12 * unidade, boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone'}
+            : undefined
+        }
+      >
       {cue.palavras.map((p, i) => {
         const next = cue.palavras[i + 1]?.inicio ?? cue.inicio + cue.duracao;
         // the word being said sits on a highlight pill with dark text (readable on any footage)
@@ -100,6 +109,7 @@ const Legenda: React.FC<{cue: Cue}> = ({cue}) => {
           </span>
         );
       })}
+      </span>
     </div>
   );
 };

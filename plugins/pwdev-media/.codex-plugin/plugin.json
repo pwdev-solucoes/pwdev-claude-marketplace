@@ -1,6 +1,6 @@
 {
   "name": "pwdev-media",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Core of the pwdev media suite: a catalog of AI models and apps by category with an update routine, generation through OpenRouter, fal, ElevenLabs, BFL, Ideogram, Leonardo, Runway and Magnific with cost estimate and confirmation, keys in the Keychain, monthly budget, ledger and creative formats with safe zones.",
   "author": {
     "name": "Paulo Soares",

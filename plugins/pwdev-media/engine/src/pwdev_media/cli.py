@@ -276,7 +276,7 @@ def cmd_video(args) -> int:
         print(json.dumps(plan, ensure_ascii=False, indent=None if args.json else 2))
         return 0
     if a == "portao":
-        r = workflow.do_gate(args.alvo, args.edit)
+        r = workflow.do_gate(args.alvo, args.edit, args.max_silencio)
         lines = [r["veredito"], f"Duração {r['duracao']:.2f}s · {r['lufs']:.1f} LUFS · pico {r['pico_dbtp']:.1f} dBTP"]
         lines += [f"- {p}" for p in r["problemas"]] + [f"aviso: {w}" for w in r["avisos"]]
         emit(args, r, "\n".join(lines))
@@ -354,6 +354,8 @@ def parser() -> argparse.ArgumentParser:
     s.add_argument("--qualidade", choices=("rascunho", "padrao", "alta"), default="padrao")
     s.add_argument("--max-palavras", type=int, default=3)
     s.add_argument("--minimo", type=float, default=0.25, help="respiros: duração mínima em segundos")
+    s.add_argument("--max-silencio", type=float, default=0.25,
+                   help="portao: maior pausa permitida (0.25 em vídeo falado; ~2.5 em tutorial de tela)")
     s.add_argument("--instalar", action="store_true", help="ffmpeg: baixa sem sudo para ~/.pwdev/bin")
     s.add_argument("--novo", action="store_true", help="projeto: cria o projeto.json")
     s.add_argument("--nome")

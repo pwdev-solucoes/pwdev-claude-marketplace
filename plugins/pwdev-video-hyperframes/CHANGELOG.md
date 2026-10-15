@@ -1,5 +1,12 @@
 # Changelog — pwdev-video-hyperframes
 
+## 0.2.0 — 2026-10-14
+
+- Caption style `caixa` (dark band, for screen recordings and light backgrounds); words wrapped in a
+  `.faixa` span.
+- `build.py render --max-silencio <s>` passes the pause limit to the gate (tutorial profile).
+- Requires pwdev-media ≥ 0.5.0.
+
 ## 0.1.0 — 2026-10-14
 
 First release.

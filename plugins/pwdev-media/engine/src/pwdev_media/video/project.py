@@ -9,7 +9,7 @@ Times are in seconds on the cut (cut.mp4). Schema `pwdev-projeto-video/1`:
   "formato": "reels-9x16",                     # id from `pwdev-media formatos`
   "fps": 30,
   "estilo": {"fonte": "Montserrat", "texto": "#FFFFFF", "destaque": "#FF6A00", "fundo": "#0A0A0A"},
-  "legenda": {"ativa": true, "estilo": "discreta" | "destaque", "max_palavras": 3, "y": 0.70},
+  "legenda": {"ativa": true, "estilo": "discreta" | "destaque" | "caixa", "max_palavras": 3, "y": 0.70},
   "blocos": [{"inicio", "fim", "tipo": "tela_cheia", "zoom": 1.0, "origem": "50% 35%"}],
   "textos": [{"inicio", "fim", "texto", "tipo": "rotulo" | "titulo", "posicao": "topo" | "centro" | "base"}],
   "cenas":  [{"inicio", "fim", "src": "compositions/<cena>.html|.tsx", "sobre_a_pessoa": true}],
@@ -29,7 +29,7 @@ SCHEMA = "pwdev-projeto-video/1"
 TIPOS_BLOCO = {"tela_cheia"}
 TIPOS_TEXTO = {"rotulo", "titulo"}
 POSICOES = {"topo", "centro", "base"}
-ESTILOS_LEGENDA = {"discreta", "destaque"}
+ESTILOS_LEGENDA = {"discreta", "destaque", "caixa"}
 SCENE_EXTENSIONS = (".html", ".tsx")
 
 

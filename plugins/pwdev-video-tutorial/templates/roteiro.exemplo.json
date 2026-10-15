@@ -1,0 +1,75 @@
+{
+  "schema": "pwdev-roteiro-tutorial/1",
+  "video_id": "V02",
+  "titulo": "Como cadastrar um cliente",
+  "resumo": "Cadastro de cliente pessoa física pelo menu Clientes.",
+  "url_base": "https://homologacao.exemplo.com.br",
+  "viewport": {
+    "largura": 1920,
+    "altura": 1080
+  },
+  "mascarar": [
+    "[name=cpf]",
+    "[name=email]"
+  ],
+  "cenas": [
+    {
+      "id": "C01",
+      "capitulo": {
+        "titulo": "Cadastrar cliente",
+        "descricao": "Em menos de um minuto"
+      },
+      "narracao": "Em menos de um minuto você vai cadastrar um cliente novo.",
+      "acoes": [
+        {
+          "tipo": "ir",
+          "valor": "/clientes"
+        }
+      ]
+    },
+    {
+      "id": "C02",
+      "narracao": "No menu Clientes, clique em \"Novo cliente\".",
+      "acoes": [
+        {
+          "tipo": "clicar",
+          "alvo": "getByRole('button', { name: 'Novo cliente' })",
+          "nota": "Novo cliente"
+        }
+      ]
+    },
+    {
+      "id": "C03",
+      "narracao": "Digite o nome completo e o e-mail do cliente.",
+      "acoes": [
+        {
+          "tipo": "preencher",
+          "alvo": "getByLabel('Nome')",
+          "valor": "Maria Exemplo",
+          "ficticio": true
+        },
+        {
+          "tipo": "preencher",
+          "alvo": "[name=email]",
+          "valor": "maria@exemplo.com",
+          "ficticio": true
+        }
+      ]
+    },
+    {
+      "id": "C04",
+      "narracao": "Clique em \"Salvar\". Pronto: o cliente aparece na lista. No próximo vídeo, você emite o primeiro pedido.",
+      "acoes": [
+        {
+          "tipo": "clicar",
+          "alvo": "getByRole('button', { name: 'Salvar' })"
+        },
+        {
+          "tipo": "destacar",
+          "alvo": "getByText('Cliente salvo')",
+          "nota": "Cadastro concluído"
+        }
+      ]
+    }
+  ]
+}

@@ -8,7 +8,7 @@ description: >
   palavra. Não use para textos simples (vhf-plano) nem para gerar imagem ou vídeo por IA
   (media-gerar).
 metadata:
-  version: 0.1.0
+  version: 0.2.0
 ---
 
 # Cenas sob medida

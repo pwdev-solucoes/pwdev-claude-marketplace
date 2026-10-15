@@ -1,0 +1,27 @@
+{
+  "name": "pwdev-video-tutorial",
+  "displayName": "PWDEV Video Tutorial — Vídeos de Sistemas e Tutoriais",
+  "version": "0.1.0",
+  "description": "Vídeos explicativos e tutoriais de sistemas a partir do sistema real: explora o código (rotas, menus, formulários, permissões) e navega com o playwright-cli, monta o mapa do sistema e o roadmap de vídeos, escreve roteiros com storytelling, narra com voz local em português (grátis) ou ElevenLabs, grava a tela com capítulos, destaques e dados sensíveis borrados, e monta o vídeo com legenda e zoom no clique pelo pwdev-video-hyperframes, mais o tutorial em texto; skills portáveis para Claude Code, Codex e Hermes Agent.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "claude-code",
+    "claude-plugin",
+    "video",
+    "tutorial",
+    "screen-recording",
+    "playwright",
+    "storytelling",
+    "documentation",
+    "onboarding",
+    "pt-br",
+    "hermes",
+    "portable"
+  ]
+}

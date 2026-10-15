@@ -7,7 +7,7 @@ description: >
   renderiza na versão fixa do HyperFrames e só entrega com o portão PASSOU. Não use para
   planejar o que aparece (vhf-plano) nem para refazer o corte (vhf-corte).
 metadata:
-  version: 0.1.0
+  version: 0.2.0
 ---
 
 # Revisar, renderizar e entregar

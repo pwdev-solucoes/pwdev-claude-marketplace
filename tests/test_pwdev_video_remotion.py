@@ -154,6 +154,15 @@ class PortableLayoutTest(unittest.TestCase):
         self.assertEqual(seed["schema"], render_plan.SCHEMA)
 
 
+class CaptionStyleTest(unittest.TestCase):
+    def test_caixa_band_is_rendered_by_the_react_template(self):
+        video = (TEMPLATE / "src" / "Video.tsx").read_text(encoding="utf-8")
+        self.assertIn("const caixa = legenda.estilo === 'caixa';", video)
+        self.assertIn("background: 'rgba(10,10,10,.82)'", video)
+        self.assertIn("'discreta' | 'destaque' | 'caixa'", (TEMPLATE / "src" / "tipos.ts").read_text(encoding="utf-8"))
+        self.assertIn('"--max-silencio"', (TEMPLATE / "build.py").read_text(encoding="utf-8"))
+
+
 class HermesAdapterTest(unittest.TestCase):
     def test_registers_every_skill_with_a_bounded_first_turn_bootstrap(self):
         ctx = FakeHermes()

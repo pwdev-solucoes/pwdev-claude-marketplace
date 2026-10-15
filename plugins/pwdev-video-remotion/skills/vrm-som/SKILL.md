@@ -7,7 +7,7 @@ description: >
   gerando por IA só com o ok e a estimativa de custo. Não use para limpar ruído da gravação (fase
   futura) nem para cortar (vrm-corte).
 metadata:
-  version: 0.1.0
+  version: 0.2.0
 ---
 
 # Trilha e efeitos

@@ -113,6 +113,20 @@ class EnvelopeMathTest(unittest.TestCase):
         env = audio.envelope_from_samples(array.array("h", [0] * audio.RATE))
         self.assertEqual(audio.silences(env, 0.25), [(0.0, 1.0)])
 
+    def test_edited_video_threshold_stays_30db_under_speech_but_out_of_the_noise(self):
+        env = audio.Envelope(db=[-12.0] * 90 + [-45.0] * 10, floor=-45.0, speech=-12.0)
+        self.assertEqual(env.threshold, -39.0, "floor + 6 wins over speech - 30 when the floor is high")
+        env = audio.Envelope(db=[], floor=-70.0, speech=-12.0)
+        self.assertEqual(env.threshold, -52.6)
+        env.fixed = -56.5
+        self.assertEqual((env.threshold, env.own_threshold), (-56.5, -52.6))
+
+    def test_a_click_inside_a_pause_does_not_split_it(self):
+        env = audio.envelope_from_samples(self.samples([(True, 1.0), (False, 0.2), (True, 0.02), (False, 0.3), (True, 1.0)]))
+        self.assertEqual(audio.silences(env, 0.25), [(1.0, 1.52)])
+        env = audio.envelope_from_samples(self.samples([(True, 1.0), (False, 0.2), (True, 0.1), (False, 0.3), (True, 1.0)]))
+        self.assertEqual(audio.silences(env, 0.25), [(1.3, 1.6)], "100 ms of sound is a short word, kept")
+
     def test_empty_audio(self):
         import array
         env = audio.envelope_from_samples(array.array("h"))
@@ -161,6 +175,19 @@ class PhrasesTest(unittest.TestCase):
         self.assertEqual(found[2]["refeita_em"], "F004", "near-identical retake")
         self.assertNotIn("refeita_em", found[4])
         self.assertEqual(phrases.auto_ids(found), ["F002", "F004", "F005"])
+
+    def test_retake_wrapped_in_new_words_is_detected(self):
+        texts = ["se eu repetir uma frase, se ele vai tirar,",
+                 "ou seja, se eu repetir uma frase, ele vai tirar e vamos ver como é que ele se comporta."]
+        found = [{"id": f"F{n:03d}", "texto": t, "inicio": n, "fim": n + 0.5, "palavras": []} for n, t in enumerate(texts, 1)]
+        self.assertEqual(phrases.auto_ids(phrases.mark_takes(found)), ["F002"])
+
+    def test_short_common_phrases_are_not_retakes(self):
+        found = [{"id": "F001", "texto": "vamos ver", "inicio": 0, "fim": 1, "palavras": []},
+                 {"id": "F002", "texto": "agora vamos ver o relatório de vendas", "inicio": 2, "fim": 3, "palavras": []},
+                 {"id": "F003", "texto": "Eu estou gravando esse vídeo aqui", "inicio": 4, "fim": 5, "palavras": []},
+                 {"id": "F004", "texto": "para mostrar como funciona o painel novo", "inicio": 6, "fim": 7, "palavras": []}]
+        self.assertEqual(phrases.auto_ids(phrases.mark_takes(found)), ["F001", "F002", "F003", "F004"])
 
     def test_different_sentences_are_not_takes(self):
         found = [{"id": "F001", "texto": "Compre agora", "inicio": 0, "fim": 1, "palavras": []},
@@ -228,7 +255,9 @@ class CutTest(TempDir):
         self.assertEqual(check.gate(out)["veredito"], "PASSOU")
         raw = check.gate(self.src)
         self.assertEqual(raw["veredito"], "REPROVOU")
-        self.assertIn("respiro", raw["problemas"][0])
+        self.assertIn("pausa", raw["problemas"][0])
+        relaxed = check.gate(self.src, max_silencio=1.5)
+        self.assertEqual(relaxed["veredito"], "PASSOU", "tutorial profile tolerates pauses up to the limit")
         timeline = json.loads((self.tmp / "edit" / "cut_timeline.json").read_text(encoding="utf-8"))
         self.assertEqual(timeline["schema"], cut.TIMELINE_SCHEMA)
         self.assertEqual([w["w"] for w in timeline["palavras"]], [w["w"] for w in words])
@@ -246,6 +275,53 @@ class CutTest(TempDir):
         info = tools.probe(result["arquivo"])
         self.assertIsNone(info["video"])
         self.assertIsNotNone(info["audio"])
+
+    def test_regressions_from_real_speech(self):
+        # 1. a soft first syllable (sound after the transcript's start) never moves the start later
+        quiet_then_loud = audio.Envelope(db=[-80.0] * 300 + [-15.0] * 100, floor=-80.0, speech=-15.0)
+        self.assertEqual(cut._real_start(quiet_then_loud, 2.9, 0.0), round(2.9 - cut.PAD, 3))
+        # ...but sound earlier than the transcript moves it back
+        self.assertEqual(cut._real_start(quiet_then_loud, 3.2, 0.0), round(3.0 - cut.PAD, 3))
+        # 2. the end follows the last loud frame, not a late transcript end
+        loud_then_quiet = audio.Envelope(db=[-15.0] * 100 + [-80.0] * 100, floor=-80.0, speech=-15.0)
+        self.assertEqual(cut._real_end(loud_then_quiet, 1.15, 2.0), round(1.0 + cut.TAIL_PAD, 3))
+        # no sound near the transcript end: the transcript time is kept
+        self.assertEqual(cut._real_end(loud_then_quiet, 1.6, 2.0), round(1.6 + cut.TAIL_PAD, 3))
+        # 3. a word that starts before the kept segment (early transcript) stays in the captions
+        segs = [{"src_inicio": 30.48, "src_fim": 32.8, "dst_inicio": 22.0, "dst_fim": 24.32}]
+        out = cut.remap_words([{"w": "Quando", "inicio": 30.12, "fim": 30.68}], segs)
+        self.assertEqual(out, [{"w": "Quando", "inicio": 22.0, "fim": 22.2}])
+        self.assertEqual(cut.remap_words([{"w": "x", "inicio": 30.0, "fim": 30.5}], segs), [], "2 frames do not count")
+        # 4. every cut goes through a limiter (recordings near 0 dBFS overshoot after AAC)
+        self.assertIn("alimiter=limit=", cut.filtergraph([(0.0, 1.0), (2.0, 3.0)], True))
+        self.assertLess(cut.SPLIT_AT, cut.RESPIRO)
+
+    def test_consecutive_intervals_never_overlap(self):
+        # phrase A's sound runs past its transcript end, into where phrase B's transcript starts
+        db = [-15.0] * 100 + [-80.0] * 10 + [-15.0] * 200
+        env = audio.Envelope(db=db, floor=-80.0, speech=-15.0)
+        edl = {"intervalos": [{"inicio": 0.1, "fim": 0.7}, {"inicio": 0.75, "fim": 2.9}]}
+        segs = cut.plan(edl, env)
+        for (a0, a1), (b0, b1) in zip(segs, segs[1:]):
+            self.assertGreaterEqual(b0, a1, f"{(a0, a1)} overlaps {(b0, b1)}: audio would repeat")
+        # an interval moved back in time (reordered EDL) is not clipped
+        back = cut.plan({"intervalos": [{"inicio": 2.0, "fim": 2.9}, {"inicio": 0.1, "fim": 0.9}]}, env)
+        self.assertLess(back[-1][0], back[0][0])
+
+    def test_segments_continuous_in_the_source_are_merged(self):
+        env = audio.Envelope(db=[-15.0] * 400, floor=-80.0, speech=-15.0)
+        self.assertEqual(cut.tighten([(0.5, 2.24), (2.24, 3.5)], env), [(0.5, 3.5)])
+        self.assertEqual(len(cut.tighten([(0.5, 2.24), (2.3, 3.5)], env)), 2)
+
+    def test_joints_are_squeezed_on_the_simulated_cut(self):
+        # two segments whose edges are quiet: alone each is fine, joined they make a 0.3 s pause
+        db = [-15.0] * 100 + [-80.0] * 15 + [-80.0] * 50 + [-80.0] * 15 + [-15.0] * 100
+        env = audio.Envelope(db=db, floor=-80.0, speech=-15.0)
+        segs = cut.tighten([(0.0, 1.15), (1.65, 2.8)], env)
+        frames = [env.db[round(t / audio.FRAME)] for a, b in segs for t in [x / 100 for x in range(round(a * 100), round(b * 100))]]
+        joined = audio.Envelope(db=frames, floor=-80.0, speech=-15.0, fixed=env.threshold)
+        self.assertEqual(audio.silences(joined, cut.SPLIT_AT), [])
+        self.assertAlmostEqual(sum(b - a for a, b in segs), 2.0 + 2 * cut.PAD, delta=0.02)
 
     def test_remap_words_drops_words_outside_kept_segments(self):
         segs = [{"src_inicio": 1.0, "src_fim": 2.0, "dst_inicio": 0.0, "dst_fim": 1.0},
@@ -298,6 +374,17 @@ class GateTest(TempDir):
         result = check.gate(loud)
         self.assertEqual(result["veredito"], "REPROVOU")
         self.assertTrue(any("estourando" in p for p in result["problemas"]))
+
+    def test_gate_judges_a_cut_with_the_source_threshold(self):
+        src = make_video(self.tmp / "fonte.mp4")
+        timeline = {"fonte": str(src), "palavras": []}
+        with mock.patch.object(audio, "envelope", wraps=audio.envelope) as env:
+            check.gate(src, timeline, [])
+        self.assertEqual(env.call_count, 1, "the source itself is judged with its own threshold")
+        cut_file = make_video(self.tmp / "corte.mp4", tones=[(0.0, 2.0)], duration=2.0)
+        with mock.patch.object(audio, "envelope", wraps=audio.envelope) as env:
+            check.gate(cut_file, timeline, [])
+        self.assertEqual([c.args[0] for c in env.call_args_list], [cut_file, str(src)])
 
     def test_gate_reports_caption_gaps(self):
         src = make_video(self.tmp / "v.mp4", tones=[(0.0, 2.0)], duration=2.0)
@@ -399,6 +486,9 @@ class RenderPlanTest(unittest.TestCase):
             self.plan()
 
     def test_scene_paths(self):
+        self.proj["legenda"]["estilo"] = "caixa"
+        self.assertEqual(project.validate(self.proj, 4.0), [])
+        self.assertEqual(render_plan.build(self.proj, self.timeline, self.cues)["legenda"]["tamanho"], 46)
         for src, ok in (("compositions/a.html", True), ("compositions/a.tsx", True),
                         ("compositions/../a.tsx", False), ("src/a.tsx", False), ("compositions/a.js", False)):
             self.proj["cenas"] = [{"inicio": 0, "fim": 1, "src": src}]

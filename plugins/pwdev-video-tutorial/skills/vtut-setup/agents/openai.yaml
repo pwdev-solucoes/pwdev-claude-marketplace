@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWDEV Tutorial Setup"
+  short_description: "Prepare tools for system tutorial videos"
+  default_prompt: "Use $vtut-setup to check that tutorial video tools are ready."

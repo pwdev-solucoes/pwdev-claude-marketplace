@@ -11,7 +11,7 @@ pwdev-video-hyperframes**. Tempos em segundos no corte (`cut.mp4`). Valide sempr
 | `formato` | id de `pwdev-media formatos listar` (`reels-9x16`, `feed-4x5`, `youtube-16x9`…) |
 | `fps` | 30 (ou 24/60) |
 | `estilo` | `fonte`, `texto`, `destaque`, `fundo` (cores em hex) |
-| `legenda` | `ativa`, `estilo` (`discreta` · `destaque`), `max_palavras` (1–6, padrão 3), `y` (0–1) |
+| `legenda` | `ativa`, `estilo` (`discreta` · `destaque` · `caixa` — faixa escura, para gravação de tela), `max_palavras` (1–6, padrão 3), `y` (0–1) |
 | `blocos` | enquadramento: `{inicio, fim, tipo: "tela_cheia", zoom: 1.0–2.0, origem: "50% 35%"}` |
 | `textos` | `{inicio, fim, texto, tipo: "rotulo" · "titulo", posicao: "topo" · "centro" · "base"}` |
 | `cenas` | `{inicio, fim, src: "compositions/<cena>.tsx", sobre_a_pessoa}` (componentes React) |

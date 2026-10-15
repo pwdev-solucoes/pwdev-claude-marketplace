@@ -21,6 +21,8 @@ PAUSE_BREAK = 0.45      # a pause this long ends a phrase
 PUNCT_BREAK = 0.15      # final punctuation plus this pause ends a phrase
 LOOKAHEAD = 4           # how many following phrases may retake a phrase
 SIMILAR = 0.62          # similarity of normalized text that counts as the same sentence
+CONTAINED = 0.7         # share of an earlier phrase's words found, in order, in a later one
+CONTAINED_MIN_WORDS = 4 # shorter phrases ("vamos ver") repeat naturally and are not retakes
 
 
 def normalize(text: str) -> str:
@@ -52,7 +54,16 @@ def _same_sentence(a: str, b: str) -> bool:
         return False
     if nb.startswith(na) or (len(na.split()) >= 3 and na.split()[:3] == nb.split()[:3]):
         return True  # an abandoned start ("Hoje eu vou..." → "Hoje eu vou mostrar três...")
-    return difflib.SequenceMatcher(None, na, nb).ratio() >= SIMILAR
+    if difflib.SequenceMatcher(None, na, nb).ratio() >= SIMILAR:
+        return True
+    # A retake that adds words around the same sentence ("se eu repetir uma frase, se ele vai tirar"
+    # → "ou seja, se eu repetir uma frase, ele vai tirar e vamos ver..."): most of the earlier
+    # phrase's words reappear, in order, inside the later one.
+    wa, wb = na.split(), nb.split()
+    if len(wa) < CONTAINED_MIN_WORDS:
+        return False
+    matched = sum(block.size for block in difflib.SequenceMatcher(None, wa, wb, autojunk=False).get_matching_blocks())
+    return matched / len(wa) >= CONTAINED
 
 
 def mark_takes(phrases: list[dict]) -> list[dict]:

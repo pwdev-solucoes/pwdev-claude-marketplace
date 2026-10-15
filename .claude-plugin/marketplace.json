@@ -459,6 +459,25 @@
         "portable"
       ],
       "strict": true
+    },
+    {
+      "name": "pwdev-video-tutorial",
+      "displayName": "PWDEV Video Tutorial — Vídeos de Sistemas e Tutoriais",
+      "source": "./plugins/pwdev-video-tutorial",
+      "description": "Vídeos explicativos e tutoriais de sistemas a partir do sistema real: código + navegação com playwright-cli, mapa do sistema, roadmap de vídeos, roteiro com storytelling, narração local em pt-BR, gravação de tela com dados sensíveis borrados e montagem com legenda e zoom no clique — Claude Code, Codex e Hermes Agent.",
+      "category": "media",
+      "tags": [
+        "video",
+        "tutorial",
+        "screen-recording",
+        "playwright",
+        "documentation",
+        "onboarding",
+        "codex",
+        "hermes",
+        "portable"
+      ],
+      "strict": true
     }
   ]
 }
