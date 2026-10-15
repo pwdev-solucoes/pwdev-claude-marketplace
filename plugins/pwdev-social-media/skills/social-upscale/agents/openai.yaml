@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Upscale"
+  short_description: "Diagnose and upscale images"
+  default_prompt: "Use $social-upscale to check whether this image needs upscaling."

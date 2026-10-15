@@ -1,33 +1,12 @@
 ---
-description: Estima, confirma e acompanha o gasto com geradores pagos
+description: Estima, confirma e acompanha o gasto com geração paga
 argument-hint: "[campanha ou --estimar]"
+allowed-tools: Bash, Read, Write, Edit, Glob, Grep
 ---
 
-# /pwdev-social-media:custo — Controle de custo
+# /pwdev-social-media:custo
 
-## STEP 0 — Idioma
-`${CLAUDE_PLUGIN_ROOT}/references/language.md`
-
-## Modo estimativa
-Antes de um lote, rode a triagem de `cost-control` e apresente em **chamadas e
-variações** — nunca em reais inventados. Preço unitário é do painel da ferramenta.
-
-## Modo acompanhamento
-Leia `.pwdev-social/gerados/manifest.jsonl` e reporte:
-
-```
-Campanha: {{nome}}
-Chamadas: {{n}} · Ferramentas: {{quais}}
-Ativos aprovados: {{n}} de {{n}} gerados
-Taxa de aproveitamento: {{%}}
-Rodadas médias por ativo: {{n}}
-```
-
-## Alertas
-Levante quando:
-- taxa de aproveitamento abaixo de **30%** → o problema é o prompt, não o modelo.
-  A correção é `prompt-craft`, não mais orçamento
-- mesmo ativo passou de **3 rodadas** → o caminho provavelmente não é geração
-- vídeo gerado sem confirmação separada
-- lote pedido sem seed fixada
-- triagem mostrou que mais da metade não precisava ser gerada
+Route this request exclusively to the portable `social-custo` skill. Read
+`${CLAUDE_PLUGIN_ROOT}/skills/social-custo/SKILL.md` and follow it exactly, passing through
+`$ARGUMENTS` as the arguments. Paths `<plugin-root>/...` in the skill are relative to
+`${CLAUDE_PLUGIN_ROOT}`. Do not add workflow steps here.

@@ -91,10 +91,10 @@
       "audio_nativo": null,
       "licenca_comercial": "a_verificar",
       "exige_rotulo_ia": true,
-      "status": "ativo",
+      "status": "deprecado",
       "origem": "curado",
       "url": "https://bfl.ai/pricing",
-      "notas": "Adaptador direto na fase 6; hoje use pelo OpenRouter ou fal."
+      "notas": "Substituído por bfl:flux-pro-1.1 e bfl:flux-2-pro."
     },
     {
       "id": "ideogram:v3",
@@ -116,10 +116,10 @@
       "audio_nativo": null,
       "licenca_comercial": "a_verificar",
       "exige_rotulo_ia": true,
-      "status": "ativo",
+      "status": "deprecado",
       "origem": "curado",
       "url": "https://ideogram.ai/pricing",
-      "notas": "Forte em texto dentro da imagem. Adaptador na fase 6."
+      "notas": "Substituído por ideogram:ideogram-3."
     },
     {
       "id": "leonardo:phoenix",
@@ -141,10 +141,10 @@
       "audio_nativo": null,
       "licenca_comercial": "a_verificar",
       "exige_rotulo_ia": true,
-      "status": "ativo",
+      "status": "deprecado",
       "origem": "curado",
       "url": "https://leonardo.ai/pricing",
-      "notas": ""
+      "notas": "Substituído por leonardo:conta."
     },
     {
       "id": "magnific:assinatura",
@@ -176,25 +176,25 @@
       "categoria": "imagem-upscale",
       "nome": "Magnific Upscaler",
       "provedor": "magnific",
-      "via": "assinatura",
+      "via": "api",
       "operacao": "upscale",
-      "modelo": null,
+      "modelo": "image-upscaler",
       "preco": {
-        "valor": 16,
-        "unidade": "mes",
+        "valor": null,
+        "unidade": "a_verificar",
         "moeda": "USD",
-        "fonte": "https://www.renderahouse.com/blog/magnific-ai-pricing",
-        "verificado_em": "2026-10-14"
+        "fonte": "",
+        "verificado_em": null
       },
       "qualidade": 5,
       "limites": {},
       "audio_nativo": null,
-      "licenca_comercial": "a_verificar",
+      "licenca_comercial": "sim",
       "exige_rotulo_ia": true,
       "status": "ativo",
       "origem": "curado",
-      "url": "https://www.magnific.com/pricing",
-      "notas": ""
+      "url": "https://docs.magnific.com",
+      "notas": "API do Magnific (chave MAGNIFIC_API_KEY; FREEPIK_API_KEY também vale). Escalas 2x a 16x, saída até 25,3 MP. Também vem na assinatura (US$ 16–20/mês)."
     },
     {
       "id": "local:realesrgan",
@@ -910,6 +910,131 @@
       "origem": "curado",
       "url": "https://ffmpeg.org/legal.html",
       "notas": ""
+    },
+    {
+      "id": "bfl:flux-pro-1.1",
+      "categoria": "imagem-gerar",
+      "nome": "FLUX 1.1 Pro (BFL)",
+      "provedor": "bfl",
+      "via": "api",
+      "operacao": "imagem",
+      "modelo": "flux-pro-1.1",
+      "preco": {
+        "valor": null,
+        "unidade": "a_verificar",
+        "moeda": "USD",
+        "fonte": "",
+        "verificado_em": null
+      },
+      "qualidade": 4,
+      "limites": {},
+      "audio_nativo": null,
+      "licenca_comercial": "sim",
+      "exige_rotulo_ia": true,
+      "status": "ativo",
+      "origem": "curado",
+      "url": "https://docs.bfl.ai",
+      "notas": "Fotorrealismo. Use --largura/--altura ou --aspect-ratio. Preço por imagem na página da BFL."
+    },
+    {
+      "id": "bfl:flux-2-pro",
+      "categoria": "imagem-gerar",
+      "nome": "FLUX.2 Pro (BFL)",
+      "provedor": "bfl",
+      "via": "api",
+      "operacao": "imagem",
+      "modelo": "flux-2-pro",
+      "preco": {
+        "valor": null,
+        "unidade": "a_verificar",
+        "moeda": "USD",
+        "fonte": "",
+        "verificado_em": null
+      },
+      "qualidade": 5,
+      "limites": {},
+      "audio_nativo": null,
+      "licenca_comercial": "sim",
+      "exige_rotulo_ia": true,
+      "status": "ativo",
+      "origem": "curado",
+      "url": "https://docs.bfl.ai",
+      "notas": "Fotorrealismo de ponta. Use --largura/--altura ou --aspect-ratio."
+    },
+    {
+      "id": "ideogram:ideogram-3",
+      "categoria": "imagem-gerar",
+      "nome": "Ideogram 3.0",
+      "provedor": "ideogram",
+      "via": "api",
+      "operacao": "imagem",
+      "modelo": "ideogram-3",
+      "preco": {
+        "valor": null,
+        "unidade": "a_verificar",
+        "moeda": "USD",
+        "fonte": "",
+        "verificado_em": null
+      },
+      "qualidade": 4,
+      "limites": {},
+      "audio_nativo": null,
+      "licenca_comercial": "sim",
+      "exige_rotulo_ia": true,
+      "status": "ativo",
+      "origem": "curado",
+      "url": "https://developer.ideogram.ai",
+      "notas": "O melhor para texto legível dentro da imagem. --aspect-ratio no formato 4x5, --n, --seed, --velocidade TURBO|DEFAULT|QUALITY."
+    },
+    {
+      "id": "leonardo:conta",
+      "categoria": "imagem-gerar",
+      "nome": "Leonardo (modelo da conta)",
+      "provedor": "leonardo",
+      "via": "api",
+      "operacao": "imagem",
+      "modelo": "conta",
+      "preco": {
+        "valor": null,
+        "unidade": "a_verificar",
+        "moeda": "USD",
+        "fonte": "",
+        "verificado_em": null
+      },
+      "qualidade": 3,
+      "limites": {},
+      "audio_nativo": null,
+      "licenca_comercial": "sim",
+      "exige_rotulo_ia": true,
+      "status": "ativo",
+      "origem": "curado",
+      "url": "https://docs.leonardo.ai",
+      "notas": "Ilustração e estilo de marca. Fixe o modelo com LEONARDO_MODEL_ID para consistência. Contrato v1 legado (a API v2 ainda não foi migrada)."
+    },
+    {
+      "id": "runway:gen4_turbo",
+      "categoria": "video-gerar",
+      "nome": "Runway Gen-4 Turbo (API)",
+      "provedor": "runway",
+      "via": "api",
+      "operacao": "video",
+      "modelo": "gen4_turbo",
+      "preco": {
+        "valor": null,
+        "unidade": "a_verificar",
+        "moeda": "USD",
+        "fonte": "",
+        "verificado_em": null
+      },
+      "qualidade": 5,
+      "limites": {},
+      "audio_nativo": false,
+      "licenca_comercial": "sim",
+      "exige_rotulo_ia": true,
+      "status": "ativo",
+      "origem": "curado",
+      "url": "https://docs.dev.runwayml.com",
+      "notas": "Imagem para vídeo: --imagem-inicial (URL ou arquivo) --duration --aspect-ratio 9:16. Créditos da API são separados dos do app."
     }
   ]
 }

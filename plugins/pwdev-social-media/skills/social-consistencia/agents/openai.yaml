@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Consistency"
+  short_description: "Keep AI images consistent across a campaign"
+  default_prompt: "Use $social-consistencia to fix the base prompt so the campaign images match."

@@ -1,0 +1,39 @@
+{
+  "name": "pwdev-social-media",
+  "version": "3.0.0",
+  "description": "AI creative production for social media: concept, cost triage, prompt craft, visual consistency, generation through the pwdev-media core (Ideogram, Flux, Leonardo, Runway, Magnific, OpenRouter, fal) with estimate and confirmation, curation, optional Figma composition, multi-format derivation, test batches, mandatory accessibility review and handoff.",
+  "author": {
+    "name": "Paulo Soares",
+    "url": "https://github.com/soarescbm"
+  },
+  "homepage": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "repository": "https://github.com/pwdev-solucoes/pwdev-claude-marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "codex",
+    "social-media",
+    "image-generation",
+    "creatives",
+    "figma",
+    "accessibility",
+    "hermes"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "PWDEV Social Media",
+    "shortDescription": "AI creatives for social media with cost control",
+    "longDescription": "Turn approved copy into on-brand social creatives: visual concept and asset triage, prompts that hit in two variations, paid generation only after an estimate and an explicit yes (via the pwdev-media CLI), curation with recorded seeds, composition in Figma or as a layered spec, the same piece in every format inside each platform's safe zone, hook x visual x format test batches, an accessibility gate with alt text and a clean delivery package. Never publishes.",
+    "developerName": "PWDEV Solucoes",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Set up the brand context and check which image generators are ready.",
+      "Generate a 4:5 background for this approved post, two variations, after showing the cost.",
+      "Adapt this approved post to 9:16, 4:5, 1:1 and 16:9 inside the safe zones."
+    ]
+  }
+}

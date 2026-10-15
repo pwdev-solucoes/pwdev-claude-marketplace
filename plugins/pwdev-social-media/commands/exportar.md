@@ -1,30 +1,12 @@
 ---
-description: Exporta peças aprovadas e monta o pacote de entrega com legendas e alt text
+description: Exporta peças aprovadas e monta o pacote com legendas e alt text
 argument-hint: "[campanha]"
+allowed-tools: Bash, Read, Write, Edit, Glob, Grep
 ---
 
 # /pwdev-social-media:exportar
 
-## STEP 0 — Idioma
-`${CLAUDE_PLUGIN_ROOT}/references/language.md`
-
-## STEP 1 — Portão
-- [ ] `creative-review` com veredito APROVADO
-- [ ] alt text de cada peça (carrossel: por slide)
-- [ ] nenhum `[PREENCHER]`
-- [ ] peça em `04 — Aprovado`
-- [ ] aprovador humano confirmou, se a seção 9 exigir
-
-Falhou algum: **não exporte**. Diga o que falta.
-
-## STEP 2 — Exportar
-`export-handoff`. Nomenclatura
-`{{campanha}}_{{plataforma}}_{{formato}}_{{n}}_{{versão}}.{{ext}}`
-
-## STEP 3 — Pacote
-peças · legendas.md · alt-text.md · publicacao.md · origem.md
-
-## STEP 4 — Arquivar
-Ofereça `vault-sync`.
-
-**Este plugin não publica.**
+Route this request exclusively to the portable `social-entrega` skill. Read
+`${CLAUDE_PLUGIN_ROOT}/skills/social-entrega/SKILL.md` and follow it exactly, passing through
+`$ARGUMENTS` as the arguments. Paths `<plugin-root>/...` in the skill are relative to
+`${CLAUDE_PLUGIN_ROOT}`. Do not add workflow steps here.

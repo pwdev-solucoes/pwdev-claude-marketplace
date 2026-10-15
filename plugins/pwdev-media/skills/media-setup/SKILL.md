@@ -8,7 +8,7 @@ description: >
   catálogo e gasto do mês. Não use para gerar mídia (media-gerar), escolher modelo
   (media-catalogo) ou atualizar o catálogo (media-atualizar).
 metadata:
-  version: 0.3.0
+  version: 0.4.0
 ---
 
 # Instalar e conferir o pwdev-media

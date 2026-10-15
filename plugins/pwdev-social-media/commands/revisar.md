@@ -1,24 +1,12 @@
 ---
-description: Audita criativos — contraste, legibilidade, área segura, brand kit e acessibilidade
+description: Audita criativos — contraste, legibilidade, zona segura, brand kit e acessibilidade
 argument-hint: "[peça, link do Figma ou pasta]"
+allowed-tools: Bash, Read, Write, Edit, Glob, Grep
 ---
 
 # /pwdev-social-media:revisar
 
-## STEP 0 — Idioma
-`${CLAUDE_PLUGIN_ROOT}/references/language.md`
-
-## STEP 1 — Entrada
-Link do Figma, arquivo de imagem, ou especificação. Se vazio, peça.
-
-## STEP 2 — Contexto
-Leia seções 3 e 8. Setor público muda o alvo de contraste de AA para AA reforçado.
-
-## STEP 3 — Revisar
-Spawn do `creative-reviewer`: 7 checagens + alt text.
-
-## STEP 4 — Entregar
-Veredito, reprovações com valor medido vs. exigido, ajustes, e a seção
-"não verificado".
-
-REPROVADO não vai para `04 — Aprovado`.
+Route this request exclusively to the portable `social-revisao` skill. Read
+`${CLAUDE_PLUGIN_ROOT}/skills/social-revisao/SKILL.md` and follow it exactly, passing through
+`$ARGUMENTS` as the arguments. Paths `<plugin-root>/...` in the skill are relative to
+`${CLAUDE_PLUGIN_ROOT}`. Do not add workflow steps here.

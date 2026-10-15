@@ -23,8 +23,8 @@ ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "plugins" / "pwdev-media"
 sys.path.insert(0, str(PLUGIN / "engine" / "src"))
 
-from pwdev_media import catalog, cli, discovery, formats, generate, http, keys, spend  # noqa: E402
-from pwdev_media.providers import elevenlabs, fal, openrouter  # noqa: E402
+from pwdev_media import catalog, cli, discovery, formats, generate, http, keys, providers, spend  # noqa: E402
+from pwdev_media.providers import bfl, elevenlabs, fal, ideogram, leonardo, magnific, openrouter, runway  # noqa: E402
 
 SKILLS = {"media-setup", "media-catalogo", "media-atualizar", "media-gerar", "media-custo", "media-formatos"}
 COMMANDS = {"init": "media-setup", "status": "media-setup", "catalogo": "media-catalogo",
@@ -448,6 +448,7 @@ class SpendAndGenerateTest(Isolated):
         self.assertIn("pwdev-media chaves guardar openrouter", err)
         code, _, err = self.run_cli("gerar", "runway:assinatura", "--prompt", "x", "--confirmar")
         self.assertEqual(code, cli.EXIT_UNSUPPORTED)
+        self.assertIn("runway:gen4_turbo", err, "points to the API item")
         code, _, err = self.run_cli("gerar", "local:whisper", "--prompt", "x")
         self.assertEqual(code, cli.EXIT_UNSUPPORTED)
         os.environ["FAL_KEY"] = "k"
@@ -540,6 +541,180 @@ class ProvidersTest(Isolated):
         with tempfile.TemporaryDirectory() as out:
             with self.assertRaisesRegex(Exception, "não faz 'musica'"):
                 openrouter.OpenRouter().generate(item(operacao="musica"), {"prompt": "x"}, Path(out))
+
+
+class DirectProvidersTest(Isolated):
+    """Adapters ported from pwdev-social-media 2.x scripts: BFL, Ideogram, Leonardo, Runway, Magnific."""
+
+    def out(self) -> Path:
+        path = Path(self.tmp.name) / "out"
+        path.mkdir(exist_ok=True)
+        return path
+
+    def test_bfl_polls_the_returned_url_and_downloads_at_once(self):
+        os.environ["BFL_API_KEY"] = "bfl-segredo"
+        states = iter([{"status": "Pending"}, {"status": "Ready", "result": {"sample": "https://delivery.bfl/x.png"}}])
+        fake = FakeHttp({
+            ("POST", "https://api.bfl.ai/v1/flux-2-pro"): {"id": "j1", "polling_url": "https://api.bfl.ai/v1/get_result?id=j1"},
+            ("GET", "https://api.bfl.ai/v1/get_result"): lambda u, p: next(states),
+            ("GET", "https://delivery.bfl/"): b"PNG",
+        })
+        with mock.patch.object(http, "request", fake), mock.patch("time.sleep"):
+            result = bfl.BFL().generate(item(provedor="bfl", operacao="imagem", modelo="flux-2-pro"),
+                                        {"prompt": "p", "aspect_ratio": "9:16", "seed": 7}, self.out())
+        self.assertEqual(fake.calls[0][3], {"prompt": "p", "width": 768, "height": 1344, "seed": 7})
+        self.assertEqual(fake.calls[0][2]["x-key"], "bfl-segredo")
+        self.assertEqual(Path(result.arquivos[0]).read_bytes(), b"PNG")
+        failing = FakeHttp({("POST", "https://api.bfl.ai/v1/m"): {"id": "j", "polling_url": "https://api.bfl.ai/p"},
+                            ("GET", "https://api.bfl.ai/p"): {"status": "Content Moderated"}})
+        with mock.patch.object(http, "request", failing), self.assertRaisesRegex(RuntimeError, "Moderated"):
+            bfl.BFL().generate(item(provedor="bfl", operacao="imagem", modelo="m"), {"prompt": "p"}, self.out())
+
+    def test_ideogram_multipart_and_safety_filter(self):
+        os.environ["IDEOGRAM_API_KEY"] = "ide-segredo"
+        sent = {}
+
+        def multipart(url, headers, fields, timeout=300.0):
+            sent.update(url=url, headers=headers, fields=fields)
+            return http.Response(200, {}, json.dumps({"generation_id": "g", "data": [
+                {"url": "https://ideogram/x.png", "is_image_safe": True}, {"url": "", "is_image_safe": False}]}).encode())
+
+        with mock.patch.object(http, "request_multipart", multipart), \
+                mock.patch.object(http, "request", FakeHttp({("GET", "https://ideogram/"): b"IMG"})):
+            result = ideogram.Ideogram().generate(item(provedor="ideogram", operacao="imagem", modelo="ideogram-3"),
+                                                  {"prompt": "Oferta R$97", "aspect_ratio": "4:5", "n": 2}, self.out())
+        self.assertEqual(sent["url"], "https://api.ideogram.ai/v2/image/generate/ideogram-3")
+        self.assertEqual(sent["headers"], {"Api-Key": "ide-segredo"})
+        self.assertEqual((sent["fields"]["prompt"], sent["fields"]["aspect_ratio"], sent["fields"]["num_images"]),
+                         ("Oferta R$97", "4x5", 2))
+        self.assertEqual((len(result.arquivos), result.extra["bloqueadas"]), (1, 1))
+        blocked = lambda *a, **k: http.Response(200, {}, json.dumps({"data": [{"url": "", "is_image_safe": False}]}).encode())
+        with mock.patch.object(http, "request_multipart", blocked), self.assertRaisesRegex(RuntimeError, "bloqueada"):
+            ideogram.Ideogram().generate(item(provedor="ideogram", operacao="imagem", modelo="ideogram-3"),
+                                         {"prompt": "x"}, self.out())
+
+    def test_multipart_encoding(self):
+        captured = {}
+
+        class Resp:
+            status, headers = 200, {}
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def read(self):
+                return b"{}"
+
+        def urlopen(req, timeout):
+            captured["body"], captured["ctype"] = req.data.decode(), req.headers["Content-type"]
+            return Resp()
+
+        with mock.patch("urllib.request.urlopen", urlopen):
+            http.request_multipart("https://x", {"Api-Key": "k"}, {"prompt": "olá", "seed": None, "n": 2})
+        boundary = captured["ctype"].split("boundary=")[1]
+        self.assertIn(f'--{boundary}\r\nContent-Disposition: form-data; name="prompt"\r\n\r\nolá\r\n', captured["body"])
+        self.assertNotIn('name="seed"', captured["body"])
+        self.assertTrue(captured["body"].endswith(f"--{boundary}--\r\n"))
+
+    def test_leonardo_v1_flow_and_fixed_model(self):
+        os.environ["LEONARDO_API_KEY"] = "leo"
+        os.environ["LEONARDO_MODEL_ID"] = "modelo-marca"
+        fake = FakeHttp({
+            ("POST", "https://cloud.leonardo.ai/api/rest/v1/generations"): {"sdGenerationJob": {"generationId": "g1"}},
+            ("GET", "https://cloud.leonardo.ai/api/rest/v1/generations/g1"): {"generations_by_pk": {
+                "status": "COMPLETE", "generated_images": [{"url": "https://cdn.leo/a.png"}, {"url": "https://cdn.leo/b.png"}]}},
+            ("GET", "https://cdn.leo/"): b"IMG",
+        })
+        with mock.patch.object(http, "request", fake), mock.patch("time.sleep"):
+            result = leonardo.Leonardo().generate(item(provedor="leonardo", operacao="imagem", modelo="conta"),
+                                                  {"prompt": "p", "largura": 1080, "altura": 1920, "n": 2}, self.out())
+        self.assertEqual(fake.calls[0][3], {"prompt": "p", "width": 1080, "height": 1920, "num_images": 2,
+                                            "modelId": "modelo-marca"})
+        self.assertEqual(len(result.arquivos), 2)
+
+    def test_runway_requires_an_image_and_downloads_the_video(self):
+        os.environ["RUNWAY_API_KEY"] = "legado"  # 2.x name still accepted
+        with self.assertRaisesRegex(Exception, "--imagem-inicial"):
+            runway.Runway().generate(item(provedor="runway", modelo="gen4_turbo"), {"prompt": "p"}, self.out())
+        fake = FakeHttp({
+            ("POST", "https://api.dev.runwayml.com/v1/image_to_video"): {"id": "t1"},
+            ("GET", "https://api.dev.runwayml.com/v1/tasks/t1"): {"status": "SUCCEEDED", "output": ["https://cdn.rw/v.mp4"]},
+            ("GET", "https://cdn.rw/"): b"MP4",
+        })
+        with mock.patch.object(http, "request", fake), mock.patch("time.sleep"):
+            result = runway.Runway().generate(item(provedor="runway", modelo="gen4_turbo"),
+                                              {"prompt": "p", "imagem_inicial": "https://img/x.png", "duration": 5,
+                                               "aspect_ratio": "9:16"}, self.out())
+        self.assertEqual(fake.calls[0][3], {"model": "gen4_turbo", "promptImage": "https://img/x.png", "promptText": "p",
+                                            "ratio": "720:1280", "duration": 5})
+        self.assertEqual(fake.calls[0][2]["X-Runway-Version"], "2024-11-06")
+        self.assertEqual(fake.calls[0][2]["Authorization"], "Bearer legado")
+        self.assertTrue(result.arquivos[0].endswith(".mp4"))
+        failed = FakeHttp({("POST", "https://api.dev.runwayml.com/v1/image_to_video"): {"id": "t2"},
+                           ("GET", "https://api.dev.runwayml.com/v1/tasks/t2"): {"status": "FAILED", "failure": "moderação"}})
+        with mock.patch.object(http, "request", failed), mock.patch("time.sleep"), self.assertRaisesRegex(RuntimeError, "moderação"):
+            runway.Runway().generate(item(provedor="runway", modelo="gen4_turbo"),
+                                     {"prompt": "p", "imagem_inicial": "https://img/x.png"}, self.out())
+
+    def test_magnific_upscale(self):
+        os.environ["FREEPIK_API_KEY"] = "fp"  # 2.x name still accepted
+        src = Path(self.tmp.name) / "foto.png"
+        src.write_bytes(b"ORIGINAL")
+        fake = FakeHttp({
+            ("POST", "https://api.magnific.com/v1/ai/image-upscaler"): {"data": {"task_id": "u1", "status": "CREATED"}},
+            ("GET", "https://api.magnific.com/v1/ai/image-upscaler/u1"): {"data": {"status": "COMPLETED",
+                                                                                  "generated": ["https://cdn.mg/u.png"]}},
+            ("GET", "https://cdn.mg/"): b"BIG",
+        })
+        with mock.patch.object(http, "request", fake), mock.patch("time.sleep"):
+            result = magnific.Magnific().generate(item(provedor="magnific", operacao="upscale", modelo="image-upscaler"),
+                                                  {"prompt": "", "arquivo": str(src), "escala": "4x"}, self.out())
+        body = fake.calls[0][3]
+        self.assertEqual((base64.b64decode(body["image"]), body["scale_factor"]), (b"ORIGINAL", "4x"))
+        self.assertEqual(fake.calls[0][2], {"x-magnific-api-key": "fp"})
+        self.assertEqual(Path(result.arquivos[0]).read_bytes(), b"BIG")
+        for params, msg in (({"arquivo": "/nao/existe.png"}, "--arquivo"), ({"arquivo": str(src), "escala": "3x"}, "--escala")):
+            with self.assertRaisesRegex(Exception, msg):
+                magnific.Magnific().generate(item(provedor="magnific", operacao="upscale", modelo="image-upscaler"),
+                                             {"prompt": "", **params}, self.out())
+
+    def test_local_first_frame_becomes_data_uri_and_file_edits_change_the_cache_key(self):
+        img = Path(self.tmp.name) / "quadro.png"
+        img.write_bytes(b"A")
+        sent, keyed = generate.local_inputs({"prompt": "p", "imagem_inicial": str(img)})
+        self.assertEqual(sent["imagem_inicial"], "data:image/png;base64," + base64.b64encode(b"A").decode())
+        first = spend.request_hash("x", keyed)
+        img.write_bytes(b"AB")
+        self.assertNotEqual(first, spend.request_hash("x", generate.local_inputs({"prompt": "p", "imagem_inicial": str(img)})[1]))
+        with self.assertRaises(FileNotFoundError):
+            generate.local_inputs({"arquivo": "/nao/existe.png"})
+        self.assertEqual(generate.local_inputs({"imagem_inicial": "https://x/y.png"})[0]["imagem_inicial"], "https://x/y.png")
+
+    def test_seed_items_for_direct_providers_are_generable(self):
+        seed = catalog.load_seed()
+        for item_id in ("bfl:flux-pro-1.1", "bfl:flux-2-pro", "ideogram:ideogram-3", "leonardo:conta",
+                        "runway:gen4_turbo", "magnific:upscale"):
+            it = catalog.find(seed, item_id)
+            with self.subTest(item=item_id):
+                self.assertTrue(it["modelo"])
+                self.assertIn(it["operacao"], providers.get(it["provedor"]).operations)
+        for old in ("bfl:flux", "ideogram:v3", "leonardo:phoenix"):
+            self.assertEqual(catalog.find(seed, old)["status"], "deprecado")
+
+    def test_working_catalog_gets_structural_updates_but_keeps_curation(self):
+        working = catalog.load()
+        up = catalog.find(working, "magnific:upscale")
+        up.update({"via": "assinatura", "modelo": None, "qualidade": 2, "notas": "minha nota"})
+        catalog.find(working, "bfl:flux")["status"] = "ativo"
+        catalog.save(working)
+        again = catalog.load()
+        up = catalog.find(again, "magnific:upscale")
+        self.assertEqual((up["via"], up["modelo"]), ("api", "image-upscaler"))
+        self.assertEqual((up["qualidade"], up["notas"]), (2, "minha nota"))
+        self.assertEqual(catalog.find(again, "bfl:flux")["status"], "deprecado")
 
 
 class KeysTest(Isolated):

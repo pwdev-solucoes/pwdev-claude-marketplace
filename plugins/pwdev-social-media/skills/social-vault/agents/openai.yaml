@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Vault"
+  short_description: "Archive campaigns, prompts and seeds"
+  default_prompt: "Use $social-vault to archive this campaign with its prompts and seeds in Obsidian."

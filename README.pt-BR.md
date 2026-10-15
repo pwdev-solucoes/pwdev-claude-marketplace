@@ -64,7 +64,7 @@ Comandos: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 | [**pwdev-qa**](./plugins/pwdev-qa/) | Garantia de qualidade portátil para Claude Code, Codex e Hermes Agent — 10 fluxos, 17 guias especialistas, recomendação de ferramentas, evidência auditável, relatórios offline em HTML e PDF | 0.1.0 | Apache-2.0 |
 | [**pwdev-skills**](./plugins/pwdev-skills/) | Engenharia de skills para Claude Code, Codex e Hermes Agent — revisão e refatoração de skills, perfis lean/guided por medição, descoberta de runtimes e modelos, benchmark A/B headless objetivo em Claude Code, Codex, Hermes e OpenCode | 0.1.0 | Apache-2.0 |
 | [**pwdev-copy**](./plugins/pwdev-copy/) | Framework de copywriting treinável — 20 skills no ciclo completo (VOC → copy → revisão → análise), 5 subagentes reais | 1.1.0 | Apache-2.0 |
-| [**pwdev-social-media**](./plugins/pwdev-social-media/) | Geração de criativos por IA — orquestração de APIs (Ideogram, Leonardo, Flux, Runway, Freepik) com trava de gasto, 19 skills, 4 subagentes | 2.0.1 | Apache-2.0 |
+| [**pwdev-social-media**](./plugins/pwdev-social-media/) | Criativos por IA para Claude Code, Codex e Hermes Agent — conceito, triagem de custo, geração pelo pwdev-media (Ideogram, Flux, Leonardo, Runway, Magnific, OpenRouter, fal) com estimativa e confirmação, curadoria, Figma opcional, todos os formatos, lote de versões, portão de acessibilidade; 22 skills, 4 subagentes | 3.0.0 | Apache-2.0 |
 | [**pwdev-devops**](./plugins/pwdev-devops/) | Plataforma, operação e incidente — postura de execução segura com guard script, 24 skills, 4 subagentes | 1.0.0 | Apache-2.0 |
 | [**pwdev-youtrack**](./plugins/pwdev-youtrack/) | Gestão do YouTrack — MCP oficial embutido (2025.3+) para issues, artigos e log de trabalho; fallback REST para boards, sprints e relatórios de tempo | 1.0.0 | Apache-2.0 |
 | [**pwdev-github**](./plugins/pwdev-github/) | GitHub Projects para Claude Code, Codex, Hermes Agent e OpenCode — templates personalizáveis, publicação idempotente de roadmaps (issues, sub-issues, milestones, blocked-by nativo) e skill para criar, atualizar e fechar issues e tarefas de Project, via gh CLI | 0.1.0 | Apache-2.0 |
@@ -74,7 +74,7 @@ Comandos: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 | [**pwdev-brain**](./plugins/pwdev-brain/) | Segundo cérebro em LLM Wiki (padrão Karpathy) no Open Knowledge Format v0.2 — ingest discutido com citação por afirmação, query citada, lint de conformidade; 2 subagentes, MCP embutido somente-leitura (6 tools) | 1.1.0 | Apache-2.0 |
 | [**pwdev-excalidraw**](./plugins/pwdev-excalidraw/) | Planejamento visual com diagramas Excalidraw via servidor MCP oficial — arquitetura, fluxos, dependências, decisões e roadmaps editáveis | 0.2.0 | Apache-2.0 |
 | [**pwdev-fumadocs**](./plugins/pwdev-fumadocs/) | Sites de documentação Fumadocs para Claude Code, Codex, Hermes Agent e OpenCode — documentação oficial ao vivo pelo servidor MCP do Fumadocs, instalação, conteúdo MDX e navegação, features via @fumadocs/cli, scanner determinístico do projeto, verificação por type-check e build | 0.1.0 | Apache-2.0 |
-| [**pwdev-media**](./plugins/pwdev-media/) | Núcleo da suíte de mídia para Claude Code, Codex e Hermes Agent — catálogo de modelos e apps de IA em 14 categorias com rotina de atualização, geração por OpenRouter, fal e ElevenLabs com estimativa e confirmação, chaves no Keychain, orçamento mensal, ledger, formatos de criativos com zonas seguras | 0.3.0 | Apache-2.0 |
+| [**pwdev-media**](./plugins/pwdev-media/) | Núcleo da suíte de mídia para Claude Code, Codex e Hermes Agent — catálogo de modelos e apps de IA em 14 categorias com rotina de atualização, geração por OpenRouter, fal e ElevenLabs com estimativa e confirmação, chaves no Keychain, orçamento mensal, ledger, formatos de criativos com zonas seguras | 0.4.0 | Apache-2.0 |
 | [**pwdev-video-hyperframes**](./plugins/pwdev-video-hyperframes/) | Edição de vídeo falado por conversa com HyperFrames para Claude Code, Codex e Hermes Agent — corte pela onda (sem respiros, última tomada certa), legendas por palavra, zooms, textos na zona segura, cenas sob medida com as skills oficiais do HyperFrames, trilha e efeitos, amostra no estúdio e render com portão de qualidade | 0.1.0 | Apache-2.0 |
 | [**pwdev-video-remotion**](./plugins/pwdev-video-remotion/) | Edição de vídeo falado por conversa com Remotion (React) para Claude Code, Codex e Hermes Agent — mesmo fluxo e mesmo projeto.json do pwdev-video-hyperframes: corte pela onda, legendas por palavra, zooms, cenas em React, trilha, Remotion Studio, render com portão de qualidade e checagem da licença do Remotion | 0.1.0 | Apache-2.0 |
 | [**pwdev-statusline**](./plugins/pwdev-statusline/) | Barra de status rica — cores dinâmicas, tokens formatados, totalmente configurável | 1.1.0 | Apache-2.0 |
@@ -329,21 +329,23 @@ Veja a [documentação completa do plugin](./plugins/pwdev-copy/README.md).
 
 ### pwdev-social-media
 
-**Geração de criativos por IA** para redes sociais: orquestração de APIs no
-centro — Ideogram, Leonardo, Flux, Runway, Freepik/Magnific — via wrappers com
-trava de gasto. Figma é camada opcional de composição. Complementa o
-`pwdev-copy`: lá o texto, aqui a peça.
+**Criativos por IA** para redes sociais, portável para Claude Code, Codex e Hermes Agent: conceito e
+triagem de ativos, prompts que acertam em duas variações, geração paga pelo núcleo `pwdev-media`
+(Ideogram, Flux, Leonardo, Runway, Magnific, OpenRouter, fal) só depois da estimativa e de um "sim"
+explícito, curadoria com seed registrada, composição opcional no Figma, a mesma peça em todos os
+formatos dentro de cada zona segura, lote gancho × visual × formato e portão de acessibilidade
+obrigatório. Complementa o `pwdev-copy`: lá o texto, aqui a peça. Precisa do `pwdev-media` ≥ 0.4.0.
 
 ```
-conceito ─▶ [CONFIRMAÇÃO DE CUSTO] ─▶ prompt ─▶ geração via API ─▶ curadoria ─▶ [figma] ─▶ revisão ─▶ export
+conceito ─▶ estimativa ─▶ sim ─▶ pwdev-media gerar ─▶ curadoria ─▶ [figma] ─▶ formatos ─▶ revisão ─▶ entrega
 ```
 
-**Subagentes:** art-director, asset-generator, creative-reviewer, figma-builder
-**Principais funcionalidades:** trava de gasto com triagem de custo, modo prompt sem chaves de API, revisão de acessibilidade obrigatória
+**Subagentes (Claude Code):** art-director, asset-generator, creative-reviewer, figma-builder — na própria conversa no Codex e no Hermes
+**Principais funcionalidades:** triagem e confirmação de custo, modo prompt sem chaves de API, derivação em vários formatos, revisão de acessibilidade obrigatória
 
-**Inclui:** 9 comandos · 4 subagentes · 19 skills · MCP
+**Inclui:** 11 comandos · 4 subagentes · 22 skills · MCP
 
-Veja a [documentação completa do plugin](./plugins/pwdev-social-media/README.md).
+Veja a [documentação completa do plugin](./plugins/pwdev-social-media/README.pt-BR.md).
 
 ### pwdev-devops
 

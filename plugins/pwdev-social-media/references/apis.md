@@ -1,92 +1,70 @@
-# APIs de Geração — contrato e operação
+# Geração paga — itens, chaves e operação
 
-Este plugin opera com **orquestração de APIs no centro**. Nenhuma dessas
-ferramentas tem MCP oficial conhecido: a integração é `Bash` + `curl`, via os
-wrappers em `${CLAUDE_PLUGIN_ROOT}/scripts/`.
+Desde a v3, nenhuma chamada paga sai deste plugin: tudo passa pela CLI `pwdev-media` (plugin
+pwdev-media ≥ 0.4.0), que guarda as chaves, estima o custo pelo catálogo, exige confirmação, respeita o
+orçamento mensal, registra o ledger e falha alto quando o contrato de uma API muda.
 
-> **Aviso de contrato.** Endpoints, parâmetros e nomes de modelo mudam sem aviso.
-> Os wrappers foram escritos para **falhar alto** quando o contrato muda, em vez
-> de retornar silêncio. Se um script reclamar de "contrato pode ter mudado",
-> confira a documentação oficial e corrija o script — não contorne.
+> **Aviso de contrato.** Endpoints e parâmetros mudam sem aviso. O `pwdev-media` sai com código 5 e a
+> mensagem da API quando isso acontece. **Pare e reporte** — não contorne com outra chamada.
 
 ---
 
-## Ferramentas
+## Itens do catálogo
 
-| Ferramenta | Melhor para | Variável | Script |
+| Necessidade | Item | Parâmetros principais | Chave |
 |---|---|---|---|
-| **Ideogram** | **imagem com texto legível** — único confiável nisso | `IDEOGRAM_API_KEY` | `gen-ideogram.sh` |
-| **Leonardo** | ilustração, consistência de estilo de marca | `LEONARDO_API_KEY` | `gen-leonardo.sh` |
-| **Flux (BFL)** | fotorrealismo | `BFL_API_KEY` | `gen-flux.sh` |
-| **Runway** | vídeo a partir de imagem | `RUNWAY_API_KEY` | `gen-runway.sh` |
-| **Freepik / Magnific** | upscale | `FREEPIK_API_KEY` | `upscale-freepik.sh` |
+| **Imagem com texto legível** | `ideogram:ideogram-3` | `--aspect-ratio 4x5` · `--n` · `--seed` | `IDEOGRAM_API_KEY` |
+| Fotorrealismo | `bfl:flux-2-pro`, `bfl:flux-pro-1.1` | `--largura --altura` ou `--aspect-ratio` · `--seed` | `BFL_API_KEY` |
+| Ilustração, estilo de marca | `leonardo:conta` | `--largura --altura --n` (modelo da conta: `LEONARDO_MODEL_ID`) | `LEONARDO_API_KEY` |
+| Animar imagem aprovada | `runway:gen4_turbo` | `--imagem-inicial` · `--duration` · `--aspect-ratio 720:1280` | `RUNWAYML_API_SECRET` (aceita `RUNWAY_API_KEY`) |
+| Upscale | `magnific:upscale` | `--arquivo` · `--escala 2x\|4x\|8x\|16x` | `MAGNIFIC_API_KEY` (aceita `FREEPIK_API_KEY`) |
+| Melhor custo com as chaves que existem | `pwdev-media catalogo recomendar --categoria imagem-gerar --so-com-chave` | — | OpenRouter, fal |
 
-Documentação: developer.ideogram.ai · docs.leonardo.ai · docs.bfl.ai ·
-docs.dev.runwayml.com · docs.freepik.com
+Detalhes, preço com fonte e data, licença comercial: `pwdev-media catalogo mostrar <item>`.
+
+**Regra que economiza mais dinheiro que qualquer outra:** se a peça é texto sobre cor sólida ou sobre
+foto que já existe, **não gere nada**. Isso é composição — Figma resolve melhor, na hora, de graça.
 
 ---
 
-## Escolha da ferramenta
+## Operação
 
-| Necessidade | Ferramenta | Por quê |
+```bash
+pwdev-media gerar <item> --prompt '<texto>' [parâmetros] --saida '.pwdev-social/gerados/<AAAA-MM-DD>-<slug>' --estimar
+# mostrar a estimativa · esperar o "sim" explícito
+pwdev-media gerar <item> --prompt '<texto>' [parâmetros] --saida '.pwdev-social/gerados/<AAAA-MM-DD>-<slug>' --confirmar
+```
+
+| Código | Significado | O que fazer |
 |---|---|---|
-| Peça com frase dentro da arte | **Ideogram** | os demais produzem texto deformado |
-| Ilustração repetível na campanha | **Leonardo** | fixar modelo e referência de estilo |
-| Foto que não existe | **Flux** | melhor fotorrealismo da lista |
-| Animar uma peça estática | **Runway** | image-to-video |
-| Imagem pequena demais | **Freepik** | mas veja o diagnóstico antes |
-
-**Regra que economiza mais dinheiro que qualquer outra:** se a peça é texto
-sobre cor sólida ou sobre foto que já existe, **não gere nada**. Isso é
-composição — Figma resolve melhor, na hora, de graça.
-
----
+| 0 | gerado (ou reaproveitado do cache, sem custo) | seguir para a curadoria |
+| 3 | chamada paga sem `--confirmar` | mostrar a estimativa e pedir o "sim" |
+| 4 | passaria do orçamento mensal | avisar; só com o "sim" usar `--acima-do-orcamento` |
+| 5 | erro do provedor ou contrato mudou | parar e reportar a mensagem |
+| 6 | sem chave | modo prompt, ou `social-contexto` para guardar a chave |
+| 7 | item sem adaptador | escolher outro item (`pwdev-media catalogo recomendar`) |
 
 ## Custo
 
-Não há tabela de preços neste arquivo, de propósito: preço muda e número errado
-aqui vira decisão errada lá. Consulte o painel de cada ferramenta.
+Estimativa em dólares vem do catálogo, sempre com fonte e data; item sem preço é estimado em chamadas
+e o provedor informa o custo real depois. Gasto: `pwdev-media custo extrato`. Teto mensal:
+`pwdev-media custo orcamento <valor>`.
 
-O que o plugin garante:
+**Vídeo é o item mais caro da stack, por larga margem.** Confirme duração e quantidade separadamente.
 
-1. `--confirm` obrigatório em todo script que gasta — segunda linha de defesa
-   além da instrução da skill
-2. estimativa apresentada em **chamadas e variações**, não em reais inventados
-3. manifesto de tudo que foi gerado, em `.pwdev-social/gerados/manifest.jsonl`
-4. orçamento por campanha na seção 6 do contexto
+## Registro
 
-**Vídeo é o item mais caro da stack, por larga margem.** Confirme duração e
-quantidade antes de qualquer repetição.
-
----
-
-## Manifesto
-
-Toda geração registra uma linha em `manifest.jsonl`:
-
-```json
-{"ts":"...","ferramenta":"ideogram","modelo":"...","prompt":"...",
- "seed":"...","arquivo":"...","custo_estimado":"..."}
-```
-
-Sem isso não há reprodução nem auditoria: seis meses depois ninguém lembra qual
-prompt gerou a peça que funcionou.
-
----
+O ledger do `pwdev-media` guarda item, custo e arquivos de cada geração; os arquivos de cada campanha
+ficam em `.pwdev-social/gerados/<data>-<slug>/`. A seed da peça aprovada vai para a seção 6 do contexto
+e para a biblioteca de prompts (`social-vault`).
 
 ## Segurança
 
-- Chave vive **apenas** em variável de ambiente
-- **Nunca** gravar chave em arquivo do projeto, skill, log ou manifesto
-- Os scripts nunca imprimem o valor da chave — só presença
-- `check-keys.sh` reporta status sem revelar nada
-
----
+- Chave no Keychain (`pwdev-media chaves guardar <provedor>`) ou em variável de ambiente
+- **Nunca** gravar chave em arquivo do projeto, skill, log ou contexto
+- `pwdev-media status` só diz **onde** a chave está, nunca o valor
 
 ## Modo prompt (sem chave)
 
-Sem chave configurada, a skill entrega o **prompt otimizado** e declara
-**"NÃO GERADO"**. Não simula resultado, não descreve imagem que não existe.
-
-É um modo legítimo de operação, não uma falha: o prompt bem construído é
-executável na interface web de qualquer uma das ferramentas.
+Sem chave, a skill entrega o **prompt otimizado** e declara **"NÃO GERADO"**. Não simula resultado. É
+um modo legítimo: o prompt roda na interface web de qualquer uma das ferramentas.

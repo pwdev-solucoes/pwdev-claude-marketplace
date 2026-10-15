@@ -1,8 +1,8 @@
 {
   "name": "pwdev-media",
   "displayName": "PWDEV Media — Catálogo de Modelos, Provedores e Custo",
-  "version": "0.3.0",
-  "description": "Núcleo da suíte pwdev de mídia: catálogo de modelos e apps de IA por categoria (imagem, vídeo, áudio, transcrição, motores de render) com rotina de atualização, geração por OpenRouter, fal e ElevenLabs com estimativa e confirmação de custo, chaves no Keychain, orçamento mensal, ledger e formatos de criativos com zonas seguras — CLI `pwdev-media`; skills portáveis para Claude Code, Codex e Hermes Agent.",
+  "version": "0.4.0",
+  "description": "Núcleo da suíte pwdev de mídia: catálogo de modelos e apps de IA por categoria (imagem, vídeo, áudio, transcrição, motores de render) com rotina de atualização, geração por OpenRouter, fal, ElevenLabs, BFL, Ideogram, Leonardo, Runway e Magnific com estimativa e confirmação de custo, chaves no Keychain, orçamento mensal, ledger e formatos de criativos com zonas seguras — CLI `pwdev-media`; skills portáveis para Claude Code, Codex e Hermes Agent.",
   "author": {
     "name": "Paulo Soares",
     "url": "https://github.com/soarescbm"

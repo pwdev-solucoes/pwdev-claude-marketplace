@@ -169,9 +169,9 @@
     },
     {
       "name": "pwdev-social-media",
-      "displayName": "PWDEV Social Media — Geração de Criativos por IA",
+      "displayName": "PWDEV Social Media — Criativos por IA",
       "source": "./plugins/pwdev-social-media",
-      "description": "Geração de criativos para redes sociais v2.0 — orquestração de APIs (Ideogram, Leonardo, Flux, Runway, Freepik) com trava de gasto, triagem de custo, engenharia de prompt, consistência visual e curadoria; Figma como camada opcional de composição; 19 skills, 4 subagentes",
+      "description": "Criativos para redes sociais v3.0, portátil (Claude Code, Codex e Hermes Agent) — conceito, triagem de custo, prompt, consistência visual, geração pelo núcleo pwdev-media com estimativa e confirmação, curadoria, Figma opcional, todos os formatos, lote de versões e revisão de acessibilidade; 22 skills, 4 subagentes",
       "category": "marketing",
       "tags": [
         "social-media",
@@ -181,7 +181,10 @@
         "runway",
         "figma",
         "accessibility",
-        "pt-br"
+        "pt-br",
+        "codex",
+        "hermes",
+        "portable"
       ],
       "strict": true
     },

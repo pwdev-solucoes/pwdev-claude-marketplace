@@ -9,8 +9,8 @@ https://github.com/blacktwist/social-media-skills
 
 | pwdev-social-media | Origem |
 |---|---|
-| `social-context` | `social-media-context-sms` |
-| `carousel-builder` | `carousel-writer-sms` (que produz texto; esta produz a peça) |
+| `social-contexto` (v2: `social-context`) | `social-media-context-sms` |
+| `social-carrossel` (v2: `carousel-builder`) | `carousel-writer-sms` (que produz texto; esta produz a peça) |
 
 Também adotados: o padrão Path A/B e a seção `Limites` (originalmente
 `Boundaries`), documentados em `references/anatomia-skill.md`.

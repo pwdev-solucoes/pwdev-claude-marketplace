@@ -57,6 +57,11 @@ Details: [`references/catalogo.md`](./references/catalogo.md) (pt-BR).
 | OpenRouter | image and video (Veo, Seedance, Wan, Sora…) | `OPENROUTER_API_KEY` |
 | fal | any queue model (Kling, Hailuo, Flux, upscalers…) | `FAL_KEY` |
 | ElevenLabs | music, sound effects and narration | `ELEVENLABS_API_KEY` |
+| BFL | FLUX 1.1 Pro and FLUX.2 Pro (photorealism) | `BFL_API_KEY` |
+| Ideogram | Ideogram 3.0 (legible text in images) | `IDEOGRAM_API_KEY` |
+| Leonardo | illustration and brand style | `LEONARDO_API_KEY` |
+| Runway | image-to-video (Gen-4 Turbo) | `RUNWAYML_API_SECRET` |
+| Magnific | image upscale (2× to 16×) | `MAGNIFIC_API_KEY` |
 
 Exit codes and contracts: [`references/provedores.md`](./references/provedores.md) (pt-BR).
 

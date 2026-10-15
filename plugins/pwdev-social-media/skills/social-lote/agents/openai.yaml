@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Batch"
+  short_description: "Hook x visual x format test batches"
+  default_prompt: "Use $social-lote to plan 3 hooks x 2 visuals in 4:5 and estimate the batch."

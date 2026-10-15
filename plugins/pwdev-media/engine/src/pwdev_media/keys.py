@@ -17,12 +17,19 @@ ENV = {
     "elevenlabs": "ELEVENLABS_API_KEY",
     "replicate": "REPLICATE_API_TOKEN",
     "runway": "RUNWAYML_API_SECRET",
-    "magnific": "FREEPIK_API_KEY",
+    "magnific": "MAGNIFIC_API_KEY",
     "kling": "KLING_API_KEY",
     "bfl": "BFL_API_KEY",
     "ideogram": "IDEOGRAM_API_KEY",
     "leonardo": "LEONARDO_API_KEY",
     "higgsfield": "HIGGSFIELD_API_KEY",
+}
+
+
+# Older names still accepted (pwdev-social-media 2.x used them).
+ALIASES = {
+    "runway": ("RUNWAY_API_KEY",),
+    "magnific": ("FREEPIK_API_KEY",),
 }
 
 
@@ -49,9 +56,9 @@ def _from_keychain(provider: str) -> str | None:
 
 def lookup(provider: str) -> tuple[str | None, str | None]:
     """(value, source) where source is 'env', 'keychain' or None."""
-    var = ENV.get(provider)
-    if var and os.environ.get(var):
-        return os.environ[var], "env"
+    for var in (ENV.get(provider), *ALIASES.get(provider, ())):
+        if var and os.environ.get(var):
+            return os.environ[var], "env"
     value = _from_keychain(provider)
     if value:
         return value, "keychain"

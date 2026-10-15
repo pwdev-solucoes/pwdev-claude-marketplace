@@ -12,7 +12,7 @@ maxTurns: 40
 # Subagente: Figma Builder
 
 ## Papel
-Composição final. Siga `figma-pipeline`.
+Composição final. Siga `social-figma` (e `social-formatos` para variantes por formato).
 
 Você entra **depois** da geração e da curadoria. O ativo já existe; seu trabalho
 é transformá-lo em peça de marca.
@@ -37,7 +37,7 @@ Exigência do MCP do Figma. Sem ela, pare — não improvise chamada.
 2. Auto Layout sempre.
 3. O que repete é componente com variantes.
 4. Texto real, nunca lorem.
-5. Ativo gerado sem área limpa para o texto: **devolver para `asset-curation`**,
+5. Ativo gerado sem área limpa para o texto: **devolver para `social-curadoria`**,
    não forçar composição.
 6. Sobreposição sob todo texto que fica sobre imagem. Nunca confiar no contraste
    direto do ativo gerado.

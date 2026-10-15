@@ -2,14 +2,24 @@
 from __future__ import annotations
 
 from .base import Provider, Result, Unsupported
+from .bfl import BFL
 from .elevenlabs import ElevenLabs
 from .fal import Fal
+from .ideogram import Ideogram
+from .leonardo import Leonardo
+from .magnific import Magnific
 from .openrouter import OpenRouter
+from .runway import Runway
 
 REGISTRY: dict[str, type[Provider]] = {
     "openrouter": OpenRouter,
     "fal": Fal,
     "elevenlabs": ElevenLabs,
+    "bfl": BFL,
+    "ideogram": Ideogram,
+    "leonardo": Leonardo,
+    "runway": Runway,
+    "magnific": Magnific,
 }
 
 

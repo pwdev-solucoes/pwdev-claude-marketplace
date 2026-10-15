@@ -1,5 +1,23 @@
 # Changelog — pwdev-media
 
+## 0.4.0 — 2026-10-14
+
+Direct providers ported from pwdev-social-media 2.x scripts, so that plugin can drop its bash
+wrappers (pwdev-social-media 3.0 requires this version).
+
+- New adapters: BFL/FLUX (`bfl:flux-pro-1.1`, `bfl:flux-2-pro`), Ideogram 3.0 over the v2 API with
+  multipart (`ideogram:ideogram-3`), Leonardo REST v1 legacy (`leonardo:conta`), Runway
+  image-to-video that now waits and downloads the video (`runway:gen4_turbo`), Magnific upscale
+  that now polls and saves the image (`magnific:upscale`).
+- `gerar`: `--arquivo`/`--escala` (upscale), `--largura`/`--altura`, `--velocidade`; a local
+  `--imagem-inicial` becomes a data URI; local inputs are part of the cache key; subscription items
+  are refused with a pointer to the provider's API item.
+- Keys: `MAGNIFIC_API_KEY` (and legacy `FREEPIK_API_KEY`), `RUNWAYML_API_SECRET` (and legacy
+  `RUNWAY_API_KEY`).
+- Catalog: plugin-owned structural fields (category, provider, via, operation, model) and
+  deprecations now reach existing working catalogs on load; curation is kept. Old ids `bfl:flux`,
+  `ideogram:v3`, `leonardo:phoenix` are deprecated in favor of the new ones.
+
 ## 0.3.0 — 2026-10-14
 
 - `video plano-render`: engine-neutral render plan (`pwdev-plano-render/1`) resolved once for both

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Brand Kit"
+  short_description: "Extract the brand kit from Figma"
+  default_prompt: "Use $social-marca to extract the brand tokens from our design system."

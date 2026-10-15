@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import urllib.error
 import urllib.request
+import uuid
 from dataclasses import dataclass
 
 USER_AGENT = "pwdev-media/0.1"
@@ -47,6 +48,25 @@ def request(method: str, url: str, headers: dict | None = None, payload=None,
         data = json.dumps(payload).encode("utf-8")
         hdrs.setdefault("Content-Type", "application/json")
     req = urllib.request.Request(url, data=data, headers=hdrs, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return Response(resp.status, dict(resp.headers), resp.read())
+    except urllib.error.HTTPError as exc:
+        raise HttpError(exc.code, url, exc.read().decode("utf-8", "replace")) from exc
+
+
+def request_multipart(url: str, headers: dict | None, fields: dict, timeout: float = 300.0) -> Response:
+    """POST multipart/form-data with plain text fields (lists become repeated fields)."""
+    boundary = "----pwdev-media-" + uuid.uuid4().hex
+    parts = []
+    for name, value in fields.items():
+        for item in value if isinstance(value, (list, tuple)) else [value]:
+            if item is None:
+                continue
+            parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n{item}\r\n')
+    body = ("".join(parts) + f"--{boundary}--\r\n").encode("utf-8")
+    hdrs = {"User-Agent": USER_AGENT, **(headers or {}), "Content-Type": f"multipart/form-data; boundary={boundary}"}
+    req = urllib.request.Request(url, data=body, headers=hdrs, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return Response(resp.status, dict(resp.headers), resp.read())

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Figma"
+  short_description: "Compose the final piece in Figma or as a spec"
+  default_prompt: "Use $social-figma to compose the headline over the selected asset."

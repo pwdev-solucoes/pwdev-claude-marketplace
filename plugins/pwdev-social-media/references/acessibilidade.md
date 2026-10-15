@@ -48,7 +48,7 @@ ou caixa — não confie na sorte do enquadramento.
 
 ## Texto alternativo
 
-Obrigatório em toda peça. Ver a skill `alt-text`.
+Obrigatório em toda peça. Ver a skill `social-alt-text`.
 
 ## Checklist de aprovação
 

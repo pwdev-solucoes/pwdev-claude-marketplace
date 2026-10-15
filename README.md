@@ -64,7 +64,7 @@ Commands: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 | [**pwdev-qa**](./plugins/pwdev-qa/) | Portable quality assurance for Claude Code, Codex and Hermes Agent — 10 workflows, 17 specialist guides, tool recommendation, auditable evidence, offline HTML and PDF reports | 0.1.0 | Apache-2.0 |
 | [**pwdev-skills**](./plugins/pwdev-skills/) | Skill engineering for Claude Code, Codex, Hermes Agent and OpenCode — review and refactor skills, lean/guided profiles by measurement, runtime and model discovery, objective headless A/B benchmarks across the same four runtimes | 0.1.0 | Apache-2.0 |
 | [**pwdev-copy**](./plugins/pwdev-copy/) | Trainable copywriting framework — 20 skills across the full cycle (VOC research → copy → review → analysis), 5 real subagents | 1.1.0 | Apache-2.0 |
-| [**pwdev-social-media**](./plugins/pwdev-social-media/) | AI creative generation for social — API orchestration (Ideogram, Leonardo, Flux, Runway, Freepik) with spend guard, 19 skills, 4 subagents | 2.0.1 | Apache-2.0 |
+| [**pwdev-social-media**](./plugins/pwdev-social-media/) | AI creatives for social media on Claude Code, Codex and Hermes Agent — concept, cost triage, generation through pwdev-media (Ideogram, Flux, Leonardo, Runway, Magnific, OpenRouter, fal) with estimate and confirmation, curation, optional Figma, every format, test batches, accessibility gate; 22 skills, 4 subagents | 3.0.0 | Apache-2.0 |
 | [**pwdev-devops**](./plugins/pwdev-devops/) | Platform, operations & incident response — safe-execution posture with guard script, 24 skills, 4 subagents | 1.0.0 | Apache-2.0 |
 | [**pwdev-youtrack**](./plugins/pwdev-youtrack/) | YouTrack management — official built-in MCP server (2025.3+) for issues, articles & work log; REST fallback for boards, sprints, time reports | 1.0.0 | Apache-2.0 |
 | [**pwdev-github**](./plugins/pwdev-github/) | GitHub Projects for Claude Code, Codex, Hermes Agent and OpenCode — customizable templates, idempotent roadmap publishing (issues, sub-issues, milestones, native blocked-by) and a skill to create, update and close issues and Project tasks, via gh CLI | 0.1.0 | Apache-2.0 |
@@ -74,7 +74,7 @@ Commands: `/pwdev-flow:init`, `/pwdev-flow:discover`, `/pwdev-flow:design`,
 | [**pwdev-brain**](./plugins/pwdev-brain/) | Second brain as an LLM Wiki (Karpathy pattern) in Open Knowledge Format v0.2 — discussed ingest with per-claim citations, cited query, compliance lint; 2 subagents, embedded read-only MCP (6 tools) | 1.1.0 | Apache-2.0 |
 | [**pwdev-excalidraw**](./plugins/pwdev-excalidraw/) | Visual planning with Excalidraw diagrams through the official MCP server — architecture, flows, dependencies, decisions and editable roadmaps | 0.2.0 | Apache-2.0 |
 | [**pwdev-fumadocs**](./plugins/pwdev-fumadocs/) | Fumadocs documentation sites for Claude Code, Codex, Hermes Agent and OpenCode — live official docs through the Fumadocs MCP server, setup, MDX content and navigation, features via @fumadocs/cli, deterministic project scanner, verified by type-check and build | 0.1.0 | Apache-2.0 |
-| [**pwdev-media**](./plugins/pwdev-media/) | Core of the media suite for Claude Code, Codex and Hermes Agent — catalog of AI models and apps in 14 categories with an update routine, generation through OpenRouter, fal and ElevenLabs with estimate and confirmation, keys in the Keychain, monthly budget, ledger, creative formats with safe zones | 0.3.0 | Apache-2.0 |
+| [**pwdev-media**](./plugins/pwdev-media/) | Core of the media suite for Claude Code, Codex and Hermes Agent — catalog of AI models and apps in 14 categories with an update routine, generation through OpenRouter, fal and ElevenLabs with estimate and confirmation, keys in the Keychain, monthly budget, ledger, creative formats with safe zones | 0.4.0 | Apache-2.0 |
 | [**pwdev-video-hyperframes**](./plugins/pwdev-video-hyperframes/) | Talking-video editing by conversation with HyperFrames for Claude Code, Codex and Hermes Agent — cut by the waveform (no breaths, last good take), word-timed captions, zooms, safe-zone texts, custom scenes with the official HyperFrames skills, music and effects, studio sample and render quality gate | 0.1.0 | Apache-2.0 |
 | [**pwdev-video-remotion**](./plugins/pwdev-video-remotion/) | Talking-video editing by conversation with Remotion (React) for Claude Code, Codex and Hermes Agent — same flow and projeto.json as pwdev-video-hyperframes: cut by the waveform, word-timed captions, zooms, custom React scenes, music, Remotion Studio, render quality gate and a Remotion license check | 0.1.0 | Apache-2.0 |
 | [**pwdev-statusline**](./plugins/pwdev-statusline/) | Rich terminal status line — dynamic colors, formatted tokens, fully configurable | 1.1.0 | Apache-2.0 |
@@ -326,19 +326,21 @@ See the [full plugin documentation](./plugins/pwdev-copy/README.md) (PT-BR).
 
 ### pwdev-social-media
 
-AI **creative generation** for social media (docs in PT-BR): API orchestration
-at the center — Ideogram, Leonardo, Flux, Runway, Freepik/Magnific — behind
-spend-guarded wrappers. Figma is an optional composition layer. Complements
-`pwdev-copy`: there the text, here the piece.
+AI **creatives for social media** (docs in PT-BR), portable to Claude Code, Codex and Hermes Agent:
+concept and asset triage, prompts that hit in two variations, paid generation through the
+`pwdev-media` core (Ideogram, Flux, Leonardo, Runway, Magnific, OpenRouter, fal) only after an estimate
+and an explicit yes, curation with recorded seeds, optional Figma composition, the same piece in every
+format inside each safe zone, hook × visual × format test batches, and a mandatory accessibility gate.
+Complements `pwdev-copy`: there the text, here the piece. Requires `pwdev-media` ≥ 0.4.0.
 
 ```
-concept ─▶ [COST CONFIRMATION] ─▶ prompt ─▶ API generation ─▶ curation ─▶ [figma] ─▶ review ─▶ export
+concept ─▶ estimate ─▶ yes ─▶ pwdev-media gerar ─▶ curation ─▶ [figma] ─▶ formats ─▶ review ─▶ handoff
 ```
 
-**Subagents:** art-director, asset-generator, creative-reviewer, figma-builder
-**Key features:** spend guard with cost triage, prompt-only mode without API keys, mandatory accessibility review
+**Subagents (Claude Code):** art-director, asset-generator, creative-reviewer, figma-builder — inline on Codex and Hermes
+**Key features:** cost triage and confirmation, prompt-only mode without API keys, multi-format derivation, mandatory accessibility review
 
-**Ships:** 9 commands · 4 subagents · 19 skills · MCP
+**Ships:** 11 commands · 4 subagents · 22 skills · MCP
 
 See the [full plugin documentation](./plugins/pwdev-social-media/README.md) (PT-BR).
 

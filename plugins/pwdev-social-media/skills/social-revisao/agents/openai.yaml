@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Review"
+  short_description: "Quality gate for creatives"
+  default_prompt: "Use $social-revisao to review this piece before approval."

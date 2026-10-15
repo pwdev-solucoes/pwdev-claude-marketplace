@@ -1,58 +1,12 @@
 ---
-description: Produz criativos end-to-end — conceito, triagem de custo, geração via API, curadoria, composição opcional no Figma e revisão
+description: Produz criativos de ponta a ponta — conceito, custo, geração, curadoria, composição, revisão e entrega
 argument-hint: "[formato] [descrição da peça]"
+allowed-tools: Bash, Read, Write, Edit, Glob, Grep
 ---
 
-# /pwdev-social-media:criar — Produzir criativos
+# /pwdev-social-media:criar
 
-## STEP 0 — Idioma
-`${CLAUDE_PLUGIN_ROOT}/references/language.md`
-
-## STEP 1 — Portões
-| Verificar | Se ausente |
-|---|---|
-| `.claude/pwdev-social-context.md` | parar → `/pwdev-social-media:init` |
-| Seção 3 — brand kit | parar → `brand-kit` |
-| Copy aprovada | parar → `/pwdev-copy:copy` |
-| Chaves (seção 6) | seguir em modo prompt, avisando |
-| Figma (seção 2) | opcional — sem ele, composição vira especificação |
-
-Nunca produza arte sobre copy não aprovada.
-
-## STEP 2 — Conceito
-Spawn do `art-director`. Ele entrega a **triagem de ativos** e o **prompt de
-cada ativo a gerar**.
-
-Apresente e **espere aprovação** antes de gastar qualquer crédito.
-
-## STEP 3 — Custo
-Rode a triagem de `cost-control`. Apresente:
-
-```
-Ativos no conceito:  {{n}}
-Eliminados na triagem: {{n}}   ← composição, acervo ou design system
-A gerar:             {{n}}
-Chamadas previstas:  {{n}} (2 variações por ativo, primeira rodada)
-Vídeo:               {{n}} clipes ← confirmar separado
-```
-
-**Espere confirmação explícita.** Sem ela, não avance.
-
-## STEP 4 — Gerar
-Spawn do `asset-generator`. Regra das 2 variações na primeira rodada.
-
-## STEP 5 — Curar
-`asset-curation`. Grade de comparação como Artifact para aprovação.
-**Registre a seed da selecionada.**
-
-## STEP 6 — Compor
-Com Figma conectado: spawn do `figma-builder`.
-Sem Figma: `figma-pipeline` entrega especificação de composição em camadas.
-
-## STEP 7 — Revisar
-Spawn do `creative-reviewer`. REPROVADO volta ao STEP 5 ou 6 — não avance.
-
-## STEP 8 — Entregar
-`export-handoff`. Ofereça `vault-sync` para arquivar prompts e seeds.
-
-**Nunca publique.**
+Route this request exclusively to the portable `social-criar` skill. Read
+`${CLAUDE_PLUGIN_ROOT}/skills/social-criar/SKILL.md` and follow it exactly, passing through
+`$ARGUMENTS` as the arguments. Paths `<plugin-root>/...` in the skill are relative to
+`${CLAUDE_PLUGIN_ROOT}`. Do not add workflow steps here.

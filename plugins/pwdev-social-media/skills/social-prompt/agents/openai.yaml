@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Prompt"
+  short_description: "Write prompts that hit in 2 variations"
+  default_prompt: "Use $social-prompt to improve this prompt for a photorealistic image."

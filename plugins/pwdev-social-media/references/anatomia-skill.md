@@ -4,7 +4,7 @@ Herdado de `pwdev-copy`, com os acréscimos da produção visual.
 
 ## Estrutura
 ```
-1. Frontmatter        description rica em gatilhos + metadata.derivado-de
+1. Frontmatter        name social-*, description "Use quando… / Não use para…", metadata.version
 2. Papel              uma frase
 3. Princípio central  a regra que explica as decisões da skill
 4. Antes de começar   contexto + portões + perguntas mínimas
@@ -21,10 +21,10 @@ Herdado de `pwdev-copy`, com os acréscimos da produção visual.
 | Portão | Verificar | Se ausente |
 |---|---|---|
 | **`/figma-use`** | carregada antes de `use_figma` | **parar** — exigência do MCP |
-| Contexto | `.claude/pwdev-social-context.md` | parar → `/pwdev-social-media:init` |
-| Brand kit | seção 3 do contexto | parar → `/pwdev-social-media:init --brand` |
+| Contexto | `.claude/pwdev-social-context.md` | parar → `social-contexto` |
+| Brand kit | seção 3 do contexto | parar → `social-marca` |
 | Copy aprovada | texto validado | parar → `/pwdev-copy:copy` |
-| Chave de API | variável de ambiente | Path C → entregar prompt, não gerar |
+| Núcleo e chave | `pwdev-media versao` e `pwdev-media chaves listar` | Path C → entregar prompt, não gerar |
 | MCP Figma | conexão ativa | Path B → entregar especificação |
 
 ## Path A / B / C
@@ -45,8 +45,8 @@ Nunca descrever artefato que não foi criado.
 ## Regras que nenhuma skill negocia
 
 1. **Não descrever peça que não existe.** Sem Figma, é especificação — e diz isso.
-2. **Não gastar crédito sem confirmação.** Toda chamada paga é confirmada antes,
-   com estimativa.
+2. **Não gastar crédito sem confirmação.** Toda chamada paga é `pwdev-media gerar ... --estimar`,
+   o "sim" da pessoa, e só então `--confirmar`.
 3. **Não publicar.** Publicar é ato externo e irreversível — exige confirmação
    explícita, sempre.
 4. **Token, nunca valor solto.** Cor e tipo vêm do design system.

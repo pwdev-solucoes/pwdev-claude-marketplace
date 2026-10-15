@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social AI Video"
+  short_description: "Script, storyboard and AI video generation"
+  default_prompt: "Use $social-video to animate the approved image into a 5 second 9:16 clip."

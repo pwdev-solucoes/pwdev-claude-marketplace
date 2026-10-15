@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Carousel"
+  short_description: "Build a full carousel with variants"
+  default_prompt: "Use $social-carrossel to build an 8-slide Instagram carousel from this approved copy."

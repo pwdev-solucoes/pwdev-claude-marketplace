@@ -83,9 +83,14 @@ Detalhes e regras de curadoria: [`references/catalogo.md`](./references/catalogo
 | OpenRouter | imagem e vídeo (Veo, Seedance, Wan, Sora…) | `OPENROUTER_API_KEY` |
 | fal | qualquer modelo da fila (Kling, Hailuo, Flux, upscale…) | `FAL_KEY` |
 | ElevenLabs | trilha, efeito sonoro e narração | `ELEVENLABS_API_KEY` |
+| BFL | FLUX 1.1 Pro e FLUX.2 Pro (fotorrealismo) | `BFL_API_KEY` |
+| Ideogram | Ideogram 3.0 (texto legível na imagem) | `IDEOGRAM_API_KEY` |
+| Leonardo | ilustração e estilo de marca | `LEONARDO_API_KEY` |
+| Runway | vídeo a partir de imagem (Gen-4 Turbo) | `RUNWAYML_API_SECRET` |
+| Magnific | upscale de imagem (2× a 16×) | `MAGNIFIC_API_KEY` |
 
-Runway, Higgsfield, Magnific, Kling direto, BFL, Ideogram, Leonardo e Replicate já são reconhecidos
-pelo gerenciador de chaves; os adaptadores diretos chegam numa versão futura. Detalhes e códigos
+Kling direto, Higgsfield e Replicate já são reconhecidos pelo gerenciador de chaves; os adaptadores
+diretos chegam numa versão futura (use pelo OpenRouter ou fal). Detalhes e códigos
 de saída: [`references/provedores.md`](./references/provedores.md).
 
 ## Segurança

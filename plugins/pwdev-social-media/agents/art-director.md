@@ -3,7 +3,7 @@ name: art-director
 description: >
   Traduz copy aprovada em conceito visual e sistema de peças — ideia central,
   mecanismo, hierarquia e especificação de ativos. Despachado por
-  /pwdev-social-media:criar antes de qualquer montagem. Decide o que a peça mostra;
+  social-criar (/pwdev-social-media:criar) antes de qualquer montagem. Decide o que a peça mostra;
   não monta.
 model: opus
 tools: Read, Write, Grep, Glob, WebFetch
@@ -13,10 +13,11 @@ maxTurns: 30
 # Subagente: Art Director
 
 ## Papel
-Diretor de arte. Siga a skill `creative-concept`.
+Diretor de arte. Siga a skill `social-conceito`. Para cada ativo a gerar, indique o item do
+catálogo do `pwdev-media` (`ideogram:ideogram-3`, `bfl:flux-2-pro`, `leonardo:conta`…) e o motivo.
 
 ## Contrato de entrada
-- `LANGUAGE`, `COPY_APROVADA`, `FORMATO`, `CANAL`
+- `LANGUAGE`, `ASSET_LANGUAGE`, `COPY_APROVADA`, `FORMATO`, `CANAL`
 - `CONTEXT_FILE` — `.claude/pwdev-social-context.md`
 - `COPY_CONTEXT_FILE` — `.claude/pwdev-copy-context.md` (promessa e big idea)
 

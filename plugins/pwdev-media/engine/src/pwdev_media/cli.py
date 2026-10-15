@@ -152,7 +152,8 @@ def cmd_formatos(args) -> int:
 
 def cmd_gerar(args) -> int:
     params = {"prompt": args.prompt}
-    for field in ("duration", "aspect_ratio", "resolution", "n", "seed", "voz", "imagem_inicial", "duracao"):
+    for field in ("duration", "aspect_ratio", "resolution", "n", "seed", "voz", "imagem_inicial", "duracao",
+                  "arquivo", "escala", "largura", "altura", "velocidade"):
         value = getattr(args, field, None)
         if value is not None:
             params[field] = value
@@ -328,7 +329,12 @@ def parser() -> argparse.ArgumentParser:
     s.add_argument("--n", type=int)
     s.add_argument("--seed", type=int)
     s.add_argument("--voz", help="voice_id do TTS")
-    s.add_argument("--imagem-inicial", dest="imagem_inicial", help="URL ou data URL do primeiro quadro")
+    s.add_argument("--imagem-inicial", dest="imagem_inicial", help="URL ou arquivo local do primeiro quadro")
+    s.add_argument("--arquivo", help="imagem local de entrada (upscale)")
+    s.add_argument("--escala", help="upscale: 2x, 4x, 8x ou 16x")
+    s.add_argument("--largura", type=int, help="imagem: largura em px (BFL, Leonardo)")
+    s.add_argument("--altura", type=int, help="imagem: altura em px (BFL, Leonardo)")
+    s.add_argument("--velocidade", help="Ideogram: rendering_speed (TURBO, DEFAULT, QUALITY)")
     s.add_argument("--entrada", help="JSON com campos próprios do modelo (fal)")
     s.add_argument("--saida", help="pasta de saída")
     s.add_argument("--estimar", action="store_true", help="só mostra a estimativa")

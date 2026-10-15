@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Handoff"
+  short_description: "Export approved pieces with captions and alt text"
+  default_prompt: "Use $social-entrega to export the approved pieces and build the delivery package."

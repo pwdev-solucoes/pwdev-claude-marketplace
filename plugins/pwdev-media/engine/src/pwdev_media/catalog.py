@@ -25,6 +25,7 @@ STATUS = {"ativo", "beta", "deprecado", "removido"}
 LICENCAS = {"sim", "nao", "a_verificar"}
 ORIGENS = {"curado", "descoberto"}
 OBJETIVOS = ("barato", "equilibrado", "maximo")
+STRUCTURAL = ("categoria", "provedor", "via", "operacao", "modelo")
 CURATED = ("nome", "qualidade", "licenca_comercial", "exige_rotulo_ia", "notas", "operacao", "url")
 PRICE_CHANGE = 0.10  # relative change that goes into the report
 STALE_DAYS = 30
@@ -47,12 +48,29 @@ def load(path: Path | None = None) -> dict:
         save(seed, path)
         return seed
     catalog = json.loads(path.read_text(encoding="utf-8"))
+    changed = False
+    seed_by_id = {i["id"]: i for i in seed["itens"]}
+    for item in catalog["itens"]:
+        src = seed_by_id.get(item["id"])
+        if src is None or item.get("origem") != "curado":
+            continue
+        for field in STRUCTURAL:  # how the plugin reaches the item: owned by the plugin, not the person
+            if item.get(field) != src.get(field):
+                item[field] = copy.deepcopy(src.get(field))
+                changed = True
+        if src.get("status") == "deprecado" and item.get("status") != "deprecado":
+            item["status"], item["notas"] = "deprecado", src.get("notas", "")
+            changed = True
     known = {item["id"] for item in catalog["itens"]}
     added = [copy.deepcopy(i) for i in seed["itens"] if i["id"] not in known]
     for cid, cat in seed["categorias"].items():
-        catalog["categorias"].setdefault(cid, cat)
+        if cid not in catalog["categorias"]:
+            catalog["categorias"][cid] = cat
+            changed = True
     if added:
         catalog["itens"].extend(added)
+        changed = True
+    if changed:
         save(catalog, path)
     return catalog
 
